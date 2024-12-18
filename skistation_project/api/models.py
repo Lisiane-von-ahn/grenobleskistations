@@ -5,6 +5,7 @@ class SkiStation(models.Model):
     latitude = models.DecimalField(max_digits=8, decimal_places=6)
     longitude = models.DecimalField(max_digits=9, decimal_places=6)
     capacity = models.IntegerField(null=True)
+    image = models.BinaryField(null=True, blank=True) 
 
     def __str__(self):
         return self.name

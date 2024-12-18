@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_yasg',
     'drf_spectacular',
+    'skistation_project'
 ]
 
 REST_FRAMEWORK = {
@@ -63,7 +64,7 @@ ROOT_URLCONF = 'skistation_project.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -123,7 +124,15 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+
+# Project-level static directory (if you have static files outside of apps)
+STATICFILES_DIRS = [
+    BASE_DIR / "static",  # This will include project-level static files
+]
+
+# Path where collected static files will be stored during production (when using collectstatic)
+STATIC_ROOT = BASE_DIR / "staticfiles"  # This is for production use
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
