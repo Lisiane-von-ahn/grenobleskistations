@@ -120,6 +120,9 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),  # Or wherever your static files are stored
 ]
 
+# settings.py
+WHITENOISE_SKIP_MISSING_FILES = True
+
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
