@@ -129,19 +129,8 @@ USE_I18N = True
 
 USE_TZ = True
 
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.1/howto/static-files/
-
-STATIC_URL = '/static/'
-
-# Project-level static directory (if you have static files outside of apps)
-STATICFILES_DIRS = [
-    BASE_DIR / "static",  # This will include project-level static files
-]
-
-# Path where collected static files will be stored during production (when using collectstatic)
-STATIC_ROOT = BASE_DIR / "staticfiles"  # This is for production use
+STATIC_URL = '/static/'  # URL to access static files
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # Directory to store collected static files
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
