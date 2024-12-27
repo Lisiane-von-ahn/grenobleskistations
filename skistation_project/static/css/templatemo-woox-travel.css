@@ -30,6 +30,69 @@ font & reset css
 reset
 --------------------------------------------- 
 */
+
+
+.page-btn.active {
+  background-color: #4CAF50; /* Green */
+  color: white;
+}
+
+.pagination-controls {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.pagination-btn {
+  background-color: #22b3c1;
+  border: 1px solid #22b3c1;
+  border: none;
+  color: white;
+  padding: 10px 20px;
+  margin: 5px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s;
+}
+
+.pagination-btn:hover {
+  background-color: #0056b3; /* Darker blue */
+}
+
+.pagination-btn:disabled {
+  background-color: #CCCCCC; /* Light gray when disabled */
+  cursor: not-allowed;
+}
+
+#pagination-numbers {
+  display: inline-block;
+  margin: 0 15px;
+}
+
+.page-btn {
+  background-color: #f1f1f1; /* Light gray */
+  border: 1px solid #ccc;
+  color: #333;
+  padding: 10px 15px;
+  margin: 5px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.page-btn:hover {
+  background-color: #22b3c1;
+  color: white;
+}
+
+.page-btn.active {
+  background-color: #22b3c1;
+  color: white;
+  border: none;
+}
+
+
 html, body, div, span, applet, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, div
 pre, a, abbr, acronym, address, big, cite, code, del, dfn, em, font, img, ins, kbd, q,
 s, samp, small, strike, strong, sub, sup, tt, var, b, u, i, center, dl, dt, dd, ol, ul, li,
@@ -822,7 +885,7 @@ Banner Style
   background-size: cover;
 }
 #section-1 .content-slider .slider #top-banner-2 {
-  background: url('../images/banner-02.jpg') no-repeat center center;
+  background: url('../images/belledonne.jpg') no-repeat center center;
   background-size: cover;
 }
 #section-1 .content-slider .slider #top-banner-3 {
@@ -885,8 +948,7 @@ Banner Style
   font-weight: 500;
   text-align: center;
   display: inline-block;
-  width: 100%;
-}
+  width: 100%;}
 #section-1 .content-slider nav .controls label:hover {
   color: #22b3c1;
 }

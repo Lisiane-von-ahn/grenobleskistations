@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+{% extends 'base.html' %}
+{% load static %}
+{% load base64_filters %}
+
+{% block title %}Stations de Ski{% endblock %}
+
+{% block content %}
+
+    <!-- ***** Section Principale ***** -->
+    <section class="ski-stations-map py-5">
+        <div class="container">
+            <div class="section-heading">
+                <h2 class="mb-4">Carte des Stations de Ski</h2>
+                <p>Explorez nos stations de ski à travers la carte interactive.</p>
+            </div>
+            <!-- Map container -->
+            <div id="ski-map" style="height: 500px;"></div>
+        </div>
+    </section>
+
+    <section class="weather-snow-level-ski-stations">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Conditions Météorologiques</h5>
+                            <div id="weather-icon" style="font-size: 48px;"></div>
+                            <p id="weather-condition"></p>
+                            <p id="temperature"></p>
+                            <p id="snow-level"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ski Stations Details Section -->
+                <div class="col-md-6">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <img src="data:image/jpeg;base64,{{ station.image|b64encode }}" class="card-img-top" alt="{{ station.name }}">
+                                
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ station.name }}</h5>
+                                    <p class="card-text"><i class="fas fa-users"></i> Capacité : {{ station.capacity }} personnes</p>
+                                    <p class="card-text"><i class="fas fa-road"></i> Pistes : {{ station.num_circuits }} pistes</p>
+                                    <p class="card-text"><i class="fas fa-signal"></i> Difficulté : {{ station.difficulty }}</p>
+                                    <p class="card-text">
+                                        <strong>Services :</strong>
+                                        <ul>
+                                            {% for store in station.servicestore_set.all %}
+                                                <li>{{ store.name }} ({{ store.type }}) - {{ store.opening_hours }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Répétez la structure de la carte pour chaque station -->
+                    </div>
+                </div>
+
+                <section class="bus-lines-details py-5">
+                    <div class="row">
+                        <div class="col-md-32">
+                            {% for bus_line in bus_lines %}
+                            <div class="col-md-32 mb-4">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h5 class="card-title"><i class="fas fa-bus"></i> Ligne de Bus : {{ bus_line.bus_number }}</h5>
+                                        <p class="card-text"><i class="fas fa-map-marker-alt"></i> Départ : {{ bus_line.departure_stop }}</p>
+                                        <p class="card-text"><i class="fas fa-map-signs"></i> Arrivée : {{ bus_line.arrival_stop }}</p>
+                                        <p class="card-text"><i class="fas fa-clock"></i> Fréquence : {{ bus_line.frequency }}</p>
+                                        <p class="card-text"><i class="fas fa-hourglass-half"></i> Durée du Trajet : {{ bus_line.travel_time }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // Use the station's latitude and longitude to center the map dynamically
+        var stationLat = {{ station.latitude }};
+        var stationLng = {{ station.longitude }};
+        
+        // Initialize the map and set its view to the ski station's coordinates
+        var map = L.map('ski-map').setView([stationLat, stationLng], 15);  // Adjust zoom level if necessary
+    
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+            attribution: 'Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+    
+        // Custom icon for ski station marker
+        var skiIcon = L.icon({
+            iconUrl: "{% static 'images/ski.png' %}",  // Replace with your own icon path
+            iconSize: [30, 30]
+        });
+    
+        // Add a marker at the ski station's location
+        var marker = L.marker([stationLat, stationLng], { icon: skiIcon }).addTo(map);
+    
+        // Bind a popup with the ski station's information
+        marker.bindPopup("<b>{{ station.name }}</b><br>Capacité: {{ station.capacity }} personnes<br>Pistes: {{ station.num_circuits }}<br>Difficulté: {{ station.difficulty }}");
+    
+        var apiKey = '{{ WEATHER_API_KEY }}';  
+        var weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${stationLat}&lon=${stationLng}&appid=${apiKey}&units=metric`;
+
+        // Map weather descriptions to icons
+        const weatherIcons = {
+            'clear sky': 'fas fa-sun',
+            'few clouds': 'fas fa-cloud-sun',
+            'scattered clouds': 'fas fa-cloud',
+            'broken clouds': 'fas fa-cloud',
+            'shower rain': 'fas fa-cloud-showers-heavy',
+            'rain': 'fas fa-cloud-rain',
+            'thunderstorm': 'fas fa-bolt',
+            'snow': 'fas fa-snowflake',
+            'mist': 'fas fa-smog'
+        };
+    
+        // Fetch weather data using the station's coordinates
+        fetch(weatherUrl)
+            .then(response => response.json())
+            .then(data => {
+                const weatherDescription = data.weather[0].description;
+                const weatherIconClass = weatherIcons[weatherDescription] || 'fas fa-question-circle';  // Fallback if no icon matches
+                
+                // Show the weather icon and data
+                document.getElementById('weather-icon').innerHTML = `<i class="${weatherIconClass}"></i>`;
+                document.getElementById('weather-condition').innerHTML = `<strong>Météo :</strong> ${weatherDescription}`;
+                document.getElementById('temperature').innerHTML = `<strong>Température :</strong> ${data.main.temp}°C`;
+                document.getElementById('snow-level').innerHTML = `<strong>Niveau de neige :</strong> ${data.snow ? data.snow['1h'] : 'Pas de neige'} cm`;
+            })
+            .catch(error => {
+                console.error('Erreur lors de la récupération des données météorologiques:', error);
+            });
+    </script>
+    
+{% endblock %}
