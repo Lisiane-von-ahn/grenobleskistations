@@ -66,8 +66,6 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'skistation_project.urls'
 
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
