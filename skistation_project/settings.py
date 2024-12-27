@@ -65,7 +65,12 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'skistation_project.urls'
 
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# settings.py
+
+if not DEBUG:
+    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
+else:
+    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
 TEMPLATES = [
     {
