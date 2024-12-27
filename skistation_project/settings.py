@@ -15,7 +15,8 @@ import dj_database_url
 import os
 
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# settings.py
+WHITENOISE_SKIP_MISSING_FILES = True# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -60,16 +61,12 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
 
 ROOT_URLCONF = 'skistation_project.urls'
 
-# settings.py
-
-if not DEBUG:
-    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
-else:
-    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 TEMPLATES = [
     {
@@ -123,9 +120,6 @@ AUTH_PASSWORD_VALIDATORS = [
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),  # Or wherever your static files are stored
 ]
-
-# settings.py
-WHITENOISE_SKIP_MISSING_FILES = True
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
