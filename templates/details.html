@@ -29,6 +29,14 @@
                             <div id="weather-icon" style="font-size: 48px;"></div>
                             <p id="weather-condition"></p>
                             <p id="temperature"></p>
+                            <p id="feels-like"></p>
+                            <p id="humidity"></p>
+                            <p id="wind-speed"></p>
+                            <p id="wind-direction"></p>
+                            <p id="visibility"></p>
+                            <p id="pressure"></p>
+                            <p id="sunrise"></p>
+                            <p id="sunset"></p>
                             <p id="snow-level"></p>
                         </div>
                     </div>
@@ -130,6 +138,7 @@
         fetch(weatherUrl)
             .then(response => response.json())
             .then(data => {
+                
                 const weatherDescription = data.weather[0].description;
                 const weatherIconClass = weatherIcons[weatherDescription] || 'fas fa-question-circle';  // Fallback if no icon matches
                 
@@ -138,6 +147,18 @@
                 document.getElementById('weather-condition').innerHTML = `<strong>Météo :</strong> ${weatherDescription}`;
                 document.getElementById('temperature').innerHTML = `<strong>Température :</strong> ${data.main.temp}°C`;
                 document.getElementById('snow-level').innerHTML = `<strong>Niveau de neige :</strong> ${data.snow ? data.snow['1h'] : 'Pas de neige'} cm`;
+                document.getElementById('feels-like').innerHTML = `<strong>Ressenti :</strong> ${data.main.feels_like}°C`;
+                document.getElementById('humidity').innerHTML = `<strong>Humidité :</strong> ${data.main.humidity}%`;
+                document.getElementById('wind-speed').innerHTML = `<strong>Vitesse du vent :</strong> ${data.wind.speed} m/s`;
+                document.getElementById('wind-direction').innerHTML = `<strong>Direction du vent :</strong> ${data.wind.deg}°`;
+                document.getElementById('visibility').innerHTML = `<strong>Visibilité :</strong> ${(data.visibility / 1000).toFixed(1)} km`;
+                document.getElementById('pressure').innerHTML = `<strong>Pression :</strong> ${data.main.pressure} hPa`;
+        
+                let sunrise = new Date(data.sys.sunrise * 1000).toLocaleTimeString();
+                let sunset = new Date(data.sys.sunset * 1000).toLocaleTimeString();
+                document.getElementById('sunrise').innerHTML = `<strong>Lever du soleil :</strong> ${sunrise}`;
+                document.getElementById('sunset').innerHTML = `<strong>Coucher du soleil :</strong> ${sunset}`;
+
             })
             .catch(error => {
                 console.error('Erreur lors de la récupération des données météorologiques:', error);
