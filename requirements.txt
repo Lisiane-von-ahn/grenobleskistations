@@ -8,3 +8,4 @@ whitenoise==6.5.0
 drf_spectacular
 dj-database-url
 mysqlclient
+Pillow
