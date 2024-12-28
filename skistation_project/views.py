@@ -10,7 +10,7 @@ def home(request):
     for station in queryset:
         print(f"{station.name}: {station.num_circuits} circuits")
 
-    random_ski_stations = queryset.order_by('?')[:4]
+    random_ski_stations = queryset.order_by('?')
 
     return render(request, 'index.html', {'ski_stations': random_ski_stations, 'all': queryset})
 
