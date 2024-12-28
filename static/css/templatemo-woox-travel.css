@@ -722,7 +722,7 @@ Header Style
     padding-right: 0px !important;
   }
   .header-area .main-nav .nav li a {
-    height: 50px !important;
+    height: 100px !important;
     line-height: 50px !important;
     padding: 0px !important;
     border: none !important;
@@ -765,6 +765,14 @@ Header Style
     height: 0px;
   }
 }
+
+/* Media query for mobile devices (screen width up to 768px) */
+@media (max-width: 768px) {
+  .header-area {
+      height: 160px;  /* Reduced height for mobile */
+  }
+}
+
 
 /* 
 ---------------------------------------------

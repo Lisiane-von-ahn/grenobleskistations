@@ -138,6 +138,6 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # Directory to store collec
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-if not os.getenv('DEBUG', 'False') == 'True':
+#if not os.getenv('DEBUG', 'False') == 'True':
     # Override the database settings with JAWSDB if in production
-    DATABASES['default'] = dj_database_url.config(default=os.environ.get('JAWSDB_URL'))
+    #DATABASES['default'] = dj_database_url.config(default=os.environ.get('JAWSDB_URL'))
