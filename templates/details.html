@@ -8,21 +8,43 @@
 {% block content %}
 
     <!-- ***** Section Principale ***** -->
-    <section class="ski-stations-map py-5">
-        <div class="container">
-            <div class="section-heading">
-                <h2 class="mb-4">Carte des Stations de Ski</h2>
-                <p>Explorez nos stations de ski à travers la carte interactive.</p>
-            </div>
-            <!-- Map container -->
-            <div id="ski-map" style="height: 500px;"></div>
-        </div>
-    </section>
-
+    
     <section class="weather-snow-level-ski-stations">
         <div class="container">
             <div class="row">
-                <div class="col-md-6">
+
+                <section class="ski-stations-map py-5">
+                    <div class="container">
+                        <div class="section-heading">
+                            <h2 class="mb-4">Carte des Stations de Ski</h2>
+                            <p>Explorez nos stations de ski à travers la carte interactive.</p>
+                        </div>
+                        <!-- Map container -->
+                        <div id="ski-map" style="height: 500px;"></div>
+                    </div>
+                </section>
+            
+
+                <section class="bus-lines-details py-2">
+                    <div class="row">
+                        <div class="col-md-32">
+                            {% for bus_line in bus_lines %}
+                            <div class="col-md-32 mb-4">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h5 class="card-title"><i class="fas fa-bus"></i> Ligne de Bus : {{ bus_line.bus_number }}</h5>
+                                        <p class="card-text"><i class="fas fa-map-marker-alt"></i> Départ : {{ bus_line.departure_stop }}</p>
+                                        <p class="card-text"><i class="fas fa-map-signs"></i> Arrivée : {{ bus_line.arrival_stop }}</p>
+                                        <p class="card-text"><i class="fas fa-clock"></i> Fréquence : {{ bus_line.frequency }}</p>
+                                        <p class="card-text"><i class="fas fa-hourglass-half"></i> Durée du Trajet : {{ bus_line.travel_time }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </section>
+                <div class="col-md-6" py-2>
                     <div class="card">
                         <div class="card-body">
                             <h5 class="card-title">Conditions Météorologiques</h5>
@@ -53,7 +75,6 @@
                                     <h5 class="card-title">{{ station.name }}</h5>
                                     <p class="card-text"><i class="fas fa-users"></i> Capacité : {{ station.capacity }} personnes</p>
                                     <p class="card-text"><i class="fas fa-road"></i> Pistes : {{ station.num_circuits }} pistes</p>
-                                    <p class="card-text"><i class="fas fa-signal"></i> Difficulté : {{ station.difficulty }}</p>
                                     <p class="card-text">
                                         <strong>Services :</strong>
                                         <ul>
@@ -69,25 +90,6 @@
                     </div>
                 </div>
 
-                <section class="bus-lines-details py-5">
-                    <div class="row">
-                        <div class="col-md-32">
-                            {% for bus_line in bus_lines %}
-                            <div class="col-md-32 mb-4">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <h5 class="card-title"><i class="fas fa-bus"></i> Ligne de Bus : {{ bus_line.bus_number }}</h5>
-                                        <p class="card-text"><i class="fas fa-map-marker-alt"></i> Départ : {{ bus_line.departure_stop }}</p>
-                                        <p class="card-text"><i class="fas fa-map-signs"></i> Arrivée : {{ bus_line.arrival_stop }}</p>
-                                        <p class="card-text"><i class="fas fa-clock"></i> Fréquence : {{ bus_line.frequency }}</p>
-                                        <p class="card-text"><i class="fas fa-hourglass-half"></i> Durée du Trajet : {{ bus_line.travel_time }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </section>
             </div>
         </div>
     </section>

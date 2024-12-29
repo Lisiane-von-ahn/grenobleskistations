@@ -6,6 +6,8 @@ class SkiStation(models.Model):
     longitude = models.DecimalField(max_digits=9, decimal_places=6)
     capacity = models.IntegerField(null=True)
     image = models.BinaryField(null=True, blank=True) 
+    altitude = models.IntegerField(null=False,default=1000)
+    distanceFromGrenoble = models.IntegerField(null=False,default=100)
 
     def __str__(self):
         return self.name
