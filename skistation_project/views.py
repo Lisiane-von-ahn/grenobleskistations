@@ -30,3 +30,26 @@ def ski_station_detail(request, station_id):
     
     return render(request, 'details.html', context)
 
+
+def ski_station_search(request):
+    query = SkiStation.objects.all()
+    
+    # Filters
+    capacity = request.GET.get('capacity')
+    distance = request.GET.get('distance')
+    altitude = request.GET.get('altitude')
+    
+    if capacity:
+        query = query.filter(capacity__gte=capacity)
+    if distance:
+        query = query.filter(distanceFromGrenoble__lte=distance)
+    if altitude:
+        query = query.filter(altitude__gte=altitude)
+    
+    context = {
+        'ski_stations': query,
+    }
+    
+    return render(request, 'search.html', context)
+
+

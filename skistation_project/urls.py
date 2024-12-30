@@ -21,4 +21,5 @@ urlpatterns = [
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('', views.home, name='my_template_view'),
     path('ski-station/<int:station_id>/', views.ski_station_detail, name='ski_station_detail'),
+    path('search/', views.ski_station_search, name='ski_station_search'),
 ]

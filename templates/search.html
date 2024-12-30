@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+{% extends 'base.html' %}
+{% load static %}
+{% load base64_filters %}
+
+{% block title %}Stations de Ski{% endblock %}
+
+{% block content %}
+
+<div class="page-heading">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                <h4>Rechercher des Stations de Ski</h4>
+                <h2>Trouvez la station de ski idéale</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Formulaire de recherche -->
+<div class="search-form">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12 py-30">
+                <form method="GET" id="search-form" action="{% url 'ski_station_search' %}">
+                    <div class="row">
+                        <div class="col-lg-3">
+                            <label for="capacity">Capacité</label>
+                            <input class="form-control" type="number" name="capacity" id="capacity" class="form-control" placeholder="Capacité minimale" value="{{ request.GET.capacity }}">
+                        </div>
+                        <div class="col-lg-3">
+                            <label for="distance">Distance de Grenoble (km)</label>
+                            <input type="number" name="distance" id="distance" class="form-control" placeholder="Distance maximale" value="{{ request.GET.distance }}">
+                        </div>
+                        <div class="col-lg-3">
+                            <label for="altitude">Altitude (m)</label>
+                            <input type="number" name="altitude" id="altitude" class="form-control" placeholder="Altitude minimale" value="{{ request.GET.altitude }}">
+                        </div>
+                        <div class="col-lg-3 align-self-end">
+                            <button type="submit" class="btn btn-primary w-100">Rechercher</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Résultats -->
+<div class="amazing-deals">
+    <div class="container">
+        <div class="row">
+            {% if ski_stations %}
+                {% for station in ski_stations %}
+                <div class="col-lg-6 col-sm-6">
+                    <div class="item">
+                        <div class="row">
+                            <div class="col-lg-6">
+                                <div class="image">
+                                    <img src="data:image/jpeg;base64,{{ station.image|b64encode }}" alt="{{ station.name }}">
+                                </div>
+                            </div>
+                            <div class="col-lg-6 align-self-center">
+                                <div class="content">
+                                    <h4>{{ station.name }}</h4>
+                                    <p>Altitude : {{ station.altitude }}m</p>
+                                    <p>Distance de Grenoble : {{ station.distanceFromGrenoble }} km</p>
+                                    <p>Capacité : {{ station.capacity }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-lg-12">
+                    <p>Aucune station de ski trouvée correspondant à vos critères.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+    
+{% endblock %}
