@@ -53,3 +53,44 @@ def ski_station_search(request):
     return render(request, 'search.html', context)
 
 
+def service_search(request):
+    # Récupérer toutes les stations de ski
+    ski_stations = SkiStation.objects.all()
+
+    # Récupérer tous les types distincts de services
+    service_types = ServiceStore.objects.values_list('type', flat=True).distinct()
+
+    # Filtrer les services en fonction des critères de recherche
+    services = ServiceStore.objects.all()
+    name = request.GET.get('name', '')
+    service_type = request.GET.get('type', '')
+    ski_station_id = request.GET.get('ski_station', '')
+
+    if name:
+        services = services.filter(name__icontains=name)
+    if service_type:
+        services = services.filter(type=service_type)
+    if ski_station_id:
+        services = services.filter(ski_station_id=ski_station_id)
+
+    context = {
+        'services': services,
+        'service_types': service_types,
+        'ski_stations': ski_stations,
+    }
+
+    return render(request, 'services.html', context)
+
+def bus_lines(request):
+    # Récupérer toutes les lignes de bus
+    bus_lines = BusLine.objects.all()
+
+    context = {
+        'bus_lines': bus_lines,
+    }
+
+    return render(request, 'bus.html', context)
+
+
+
+
