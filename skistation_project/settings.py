@@ -173,7 +173,6 @@ if not os.getenv('DEBUG', 'False') == 'True':
         'HOST': os.getenv('host', 'qssdsdsd'),
         'PORT': os.getenv('port', 'qssdsdsd'),
     }
-}
 
 
 SOCIALACCOUNT_LOGIN_REDIRECT_URL = '/'
