@@ -173,6 +173,7 @@ if not os.getenv('DEBUG', 'False') == 'True':
         'HOST': os.getenv('host', 'qssdsdsd'),
         'PORT': os.getenv('port', 'qssdsdsd'),
     }
+    DATABASES['default'] = dj_database_url.config(default=os.environ.get('JAWSDB_URL'))
 
 
 SOCIALACCOUNT_LOGIN_REDIRECT_URL = '/'
