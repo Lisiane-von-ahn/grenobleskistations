@@ -31,7 +31,7 @@ class ServiceStore(models.Model):
     latitude = models.DecimalField(max_digits=8, decimal_places=6)
     longitude = models.DecimalField(max_digits=9, decimal_places=6)
     type = models.CharField(max_length=50)
-    opening_hours = models.CharField(max_length=100, null=True)
+    opening_hours = models.CharField(max_length=100, null=True)    
 
     def __str__(self):
         return self.name

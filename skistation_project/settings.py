@@ -166,7 +166,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 if not os.getenv('DEBUG', 'False') == 'True':
     # Override the database settings with JAWSDB if in production
     DATABASES['default'] = {
-        'ENGINE': 'django.db.backends.postgresql',
+        'ENGINE': 'skistation_project.db_backends.postgresql',
         'NAME': os.getenv('database', 'qssdsdsd'),
         'USER': os.getenv('user', 'qssdsdsd'),
         'PASSWORD': os.getenv('password', 'qssdsdsd'),
