@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+{% extends 'base.html' %}
+{% load static %}
+{% load form_tags %}
+
+{% block title %}Register / S'inscrire{% endblock %}
+
+{% block content %}
+
+<div class="page-heading text-center py-50 bg-light-blue">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                <h4 class="text-muted">S'inscrire</h4>
+                <h2 class="text-primary">Créez votre compte</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="register-section py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-6 col-md-8">
+                <div class="card p-5 shadow-lg">
+                    <h3 class="text-primary text-center mb-4">Inscription</h3>
+                    <form method="POST">
+                        {% csrf_token %}
+
+                        <!-- Username Input -->
+                        <div class="form-group mb-3">
+                            {{ form.username.label_tag }}
+                            {{ form.username|add_class:"form-control" }}
+                            <small class="form-text text-muted">{{ form.username.help_text }}</small>
+                        </div>
+
+                        <!-- Email Input -->
+                        <div class="form-group mb-3">
+                            {{ form.mail.label_tag }}
+                            {{ form.mail }}
+                            <small class="form-text text-muted">{{ form.email.help_text }}</small>
+                        </div>
+
+                        <!-- Password1 Input -->
+                        <div class="form-group mb-3">
+                            {{ form.password1.label_tag }}
+                            {{ form.password1|add_class:"form-control" }}
+                        </div>
+
+                        <!-- Password2 Input -->
+                        <div class="form-group mb-4">
+                            {{ form.password2.label_tag }}
+                            {{ form.password2|add_class:"form-control" }}
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-primary btn-block py-2">S'inscrire</button>
+                        </div>
+                    </form>
+
+                    <!-- Display Form Errors in Bootstrap Alert -->
+                    {% if form.non_field_errors or form.errors %}
+                        <div class="alert alert-danger mt-4">
+                            <ul class="mb-0">
+                                {% for field, errors in form.errors.items %}
+                                    {% for error in errors %}
+                                        <li>{{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                                {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+
+                    <!-- Link to Login -->
+                    <p class="text-center mt-3 mb-0">
+                        <a href="{% url 'login' %}" class="text-secondary">Login / Se connecter</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

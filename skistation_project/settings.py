@@ -46,8 +46,31 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_yasg',
     'drf_spectacular',
-    'skistation_project'
+    'skistation_project',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',    
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.openapi.AutoSchema',
+}
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+ACCOUNT_ADAPTER = 'skistation_project.adapters.CustomAccountAdapter'
+
+SOCIALACCOUNT_ADAPTER = 'skistation_project.adapters.CustomSocialAccountAdapter'
+
+SITE_ID = 1
+LOGIN_REDIRECT_URL = '/'
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
 
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
@@ -62,6 +85,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'skistation_project.middleware.CookieConsentMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
 ]
 
 ROOT_URLCONF = 'skistation_project.urls'
@@ -141,3 +166,21 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 if not os.getenv('DEBUG', 'False') == 'True':
     # Override the database settings with JAWSDB if in production
     DATABASES['default'] = dj_database_url.config(default=os.environ.get('JAWSDB_URL'))
+
+
+SOCIALACCOUNT_LOGIN_REDIRECT_URL = '/'
+SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URL ="http://127.0.0.1:8000/accounts/google/login/callback/"
+
+# settings.py
+LOGOUT_REDIRECT_URL = '/'
+
+# settings.py
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': ['profile', 'email'],
+        'AUTH_PARAMS': {'access_type': 'online'},
+        'OAUTH_PKCE_ENABLED': True,
+    }
+}
+
+ACCOUNT_AUTHENTICATION_METHOD = "username_email"

@@ -1,7 +1,9 @@
+urllib3==1.26.15
 Django==4.2.4
 djangorestframework==3.14.0
 psycopg2-binary==2.9.10
 drf-yasg==1.21.4
+django-filter
 gunicorn==21.2.0
 django-heroku==0.3.1
 whitenoise==6.5.0
@@ -9,3 +11,9 @@ drf_spectacular
 dj-database-url
 mysqlclient
 Pillow
+django-allauth
+PyJWT
+pyyaml
+coreapi
+openapi-codec
+coreschema

@@ -1,6 +1,12 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from api.models import SkiStation, BusLine, ServiceStore, SkiCircuit
 from django.db.models import Sum
+from django.contrib.auth.forms import UserCreationForm
+from .forms import UserRegistrationForm
+from allauth.socialaccount.providers.google.views import OAuth2LoginView
+from allauth.socialaccount.providers.google.views import OAuth2CallbackView
+from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
+from allauth.account.adapter import DefaultAccountAdapter
 
 def home(request):
 
@@ -91,6 +97,33 @@ def bus_lines(request):
 
     return render(request, 'bus.html', context)
 
+def terms_and_conditions(request):
+    return render(request, 'terms.html')
 
+def register(request):
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            return redirect('login')  # Redirect to login after registration
+    else:
+        form = UserCreationForm()
 
+    return render(request, 'register.html', {'form': form})
 
+class CustomGoogleLoginView(OAuth2LoginView):
+    def get(self, request, *args, **kwargs):
+        adapter = DefaultSocialAccountAdapter()
+        return super().get(request, *args, **kwargs)
+    
+class CustomGoogleCallbackView(OAuth2CallbackView):
+    def get(self, request, *args, **kwargs):
+        # Custom logic, if needed
+        return super().get(request, *args, **kwargs)    
+    
+class CustomAccountAdapter(DefaultAccountAdapter):
+    def save_user(self, request, user, form, commit=True):
+        # Set the username to the email
+        print("teste");
+        user.username = user.email
+        return super().save_user(request, user, form, commit)

@@ -2398,3 +2398,19 @@ body {
   }
 }
 
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+main {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+footer {
+  margin-top: auto; /* Pushes the footer to the bottom */
+  padding: 10px 0;
+  text-align: center;
+}

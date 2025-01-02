@@ -21,63 +21,37 @@
     <link rel="stylesheet" href="{% static 'css/animate.css' %}">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="{% static 'styler.js'%}"></script>
+
+    <!-- Custom CSS for the page -->
     <style>
-        /* Ajuster les titres */
+        /* Custom styles */
         h2, h5 {
             font-weight: 600;
             color: #333;
         }
         
-        /* Appliquer une bordure arrondie et une ombre douce aux cartes */
         .card {
             border-radius: 15px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
-        
-        /* Espacement interne des cartes */
-        .card-body {
-            padding: 20px;
-        }
-        
-        /* Effet hover sur les cartes */
-        .card:hover {
-            transform: translateY(-5px);
-            transition: transform 0.3s ease;
-        }
-        
-        /* Styliser le menu */
+
         .nav li a {
             color: #555;
             padding: 10px 20px;
             transition: background-color 0.3s ease;
         }
-        
+
         .nav li a:hover {
             background-color: #ff6b6b;
             color: #fff;
-        }
-        
-        /* Styles pour la section météo */
-        .weather-snow-level-ski-stations .card {
-            background-color: #f7f7f7;
-        }
-        
-        #weather-icon i {
-            color: #ff6b6b;
-        }
-        
-        /* Optimisation pour mobile */
-        @media (max-width: 768px) {
-            .ski-stations-map, .weather-snow-level-ski-stations {
-                text-align: center;
-            }
         }
     </style>        
 </head>
 
 <body>
 
-    <!-- ***** Zone d'En-tête ***** -->
+    <!-- ***** Header Area ***** -->
     <header class="header-area header-sticky">
         <div class="container">
             <div class="row">
@@ -91,9 +65,26 @@
                             <li><a href="{% url 'ski_station_search' %}">Recherche</a></li>
                             <li><a href="{% url 'services' %}">Services</a></li>
                             <li><a href="{% url 'bus' %}">Lignes de Bus</a></li>
+                            <li><a href="{% url 'terms' %}">Terms</a></li>
                             <li><a href="{% url 'schema-swagger-ui' %}">API</a></li>
-                            <li><a href="{% url 'admin:index' %}">Admin</a></li>
-                        </ul>   
+
+                            <!-- Authentication Links -->
+                            {% if user.is_authenticated %}
+                                <!-- Display name and logout option -->
+                                <li><a href="#">Bonjour, {{ user.first_name }} {{ user.last_name }}</a></li>
+                                
+                                <!-- Logout Form -->
+                                <li>
+                                    <form method="POST" action="{% url 'logout' %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-danger">Déconnexion</button>
+                                    </form>
+                                </li>
+                            {% else %}
+                                <!-- Display login option -->
+                                <li><a href="{% url 'login' %}">Connexion</a></li>
+                            {% endif %}
+                        </ul>
                         <a class='menu-trigger'>
                             <span>Menu</span>
                         </a>
@@ -102,24 +93,25 @@
             </div>
         </div>
     </header>
-    <!-- ***** Fin de l'En-tête ***** -->
+    <!-- ***** End of Header ***** -->
 
-    <!-- ***** Contenu Dynamique (Section de contenu injecté) ***** -->
-    <main>
-        {% block content %}
-        <!-- Dynamic content will go here -->
-        {% endblock %}
-        <div class="call-to-action">
-        
-          <footer>
+    <!-- ***** Dynamic Content Section ***** -->
+    <main>                
+        <div style="margin-top: 141px">
+            {% block content %} 
+            <!-- Dynamic content will go here -->
+            {% endblock %}
+        </div>
+    
+        <footer>
             <div class="container">
-              <div class="row">
-                <div class="col-lg-12">
-                  <p>Copyright © 2025 Grenoble Ski Station
+                <div class="row">
+                    <div class="col-lg-12">
+                        <p>Copyright © 2025 Grenoble Ski Station</p>
+                    </div>
                 </div>
-              </div>
             </div>
-          </footer>    
+        </footer>
     </main>
 
     <!-- Scripts Bootstrap -->
@@ -127,6 +119,5 @@
     <script src="{% static 'vendor/bootstrap/js/bootstrap.min.js'%}"></script>
 
 </body>
-
 
 </html>
