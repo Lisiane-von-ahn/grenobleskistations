@@ -25,12 +25,11 @@
 
     <!-- Custom CSS for the page -->
     <style>
-        /* Custom styles */
         h2, h5 {
             font-weight: 600;
             color: #333;
         }
-        
+
         .card {
             border-radius: 15px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -45,6 +44,23 @@
         .nav li a:hover {
             background-color: #ff6b6b;
             color: #fff;
+        }
+
+        /* Style pour la bannière de consentement des cookies */
+        #cookie-banner {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 15px;
+            display: none; /* Masqué par défaut */
+            z-index: 1000;
+        }
+
+        #cookie-banner .btn {
+            margin-left: 10px;
         }
     </style>        
 </head>
@@ -68,12 +84,8 @@
                             <li><a href="{% url 'terms' %}">Terms</a></li>
                             <li><a href="{% url 'schema-swagger-ui' %}">API</a></li>
 
-                            <!-- Authentication Links -->
                             {% if user.is_authenticated %}
-                                <!-- Display name and logout option -->
                                 <li><a href="#">Bonjour, {{ user.first_name }} {{ user.last_name }}</a></li>
-                                
-                                <!-- Logout Form -->
                                 <li>
                                     <form method="POST" action="{% url 'logout' %}">
                                         {% csrf_token %}
@@ -81,7 +93,6 @@
                                     </form>
                                 </li>
                             {% else %}
-                                <!-- Display login option -->
                                 <li><a href="{% url 'login' %}">Connexion</a></li>
                             {% endif %}
                         </ul>
@@ -95,11 +106,17 @@
     </header>
     <!-- ***** End of Header ***** -->
 
+    <!-- Bannière de consentement des cookies -->
+    <div id="cookie-banner" class="text-center">
+        <p>Nous utilisons des cookies pour améliorer votre expérience. <a href="{% url 'terms' %}" class="text-info">En savoir plus</a></p>
+        <button id="accept-cookies" class="btn btn-success">Accepter</button>
+        <button id="reject-cookies" class="btn btn-danger">Refuser</button>
+    </div>
+
     <!-- ***** Dynamic Content Section ***** -->
-    <main>                
+    <main>
         <div style="margin-top: 141px">
             {% block content %} 
-            <!-- Dynamic content will go here -->
             {% endblock %}
         </div>
     
@@ -118,6 +135,34 @@
     <script src="{% static 'vendor/jquery/jquery.min.js' %}"></script>
     <script src="{% static 'vendor/bootstrap/js/bootstrap.min.js'%}"></script>
 
-</body>
+    <!-- Script pour gérer la bannière de consentement des cookies -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Vérifie si l'utilisateur a déjà donné son consentement
+            const cookieConsent = "{{ request.cookie_consent }}";
 
+            if (!cookieConsent || cookieConsent === 'unknown') {
+                document.getElementById('cookie-banner').style.display = 'block';
+            }
+
+            document.getElementById('accept-cookies').addEventListener('click', function() {
+                setCookie('cookie_consent', 'accepted', 365);
+                document.getElementById('cookie-banner').style.display = 'none';
+            });
+
+            document.getElementById('reject-cookies').addEventListener('click', function() {
+                setCookie('cookie_consent', 'rejected', 365);
+                document.getElementById('cookie-banner').style.display = 'none';
+            });
+
+            function setCookie(name, value, days) {
+                const date = new Date();
+                date.setTime(date.getTime() + (days*24*60*60*1000));
+                const expires = "expires=" + date.toUTCString();
+                document.cookie = name + "=" + value + ";" + expires + ";path=/";
+            }
+        });
+    </script>
+
+</body>
 </html>

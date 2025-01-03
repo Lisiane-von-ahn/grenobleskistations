@@ -97,7 +97,7 @@
                                             <h4>{{ station.name }}</h4>
                                             <span>{{ station.location }}</span>
                                             <div class="main-button">
-                                                <a href="">Découvrez</a>
+                                                <a href="{% url 'ski_station_detail' station.id %}">Découvrez</a>
                                             </div>
                                             <p>Découvrez la beauté de {{ station.name }}.</p>
                                             <ul class="info">

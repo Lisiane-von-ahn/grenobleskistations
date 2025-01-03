@@ -7,64 +7,67 @@
 
 {% block content %}
 
-<div class="page-heading text-center py-25 bg-light-blue">
+<div class="page-heading text-center py-5 bg-light-blue">
     <div class="container">
-        <div class="row">
-            <div class="col-lg-12">
-                <h4 class="text-muted">Rechercher des Stations de Ski</h4>
-                <h2 class="text-primary">Trouvez la station de ski idéale</h2>
-            </div>
-        </div>
+        <h2 class="display-4 text-primary">Trouvez la station de ski idéale</h2>
+        <p class="lead text-muted">Recherchez des stations de ski adaptées à vos préférences.</p>
     </div>
 </div>
 
-<!-- Formulaire de recherche -->
+<!-- Formulaire de recherche amélioré -->
 <div class="search-form py-5">
     <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-lg-10">
-                <form method="GET" id="search-form" action="{% url 'ski_station_search' %}">
-                    <div class="row g-3">
-                        <div class="col-lg-3">
-                            <label for="capacity" class="form-label">Capacité</label>
-                            <input class="form-control form-control-lg" type="number" name="capacity" id="capacity" placeholder="Capacité minimale" value="{{ request.GET.capacity }}">
-                        </div>
-                        <div class="col-lg-3">
-                            <label for="distance" class="form-label">Distance de Grenoble (km)</label>
-                            <input type="number" name="distance" id="distance" class="form-control form-control-lg" placeholder="Distance maximale" value="{{ request.GET.distance }}">
-                        </div>
-                        <div class="col-lg-3">
-                            <label for="altitude" class="form-label">Altitude (m)</label>
-                            <input type="number" name="altitude" id="altitude" class="form-control form-control-lg" placeholder="Altitude minimale" value="{{ request.GET.altitude }}">
-                        </div>
-                        <div class="col-lg-3 align-self-end">
-                            <button type="submit" class="btn btn-primary btn-lg w-100">Rechercher</button>
-                        </div>
-                    </div>
-                </form>
+        <form method="GET" id="search-form" action="{% url 'ski_station_search' %}">
+            <div class="row g-4">
+                <div class="col-lg-3">
+                    <label for="capacity" class="form-label">
+                        <i class="bi bi-people"></i> Capacité
+                    </label>
+                    <input class="form-control form-control-lg" type="number" name="capacity" id="capacity" placeholder="Capacité minimale" value="{{ request.GET.capacity }}">
+                </div>
+                <div class="col-lg-3">
+                    <label for="distance" class="form-label">
+                        <i class="bi bi-geo-alt"></i> Distance de Grenoble (km)
+                    </label>
+                    <input class="form-control form-control-lg" type="number" name="distance" id="distance" placeholder="Distance maximale" value="{{ request.GET.distance }}">
+                </div>
+                <div class="col-lg-3">
+                    <label for="altitude" class="form-label">
+                        <i class="bi bi-arrow-up"></i> Altitude (m)
+                    </label>
+                    <input class="form-control form-control-lg" type="number" name="altitude" id="altitude" placeholder="Altitude minimale" value="{{ request.GET.altitude }}">
+                </div>
+                <div class="col-lg-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary btn-lg w-100">
+                        <i class="bi bi-search"></i> Rechercher
+                    </button>
+                </div>
             </div>
-        </div>
+        </form>
     </div>
 </div>
 
-<!-- Résultats -->
-<div class="amazing-deals py-5">
+<!-- Résultats améliorés -->
+<div class="amazing-deals py-5 bg-light">
     <div class="container">
-        <div class="row g-4">
+        <div class="row g-4 justify-content-center">
             {% if ski_stations %}
                 {% for station in ski_stations %}
-                <div class="col-lg-6 col-sm-6">
+                <div class="col-lg-6 col-sm-12">
                     <div class="card shadow-sm border-0 h-100">
                         <div class="row g-0">
                             <div class="col-md-6">
-                                <img src="data:image/jpeg;base64,{{ station.image|b64encode }}" class="card-img-top" alt="{{ station.name }}">
+                                <img src="data:image/jpeg;base64,{{ station.image|b64encode }}" class="img-fluid rounded-start" alt="{{ station.name }}">
                             </div>
-                            <div class="col-md-6">
-                                <div class="card-body d-flex flex-column justify-content-center">
+                            <div class="col-md-6 d-flex align-items-center">
+                                <div class="card-body">
                                     <h4 class="card-title text-primary">{{ station.name }}</h4>
-                                    <p class="card-text">Altitude : {{ station.altitude }}m</p>
-                                    <p class="card-text">Distance de Grenoble : {{ station.distanceFromGrenoble }} km</p>
-                                    <p class="card-text">Capacité : {{ station.capacity }}</p>
+                                    <ul class="list-unstyled">
+                                        <li><strong>Altitude :</strong> {{ station.altitude }} m</li>
+                                        <li><strong>Distance :</strong> {{ station.distanceFromGrenoble }} km</li>
+                                        <li><strong>Capacité :</strong> {{ station.capacity }}</li>
+                                    </ul>
+                                    <a href="{% url 'ski_station_detail' station.id %}" class="btn btn-outline-primary btn-sm">Voir plus de détails</a>
                                 </div>
                             </div>
                         </div>
@@ -72,8 +75,8 @@
                 </div>
                 {% endfor %}
             {% else %}
-                <div class="col-lg-12">
-                    <p class="text-muted text-center">Aucune station de ski trouvée correspondant à vos critères.</p>
+                <div class="col-lg-12 text-center">
+                    <p class="text-muted">Aucune station de ski ne correspond à vos critères. Essayez de modifier les filtres.</p>
                 </div>
             {% endif %}
         </div>

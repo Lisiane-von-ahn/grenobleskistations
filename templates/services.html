@@ -24,11 +24,9 @@
             <div class="col-lg-10">
                 <form method="GET" id="search-form" action="{% url 'services' %}">
                     <div class="row g-3">
-                        <div class="col-lg-4">
-                            <label for="name" class="form-label">Nom du service</label>
-                            <input class="form-control form-control-lg" type="text" name="name" id="name" placeholder="Nom du service" value="{{ request.GET.name }}">
-                        </div>
-                        <div class="col-lg-4">
+                        <!-- Suppression du champ 'Nom du service' -->
+
+                        <div class="col-lg-6">
                             <label for="type" class="form-label">Type de service</label>
                             <select class="form-control form-control-lg" name="type" id="type">
                                 <option value="">Tous les types</option>
@@ -37,7 +35,8 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-lg-4">
+
+                        <div class="col-lg-6">
                             <label for="ski_station" class="form-label">Station de ski</label>
                             <select class="form-control form-control-lg" name="ski_station" id="ski_station">
                                 <option value="">Toutes les stations</option>
@@ -47,7 +46,7 @@
                             </select>
                         </div>
                     </div>
-                    <div class="row mt-3">
+                    <div class="row mt-4">
                         <div class="col-lg-12 text-center">
                             <button type="submit" class="btn btn-primary btn-lg w-50">Rechercher</button>
                         </div>
