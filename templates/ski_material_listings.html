@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+{% extends 'base.html' %}
+{% load static %}
+{% load base64_filters %}
+
+{% block title %}Donner ou Vendre du Matériel de Ski{% endblock %}
+
+{% block content %}
+
+<div class="page-heading text-center py-5 bg-light-blue">
+    <div class="container">
+        <h2 class="display-4 text-primary">Donnez ou Vendez du Matériel de Ski</h2>
+        <p class="lead text-muted">Publiez votre matériel de ski à vendre ou à donner.</p>
+    </div>
+</div>
+
+<!-- Formulaire de publication de matériel -->
+<div class="publish-form py-5">
+    <div class="container">
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-primary btn-lg mt-3">Publier</button>
+        </form>
+    </div>
+</div>
+
+<!-- Affichage des annonces existantes -->
+<div class="listings py-5 bg-light">
+    <div class="container">
+        <h3 class="text-primary mb-4">Annonces de matériel de ski</h3>
+        <div class="row g-4">
+            {% if listings %}
+                {% for listing in listings %}
+                <div class="col-lg-6 col-sm-12">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="row g-0">
+                            <div class="col-md-6">
+                                <img src="data:image/jpeg;base64,{{ listing.image|b64encode }}" class="img-fluid rounded-start" alt="{{ listing.title }}">
+                            </div>
+                            <div class="col-md-6 d-flex align-items-center">
+                                <div class="card-body">
+                                    <h4 class="card-title text-primary">{{ listing.title }}</h4>
+                                    <ul class="list-unstyled">
+                                        <li><strong>Ville :</strong> {{ listing.city }}</li>
+                                        <li><strong>Type :</strong> {{ listing.get_material_type_display }}</li>
+                                        {% if listing.price %}
+                                            <li><strong>Prix :</strong> {{ listing.price }} €</li>
+                                        {% else %}
+                                            <li><strong>Prix :</strong> Gratuit</li>
+                                        {% endif %}
+                                    </ul>
+                                    <a href="{% url 'listing_detail' id=listing.id %}" class="btn btn-outline-primary btn-sm">Voir plus de détails</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-lg-12 text-center">
+                    <p class="text-muted">Aucune annonce disponible pour le moment.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}

@@ -2414,3 +2414,67 @@ footer {
   padding: 10px 0;
   text-align: center;
 }
+
+.floating-btn {
+  position: fixed;
+  bottom: 20px; /* Adjust this value to move the button up or down */
+  right: 20px;  /* Adjust this value to move the button left or right */
+  background-color: #ff6b6b;
+  color: white;
+  font-size: 24px;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  text-decoration: none;
+  z-index: 1000; /* Makes sure it's above other elements */
+  transition: all 0.3s ease;
+}
+
+.floating-btn:hover {
+  background-color: #e04646;
+  transform: scale(1.1); /* Slightly enlarge when hovered */
+}
+
+.badge-danger {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background-color: red;
+  color: white;
+  border-radius: 50%;
+  font-size: 12px;
+  padding: 3px 6px;
+}
+
+.profile-header {
+  background-color: #22b3c1;  /* Green color for header */
+  color: white;
+  padding: 20px;
+  text-align: center;
+}
+
+.profile-picture {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.profile-content {
+  margin-top: 20px;
+}
+
+.profile-content h3 {
+  color: #333;
+}
+
+.profile-content form button {
+  margin-top: 10px;
+}
+
+.mycolor
+{
+  background-color: #22b3c1;  /* Green color for header */
+}

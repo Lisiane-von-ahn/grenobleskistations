@@ -30,4 +30,9 @@ urlpatterns = [
     path('logout/', auth_views.LogoutView.as_view(next_page='my_template_view'), name='logout'),
     path('register/', views.register, name='register'),
     path('accounts/', include('allauth.urls')),
+    path('ski-material-listings/', views.ski_material_listings, name='ski_material_listings'),
+    path('listing/<int:id>/', views.listing_detail, name='listing_detail'),
+    path('messages/', views.messages_view, name='messages'),
+    path('profile/', views.profile_view, name='profile'),
+    path('delete_account/', views.delete_account, name='delete_account'),
 ]

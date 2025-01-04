@@ -103,6 +103,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'skistation_project.context_processors.global_variables',
+                'skistation_project.context_processors.unread_message_count',
             ],
         },
     },

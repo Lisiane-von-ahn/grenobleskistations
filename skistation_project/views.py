@@ -1,12 +1,19 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from api.models import SkiStation, BusLine, ServiceStore, SkiCircuit
+from api.models import SkiStation, BusLine, ServiceStore, SkiCircuit, SkiMaterialListing,Message, UserProfile
 from django.db.models import Sum
 from django.contrib.auth.forms import UserCreationForm
-from .forms import UserRegistrationForm
+from .forms import UserRegistrationForm,SkiMaterialListingForm, ProfileForm
 from allauth.socialaccount.providers.google.views import OAuth2LoginView
 from allauth.socialaccount.providers.google.views import OAuth2CallbackView
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from allauth.account.adapter import DefaultAccountAdapter
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.contrib.auth import get_user_model
+import base64
+
 
 def home(request):
 
@@ -127,3 +134,74 @@ class CustomAccountAdapter(DefaultAccountAdapter):
         print("teste");
         user.username = user.email
         return super().save_user(request, user, form, commit)
+    
+@login_required(login_url='login')
+def ski_material_listings(request):
+    listings = SkiMaterialListing.objects.all().order_by('-posted_at')
+
+    if request.method == 'POST':
+        form = SkiMaterialListingForm(request.POST, request.FILES)
+        if form.is_valid():
+            listing = form.save(commit=False)
+            listing.user = request.user  # Set the current user as the listing creator
+            listing.save()
+            return redirect('ski_material_listings')
+    else:
+        form = SkiMaterialListingForm()
+
+    return render(request, 'ski_material_listings.html', {'form': form, 'listings': listings})
+
+def listing_detail(request, id):
+    listing = get_object_or_404(SkiMaterialListing, id=id)
+    return render(request, 'listing_detail.html', {'listing': listing})
+
+@login_required
+def messages_view(request):
+    messages, unread_count = getMessagesAndCount(request)
+
+    return render(request, 'messages/messages.html', {
+        'messages': messages,
+        'unread_count': unread_count
+    })
+
+def getMessagesAndCount(request):
+    messages = Message.objects.filter(recipient=request.user).order_by('-created_at')
+    
+    unread_messages = messages.filter(is_read=False)
+    unread_messages.update(is_read=True)
+
+    unread_count = messages.filter(is_read=False).count()
+    return messages,unread_count
+
+@login_required
+def profile_view(request):
+    user = request.user  # Get the current user
+
+    profile_picture_data = None
+    try:
+        user_profile = UserProfile.objects.get(user=user)  # Get the user profile
+        if user_profile.profile_picture:
+            # Convert binary data to base64 string for rendering in the template
+            profile_picture_data = base64.b64encode(user_profile.profile_picture).decode('utf-8')
+    except UserProfile.DoesNotExist:
+        pass  # Handle case where UserProfile does not exist for the user
+
+    if request.method == 'POST':
+        form = ProfileForm(request.POST, request.FILES, instance=user)  # Add request.FILES
+        if form.is_valid():
+            form.save()  # Save the form data and profile picture
+            return redirect('profile')  # Redirect to the profile page after saving
+    else:
+        form = ProfileForm(instance=user)  # Pass the instance here as well
+
+    return render(request, 'profile.html', {
+        'form': form,
+        'profile_picture': profile_picture_data  # Pass the profile picture in base64
+    })
+
+@login_required
+def delete_account(request):
+    user = request.user
+    user.delete()
+    messages.success(request, 'Your account has been deleted successfully.')
+    return redirect('home')  # Redirect to home or another page
