@@ -8,6 +8,6 @@ router.register(r'servicestores', ServiceStoreViewSet)
 router.register(r'skicircuits', SkiCircuitViewSet)
 router.register(r'skimaterial', SkiMaterialListingViewSet)
 router.register(r'userprofile', UserProfileViewSet)
-router.register(r'userprofile', UserViewSet)
+router.register(r'userview', UserViewSet)
 
 urlpatterns = router.urls
