@@ -67,7 +67,6 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response({'message': 'User created successfully.'}, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
 def login_view(request):
     username = request.data.get('username')
     password = request.data.get('password')
