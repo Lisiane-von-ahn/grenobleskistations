@@ -67,12 +67,14 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response({'message': 'User created successfully.'}, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def login_view(request):
     username = request.data.get('username')
     password = request.data.get('password')
     user = authenticate(request, username=username, password=password)
     if user is not None:
         login(request, user)
-        return Response({'token': user}, status=status.HTTP_200_OK)
+        token, created = Token.objects.get_or_create(user=user)
+        return Response({'token': token.key}, status=status.HTTP_200_OK)
     return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
