@@ -51,7 +51,7 @@ class UserProfileViewSet(viewsets.ModelViewSet):
         profile = UserProfile.objects.get(user=request.user)
         serializer = self.get_serializer(profile)
         return Response(serializer.data)
-    
+        
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserProfileSerializer
