@@ -9,6 +9,7 @@ from rest_framework.authtoken.views import ObtainAuthToken
 from .models import SkiStation, BusLine, ServiceStore, SkiCircuit, SkiMaterialListing, Message, UserProfile
 from .serializers import (SkiStationSerializer, BusLineSerializer, ServiceStoreSerializer, 
                           SkiCircuitSerializer, SkiMaterialListingSerializer, MessageSerializer, UserProfileSerializer)
+from rest_framework.exceptions import ValidationError
 
 
 class SkiStationViewSet(viewsets.ModelViewSet):
@@ -32,8 +33,17 @@ class SkiMaterialListingViewSet(viewsets.ModelViewSet):
     serializer_class = SkiMaterialListingSerializer
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        user_id = self.request.data.get('user')  # <- Prend l'id du POST envoyé
+        if not user_id:
+            raise ValidationError("User ID is required.")
 
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            raise ValidationError("Invalid user ID.")
+
+        serializer.save(user=user)
+        
 class MessageViewSet(viewsets.ModelViewSet):
     queryset = Message.objects.all()
     serializer_class = MessageSerializer
