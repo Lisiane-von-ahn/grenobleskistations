@@ -51,19 +51,14 @@ class SkiCircuit(models.Model):
     def __str__(self):
         return f"{self.difficulty} - {self.num_pistes} pistes"
 
-class SkiMaterialListing(models.Model):
-    TYPE_CHOICES = [
-        ('sale', 'For Sale'),
-        ('donation', 'For Donation')
-    ]
-    
+class SkiMaterialListing(models.Model):    
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.CharField(max_length=200)
     description = models.TextField()
     ski_station = models.ForeignKey(SkiStation, on_delete=models.SET_NULL, null=True, blank=True)
     city = models.CharField(max_length=100)  # New field to specify pickup city
     price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    material_type = models.CharField(max_length=10, choices=TYPE_CHOICES)
+    material_type = models.CharField(max_length=10)
     image = models.BinaryField(null=True, blank=True, editable=True) 
     posted_at = models.DateTimeField(auto_now_add=True)
 
