@@ -47,18 +47,36 @@ from django.utils.translation import check_for_language, activate
 from datetime import timedelta
 import json
 import base64
+import logging
+
+
+logger = logging.getLogger('skistation.auth')
 
 
 def set_language_view(request):
     language = request.GET.get('language', '').strip()
     next_url = request.GET.get('next', '/') or '/'
+    is_valid = bool(language and check_for_language(language))
 
     response = HttpResponseRedirect(next_url)
-    if language and check_for_language(language):
+    if is_valid:
         activate(language)
         if hasattr(request, 'session'):
             request.session['django_language'] = language
         response.set_cookie('django_language', language)
+        logger.info(
+            'Language switched language=%s next=%s user=%s',
+            language,
+            next_url,
+            getattr(getattr(request, 'user', None), 'id', 'anonymous'),
+        )
+    else:
+        logger.warning(
+            'Language switch ignored invalid_language=%s next=%s user=%s',
+            language,
+            next_url,
+            getattr(getattr(request, 'user', None), 'id', 'anonymous'),
+        )
     return response
 
 
