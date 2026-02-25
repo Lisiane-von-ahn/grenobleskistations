@@ -24,7 +24,7 @@ class BusLine(models.Model):
     bus_number = models.CharField(max_length=50)
     departure_stop = models.CharField(max_length=100)
     arrival_stop = models.CharField(max_length=100)
-    frequency = models.CharField(max_length=50, null=True)
+    frequency = models.CharField(max_length=120, null=True)
     travel_time = models.CharField(max_length=50, null=True)
     route_points = models.CharField(max_length=255, null=True, blank=True)
     departure_latitude = models.DecimalField(max_digits=8, decimal_places=6, null=True, blank=True)
