@@ -55,7 +55,9 @@ PY
 
     if [[ "${SHOULD_SEED}" == "yes" ]]; then
         echo "Running initial seed..."
-        python /app/load_ski_stations.py
+        if ! python /app/load_ski_stations.py; then
+            echo "WARNING: seed failed, continuing startup."
+        fi
     else
         echo "Seed skipped (data already present)."
     fi
