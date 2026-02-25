@@ -2,6 +2,9 @@ import logging
 
 from django.contrib.auth.signals import user_logged_in, user_logged_out, user_login_failed
 from django.dispatch import receiver
+from allauth.account.signals import password_changed
+
+from api.models import UserProfile
 
 
 auth_logger = logging.getLogger('skistation.auth')
@@ -52,3 +55,12 @@ def on_user_login_failed(sender, credentials, request, **kwargs):
         request.path if request else '',
         _client_ip(request),
     )
+
+
+@receiver(password_changed)
+def on_password_changed(request, user, **kwargs):
+    profile, _ = UserProfile.objects.get_or_create(user=user)
+    if profile.force_password_reset:
+        profile.force_password_reset = False
+        profile.save(update_fields=['force_password_reset'])
+        auth_logger.info('Password reset flag cleared user_id=%s username=%s', user.id, user.get_username())

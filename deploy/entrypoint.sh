@@ -41,6 +41,7 @@ PY
 fi
 
 python manage.py migrate --noinput
+python manage.py ensure_bootstrap_admin
 
 if [[ "${RUN_SEED_ON_STARTUP:-true}" == "true" ]]; then
     SHOULD_SEED=$(python - <<'PY'

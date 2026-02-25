@@ -131,9 +131,91 @@
             color: #1f2937;
         }
 
+        .auth-card {
+            border-radius: 16px;
+        }
+
+        main > div {
+            margin-top: 128px !important;
+        }
+
+        .floating-btn {
+            position: fixed;
+            right: 16px;
+            bottom: 18px;
+            z-index: 1050;
+        }
+
+        .floating-btn .badge {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+        }
+
+        @media (max-width: 1199.98px) {
+            .main-nav .nav li a {
+                padding: 8px 10px;
+                font-size: 14px;
+            }
+        }
+
         @media (max-width: 991.98px) {
             .main-nav .nav li.mobile-hide {
                 display: none !important;
+            }
+
+            .main-nav .nav {
+                max-height: calc(100vh - 180px);
+                overflow-y: auto;
+                padding-bottom: 10px;
+            }
+
+            .main-nav .nav li a {
+                font-size: 15px;
+            }
+
+            main > div {
+                margin-top: 118px !important;
+            }
+
+            #cookie-banner {
+                padding: 12px;
+                font-size: 14px;
+            }
+
+            #cookie-banner .btn {
+                margin-top: 6px;
+            }
+
+            .floating-btn {
+                right: 12px;
+                bottom: 12px;
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .container {
+                padding-left: 14px;
+                padding-right: 14px;
+            }
+
+            .card {
+                border-radius: 12px;
+            }
+
+            .btn {
+                min-height: 42px;
+            }
+
+            .form-control,
+            .form-select,
+            .form-control-file {
+                min-height: 42px;
+                font-size: 15px;
+            }
+
+            main > div {
+                margin-top: 110px !important;
             }
 
             .main-nav .nav li .offers-submenu {
@@ -191,7 +273,7 @@
                         <a href="{% url 'my_template_view' %}" class="logo">
                             <img src="{% static 'images/logo.png' %}" alt="Logo">
                         </a>
-                        <ul class="nav">
+                        <ul class="nav" id="site-main-nav">
                             <li><a href="{% url 'my_template_view' %}" class="active">{% trans "Accueil" %}</a></li>
                             <li><a href="{% url 'ski_material_listings' %}">{% trans "Matériel de Ski" %}</a></li>
                             <li><a href="{% url 'ski_station_search' %}">{% trans "Recherche" %}</a></li>
@@ -214,7 +296,13 @@
                             {% if user.is_authenticated %}
                                 <li>
                                     <a href="{% url 'profile' %}">
-                                        <span class="desktop-label">{% trans "Mon profil" %}</span>
+                                        <span class="desktop-label">
+                                            {% if user.first_name or user.last_name %}
+                                                {{ user.first_name }} {{ user.last_name }}
+                                            {% else %}
+                                                {% trans "Mon profil" %}
+                                            {% endif %}
+                                        </span>
                                         <span class="mobile-label">{% trans "Profil" %}</span>
                                     </a>
                                 </li>
@@ -231,7 +319,7 @@
                                 <li><a href="{% url 'login' %}">{% trans "Connexion" %}</a></li>
                             {% endif %}
                         </ul>
-                        <a class='menu-trigger'>
+                        <a class='menu-trigger' href="#" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="site-main-nav">
                             <span>{% trans "Menu" %}</span>
                         </a>
                     </nav>
@@ -269,6 +357,65 @@
     <!-- Scripts Bootstrap -->
     <script src="{% static 'vendor/jquery/jquery.min.js' %}"></script>
     <script src="{% static 'vendor/bootstrap/js/bootstrap.min.js'%}"></script>
+
+    <script>
+        (function () {
+            const trigger = document.querySelector('.menu-trigger');
+            const nav = document.querySelector('#site-main-nav');
+            if (!trigger || !nav) return;
+
+            const mobileMaxWidth = 991.98;
+
+            function isMobile() {
+                return window.innerWidth <= mobileMaxWidth;
+            }
+
+            function closeMobileMenu() {
+                if (!isMobile()) {
+                    nav.style.display = '';
+                    trigger.classList.remove('active');
+                    trigger.setAttribute('aria-expanded', 'false');
+                    return;
+                }
+                nav.style.display = 'none';
+                trigger.classList.remove('active');
+                trigger.setAttribute('aria-expanded', 'false');
+            }
+
+            function openMobileMenu() {
+                nav.style.display = 'block';
+                trigger.classList.add('active');
+                trigger.setAttribute('aria-expanded', 'true');
+            }
+
+            trigger.addEventListener('click', function (event) {
+                event.preventDefault();
+                if (!isMobile()) return;
+                const isOpen = nav.style.display === 'block';
+                if (isOpen) {
+                    closeMobileMenu();
+                } else {
+                    openMobileMenu();
+                }
+            });
+
+            nav.querySelectorAll('a').forEach(function (link) {
+                link.addEventListener('click', function () {
+                    if (isMobile()) closeMobileMenu();
+                });
+            });
+
+            window.addEventListener('resize', function () {
+                if (!isMobile()) {
+                    nav.style.display = '';
+                    trigger.classList.remove('active');
+                    trigger.setAttribute('aria-expanded', 'false');
+                }
+            });
+
+            closeMobileMenu();
+        })();
+    </script>
 
     <!-- Script pour gérer la bannière de consentement des cookies -->
     <script>

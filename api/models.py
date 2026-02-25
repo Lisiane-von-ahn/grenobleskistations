@@ -191,6 +191,7 @@ class CrowdStatusUpdate(models.Model):
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile', null=True)
     profile_picture = models.BinaryField(null=True, blank=True)
+    force_password_reset = models.BooleanField(default=False)
 
     def __str__(self):
         return f'{self.user.username} Profile'

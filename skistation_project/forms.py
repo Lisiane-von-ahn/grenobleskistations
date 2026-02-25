@@ -1,5 +1,8 @@
 from django import forms
 from django.contrib.auth.models import User
+from allauth.account.forms import LoginForm, SignupForm
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from api.models import SkiMaterialListing, UserProfile, InstructorProfile, InstructorService, InstructorReview, Message, SnowConditionUpdate, PisteConditionReport, CrowdStatusUpdate
 from django.db import models
 from django.contrib.auth.models import User
@@ -10,7 +13,8 @@ import os
 from django.contrib.auth import get_user_model
 
 class UserRegistrationForm(forms.Form):
-    username = forms.CharField(max_length=100)
+    first_name = forms.CharField(max_length=100, required=False)
+    last_name = forms.CharField(max_length=100, required=False)
     email = forms.EmailField()
     password1 = forms.CharField(widget=forms.PasswordInput)
     password2 = forms.CharField(widget=forms.PasswordInput)
@@ -22,6 +26,46 @@ class UserRegistrationForm(forms.Form):
         
         if password1 != password2:
             raise forms.ValidationError("The passwords do not match.")
+
+
+class CustomSignupForm(SignupForm):
+    first_name = forms.CharField(max_length=150, required=False, label='Prénom')
+    last_name = forms.CharField(max_length=150, required=False, label='Nom')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['email'].label = 'Email'
+        self.fields['email'].widget.attrs.update({'placeholder': 'you@example.com', 'autocomplete': 'email'})
+        self.fields['first_name'].widget.attrs.update({'placeholder': 'Prénom', 'autocomplete': 'given-name'})
+        self.fields['last_name'].widget.attrs.update({'placeholder': 'Nom', 'autocomplete': 'family-name'})
+
+    def clean_email(self):
+        email = (self.cleaned_data.get('email') or '').strip().lower()
+        user_model = get_user_model()
+
+        if user_model.objects.filter(email__iexact=email).exists():
+            raise ValidationError("Un compte existe déjà avec cet email.")
+
+        if user_model.objects.filter(username__iexact=email).exists():
+            raise ValidationError("Cet identifiant email est déjà utilisé.")
+
+        return email
+
+    def save(self, request):
+        user = super().save(request)
+        user.username = user.email
+        user.first_name = self.cleaned_data.get('first_name', '').strip()
+        user.last_name = self.cleaned_data.get('last_name', '').strip()
+        user.save(update_fields=['username', 'first_name', 'last_name'])
+        return user
+
+
+class CustomLoginForm(LoginForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'login' in self.fields:
+            self.fields['login'].label = 'Email'
+            self.fields['login'].widget.attrs.update({'placeholder': 'you@example.com', 'autocomplete': 'email'})
 
 class SkiMaterialListingForm(forms.ModelForm):
     image_file = forms.ImageField(required=False)  

@@ -61,11 +61,27 @@
     }
 
     @media (max-width: 767.98px) {
+        .services-heading h2 {
+            font-size: 1.45rem;
+        }
+
+        .services-heading p {
+            font-size: 0.95rem;
+        }
+
         .click-hint {
             opacity: 1;
             transform: none;
             font-size: 0.72rem;
             padding: 0.25rem 0.45rem;
+        }
+
+        .service-card .card-body {
+            padding: 0.9rem;
+        }
+
+        .sticky-top {
+            position: static !important;
         }
 
         .card-actions {
@@ -94,7 +110,7 @@
 <section class="py-5 bg-light">
     <div class="container">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
-            <div>
+            <div class="services-heading">
                 <h2 class="mb-1">{% trans "Services autour des stations" %}</h2>
                 <p class="text-muted mb-0">{% trans "Cliquez sur un service pour ouvrir son site ou sa localisation Google Maps." %}</p>
             </div>
@@ -241,14 +257,14 @@
                 <div class="col-lg-6 col-xl-4">
                     <div class="card border-0 shadow-sm h-100 service-card clickable">
                         {% if user.is_authenticated %}
-                            <a href="{% url 'messages' %}?user={{ service.instructor.user.id }}" class="service-card-link" aria-label="Contacter le moniteur {{ service.instructor.user.username }}"></a>
+                            <a href="{% url 'messages' %}?user={{ service.instructor.user.id }}" class="service-card-link" aria-label="Contacter le moniteur {% if service.instructor.user.first_name or service.instructor.user.last_name %}{{ service.instructor.user.first_name }} {{ service.instructor.user.last_name }}{% else %}{{ service.instructor.user.username }}{% endif %}"></a>
                         {% else %}
-                            <a href="{% url 'login' %}" class="service-card-link" aria-label="Se connecter pour contacter {{ service.instructor.user.username }}"></a>
+                            <a href="{% url 'login' %}" class="service-card-link" aria-label="Se connecter pour contacter {% if service.instructor.user.first_name or service.instructor.user.last_name %}{{ service.instructor.user.first_name }} {{ service.instructor.user.last_name }}{% else %}{{ service.instructor.user.username }}{% endif %}"></a>
                         {% endif %}
                         <span class="badge bg-primary click-hint"><i class="fas fa-comments mr-1"></i>Cliquer pour contacter</span>
                         <div class="card-body d-flex flex-column">
                             <h5 class="card-title mb-1">{{ service.title }}</h5>
-                            <p class="text-muted mb-2">Moniteur: {{ service.instructor.user.username }}</p>
+                            <p class="text-muted mb-2">Moniteur: {% if service.instructor.user.first_name or service.instructor.user.last_name %}{{ service.instructor.user.first_name }} {{ service.instructor.user.last_name }}{% else %}{{ service.instructor.user.username }}{% endif %}</p>
                             <p class="mb-1"><strong>Station :</strong> {{ service.ski_station.name }}</p>
                             <p class="mb-1"><strong>Durée :</strong> {{ service.duration_minutes }} min</p>
                             <p class="mb-1"><strong>Prix :</strong> {{ service.amount }} {{ service.currency }}</p>

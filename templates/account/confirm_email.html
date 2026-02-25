@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+<section class="py-5 auth-section">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-12 col-md-9 col-lg-6">
+                <div class="card border-0 shadow-sm auth-card">
+                    <div class="card-body p-4 p-md-5 text-center">
+                        <h2 class="h4 mb-3">{% trans "Confirmer votre e-mail" %}</h2>
+                        {% if confirmation %}
+                            <p class="text-muted mb-4">{% trans "Confirmez cette adresse e-mail pour activer votre compte." %}</p>
+                            <form method="post" action="{% url 'account_confirm_email' confirmation.key %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-primary">{% trans "Confirmer" %}</button>
+                            </form>
+                        {% else %}
+                            <p class="text-muted mb-3">{% trans "Le lien de confirmation est invalide ou expiré." %}</p>
+                            <a href="{% url 'account_email' %}" class="btn btn-outline-primary">{% trans "Renvoyer" %}</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -60,6 +60,9 @@ Le projet inclut un déploiement prêt pour serveur Linux avec:
 - `DB_PORT` (ex: `5432`)
 - `DATABASE_URL` (optionnel, prioritaire si défini)
 - `WEATHER_API_KEY` (optionnel)
+- `BOOTSTRAP_ADMIN_USERNAME` (optionnel, défaut: `admin`)
+- `BOOTSTRAP_ADMIN_PASSWORD` (optionnel, défaut: `admin`)
+- `BOOTSTRAP_ADMIN_EMAIL` (optionnel, défaut: `admin@grenobleski.local`)
 
 ### Set automatique des secrets GitHub
 
@@ -82,8 +85,10 @@ chmod +x deploy/set-github-secrets.sh
 
 ```bash
 chmod +x deploy/install.sh
-./deploy/install.sh HOST USER PASSWORD WEATHER_API_KEY DB_NAME DB_PORT DATABASE_URL
+./deploy/install.sh HOST USER PASSWORD WEATHER_API_KEY DB_NAME DB_PORT DATABASE_URL BOOTSTRAP_ADMIN_USERNAME BOOTSTRAP_ADMIN_PASSWORD BOOTSTRAP_ADMIN_EMAIL
 ```
+
+Un superuser bootstrap est créé une seule fois si absent. Il est marqué pour forcer le changement de mot de passe au premier login.
 
 Le seed (`load_ski_stations.py`) est exécuté explicitement après le `docker compose up` par `deploy/install.sh`.
 Il s'applique à la base configurée via les secrets (`DATABASE_URL` ou `DB_*`).

@@ -8,6 +8,104 @@
 {% block title %}{% trans "Stations de Ski" %}{% endblock %}
 
 {% block content %}
+
+  <style>
+    .station-summary-card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    }
+
+    .nearest-station-weather {
+      border: 1px solid #eef2f6;
+      border-radius: 10px;
+      padding: 10px 12px;
+      transition: box-shadow 0.2s ease;
+    }
+
+    .nearest-station-weather:hover {
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.07);
+    }
+
+    .visit-country .items .item {
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.08);
+      background: #fff;
+    }
+
+    .visit-country .items .item .right-content {
+      padding-top: 6px;
+      padding-bottom: 6px;
+    }
+
+    .visit-country .items .item .right-content .info li {
+      margin-bottom: 4px;
+    }
+
+    @media (max-width: 991.98px) {
+      .visit-country .items .item .row {
+        row-gap: 14px;
+      }
+
+      .visit-country .items .item .image img {
+        width: 100%;
+        border-radius: 14px;
+      }
+
+      .side-bar-map {
+        margin-top: 18px;
+      }
+
+      #stations-map {
+        height: 340px !important;
+      }
+
+      .pagination-controls {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      .section-heading {
+        margin-bottom: 10px;
+      }
+
+      .station-summary-card {
+        margin-top: 14px;
+      }
+    }
+
+    @media (max-width: 575.98px) {
+      #section-1 .main-caption h1 {
+        font-size: 1.45rem;
+      }
+
+      .visit-country .items .item .right-content h4 {
+        font-size: 1.15rem;
+      }
+
+      .visit-country .items .item .right-content {
+        padding-left: 6px;
+        padding-right: 6px;
+      }
+
+      .nearest-station-weather {
+        padding: 8px 10px;
+      }
+
+      .pagination-btn,
+      .page-btn {
+        min-height: 40px;
+        padding: 8px 12px;
+      }
+
+      #stations-map {
+        height: 280px !important;
+      }
+    }
+  </style>
   
   <script src="{% static 'js/paginationski.js' %}"></script>
 
@@ -125,7 +223,7 @@
                 <div id="map">
                   <div id="stations-map" style="height: 420px; border-radius: 23px;"></div>
                 </div>
-                <div class="mt-4 p-3" style="background: #fff; border-radius: 16px;">
+                <div class="mt-4 p-3 station-summary-card">
                   <h5>{% trans "Stations les plus proches" %}</h5>
                   <ul class="list-unstyled mb-0">
                     {% for station in nearest_stations %}

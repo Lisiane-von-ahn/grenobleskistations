@@ -36,6 +36,22 @@
     }
 
     @media (max-width: 767.98px) {
+        .instructor-hero h2 {
+            font-size: 1.55rem;
+        }
+
+        .instructor-hero p {
+            font-size: 0.95rem;
+        }
+
+        .sticky-top {
+            position: static !important;
+        }
+
+        .instructor-card {
+            padding: 1rem !important;
+        }
+
         .instructor-toolbar {
             flex-direction: column;
             align-items: stretch !important;
@@ -59,7 +75,7 @@
     }
 </style>
 <section class="py-5" style="background: linear-gradient(135deg, #2ca7b7, #1f8f9e);">
-    <div class="container text-white">
+    <div class="container text-white instructor-hero">
         <h2 class="display-5 mb-2">{% trans "Moniteurs disponibles" %}</h2>
         <p class="mb-0">{% trans "Trouvez un professionnel pour cours privés, perfectionnement et accompagnement piste." %}</p>
     </div>
@@ -148,15 +164,15 @@
     <div class="row g-4">
         {% for instructor in instructors %}
             <div class="col-lg-6">
-                <div class="card border-0 shadow-sm p-4 h-100">
+                <div class="card border-0 shadow-sm p-4 h-100 instructor-card">
                     <div class="d-flex align-items-center mb-3">
                         {% if instructor.profile_photo %}
-                            <img src="data:image/png;base64,{{ instructor.profile_photo|b64encode }}" alt="{{ instructor.user.username }}" class="rounded-circle mr-3" style="width:72px;height:72px;object-fit:cover;">
+                            <img src="data:image/png;base64,{{ instructor.profile_photo|b64encode }}" alt="{% if instructor.user.first_name or instructor.user.last_name %}{{ instructor.user.first_name }} {{ instructor.user.last_name }}{% else %}{{ instructor.user.username }}{% endif %}" class="rounded-circle mr-3" style="width:72px;height:72px;object-fit:cover;">
                         {% else %}
-                            <img src="{% static 'images/default-profile.png' %}" alt="{{ instructor.user.username }}" class="rounded-circle mr-3" style="width:72px;height:72px;object-fit:cover;">
+                            <img src="{% static 'images/default-profile.png' %}" alt="{% if instructor.user.first_name or instructor.user.last_name %}{{ instructor.user.first_name }} {{ instructor.user.last_name }}{% else %}{{ instructor.user.username }}{% endif %}" class="rounded-circle mr-3" style="width:72px;height:72px;object-fit:cover;">
                         {% endif %}
                         <div>
-                            <h5 class="mb-1">{{ instructor.user.username }}</h5>
+                            <h5 class="mb-1">{% if instructor.user.first_name or instructor.user.last_name %}{{ instructor.user.first_name }} {{ instructor.user.last_name }}{% else %}{{ instructor.user.username }}{% endif %}</h5>
                             <small class="text-muted">{{ instructor.years_experience }} {% trans "ans d'expérience" %}</small>
                         </div>
                     </div>

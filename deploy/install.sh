@@ -5,7 +5,7 @@ set -euo pipefail
 # Docker deploy installer (used by GitHub Actions)
 # =============================================================================
 # Calling convention kept compatible with legacy deploy:
-#   ./deploy/install.sh HOST USER PASSWORD WEATHER_API_KEY [DB_NAME] [DB_PORT] [DATABASE_URL]
+#   ./deploy/install.sh HOST USER PASSWORD WEATHER_API_KEY [DB_NAME] [DB_PORT] [DATABASE_URL] [BOOTSTRAP_ADMIN_USERNAME] [BOOTSTRAP_ADMIN_PASSWORD] [BOOTSTRAP_ADMIN_EMAIL]
 #
 # HOST/USER/PASSWORD/DB_* are DB inputs.
 # If DATABASE_URL is provided, it takes precedence.
@@ -27,9 +27,12 @@ WEATHER_API_KEY_ARG="${4:-}"
 DB_NAME_ARG="${5:-grenobleski}"
 DB_PORT_ARG="${6:-5432}"
 DATABASE_URL_ARG="${7:-}"
+BOOTSTRAP_ADMIN_USERNAME_ARG="${8:-admin}"
+BOOTSTRAP_ADMIN_PASSWORD_ARG="${9:-admin}"
+BOOTSTRAP_ADMIN_EMAIL_ARG="${10:-admin@grenobleski.local}"
 
 if [[ -z "${DB_HOST_ARG}" || -z "${DB_USER_ARG}" || -z "${DB_PASSWORD_ARG}" ]]; then
-  echo "❌ Missing required args. Usage: ./deploy/install.sh HOST USER PASSWORD WEATHER_API_KEY [DB_NAME] [DB_PORT] [DATABASE_URL]"
+  echo "❌ Missing required args. Usage: ./deploy/install.sh HOST USER PASSWORD WEATHER_API_KEY [DB_NAME] [DB_PORT] [DATABASE_URL] [BOOTSTRAP_ADMIN_USERNAME] [BOOTSTRAP_ADMIN_PASSWORD] [BOOTSTRAP_ADMIN_EMAIL]"
   exit 1
 fi
 
@@ -149,6 +152,9 @@ WEATHER_API_KEY=${WEATHER_API_KEY_ARG}
 RUN_SEED_ON_STARTUP=false
 
 DATABASE_URL=${database_url_effective}
+BOOTSTRAP_ADMIN_USERNAME=${BOOTSTRAP_ADMIN_USERNAME_ARG}
+BOOTSTRAP_ADMIN_PASSWORD=${BOOTSTRAP_ADMIN_PASSWORD_ARG}
+BOOTSTRAP_ADMIN_EMAIL=${BOOTSTRAP_ADMIN_EMAIL_ARG}
 
 POSTGRES_DB=${DB_NAME_ARG}
 POSTGRES_USER=${DB_USER_ARG}
@@ -188,7 +194,8 @@ run_compose() {
   echo "🗄️ Ensuring migrations are applied before seed"
   local migrate_ok=false
   for i in $(seq 1 20); do
-    if docker compose "${compose_files[@]}" exec -T web python manage.py migrate --noinput; then
+    if docker compose "${compose_files[@]}" exec -T web python manage.py migrate --noinput && \
+       docker compose "${compose_files[@]}" exec -T web python manage.py ensure_bootstrap_admin; then
       migrate_ok=true
       break
     fi

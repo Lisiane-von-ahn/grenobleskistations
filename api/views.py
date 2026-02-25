@@ -96,20 +96,31 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def register(self, request):
-        username = request.data.get('username')
+        email = (request.data.get('email') or '').strip().lower()
         password = request.data.get('password')
-        email = request.data.get('email')
-        if not username or not password:
-            return Response({'error': 'Username and password are required.'}, status=status.HTTP_400_BAD_REQUEST)
-        user = User.objects.create_user(username=username, password=password, email=email)
+        first_name = (request.data.get('first_name') or '').strip()
+        last_name = (request.data.get('last_name') or '').strip()
+
+        if not email or not password:
+            return Response({'error': 'Email and password are required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if User.objects.filter(email__iexact=email).exists():
+            return Response({'error': 'A user with this email already exists.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = User.objects.create_user(
+            username=email,
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+        )
         return Response({'message': 'User created successfully.'}, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_view(request):
-    username = request.data.get('username')
+    login_identifier = (request.data.get('email') or request.data.get('username') or '').strip().lower()
     password = request.data.get('password')
-    user = authenticate(request, username=username, password=password)
+    user = authenticate(request, username=login_identifier, password=password)
     if user is not None:
         login(request, user)
         token, created = Token.objects.get_or_create(user=user)

@@ -1,6 +1,10 @@
 name: Deploy GrenobleSki
 
 on:
+  push:
+    branches:
+      - main
+      - master
   workflow_dispatch:
 
 jobs:
@@ -40,7 +44,10 @@ jobs:
               "${{ secrets.WEATHER_API_KEY }}" \
               "${{ secrets.DB_NAME }}" \
               "${{ secrets.DB_PORT }}" \
-              "${{ secrets.DATABASE_URL }}"
+              "${{ secrets.DATABASE_URL }}" \
+              "${{ secrets.BOOTSTRAP_ADMIN_USERNAME }}" \
+              "${{ secrets.BOOTSTRAP_ADMIN_PASSWORD }}" \
+              "${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}"
 
             echo "⏳ Waiting for web container health"
             for i in $(seq 1 60); do

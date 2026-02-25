@@ -3,36 +3,56 @@
 {% load i18n %}
 
 {% block content %}
+<section class="py-5 auth-section">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-12 col-md-9 col-lg-6">
+                <div class="card border-0 shadow-sm auth-card">
+                    <div class="card-body p-4 p-md-5">
+                        <h2 class="h4 mb-3 text-center">{% trans "Connexion" %}</h2>
+                        <p class="text-muted text-center mb-4">{% trans "Connectez-vous avec votre e-mail." %}</p>
 
-<div class="container mt-5 py-15">
-    <h2>{% trans "Connexion" %}</h2>
-    <form method="post" action="{% url 'login' %}">
-        {% csrf_token %}
-        {% if form.non_field_errors %}
-            <div class="alert alert-danger">{{ form.non_field_errors }}</div>
-        {% endif %}
-        <div class="form-group">
-            <label for="id_username">{% trans "Nom d'utilisateur :" %}</label>
-            <input type="text" name="username" id="id_username" class="form-control" placeholder="{% trans "Entrez votre nom d'utilisateur" %}" required>
+                        <form method="post" action="{% url 'account_login' %}">
+                            {% csrf_token %}
+                            {% if form.non_field_errors %}
+                                <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                            {% endif %}
+
+                            <div class="form-group mb-3">
+                                <label for="id_login">{% trans "Email" %}</label>
+                                <input type="email" name="login" id="id_login" class="form-control" placeholder="you@example.com" required autocomplete="email">
+                            </div>
+
+                            <div class="form-group mb-3">
+                                <label for="id_password">{% trans "Mot de passe" %}</label>
+                                <input type="password" name="password" id="id_password" class="form-control" placeholder="{% trans 'Entrez votre mot de passe' %}" required autocomplete="current-password">
+                            </div>
+
+                            {% if redirect_field_value %}
+                                <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">
+                            {% endif %}
+
+                            <button type="submit" class="btn btn-primary w-100">{% trans "Se connecter" %}</button>
+                        </form>
+
+                        <div class="text-center my-3">
+                            <a href="{% url 'account_reset_password' %}" class="small">{% trans "Mot de passe oublié ?" %}</a>
+                        </div>
+
+                        <hr>
+
+                        <a href="/accounts/google/login/" class="btn btn-outline-dark w-100 mb-3">
+                            <i class="fab fa-google"></i> {% trans "Continuer avec Google" %}
+                        </a>
+
+                        <p class="mb-0 text-center">
+                            {% trans "Pas encore de compte ?" %}
+                            <a href="{% url 'account_signup' %}">{% trans "Créer un compte" %}</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="form-group">
-            <label for="id_password">{% trans "Mot de passe :" %}</label>
-            <input type="password" name="password" id="id_password" class="form-control" placeholder="{% trans 'Entrez votre mot de passe' %}" required>
-        </div>
-        {% if next %}
-            <input type="hidden" name="next" value="{{ next }}">
-        {% endif %}
-        <button type="submit" class="btn btn-primary">{% trans "Se connecter" %}</button>
-    </form>
-
-    <hr>
-
-    <!-- Section for Google login -->
-    <h3>{% trans "Ou connectez-vous avec Google" %}</h3>
-    <a href="/accounts/google/login/" class="btn btn-danger">
-        <i class="fab fa-google"></i> {% trans "Connexion avec Google" %}
-    </a>
-
-    <p class="mt-3">{% trans "Pas encore de compte ?" %} <a href="{% url 'register' %}">{% trans "Inscrivez-vous" %}</a></p>
-</div>
+    </div>
+</section>
 {% endblock %}

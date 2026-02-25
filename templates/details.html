@@ -78,6 +78,47 @@
             background: var(--bs-primary, #0d6efd);
             color: #fff;
         }
+
+        @media (max-width: 991.98px) {
+            .station-hero-image {
+                height: 220px;
+            }
+
+            #ski-map {
+                height: 340px !important;
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .station-hero-image {
+                height: 190px;
+            }
+
+            .station-stat {
+                padding: 9px 10px;
+                font-size: 0.92rem;
+            }
+
+            .section-card {
+                border-radius: 12px;
+            }
+
+            #ski-map {
+                height: 260px !important;
+            }
+
+            .crowd-choice {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                width: 100%;
+            }
+
+            .crowd-choice label {
+                border-right: 0;
+                border-bottom: 1px solid #dfe3e6;
+                text-align: center;
+            }
+        }
     </style>
 
     <section class="py-4">

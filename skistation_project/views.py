@@ -17,7 +17,6 @@ from api.models import (
 from django.db.models import Sum, Count, Q, Avg, Min
 from django.db.models import Case, When, Value, FloatField
 from django.db.models.functions import TruncHour
-from django.contrib.auth.forms import UserCreationForm
 from .forms import (
     UserRegistrationForm,
     SkiMaterialListingForm,
@@ -484,15 +483,7 @@ def terms_and_conditions(request):
     return render(request, 'terms.html')
 
 def register(request):
-    if request.method == 'POST':
-        form = UserCreationForm(request.POST, request.FILES)
-        if form.is_valid():
-            form.save()
-            return redirect('login')  # Redirect to login after registration
-    else:
-        form = UserCreationForm()
-
-    return render(request, 'register.html', {'form': form})
+    return redirect('account_signup')
 
 class CustomGoogleLoginView(OAuth2LoginView):
     def get(self, request, *args, **kwargs):

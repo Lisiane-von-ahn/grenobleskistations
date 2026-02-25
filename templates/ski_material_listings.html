@@ -18,6 +18,22 @@
     }
 
     @media (max-width: 767.98px) {
+        .marketplace-heading h2 {
+            font-size: 1.45rem;
+        }
+
+        .marketplace-heading p {
+            font-size: 0.95rem;
+        }
+
+        .sticky-top {
+            position: static !important;
+        }
+
+        .listing-card .card-img-top {
+            height: 180px !important;
+        }
+
         .material-toolbar {
             flex-direction: column;
             align-items: stretch !important;
@@ -44,13 +60,21 @@
             margin-top: 0.25rem;
             text-align: left;
         }
+
+        .modal-dialog {
+            margin: 0.35rem;
+        }
+
+        .modal-content {
+            border-radius: 12px;
+        }
     }
 </style>
 
 <section class="py-5 bg-light">
     <div class="container">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-            <div>
+            <div class="marketplace-heading">
                 <h2 class="mb-1">{% trans "Marketplace Matériel de ski" %}</h2>
                 <p class="text-muted mb-0">{% trans "Recherche rapide, filtres flottants et gestion de vos offres." %}</p>
             </div>
@@ -120,7 +144,7 @@
             {% if listings %}
                 {% for listing in listings %}
                     <div class="col-lg-6 col-xl-4">
-                        <div class="card border-0 shadow-sm h-100">
+                        <div class="card border-0 shadow-sm h-100 listing-card">
                             {% if listing.image %}
                                 <img src="data:image/jpeg;base64,{{ listing.image|b64encode }}" class="card-img-top" style="height: 220px; object-fit: cover;" alt="{{ listing.title }}">
                             {% else %}
@@ -161,7 +185,13 @@
                                             <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Supprimer cette annonce ?');">Supprimer</button>
                                         </form>
                                     {% endif %}
-                                    <span class="text-muted small ms-auto align-self-center listing-user">@{{ listing.user.username }}</span>
+                                    <span class="text-muted small ms-auto align-self-center listing-user">
+                                        {% if listing.user.first_name or listing.user.last_name %}
+                                            {{ listing.user.first_name }} {{ listing.user.last_name }}
+                                        {% else %}
+                                            @{{ listing.user.username }}
+                                        {% endif %}
+                                    </span>
                                 </div>
                             </div>
                         </div>

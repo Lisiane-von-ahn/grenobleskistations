@@ -5,8 +5,38 @@
 {% block title %}{% trans "Profil de l'utilisateur" %}{% endblock %}
 
 {% block content %}
+<style>
+  @media (max-width: 767.98px) {
+    .profile-hero h2 {
+      font-size: 1.65rem;
+    }
+
+    .profile-hero p {
+      font-size: 0.95rem;
+    }
+
+    .profile-info-card,
+    .profile-edit-card {
+      border-radius: 12px;
+    }
+
+    .profile-actions {
+      flex-direction: column;
+      gap: 0.6rem;
+      align-items: stretch !important;
+    }
+
+    .profile-actions .btn {
+      width: 100%;
+    }
+
+    .form-row {
+      display: block;
+    }
+  }
+</style>
 <section class="py-5" style="background: linear-gradient(135deg, #2ca7b7, #1f8f9e);">
-  <div class="container text-center text-white">
+  <div class="container text-center text-white profile-hero">
     <h2 class="display-4 mb-2">{% trans "Profil utilisateur" %}</h2>
     <p class="mb-0">{% trans "Gérez vos informations personnelles et votre photo de profil." %}</p>
   </div>
@@ -26,7 +56,7 @@
 
     <div class="row">
       <div class="col-lg-4 mb-4">
-        <div class="card border-0 shadow-sm h-100">
+        <div class="card border-0 shadow-sm h-100 profile-info-card">
           <div class="card-body text-center p-4">
             {% if profile_picture %}
               <img src="data:image/png;base64,{{ profile_picture }}" class="rounded-circle mb-3" alt="{% trans 'Photo de profil' %}" style="width: 150px; height: 150px; object-fit: cover;">
@@ -44,7 +74,7 @@
             <p class="text-muted mb-3">{{ user.email }}</p>
 
             <div class="text-left border rounded p-3 bg-light">
-              <p class="mb-2"><strong>{% trans "Nom d'utilisateur :" %}</strong> {{ user.username }}</p>
+              <p class="mb-2"><strong>{% trans "Identifiant (email) :" %}</strong> {{ user.email }}</p>
               <p class="mb-2"><strong>{% trans "Membre depuis :" %}</strong> {{ user.date_joined|date:"d/m/Y" }}</p>
               <p class="mb-0"><strong>{% trans "Dernière connexion :" %}</strong> {{ user.last_login|date:"d/m/Y H:i" }}</p>
             </div>
@@ -53,7 +83,7 @@
       </div>
 
       <div class="col-lg-8 mb-4">
-        <div class="card border-0 shadow-sm h-100">
+        <div class="card border-0 shadow-sm h-100 profile-edit-card">
           <div class="card-header border-0 text-white" style="background: linear-gradient(135deg, #2ca7b7, #1f8f9e);">
             <h4 class="mb-0">{% trans "Mettre à jour vos informations" %}</h4>
           </div>
@@ -89,7 +119,7 @@
                 <small class="form-text text-muted">{% trans "Choisissez une image carrée pour un meilleur rendu." %}</small>
               </div>
 
-              <div class="d-flex justify-content-between align-items-center mt-4">
+              <div class="d-flex justify-content-between align-items-center mt-4 profile-actions">
                 <button type="submit" class="btn btn-primary btn-lg">{% trans "Mettre à jour le profil" %}</button>
                 <a href="{% url 'my_template_view' %}" class="btn btn-outline-secondary">{% trans "Retour à l'accueil" %}</a>
               </div>
