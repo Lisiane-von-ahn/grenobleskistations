@@ -21,11 +21,11 @@ class SkiStation(models.Model):
 
 class BusLine(models.Model):
     ski_station = models.ForeignKey(SkiStation, on_delete=models.CASCADE, null=True)
-    bus_number = models.CharField(max_length=50)
+    bus_number = models.CharField(max_length=120)
     departure_stop = models.CharField(max_length=100)
     arrival_stop = models.CharField(max_length=100)
     frequency = models.CharField(max_length=120, null=True)
-    travel_time = models.CharField(max_length=50, null=True)
+    travel_time = models.CharField(max_length=120, null=True)
     route_points = models.CharField(max_length=255, null=True, blank=True)
     departure_latitude = models.DecimalField(max_digits=8, decimal_places=6, null=True, blank=True)
     departure_longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
@@ -41,7 +41,7 @@ class ServiceStore(models.Model):
     longitude = models.DecimalField(max_digits=9, decimal_places=6)
     address = models.CharField(max_length=255, blank=True, null=True)
     website_url = models.URLField(blank=True, null=True)
-    type = models.CharField(max_length=50)
+    type = models.CharField(max_length=100)
     opening_hours = models.CharField(max_length=100, null=True)    
 
     def __str__(self):
