@@ -62,6 +62,90 @@ SERVICE_SEED_BY_STATION = {
     ],
 }
 
+DEFAULT_SERVICE_BLUEPRINTS = [
+    {
+        'name_tpl': 'Location Ski {station}',
+        'type': 'Location matériel',
+        'opening_hours': '08:00-19:00',
+        'address_tpl': 'Front de neige, {station}',
+    },
+    {
+        'name_tpl': 'Location Premium {station}',
+        'type': 'Magasin / Location',
+        'opening_hours': '08:30-19:00',
+        'address_tpl': 'Centre station, {station}',
+    },
+    {
+        'name_tpl': 'Atelier Ski {station}',
+        'type': 'Atelier / réparation',
+        'opening_hours': '08:30-18:30',
+        'address_tpl': 'Galerie commerçante, {station}',
+    },
+    {
+        'name_tpl': 'Bootfitting {station}',
+        'type': 'Atelier / réparation',
+        'opening_hours': '09:00-18:00',
+        'address_tpl': 'Zone piétonne, {station}',
+    },
+    {
+        'name_tpl': 'Restaurant des Pistes {station}',
+        'type': 'Restauration',
+        'opening_hours': '11:30-16:30',
+        'address_tpl': 'Pied des pistes, {station}',
+    },
+    {
+        'name_tpl': 'Snack Montagne {station}',
+        'type': 'Restauration',
+        'opening_hours': '10:00-17:00',
+        'address_tpl': 'Esplanade station, {station}',
+    },
+    {
+        'name_tpl': 'Point Info {station}',
+        'type': 'Information',
+        'opening_hours': '08:30-17:30',
+        'address_tpl': 'Office de tourisme, {station}',
+    },
+    {
+        'name_tpl': 'Secours Piste {station}',
+        'type': 'Secours',
+        'opening_hours': '08:00-17:00',
+        'address_tpl': 'Poste de secours, {station}',
+    },
+]
+
+
+def clip_text(value, max_length):
+    return value if len(value) <= max_length else value[:max_length]
+
+
+def get_services_for_station(station_name):
+    specific_services = list(SERVICE_SEED_BY_STATION.get(station_name, []))
+    specific_names = {service.get('name', '') for service in specific_services}
+
+    generated_services = []
+    for blueprint in DEFAULT_SERVICE_BLUEPRINTS:
+        name = blueprint['name_tpl'].format(station=station_name)
+        if name in specific_names:
+            continue
+        generated_services.append({
+            'name': clip_text(name, 100),
+            'type': clip_text(blueprint['type'], 100),
+            'opening_hours': clip_text(blueprint['opening_hours'], 100),
+            'address': clip_text(blueprint['address_tpl'].format(station=station_name), 255),
+        })
+
+    normalized_specific_services = [
+        {
+            'name': clip_text(service.get('name', ''), 100),
+            'type': clip_text(service.get('type', ''), 100),
+            'opening_hours': clip_text(service.get('opening_hours', ''), 100),
+            'address': clip_text(service.get('address', ''), 255),
+        }
+        for service in specific_services
+    ]
+
+    return normalized_specific_services + generated_services
+
 BUS_LINES_SEED = [
     {
         'station_name': 'Chamrousse',
@@ -270,10 +354,8 @@ def seed_ski_stations():
         else:
             updated_count += 1
 
-    for station_name, services in SERVICE_SEED_BY_STATION.items():
-        station = station_by_name.get(station_name)
-        if not station:
-            continue
+    for station_name, station in station_by_name.items():
+        services = get_services_for_station(station_name)
         for index, service in enumerate(services):
             lat_offset = (index + 1) * 0.0025
             lng_offset = (index + 1) * 0.0025
