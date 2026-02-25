@@ -26,6 +26,9 @@ class BusLine(models.Model):
     arrival_stop = models.CharField(max_length=100)
     frequency = models.CharField(max_length=50, null=True)
     travel_time = models.CharField(max_length=50, null=True)
+    route_points = models.CharField(max_length=255, null=True, blank=True)
+    departure_latitude = models.DecimalField(max_digits=8, decimal_places=6, null=True, blank=True)
+    departure_longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
 
     def __str__(self):
         return self.bus_number
@@ -36,6 +39,8 @@ class ServiceStore(models.Model):
     name = models.CharField(max_length=100)
     latitude = models.DecimalField(max_digits=8, decimal_places=6)
     longitude = models.DecimalField(max_digits=9, decimal_places=6)
+    address = models.CharField(max_length=255, blank=True, null=True)
+    website_url = models.URLField(blank=True, null=True)
     type = models.CharField(max_length=50)
     opening_hours = models.CharField(max_length=100, null=True)    
 
@@ -52,13 +57,23 @@ class SkiCircuit(models.Model):
         return f"{self.difficulty} - {self.num_pistes} pistes"
 
 class SkiMaterialListing(models.Model):    
+    LISTING_TYPE_CHOICES = [
+        ('lend', 'Lend'),
+        ('sell', 'Sell'),
+    ]
+
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.CharField(max_length=200)
     description = models.TextField()
     ski_station = models.ForeignKey(SkiStation, on_delete=models.SET_NULL, null=True, blank=True)
-    city = models.CharField(max_length=100)  # New field to specify pickup city
+    city = models.CharField(max_length=100)
     price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    material_type = models.CharField(max_length=10)
+    material_type = models.CharField(max_length=50)
+    listing_type = models.CharField(max_length=10, choices=LISTING_TYPE_CHOICES, default='lend')
+    is_free = models.BooleanField(default=True)
+    deposit_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    available_from = models.DateField(null=True, blank=True)
+    available_to = models.DateField(null=True, blank=True)
     image = models.BinaryField(null=True, blank=True, editable=True) 
     posted_at = models.DateTimeField(auto_now_add=True)
 
@@ -76,9 +91,103 @@ class Message(models.Model):
 
     def __str__(self):
         return f"Message from {self.sender} to {self.recipient} on {self.created_at}"
+
+
+class InstructorProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='instructor_profile')
+    bio = models.TextField(blank=True)
+    years_experience = models.PositiveIntegerField(default=0)
+    certifications = models.CharField(max_length=255, blank=True)
+    phone = models.CharField(max_length=30, blank=True)
+    profile_photo = models.BinaryField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Instructor {self.user.username}"
+
+
+class InstructorService(models.Model):
+    instructor = models.ForeignKey(InstructorProfile, on_delete=models.CASCADE, related_name='services')
+    ski_station = models.ForeignKey(SkiStation, on_delete=models.CASCADE, related_name='instructor_services')
+    title = models.CharField(max_length=120)
+    description = models.TextField()
+    duration_minutes = models.PositiveIntegerField(default=60)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    currency = models.CharField(max_length=10, default='EUR')
+    max_group_size = models.PositiveIntegerField(default=1)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.title} - {self.instructor.user.username}"
+
+
+class InstructorReview(models.Model):
+    instructor = models.ForeignKey(InstructorProfile, on_delete=models.CASCADE, related_name='reviews')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='instructor_reviews')
+    rating = models.PositiveSmallIntegerField()
+    comment = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('instructor', 'user')
+
+    def __str__(self):
+        return f"Review {self.instructor.user.username} by {self.user.username}: {self.rating}/5"
+
+
+class SnowConditionUpdate(models.Model):
+    ski_station = models.ForeignKey(SkiStation, on_delete=models.CASCADE, related_name='snow_updates')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='snow_updates')
+    note = models.TextField(blank=True)
+    snow_depth_cm = models.PositiveIntegerField(null=True, blank=True)
+    image = models.BinaryField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Snow update {self.ski_station.name} - {self.user.username}"
+
+
+class PisteConditionReport(models.Model):
+    CROWD_CHOICES = [
+        ('quiet', 'Peu de gens'),
+        ('normal', 'Agréable'),
+        ('busy', 'Bondé'),
+    ]
+
+    ski_station = models.ForeignKey(SkiStation, on_delete=models.CASCADE, related_name='piste_reports')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='piste_reports')
+    piste_rating = models.PositiveSmallIntegerField()
+    crowd_level = models.CharField(max_length=10, choices=CROWD_CHOICES, default='normal')
+    comment = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('ski_station', 'user')
+
+    def __str__(self):
+        return f"Piste report {self.ski_station.name} - {self.user.username}"
+
+
+class CrowdStatusUpdate(models.Model):
+    CROWD_CHOICES = [
+        ('quiet', 'Peu de gens'),
+        ('normal', 'Agréable'),
+        ('busy', 'Bondé'),
+    ]
+
+    ski_station = models.ForeignKey(SkiStation, on_delete=models.CASCADE, related_name='crowd_updates')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='crowd_updates')
+    crowd_level = models.CharField(max_length=10, choices=CROWD_CHOICES, default='normal')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Crowd update {self.ski_station.name} - {self.user.username}"
     
 class UserProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile_api")
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile', null=True)
     profile_picture = models.BinaryField(null=True, blank=True)
 
     def __str__(self):

@@ -1,0 +1,42 @@
+name: Deploy GrenobleSki
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+
+            APP_DIR="/root/grenobleskistations"
+            REPO_URL="https://github.com/${{ github.repository }}.git"
+
+            if [ ! -d "$APP_DIR/.git" ]; then
+              rm -rf "$APP_DIR"
+              git clone "$REPO_URL" "$APP_DIR"
+            fi
+
+            cd "$APP_DIR"
+            git fetch --all
+            git checkout "${{ github.ref_name }}"
+            git reset --hard "origin/${{ github.ref_name }}"
+
+            chmod +x deploy/install.sh
+            ./deploy/install.sh \
+              "${{ secrets.DB_HOST }}" \
+              "${{ secrets.DB_USER }}" \
+              "${{ secrets.DB_PASSWORD }}" \
+              "${{ secrets.WEATHER_API_KEY }}" \
+              "${{ secrets.DB_NAME }}" \
+              "${{ secrets.DB_PORT }}" \
+              "${{ secrets.DATABASE_URL }}"

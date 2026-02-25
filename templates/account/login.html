@@ -1,32 +1,38 @@
 {% extends 'base.html' %}
 {% load static %}
-{% load socialaccount %}  <!-- Load the template tags for social login -->
+{% load i18n %}
 
 {% block content %}
 
 <div class="container mt-5 py-15">
-    <h2>Connexion</h2>
+    <h2>{% trans "Connexion" %}</h2>
     <form method="post" action="{% url 'login' %}">
         {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+        {% endif %}
         <div class="form-group">
-            <label for="id_login">E-mail :</label>
-            <input type="email" name="login" class="form-control" placeholder="Entrez votre e-mail" required>
+            <label for="id_username">{% trans "Nom d'utilisateur :" %}</label>
+            <input type="text" name="username" id="id_username" class="form-control" placeholder="{% trans "Entrez votre nom d'utilisateur" %}" required>
         </div>
         <div class="form-group">
-            <label for="id_password">Mot de passe :</label>
-            <input type="password" name="password" class="form-control" placeholder="Entrez votre mot de passe" required>
+            <label for="id_password">{% trans "Mot de passe :" %}</label>
+            <input type="password" name="password" id="id_password" class="form-control" placeholder="{% trans 'Entrez votre mot de passe' %}" required>
         </div>
-        <button type="submit" class="btn btn-primary">Se connecter</button>
+        {% if next %}
+            <input type="hidden" name="next" value="{{ next }}">
+        {% endif %}
+        <button type="submit" class="btn btn-primary">{% trans "Se connecter" %}</button>
     </form>
 
     <hr>
 
     <!-- Section for Google login -->
-    <h3>Ou connectez-vous avec Google</h3>
-    <a href="{% provider_login_url 'google' %}" class="btn btn-danger">
-        <i class="fab fa-google"></i> Connexion avec Google
+    <h3>{% trans "Ou connectez-vous avec Google" %}</h3>
+    <a href="/accounts/google/login/" class="btn btn-danger">
+        <i class="fab fa-google"></i> {% trans "Connexion avec Google" %}
     </a>
 
-    <p class="mt-3">Pas encore de compte ? <a href="{% url 'register' %}">Inscrivez-vous</a></p>
+    <p class="mt-3">{% trans "Pas encore de compte ?" %} <a href="{% url 'register' %}">{% trans "Inscrivez-vous" %}</a></p>
 </div>
 {% endblock %}

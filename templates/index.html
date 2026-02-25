@@ -2,8 +2,9 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load base64_filters %}
+{% load i18n %}
 
-{% block title %}Stations de Ski{% endblock %}
+{% block title %}{% trans "Stations de Ski" %}{% endblock %}
 
 {% block content %}
   
@@ -24,7 +25,7 @@
                 <div class="main-caption">
                     <h1>{{ station.name }}</h1>
                     <div class="border-button">
-                        <a href="#">Allez</a>
+                    <a href="{% url 'ski_station_detail' station.id %}">{% trans "Allez" %}</a>
                     </div>
                 </div>
                 <div class="container">
@@ -34,15 +35,15 @@
                                 <div class="row">
                                     <div class="col-lg-3 col-sm-6 col-6">
                                         <i class="fa fa-user"></i>
-                                        <h4><span>Capacité:</span><br>{{ station.capacity }} personnes</h4>
+                                        <h4><span>{% trans "Capacité:" %}</span><br>{{ station.capacity }} {% trans "personnes" %}</h4>
                                     </div>
                                     <div class="col-lg-3 col-sm-6 col-6">
                                       <i class="fa fa-mountain"></i>
-                                      <h4><span>Altitude:</span><br>{{ station.altitude }} m</h4>
+                                      <h4><span>{% trans "Altitude:" %}</span><br>{{ station.altitude }} m</h4>
                                   </div>
                                   <div class="col-lg-3 col-sm-6 col-6">
                                       <i class="fa fa-road"></i>
-                                      <h4><span>Distance de Grenoble:</span><br>{{ station.distanceFromGrenoble }} km</h4>
+                                      <h4><span>{% trans "Distance de Grenoble:" %}</span><br>{{ station.distanceFromGrenoble }} km</h4>
                                   </div>                                    
                                 </div>
                             </div>
@@ -71,8 +72,8 @@
         <div class="row">
             <div class="col-lg-5">
                 <div class="section-heading">
-                  <h2>Visitez l'une de nos stations de ski dès maintenant</h2>
-                  <p>Découvrez les meilleures stations de ski que nous proposons, avec des informations détaillées et des visuels époustouflants.</p>                </div>
+                  <h2>{% trans "Visitez l'une de nos stations de ski dès maintenant" %}</h2>
+                  <p>{% trans "Découvrez les meilleures stations de ski que nous proposons, avec des informations détaillées et des visuels époustouflants." %}</p>                </div>
             </div>
         </div>
         <div class="row">
@@ -97,15 +98,15 @@
                                             <h4>{{ station.name }}</h4>
                                             <span>{{ station.location }}</span>
                                             <div class="main-button">
-                                                <a href="{% url 'ski_station_detail' station.id %}">Découvrez</a>
+                                                <a href="{% url 'ski_station_detail' station.id %}">{% trans "Découvrez" %}</a>
                                             </div>
-                                            <p>Découvrez la beauté de {{ station.name }}.</p>
+                                            <p>{% blocktrans with station_name=station.name %}Découvrez la beauté de {{ station_name }}.{% endblocktrans %}</p>
                                             <ul class="info">
-                                                <li><i class="fa fa-user"></i> Capacité : {{ station.capacity }}</li>
-                                                <li><i class="fa fa-user"></i> Pistes : {{ station.num_circuits }}</li>
+                                              <li><i class="fa fa-user"></i> {% trans "Capacité" %} : {{ station.capacity }}</li>
+                                              <li><i class="fa fa-user"></i> {% trans "Pistes" %} : {{ station.num_circuits }}</li>
                                             </ul>
                                             <div class="text-button">
-                                                <a href="ski-station/{{ station.id }}">Besoin d'indications ? <i class="fa fa-arrow-right"></i></a>
+                                              <a href="ski-station/{{ station.id }}">{% trans "Besoin d'indications ?" %} <i class="fa fa-arrow-right"></i></a>
                                             </div>
                                         </div>
                                     </div>
@@ -121,16 +122,29 @@
             <div class="row">
               <div class="col-lg-12">
                 <div id="map">
-                  <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d27620.401701224374!2d5.704524!3d45.188529!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x478af5ad36559f13%3A0x408ab2ae4baea40!2sGrenoble!5e0!3m2!1sen!2sfr!4v1700000000000!5m2!1sen!2sfr" width="100%" height="550px" frameborder="0" style="border:0; border-radius: 23px;" allowfullscreen=""></iframe>
+                  <div id="stations-map" style="height: 420px; border-radius: 23px;"></div>
+                </div>
+                <div class="mt-4 p-3" style="background: #fff; border-radius: 16px;">
+                  <h5>{% trans "Stations les plus proches" %}</h5>
+                  <ul class="list-unstyled mb-0">
+                    {% for station in nearest_stations %}
+                      <li class="mb-2 nearest-station-weather" data-lat="{{ station.latitude }}" data-lng="{{ station.longitude }}" data-station-id="{{ station.id }}">
+                        <strong>{{ station.name }}</strong><br>
+                        <small>{% blocktrans with distance=station.distanceFromGrenoble service_count=station.service_count instructor_count=station.instructor_service_count %}{{ distance }} km de Grenoble • {{ service_count }} services • {{ instructor_count }} offres moniteur{% endblocktrans %}</small>
+                        <br>
+                        <small id="nearest-wx-{{ station.id }}">{% trans "Météo: chargement..." %}</small>
+                      </li>
+                    {% endfor %}
+                  </ul>
                 </div>
               </div>
             </div>
           </div>
         </div>
         <div class="pagination-controls">
-          <button id="prev-btn" class="pagination-btn">Précédent</button>
+          <button id="prev-btn" class="pagination-btn">{% trans "Précédent" %}</button>
           <span id="pagination-numbers"></span>
-          <button id="next-btn" class="pagination-btn">Suivant</button>
+          <button id="next-btn" class="pagination-btn">{% trans "Suivant" %}</button>
         </div>
   
       </div>
@@ -161,6 +175,115 @@
     $('nav .controls label').click(function() {
       clearInterval(bannerTimer);
       bannerTimer = setInterval(bannerSwitcher, 5000)
+    });
+
+    const map = L.map('stations-map').setView([45.188529, 5.724524], 9);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+      attribution: 'Map data © OpenStreetMap contributors'
+    }).addTo(map);
+
+    const stations = [
+      {% for station in map_stations %}
+      {
+        name: "{{ station.name|escapejs }}",
+        lat: {{ station.latitude }},
+        lng: {{ station.longitude }},
+        capacity: {{ station.capacity|default:0 }},
+        altitude: {{ station.altitude|default:0 }},
+        distance: {{ station.distanceFromGrenoble|default:0 }},
+        circuits: {{ station.num_circuits|default:0 }},
+        services: {{ station.service_count|default:0 }},
+        instructorServices: {{ station.instructor_service_count|default:0 }},
+        detailUrl: "{% url 'ski_station_detail' station.id %}"
+      },
+      {% endfor %}
+    ];
+
+    function weatherIconClass(main) {
+      const key = (main || '').toLowerCase();
+      if (key.includes('clear')) return 'fa-sun';
+      if (key.includes('snow')) return 'fa-snowflake';
+      if (key.includes('rain') || key.includes('drizzle')) return 'fa-cloud-rain';
+      if (key.includes('thunderstorm')) return 'fa-bolt';
+      if (key.includes('mist') || key.includes('fog')) return 'fa-smog';
+      if (key.includes('cloud')) return 'fa-cloud';
+      return 'fa-cloud-sun';
+    }
+
+    function temperatureClass(temp) {
+      if (temp <= -5) return 'text-primary';
+      if (temp <= 2) return 'text-info';
+      if (temp <= 10) return 'text-secondary';
+      if (temp <= 18) return 'text-warning';
+      return 'text-danger';
+    }
+
+    stations.forEach((station) => {
+      const popup = `
+        <strong>${station.name}</strong><br>
+        Distance: ${station.distance} km<br>
+        Altitude: ${station.altitude} m<br>
+        Capacity: ${station.capacity}<br>
+        Pistes: ${station.circuits}<br>
+        Services: ${station.services}<br>
+        Moniteur: ${station.instructorServices} offre(s)<br>
+        <span id="wx-${station.name.replace(/[^a-zA-Z0-9]/g, '')}">Météo: chargement...</span><br>
+        <a href="${station.detailUrl}">Voir détails</a>
+      `;
+      const marker = L.marker([station.lat, station.lng]).addTo(map).bindPopup(popup);
+
+      marker.on('popupopen', () => {
+        const weatherApiKey = '{{ WEATHER_API_KEY }}';
+        const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${station.lat}&lon=${station.lng}&appid=${weatherApiKey}&units=metric&lang=fr`;
+        const weatherId = `wx-${station.name.replace(/[^a-zA-Z0-9]/g, '')}`;
+        fetch(weatherUrl)
+          .then((response) => response.json())
+          .then((data) => {
+            const target = document.getElementById(weatherId);
+            if (!target) return;
+            if (data && data.main && data.weather && data.weather.length) {
+              const icon = weatherIconClass(data.weather[0].main || data.weather[0].description || '');
+              const roundedTemp = Math.round(data.main.temp);
+              const tempClass = temperatureClass(roundedTemp);
+              target.innerHTML = `<i class="fa ${icon}"></i> Météo: ${data.weather[0].description}, <span class="${tempClass}">${roundedTemp}°C</span>`;
+            } else {
+              target.innerHTML = 'Météo: indisponible';
+            }
+          })
+          .catch(() => {
+            const target = document.getElementById(weatherId);
+            if (target) target.innerHTML = 'Météo: indisponible';
+          });
+      });
+    });
+
+    const nearestStationRows = document.querySelectorAll('.nearest-station-weather');
+    nearestStationRows.forEach((row) => {
+      const lat = row.dataset.lat;
+      const lng = row.dataset.lng;
+      const stationId = row.dataset.stationId;
+      const target = document.getElementById(`nearest-wx-${stationId}`);
+      if (!lat || !lng || !target) return;
+
+      const weatherApiKey = '{{ WEATHER_API_KEY }}';
+      const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&appid=${weatherApiKey}&units=metric&lang=fr`;
+
+      fetch(weatherUrl)
+        .then((response) => response.json())
+        .then((data) => {
+          if (data && data.main && data.weather && data.weather.length) {
+            const icon = weatherIconClass(data.weather[0].main || data.weather[0].description || '');
+            const roundedTemp = Math.round(data.main.temp);
+            const tempClass = temperatureClass(roundedTemp);
+            target.innerHTML = `<i class="fa ${icon}"></i> Météo: ${data.weather[0].description}, <span class="${tempClass}">${roundedTemp}°C</span>`;
+          } else {
+            target.innerHTML = 'Météo: indisponible';
+          }
+        })
+        .catch(() => {
+          target.innerHTML = 'Météo: indisponible';
+        });
     });
   </script>
 

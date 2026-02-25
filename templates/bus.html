@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 {% extends 'base.html' %}
 {% load static %}
+{% load i18n %}
 
-{% block title %}Lignes de Bus{% endblock %}
+{% block title %}{% trans "Lignes de Bus" %}{% endblock %}
 
 {% block content %}
 
@@ -10,10 +11,60 @@
     <div class="container">
         <div class="row">
             <div class="col-lg-12">
-                <h4 class="text-muted">Lignes de Bus</h4>
-                <h2 class="text-primary">Liste des lignes de bus pour les stations de ski</h2>
+                <h4 class="text-muted">{% trans "Lignes de Bus" %}</h4>
+                <h2 class="text-primary">{% trans "Liste des lignes de bus pour les stations de ski" %}</h2>
             </div>
         </div>
+    </div>
+</div>
+
+<div class="container py-4">
+    <div class="card p-4 shadow-sm">
+        <h4 class="mb-3">{% trans "Planifier votre trajet vers une station" %}</h4>
+        <form method="get" class="row g-3">
+            <div class="col-lg-4">
+                <label class="form-label">{% trans "Départ" %}</label>
+                <input type="text" name="departure" class="form-control" value="{{ departure }}" placeholder="{% trans 'Ex: Grenoble Gare, Meylan, Voiron' %}">
+            </div>
+            <div class="col-lg-4">
+                <label class="form-label">{% trans "Station de ski" %}</label>
+                <select name="station" class="form-control">
+                    <option value="">{% trans "Toutes les stations" %}</option>
+                    {% for station in stations %}
+                    <option value="{{ station.id }}" {% if selected_station and selected_station.id == station.id %}selected{% endif %}>{{ station.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-lg-2">
+                <label class="form-label">{% trans "Période" %}</label>
+                <select name="schedule" class="form-control">
+                    <option value="" {% if not schedule %}selected{% endif %}>{% trans "Tous" %}</option>
+                    <option value="weekday" {% if schedule == 'weekday' %}selected{% endif %}>{% trans "Semaine" %}</option>
+                    <option value="weekend" {% if schedule == 'weekend' %}selected{% endif %}>{% trans "Week-end" %}</option>
+                </select>
+            </div>
+            <div class="col-lg-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">{% trans "Calculer" %}</button>
+            </div>
+        </form>
+
+        {% if selected_station %}
+        <div class="mt-3">
+            <span class="badge badge-info">{% trans "Station:" %} {{ selected_station.name }}</span>
+            <span class="badge badge-secondary">{% trans "Départ:" %} {{ departure }}</span>
+            {% if schedule == 'weekday' %}<span class="badge badge-primary">{% trans "Semaine" %}</span>{% endif %}
+            {% if schedule == 'weekend' %}<span class="badge badge-warning">{% trans "Week-end" %}</span>{% endif %}
+            <a class="btn btn-outline-primary btn-sm ml-2" href="{{ transit_url }}" target="_blank">{% trans "Itinéraire Bus" %}</a>
+            <a class="btn btn-outline-success btn-sm" href="{{ driving_url }}" target="_blank">{% trans "Itinéraire Voiture" %}</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="container pb-4">
+    <div class="card p-3 shadow-sm">
+        <h5>{% trans "Localisation approximative des départs bus" %}</h5>
+        <div id="bus-map" style="height: 340px; border-radius: 12px;"></div>
     </div>
 </div>
 
@@ -26,12 +77,13 @@
                     <table class="table table-bordered table-hover">
                         <thead class="table-light">
                             <tr>
-                                <th scope="col">Numéro de bus</th>
-                                <th scope="col">Départ</th>
-                                <th scope="col">Arrivée</th>
-                                <th scope="col">Fréquence</th>
-                                <th scope="col">Temps de trajet</th>
-                                <th scope="col">Station de ski</th>
+                                <th scope="col">{% trans "Numéro de bus" %}</th>
+                                <th scope="col">{% trans "Départ" %}</th>
+                                <th scope="col">{% trans "Arrivée" %}</th>
+                                <th scope="col">{% trans "Fréquence" %}</th>
+                                <th scope="col">{% trans "Temps de trajet" %}</th>
+                                <th scope="col">{% trans "Points de passage" %}</th>
+                                <th scope="col">{% trans "Station de ski" %}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -42,6 +94,7 @@
                                 <td>{{ line.arrival_stop }}</td>
                                 <td>{{ line.frequency }}</td>
                                 <td>{{ line.travel_time }}</td>
+                                <td>{{ line.route_points|default:"-" }}</td>
                                 <td>{{ line.ski_station.name }}</td>
                             </tr>
                             {% endfor %}
@@ -50,11 +103,37 @@
                 </div>
             {% else %}
                 <div class="col-lg-12">
-                    <p class="text-muted text-center">Aucune ligne de bus disponible.</p>
+                    <p class="text-muted text-center">{% trans "Aucune ligne de bus disponible." %}</p>
                 </div>
             {% endif %}
         </div>
     </div>
 </div>
+
+<script>
+    const map = L.map('bus-map').setView([45.188529, 5.724524], 9);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: 'Map data © OpenStreetMap contributors'
+    }).addTo(map);
+
+    const busPoints = [
+        {% for point in bus_map_points %}
+        {
+            line: "{{ point.line|escapejs }}",
+            station: "{{ point.station_name|escapejs }}",
+            stop: "{{ point.departure_stop|escapejs }}",
+            route: "{{ point.route_points|escapejs }}",
+            lat: {{ point.lat }},
+            lng: {{ point.lng }}
+        },
+        {% endfor %}
+    ];
+
+    busPoints.forEach((point) => {
+        const popup = `<strong>{% trans "Ligne" %} ${point.line}</strong><br>${point.stop}<br>{% trans "Vers" %} ${point.station}<br>${point.route}`;
+        L.marker([point.lat, point.lng]).addTo(map).bindPopup(popup);
+    });
+</script>
 
 {% endblock %}

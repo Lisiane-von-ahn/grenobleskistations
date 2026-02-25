@@ -24,12 +24,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-xhlkfv0em#28h(+*zfl^p2*a$pbzp0ff_fp^sbj6*=g$1hw-^q'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-xhlkfv0em#28h(+*zfl^p2*a$pbzp0ff_fp^sbj6*=g$1hw-^q')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True').lower() in ('1', 'true', 'yes', 'on')
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', '*').split(',') if h.strip()]
 
 WEATHER_API_KEY = os.getenv('WEATHER_API_KEY', 'qssdsdsd')
 
@@ -59,6 +59,7 @@ REST_FRAMEWORK = {
 }
 
 AUTHENTICATION_BACKENDS = [
+    'skistation_project.backends.EmailOrUsernameModelBackend',
     'django.contrib.auth.backends.ModelBackend',
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
@@ -80,6 +81,7 @@ REST_FRAMEWORK = {
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -119,7 +121,7 @@ WSGI_APPLICATION = 'skistation_project.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',  # This will create the SQLite database file in your project base directory
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
@@ -149,7 +151,16 @@ STATICFILES_DIRS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'fr'
+
+LANGUAGES = [
+    ('fr', 'Français'),
+    ('en', 'English'),
+]
+
+LOCALE_PATHS = [
+    BASE_DIR / 'locale',
+]
 
 TIME_ZONE = 'UTC'
 
@@ -165,17 +176,33 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # Directory to store collec
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-if not os.getenv('DEBUG', 'False') == 'True':
-    # Override the database settings with JAWSDB if in production
-    DATABASES['default'] = {
-        'ENGINE': 'skistation_project.db_backends.postgresql',
-        'NAME': os.getenv('database', 'qssdsdsd'),
-        'USER': os.getenv('user', 'qssdsdsd'),
-        'PASSWORD': os.getenv('password', 'qssdsdsd'),
-        'HOST': os.getenv('host', 'qssdsdsd'),
-        'PORT': os.getenv('port', 'qssdsdsd'),
-    }
-    DATABASES['default'] = dj_database_url.config(default=os.environ.get('JAWSDB_URL'))
+database_url = os.getenv('DATABASE_URL') or os.getenv('JAWSDB_URL')
+
+if database_url:
+    DATABASES['default'] = dj_database_url.parse(database_url)
+else:
+    has_pg_parts = all([
+        os.getenv('database'),
+        os.getenv('user'),
+        os.getenv('password'),
+        os.getenv('host'),
+        os.getenv('port'),
+    ])
+
+    if has_pg_parts:
+        DATABASES['default'] = {
+            'ENGINE': 'skistation_project.db_backends.postgresql',
+            'NAME': os.getenv('database'),
+            'USER': os.getenv('user'),
+            'PASSWORD': os.getenv('password'),
+            'HOST': os.getenv('host'),
+            'PORT': os.getenv('port'),
+        }
+    else:
+        DATABASES['default'] = {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db_test.sqlite3',
+        }
 
 
 SOCIALACCOUNT_LOGIN_REDIRECT_URL = '/'

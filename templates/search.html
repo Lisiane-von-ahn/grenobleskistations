@@ -2,15 +2,16 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load base64_filters %}
+{% load i18n %}
 
-{% block title %}Stations de Ski{% endblock %}
+{% block title %}{% trans "Stations de Ski" %}{% endblock %}
 
 {% block content %}
 
 <div class="page-heading text-center py-5 bg-light-blue">
     <div class="container">
-        <h2 class="display-4 text-primary">Trouvez la station de ski idéale</h2>
-        <p class="lead text-muted">Recherchez des stations de ski adaptées à vos préférences.</p>
+        <h2 class="display-4 text-primary">{% trans "Trouvez la station de ski idéale" %}</h2>
+        <p class="lead text-muted">{% trans "Recherchez des stations de ski adaptées à vos préférences." %}</p>
     </div>
 </div>
 
@@ -21,25 +22,25 @@
             <div class="row g-4">
                 <div class="col-lg-3">
                     <label for="capacity" class="form-label">
-                        <i class="bi bi-people"></i> Capacité
+                        <i class="bi bi-people"></i> {% trans "Capacité" %}
                     </label>
-                    <input class="form-control form-control-lg" type="number" name="capacity" id="capacity" placeholder="Capacité minimale" value="{{ request.GET.capacity }}">
+                    <input class="form-control form-control-lg" type="number" name="capacity" id="capacity" placeholder="{% trans 'Capacité minimale' %}" value="{{ request.GET.capacity }}">
                 </div>
                 <div class="col-lg-3">
                     <label for="distance" class="form-label">
-                        <i class="bi bi-geo-alt"></i> Distance de Grenoble (km)
+                        <i class="bi bi-geo-alt"></i> {% trans "Distance de Grenoble (km)" %}
                     </label>
-                    <input class="form-control form-control-lg" type="number" name="distance" id="distance" placeholder="Distance maximale" value="{{ request.GET.distance }}">
+                    <input class="form-control form-control-lg" type="number" name="distance" id="distance" placeholder="{% trans 'Distance maximale' %}" value="{{ request.GET.distance }}">
                 </div>
                 <div class="col-lg-3">
                     <label for="altitude" class="form-label">
-                        <i class="bi bi-arrow-up"></i> Altitude (m)
+                        <i class="bi bi-arrow-up"></i> {% trans "Altitude (m)" %}
                     </label>
-                    <input class="form-control form-control-lg" type="number" name="altitude" id="altitude" placeholder="Altitude minimale" value="{{ request.GET.altitude }}">
+                    <input class="form-control form-control-lg" type="number" name="altitude" id="altitude" placeholder="{% trans 'Altitude minimale' %}" value="{{ request.GET.altitude }}">
                 </div>
                 <div class="col-lg-3 d-flex align-items-end">
                     <button type="submit" class="btn btn-primary btn-lg w-100">
-                        <i class="bi bi-search"></i> Rechercher
+                        <i class="bi bi-search"></i> {% trans "Rechercher" %}
                     </button>
                 </div>
             </div>
@@ -63,11 +64,11 @@
                                 <div class="card-body">
                                     <h4 class="card-title text-primary">{{ station.name }}</h4>
                                     <ul class="list-unstyled">
-                                        <li><strong>Altitude :</strong> {{ station.altitude }} m</li>
-                                        <li><strong>Distance :</strong> {{ station.distanceFromGrenoble }} km</li>
-                                        <li><strong>Capacité :</strong> {{ station.capacity }}</li>
+                                        <li><strong>{% trans "Altitude :" %}</strong> {{ station.altitude }} m</li>
+                                        <li><strong>{% trans "Distance :" %}</strong> {{ station.distanceFromGrenoble }} km</li>
+                                        <li><strong>{% trans "Capacité :" %}</strong> {{ station.capacity }}</li>
                                     </ul>
-                                    <a href="{% url 'ski_station_detail' station.id %}" class="btn btn-outline-primary btn-sm">Voir plus de détails</a>
+                                    <a href="{% url 'ski_station_detail' station.id %}" class="btn btn-outline-primary btn-sm">{% trans "Voir plus de détails" %}</a>
                                 </div>
                             </div>
                         </div>
@@ -76,7 +77,7 @@
                 {% endfor %}
             {% else %}
                 <div class="col-lg-12 text-center">
-                    <p class="text-muted">Aucune station de ski ne correspond à vos critères. Essayez de modifier les filtres.</p>
+                    <p class="text-muted">{% trans "Aucune station de ski ne correspond à vos critères. Essayez de modifier les filtres." %}</p>
                 </div>
             {% endif %}
         </div>

@@ -1,7 +1,17 @@
 import base64
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import SkiStation, BusLine, ServiceStore, SkiCircuit,SkiMaterialListing,Message, UserProfile
+from .models import (
+    SkiStation,
+    BusLine,
+    ServiceStore,
+    SkiCircuit,
+    SkiMaterialListing,
+    Message,
+    UserProfile,
+    InstructorProfile,
+    InstructorService,
+)
 
 class SkiStationSerializer(serializers.ModelSerializer):
     class Meta:
@@ -50,3 +60,19 @@ class UserProfileSerializer(serializers.ModelSerializer):
         if obj.profile_picture:
             return base64.b64encode(obj.profile_picture).decode('utf-8')
         return None
+
+
+class InstructorProfileSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+
+    class Meta:
+        model = InstructorProfile
+        fields = '__all__'
+
+
+class InstructorServiceSerializer(serializers.ModelSerializer):
+    instructor = InstructorProfileSerializer(read_only=True)
+
+    class Meta:
+        model = InstructorService
+        fields = '__all__'

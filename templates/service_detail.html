@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Fiche Service" %}{% endblock %}
+
+{% block content %}
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4 p-lg-5">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+                    <div>
+                        <h2 class="mb-1">{{ service.name }}</h2>
+                        <p class="text-muted mb-0">{{ service.type }} • {{ service.ski_station.name }}</p>
+                    </div>
+                    <a href="{% url 'services' %}" class="btn btn-outline-secondary btn-sm">{% trans "Retour services" %}</a>
+                </div>
+
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <div class="border rounded p-3 h-100">
+                            <h5 class="mb-3">{% trans "Localisation" %}</h5>
+                            <p class="mb-2"><strong>{% trans "Adresse:" %}</strong> {{ address_display }}</p>
+                            <p class="mb-2"><strong>{% trans "Coordonnées:" %}</strong> {{ service.latitude }}, {{ service.longitude }}</p>
+                            <p class="mb-0"><strong>{% trans "Horaires:" %}</strong> {% if service.opening_hours %}{{ service.opening_hours }}{% else %}{% trans "Non renseigné" %}{% endif %}</p>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-6">
+                        <div class="border rounded p-3 h-100">
+                            <h5 class="mb-3">{% trans "Liens rapides" %}</h5>
+                            <div class="d-flex flex-wrap gap-2">
+                                {% if service.website_url %}
+                                    <a href="{{ service.website_url }}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">{% trans "Site du service" %}</a>
+                                {% endif %}
+                                <a href="{{ google_maps_url }}" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm">{% trans "Voir sur Google Maps" %}</a>
+                                <a href="{{ directions_url }}" target="_blank" rel="noopener" class="btn btn-outline-success btn-sm">{% trans "Itinéraire depuis Grenoble" %}</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

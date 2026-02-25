@@ -1,0 +1,242 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load base64_filters %}
+{% load i18n %}
+
+{% block title %}{% trans "Moniteurs" %}{% endblock %}
+
+{% block content %}
+<style>
+    .btn.btn-sm {
+        border-radius: 0.5rem;
+    }
+
+    .rating-stars {
+        color: var(--bs-warning, #ffc107);
+        letter-spacing: 1px;
+    }
+    .review-stars {
+        direction: rtl;
+        display: inline-flex;
+        gap: 2px;
+    }
+    .review-stars input {
+        display: none;
+    }
+    .review-stars label {
+        cursor: pointer;
+        color: var(--bs-secondary-color, #6c757d);
+        font-size: 1.2rem;
+        margin: 0;
+    }
+    .review-stars label:hover,
+    .review-stars label:hover ~ label,
+    .review-stars input:checked ~ label {
+        color: var(--bs-warning, #ffc107);
+    }
+
+    @media (max-width: 767.98px) {
+        .instructor-toolbar {
+            flex-direction: column;
+            align-items: stretch !important;
+        }
+
+        .instructor-toolbar .btn,
+        .instructor-toolbar .btn-link {
+            width: 100%;
+            text-align: center;
+        }
+
+        .instructor-actions {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.45rem;
+        }
+
+        .instructor-actions .btn {
+            width: 100%;
+        }
+    }
+</style>
+<section class="py-5" style="background: linear-gradient(135deg, #2ca7b7, #1f8f9e);">
+    <div class="container text-white">
+        <h2 class="display-5 mb-2">{% trans "Moniteurs disponibles" %}</h2>
+        <p class="mb-0">{% trans "Trouvez un professionnel pour cours privés, perfectionnement et accompagnement piste." %}</p>
+    </div>
+</section>
+
+<section class="py-5" style="background: #f5f7fa;">
+<div class="container">
+    <div class="card border-0 shadow-sm sticky-top mb-4" style="top: 12px; z-index: 20;">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-lg-5">
+                    <label class="form-label" for="q">{% trans "Recherche libre" %}</label>
+                    <input
+                        id="q"
+                        type="text"
+                        name="q"
+                        class="form-control"
+                        value="{{ search_query }}"
+                        placeholder="Moniteur, cours, certification, station..."
+                    >
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label" for="station">{% trans "Station" %}</label>
+                    <select class="form-control" id="station" name="station">
+                        <option value="">{% trans "Toutes les stations" %}</option>
+                        {% for station in stations %}
+                            <option value="{{ station.id }}" {% if selected_station == station.id|stringformat:'s' %}selected{% endif %}>{{ station.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-lg-2 col-md-3">
+                    <label class="form-label" for="price_min">{% trans "Prix min (€)" %}</label>
+                    <input id="price_min" type="number" min="0" step="1" name="price_min" class="form-control" value="{{ price_min }}">
+                </div>
+                <div class="col-lg-2 col-md-3">
+                    <label class="form-label" for="price_max">{% trans "Prix max (€)" %}</label>
+                    <input id="price_max" type="number" min="0" step="1" name="price_max" class="form-control" value="{{ price_max }}">
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label" for="sort">{% trans "Tri" %}</label>
+                    <select id="sort" name="sort" class="form-control">
+                        <option value="relevance" {% if sort_by == 'relevance' %}selected{% endif %}>{% trans "Pertinence" %}</option>
+                        <option value="price_asc" {% if sort_by == 'price_asc' %}selected{% endif %}>Prix croissant</option>
+                        <option value="price_desc" {% if sort_by == 'price_desc' %}selected{% endif %}>Prix décroissant</option>
+                        <option value="experience_desc" {% if sort_by == 'experience_desc' %}selected{% endif %}>Expérience</option>
+                        <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>Plus récents</option>
+                    </select>
+                </div>
+                <div class="col-12 d-flex flex-wrap gap-2 instructor-toolbar">
+                    <button type="submit" class="btn btn-primary btn-sm">{% trans "Filtrer" %}</button>
+                    {% if user.is_authenticated %}
+                        <a
+                            href="?q={{ search_query|default:'' }}&station={{ selected_station|default:'' }}&price_min={{ price_min|default:'' }}&price_max={{ price_max|default:'' }}&sort={{ sort_by|default:'relevance' }}{% if not my_offers %}&my_offers=1{% endif %}"
+                            class="btn btn-sm {% if my_offers %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                        >
+                            {% trans "Mes offres" %}
+                        </a>
+                    {% endif %}
+                    <a href="{% url 'instructors' %}" class="btn btn-sm btn-link">{% trans "Réinitialiser" %}</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if search_query or selected_station or price_min or price_max or my_offers or sort_by != 'relevance' %}
+        <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+            <span class="text-muted">{% trans "Filtres actifs :" %}</span>
+            {% if search_query %}<span class="badge bg-primary">Recherche: {{ search_query }}</span>{% endif %}
+            {% if selected_station %}
+                {% for station in stations %}
+                    {% if selected_station == station.id|stringformat:'s' %}
+                        <span class="badge bg-info">Station: {{ station.name }}</span>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+            {% if price_min %}<span class="badge bg-success">Min: {{ price_min }} €</span>{% endif %}
+            {% if price_max %}<span class="badge bg-success">Max: {{ price_max }} €</span>{% endif %}
+            {% if my_offers %}<span class="badge bg-dark">Mes offres</span>{% endif %}
+            {% if sort_by == 'price_asc' %}<span class="badge bg-secondary">Tri: Prix croissant</span>{% endif %}
+            {% if sort_by == 'price_desc' %}<span class="badge bg-secondary">Tri: Prix décroissant</span>{% endif %}
+            {% if sort_by == 'experience_desc' %}<span class="badge bg-secondary">Tri: Expérience</span>{% endif %}
+            {% if sort_by == 'newest' %}<span class="badge bg-secondary">Tri: Plus récents</span>{% endif %}
+        </div>
+    {% endif %}
+
+    <div class="row g-4">
+        {% for instructor in instructors %}
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm p-4 h-100">
+                    <div class="d-flex align-items-center mb-3">
+                        {% if instructor.profile_photo %}
+                            <img src="data:image/png;base64,{{ instructor.profile_photo|b64encode }}" alt="{{ instructor.user.username }}" class="rounded-circle mr-3" style="width:72px;height:72px;object-fit:cover;">
+                        {% else %}
+                            <img src="{% static 'images/default-profile.png' %}" alt="{{ instructor.user.username }}" class="rounded-circle mr-3" style="width:72px;height:72px;object-fit:cover;">
+                        {% endif %}
+                        <div>
+                            <h5 class="mb-1">{{ instructor.user.username }}</h5>
+                            <small class="text-muted">{{ instructor.years_experience }} {% trans "ans d'expérience" %}</small>
+                        </div>
+                    </div>
+
+                    <p class="mb-2"><strong>{% trans "Certifications:" %}</strong> {{ instructor.certifications|default:'Non précisé' }}</p>
+                    <p class="text-muted mb-3">{{ instructor.bio|default:'Pas de description pour le moment.' }}</p>
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <span class="badge bg-light text-dark">{{ instructor.active_services_count }} offre(s) active(s)</span>
+                        {% if instructor.min_amount %}
+                            <span class="badge bg-success">À partir de {{ instructor.min_amount|floatformat:0 }} €</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        {% if instructor.review_count %}
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <span class="badge bg-warning text-dark">{{ instructor.avg_rating|floatformat:1 }}/5</span>
+                                <span class="rating-stars">
+                                    {% for _ in '12345' %}
+                                        {% if forloop.counter <= instructor.avg_rating_rounded %}★{% else %}☆{% endif %}
+                                    {% endfor %}
+                                </span>
+                                <small class="text-muted">({{ instructor.review_count }} avis)</small>
+                            </div>
+                        {% else %}
+                            <small class="text-muted">{% trans "Pas encore d'évaluation" %}</small>
+                        {% endif %}
+                    </div>
+
+                    <div class="mt-auto d-flex flex-wrap gap-2 instructor-actions">
+                        {% if user.is_authenticated %}
+                            <a href="{% url 'messages' %}?user={{ instructor.user.id }}" class="btn btn-primary btn-sm">{% trans "Contacter" %}</a>
+                            {% if user != instructor.user %}
+                                <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#review-form-{{ instructor.id }}" aria-expanded="false" aria-controls="review-form-{{ instructor.id }}">
+                                    {% trans "Évaluer" %}
+                                </button>
+                            {% endif %}
+                        {% else %}
+                            <a href="{% url 'login' %}" class="btn btn-outline-primary btn-sm">{% trans "Se connecter pour contacter" %}</a>
+                        {% endif %}
+                    </div>
+
+                    {% if user.is_authenticated and user != instructor.user %}
+                        <div class="collapse mt-3" id="review-form-{{ instructor.id }}">
+                            <div class="border rounded p-3 bg-light">
+                                <form method="post">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="form_type" value="instructor_review">
+                                    <input type="hidden" name="instructor_id" value="{{ instructor.id }}">
+
+                                    <label class="form-label d-block mb-1">Votre note</label>
+                                    <div class="review-stars mb-2" role="radiogroup" aria-label="Note moniteur">
+                                        <input type="radio" id="inst-{{ instructor.id }}-star5" name="rating" value="5" {% if instructor.current_user_review and instructor.current_user_review.rating == 5 %}checked{% endif %}>
+                                        <label for="inst-{{ instructor.id }}-star5">★</label>
+                                        <input type="radio" id="inst-{{ instructor.id }}-star4" name="rating" value="4" {% if instructor.current_user_review and instructor.current_user_review.rating == 4 %}checked{% endif %}>
+                                        <label for="inst-{{ instructor.id }}-star4">★</label>
+                                        <input type="radio" id="inst-{{ instructor.id }}-star3" name="rating" value="3" {% if instructor.current_user_review and instructor.current_user_review.rating == 3 %}checked{% endif %}>
+                                        <label for="inst-{{ instructor.id }}-star3">★</label>
+                                        <input type="radio" id="inst-{{ instructor.id }}-star2" name="rating" value="2" {% if instructor.current_user_review and instructor.current_user_review.rating == 2 %}checked{% endif %}>
+                                        <label for="inst-{{ instructor.id }}-star2">★</label>
+                                        <input type="radio" id="inst-{{ instructor.id }}-star1" name="rating" value="1" {% if instructor.current_user_review and instructor.current_user_review.rating == 1 %}checked{% endif %}>
+                                        <label for="inst-{{ instructor.id }}-star1">★</label>
+                                    </div>
+
+                                    <label class="form-label" for="inst-{{ instructor.id }}-comment">Commentaire (optionnel)</label>
+                                    <textarea id="inst-{{ instructor.id }}-comment" name="comment" class="form-control mb-2" rows="2" placeholder="Votre retour sur ce moniteur...">{% if instructor.current_user_review %}{{ instructor.current_user_review.comment }}{% endif %}</textarea>
+
+                                    <button type="submit" class="btn btn-primary btn-sm">Enregistrer mon avis</button>
+                                </form>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12">
+                <p class="text-muted">Aucun moniteur actif pour le moment.</p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+</section>
+{% endblock %}

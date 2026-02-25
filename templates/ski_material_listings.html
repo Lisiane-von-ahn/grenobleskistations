@@ -2,68 +2,282 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load base64_filters %}
+{% load i18n %}
 
-{% block title %}Donner ou Vendre du Matériel de Ski{% endblock %}
+{% block title %}{% trans "Donner ou Vendre du Matériel de Ski" %}{% endblock %}
 
 {% block content %}
+<style>
+    .btn.btn-sm {
+        border-radius: 0.5rem;
+    }
 
-<div class="page-heading text-center py-5 bg-light-blue">
-    <div class="container">
-        <h2 class="display-4 text-primary">Donnez ou Vendez du Matériel de Ski</h2>
-        <p class="lead text-muted">Publiez votre matériel de ski à vendre ou à donner.</p>
-    </div>
-</div>
+    .listing-actions .btn {
+        position: relative;
+        z-index: 2;
+    }
 
-<!-- Formulaire de publication de matériel -->
-<div class="publish-form py-5">
-    <div class="container">
-        <form method="POST" enctype="multipart/form-data">
-            {% csrf_token %}
-            {{ form.as_p }}
-            <button type="submit" class="btn btn-primary btn-lg mt-3">Publier</button>
-        </form>
-    </div>
-</div>
+    @media (max-width: 767.98px) {
+        .material-toolbar {
+            flex-direction: column;
+            align-items: stretch !important;
+        }
 
-<!-- Affichage des annonces existantes -->
-<div class="listings py-5 bg-light">
+        .material-toolbar .btn,
+        .material-toolbar .btn-link {
+            width: 100%;
+            text-align: center;
+        }
+
+        .listing-actions {
+            display: grid !important;
+            grid-template-columns: 1fr;
+            gap: 0.45rem;
+        }
+
+        .listing-actions .btn {
+            width: 100%;
+        }
+
+        .listing-user {
+            margin-left: 0 !important;
+            margin-top: 0.25rem;
+            text-align: left;
+        }
+    }
+</style>
+
+<section class="py-5 bg-light">
     <div class="container">
-        <h3 class="text-primary mb-4">Annonces de matériel de ski</h3>
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+            <div>
+                <h2 class="mb-1">{% trans "Marketplace Matériel de ski" %}</h2>
+                <p class="text-muted mb-0">{% trans "Recherche rapide, filtres flottants et gestion de vos offres." %}</p>
+            </div>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addListingModal" data-toggle="modal" data-target="#addListingModal" type="button">
+                {% trans "Ajouter une offre" %}
+            </button>
+        </div>
+
+        <div class="card border-0 shadow-sm sticky-top mb-4" style="top: 12px; z-index: 20;">
+            <div class="card-body">
+                <form method="get" class="row g-3 align-items-end">
+                    <div class="col-lg-6">
+                        <label class="form-label" for="q">{% trans "Recherche globale" %}</label>
+                        <input
+                            id="q"
+                            type="text"
+                            name="q"
+                            class="form-control"
+                            value="{{ search_query }}"
+                            placeholder="Rechercher: annonce, ville, station, matériel, vendeur..."
+                        >
+                    </div>
+                    <div class="col-lg-2 col-md-4">
+                        <label class="form-label" for="listing_type">{% trans "Type" %}</label>
+                        <select class="form-control" id="listing_type" name="listing_type">
+                            <option value="">{% trans "Tous" %}</option>
+                            <option value="lend" {% if request.GET.listing_type == 'lend' %}selected{% endif %}>{% trans "Prêt" %}</option>
+                            <option value="sell" {% if request.GET.listing_type == 'sell' %}selected{% endif %}>{% trans "Vente" %}</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-2 col-md-4">
+                        <div class="form-check mt-4">
+                            <input class="form-check-input" type="checkbox" id="only_free" name="only_free" value="1" {% if request.GET.only_free %}checked{% endif %}>
+                            <label class="form-check-label" for="only_free">{% trans "Uniquement gratuit" %}</label>
+                        </div>
+                    </div>
+                    <div class="col-lg-2 col-md-4">
+                        <button class="btn btn-outline-primary w-100" type="submit">{% trans "Filtrer" %}</button>
+                    </div>
+
+                    {% if user.is_authenticated %}
+                        <div class="col-12 d-flex flex-wrap gap-2 material-toolbar">
+                            <a
+                                href="?q={{ search_query|default:'' }}&listing_type={{ request.GET.listing_type|default:'' }}&only_free={% if request.GET.only_free %}1{% endif %}{% if not request.GET.my_listings %}&my_listings=1{% endif %}"
+                                class="btn btn-sm {% if request.GET.my_listings %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                            >
+                                {% trans "Mes offres" %}
+                            </a>
+                            <a href="{% url 'ski_material_listings' %}" class="btn btn-sm btn-link">{% trans "Réinitialiser" %}</a>
+                        </div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+
+        {% if search_query or request.GET.listing_type or request.GET.only_free or request.GET.my_listings %}
+            <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+                <span class="text-muted">{% trans "Filtres actifs :" %}</span>
+                {% if search_query %}<span class="badge bg-primary">Recherche: {{ search_query }}</span>{% endif %}
+                {% if request.GET.listing_type %}<span class="badge bg-info">Type: {{ request.GET.listing_type }}</span>{% endif %}
+                {% if request.GET.only_free %}<span class="badge bg-success">Uniquement gratuit</span>{% endif %}
+                {% if request.GET.my_listings %}<span class="badge bg-dark">Mes offres</span>{% endif %}
+            </div>
+        {% endif %}
+
         <div class="row g-4">
             {% if listings %}
                 {% for listing in listings %}
-                <div class="col-lg-6 col-sm-12">
-                    <div class="card shadow-sm border-0 h-100">
-                        <div class="row g-0">
-                            <div class="col-md-6">
-                                <img src="data:image/jpeg;base64,{{ listing.image|b64encode }}" class="img-fluid rounded-start" alt="{{ listing.title }}">
-                            </div>
-                            <div class="col-md-6 d-flex align-items-center">
-                                <div class="card-body">
-                                    <h4 class="card-title text-primary">{{ listing.title }}</h4>
-                                    <ul class="list-unstyled">
-                                        <li><strong>Ville :</strong> {{ listing.city }}</li>
-                                        <li><strong>Type :</strong> {{ listing.get_material_type_display }}</li>
-                                        {% if listing.price %}
-                                            <li><strong>Prix :</strong> {{ listing.price }} €</li>
-                                        {% else %}
-                                            <li><strong>Prix :</strong> Gratuit</li>
-                                        {% endif %}
-                                    </ul>
-                                    <a href="{% url 'listing_detail' id=listing.id %}" class="btn btn-outline-primary btn-sm">Voir plus de détails</a>
+                    <div class="col-lg-6 col-xl-4">
+                        <div class="card border-0 shadow-sm h-100">
+                            {% if listing.image %}
+                                <img src="data:image/jpeg;base64,{{ listing.image|b64encode }}" class="card-img-top" style="height: 220px; object-fit: cover;" alt="{{ listing.title }}">
+                            {% else %}
+                                <img src="{% static 'images/default.jpg' %}" class="card-img-top" style="height: 220px; object-fit: cover;" alt="{{ listing.title }}">
+                            {% endif %}
+                            <div class="card-body d-flex flex-column">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h5 class="card-title mb-0">{{ listing.title }}</h5>
+                                    <span class="badge {% if listing.listing_type == 'sell' %}bg-warning text-dark{% else %}bg-primary{% endif %}">
+                                        {{ listing.get_listing_type_display }}
+                                    </span>
+                                </div>
+                                <p class="text-muted mb-2">{{ listing.material_type }} • {{ listing.city }}{% if listing.ski_station %} • {{ listing.ski_station.name }}{% endif %}</p>
+                                <p class="small mb-3">{{ listing.description|truncatechars:140 }}</p>
+
+                                <ul class="list-unstyled small mb-3">
+                                    {% if listing.is_free %}
+                                        <li><strong>Prix :</strong> Gratuit</li>
+                                    {% elif listing.price %}
+                                        <li><strong>Prix :</strong> {{ listing.price }} €</li>
+                                    {% else %}
+                                        <li><strong>Prix :</strong> Non précisé</li>
+                                    {% endif %}
+                                    {% if listing.deposit_amount %}<li><strong>Caution :</strong> {{ listing.deposit_amount }} €</li>{% endif %}
+                                    {% if listing.available_from or listing.available_to %}
+                                        <li><strong>Disponibilité :</strong> {{ listing.available_from|default:'?' }} → {{ listing.available_to|default:'?' }}</li>
+                                    {% endif %}
+                                </ul>
+
+                                <div class="mt-auto d-flex flex-wrap gap-2 listing-actions">
+                                    {% if user.is_authenticated and listing.user != user %}
+                                        <a href="{% url 'messages' %}?user={{ listing.user.id }}" class="btn btn-outline-primary btn-sm">Contacter</a>
+                                    {% endif %}
+                                    {% if user.is_authenticated and listing.user == user %}
+                                        <a href="{% url 'edit_listing' id=listing.id %}" class="btn btn-outline-secondary btn-sm">Modifier</a>
+                                        <form method="post" action="{% url 'delete_listing' id=listing.id %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Supprimer cette annonce ?');">Supprimer</button>
+                                        </form>
+                                    {% endif %}
+                                    <span class="text-muted small ms-auto align-self-center listing-user">@{{ listing.user.username }}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
                 {% endfor %}
             {% else %}
-                <div class="col-lg-12 text-center">
-                    <p class="text-muted">Aucune annonce disponible pour le moment.</p>
+                <div class="col-12">
+                    <div class="alert alert-light border mb-0">{% trans "Aucune annonce trouvée avec ces critères." %}</div>
                 </div>
             {% endif %}
         </div>
     </div>
+</section>
+
+<div class="modal fade" id="addListingModal" tabindex="-1" aria-labelledby="addListingModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addListingModalLabel">{% trans "Ajouter une annonce de matériel" %}</h5>
+                <button type="button" class="close" data-bs-dismiss="modal" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form method="POST" enctype="multipart/form-data">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label" for="id_title">Titre</label>
+                            {{ form.title }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="id_material_type">Type de matériel</label>
+                            {{ form.material_type }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="id_description">Description</label>
+                            {{ form.description }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="id_ski_station">Station</label>
+                            {{ form.ski_station }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="id_city">Ville</label>
+                            {{ form.city }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="id_listing_type">Type d'annonce</label>
+                            {{ form.listing_type }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="id_price">Prix (€)</label>
+                            {{ form.price }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="id_deposit_amount">Caution (€)</label>
+                            {{ form.deposit_amount }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="id_available_from">Disponible du</label>
+                            {{ form.available_from }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="id_available_to">Disponible au</label>
+                            {{ form.available_to }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="id_image_file">Photo</label>
+                            {{ form.image_file }}
+                        </div>
+                        <div class="col-md-6 d-flex align-items-center">
+                            <div class="form-check mt-3">
+                                {{ form.is_free }}
+                                <label class="form-check-label" for="id_is_free">Offre gratuite</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if form.errors %}
+                        <div class="alert alert-danger mt-3 mb-0">
+                            <strong>Impossible de publier :</strong>
+                            <ul class="mb-0 mt-2">
+                                {% for field in form %}
+                                    {% for error in field.errors %}
+                                        <li>{{ field.label }} : {{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                                {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" data-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Publier l'annonce</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
+
+{% if form.errors %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof bootstrap !== 'undefined') {
+            var modalElement = document.getElementById('addListingModal');
+            var modal = new bootstrap.Modal(modalElement);
+            modal.show();
+        } else if (typeof $ !== 'undefined') {
+            $('#addListingModal').modal('show');
+        }
+    });
+</script>
+{% endif %}
 
 {% endblock %}

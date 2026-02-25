@@ -1,0 +1,1146 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: grenobleskistations\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-25 08:26+0100\n"
+"PO-Revision-Date: 2026-02-25 00:00+0000\n"
+"Last-Translator: GitHub Copilot\n"
+"Language-Team: English\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: templates/account/login.html:8 templates/base.html:232
+msgid "Connexion"
+msgstr "Login"
+
+#: templates/account/login.html:15 templates/profile.html:47
+msgid "Nom d'utilisateur :"
+msgstr "Username:"
+
+#: templates/account/login.html:19
+msgid "Mot de passe :"
+msgstr "Password:"
+
+#: templates/account/login.html:20
+msgid "Entrez votre mot de passe"
+msgstr "Enter your password"
+
+#: templates/account/login.html:25 templates/register.html:81
+msgid "Se connecter"
+msgstr "Log in"
+
+#: templates/account/login.html:31
+msgid "Ou connectez-vous avec Google"
+msgstr "Or sign in with Google"
+
+#: templates/account/login.html:33
+msgid "Connexion avec Google"
+msgstr "Sign in with Google"
+
+#: templates/account/login.html:36
+msgid "Pas encore de compte ?"
+msgstr "No account yet?"
+
+#: templates/account/login.html:36
+msgid "Inscrivez-vous"
+msgstr "Sign up"
+
+#: templates/account/register.html:6 templates/register.html:27
+msgid "Inscription"
+msgstr "Registration"
+
+#: templates/account/register.html:10 templates/register.html:7
+#: templates/register.html:15 templates/register.html:59
+msgid "S'inscrire"
+msgstr "Sign up"
+
+#: templates/account/register.html:12
+msgid "Déjà un compte ?"
+msgstr "Already have an account?"
+
+#: templates/account/register.html:12
+msgid "Connectez-vous ici"
+msgstr "Log in here"
+
+#: templates/base.html:14
+msgid "Stations de Ski - Vue d'ensemble"
+msgstr "Ski Stations - Overview"
+
+#: templates/base.html:195
+msgid "Accueil"
+msgstr "Home"
+
+#: templates/base.html:196
+msgid "Matériel de Ski"
+msgstr "Ski Gear"
+
+#: templates/base.html:197
+msgid "Recherche"
+msgstr "Search"
+
+#: templates/base.html:198
+msgid "Services"
+msgstr "Services"
+
+#: templates/base.html:199 templates/instructors.html:6
+msgid "Moniteurs"
+msgstr "Instructors"
+
+#: templates/base.html:200 templates/bus.html:6 templates/bus.html:14
+msgid "Lignes de Bus"
+msgstr "Bus Lines"
+
+#: templates/base.html:202
+msgid "Conditions"
+msgstr "Terms"
+
+#: templates/base.html:218
+msgid "Mon profil"
+msgstr "My Profile"
+
+#: templates/base.html:219
+msgid "Profil"
+msgstr "Profile"
+
+#: templates/base.html:222
+msgid "Devenir moniteur"
+msgstr "Become an Instructor"
+
+#: templates/base.html:224 templates/instructors.html:118
+#: templates/ski_material_listings.html:100
+msgid "Mes offres"
+msgstr "My Offers"
+
+#: templates/base.html:226
+msgid "Offres matériel"
+msgstr "Gear Offers"
+
+#: templates/base.html:227
+msgid "Offres moniteur"
+msgstr "Instructor Offers"
+
+#: templates/base.html:230
+msgid "Déconnexion"
+msgstr "Logout"
+
+#: templates/base.html:236
+msgid "Menu"
+msgstr "Menu"
+
+#: templates/base.html:247
+msgid "Nous utilisons des cookies pour améliorer votre expérience."
+msgstr "We use cookies to improve your experience."
+
+#: templates/base.html:247
+msgid "En savoir plus"
+msgstr "Learn more"
+
+#: templates/base.html:248
+msgid "Accepter"
+msgstr "Accept"
+
+#: templates/base.html:249
+msgid "Refuser"
+msgstr "Reject"
+
+#: templates/bus.html:15
+#, fuzzy
+msgid "Liste des lignes de bus pour les stations de ski"
+msgstr "List of bus lines to ski stations"
+
+#: templates/bus.html:23
+msgid "Planifier votre trajet vers une station"
+msgstr "Plan your trip to a station"
+
+#: templates/bus.html:26 templates/bus.html:81
+msgid "Départ"
+msgstr "Departure"
+
+#: templates/bus.html:27
+msgid "Ex: Grenoble Gare, Meylan, Voiron"
+msgstr "e.g. Grenoble Station, Meylan, Voiron"
+
+#: templates/bus.html:30 templates/bus.html:86
+msgid "Station de ski"
+msgstr "Ski station"
+
+#: templates/bus.html:32 templates/instructors.html:87
+#: templates/services.html:131
+msgid "Toutes les stations"
+msgstr "All stations"
+
+#: templates/bus.html:39
+msgid "Période"
+msgstr "Period"
+
+#: templates/bus.html:41 templates/ski_material_listings.html:79
+msgid "Tous"
+msgstr "All"
+
+#: templates/bus.html:42 templates/bus.html:55
+msgid "Semaine"
+msgstr "Weekdays"
+
+#: templates/bus.html:43 templates/bus.html:56
+msgid "Week-end"
+msgstr "Weekend"
+
+#: templates/bus.html:47
+msgid "Calculer"
+msgstr "Calculate"
+
+#: templates/bus.html:53
+msgid "Station:"
+msgstr "Station:"
+
+#: templates/bus.html:54 templates/details.html:138
+msgid "Départ:"
+msgstr "Departure:"
+
+#: templates/bus.html:57
+msgid "Itinéraire Bus"
+msgstr "Bus route"
+
+#: templates/bus.html:58
+msgid "Itinéraire Voiture"
+msgstr "Driving route"
+
+#: templates/bus.html:66
+msgid "Localisation approximative des départs bus"
+msgstr "Approximate location of bus departures"
+
+#: templates/bus.html:80
+msgid "Numéro de bus"
+msgstr "Bus number"
+
+#: templates/bus.html:82
+msgid "Arrivée"
+msgstr "Arrival"
+
+#: templates/bus.html:83
+msgid "Fréquence"
+msgstr "Frequency"
+
+#: templates/bus.html:84
+msgid "Temps de trajet"
+msgstr "Travel time"
+
+#: templates/bus.html:85
+msgid "Points de passage"
+msgstr "Route points"
+
+#: templates/bus.html:106
+msgid "Aucune ligne de bus disponible."
+msgstr "No bus lines available."
+
+#: templates/bus.html:134
+msgid "Ligne"
+msgstr "Line"
+
+#: templates/bus.html:134
+msgid "Vers"
+msgstr "To"
+
+#: templates/details.html:7 templates/index.html:7 templates/search.html:7
+msgid "Stations de Ski"
+msgstr "Ski Stations"
+
+#: templates/details.html:96 templates/details.html:494 templates/index.html:38
+msgid "Capacité:"
+msgstr "Capacity:"
+
+#: templates/details.html:99 templates/details.html:494
+msgid "Pistes:"
+msgstr "Runs:"
+
+#: templates/details.html:102
+msgid "Distance Grenoble:"
+msgstr "Distance Grenoble:"
+
+#: templates/details.html:105
+msgid "Altitude max:"
+msgstr "Max altitude:"
+
+#: templates/details.html:110
+msgid "Venir en bus"
+msgstr "Come by bus"
+
+#: templates/details.html:111
+msgid "Venir en voiture"
+msgstr "Come by car"
+
+#: templates/details.html:118
+msgid "Conditions météorologiques actuelles"
+msgstr "Current weather conditions"
+
+#: templates/details.html:134
+msgid "Lignes de bus vers la station"
+msgstr "Bus lines to the station"
+
+#: templates/details.html:139
+msgid "Arrivée:"
+msgstr "Arrival:"
+
+#: templates/details.html:140
+msgid "Fréquence:"
+msgstr "Frequency:"
+
+#: templates/details.html:141
+msgid "Trajet:"
+msgstr "Trip:"
+
+#: templates/details.html:144
+msgid "Aucune ligne de bus renseignée."
+msgstr "No bus line listed."
+
+#: templates/details.html:151
+msgid "Carte de localisation"
+msgstr "Location map"
+
+#: templates/details.html:158
+#, python-format
+msgid "Services disponibles à %(station_name)s"
+msgstr "Services available in %(station_name)s"
+
+#: templates/details.html:164
+msgid "Type:"
+msgstr "Type:"
+
+#: templates/details.html:165 templates/service_detail.html:25
+msgid "Horaires:"
+msgstr "Opening hours:"
+
+#: templates/details.html:169
+msgid "Aucun service renseigné."
+msgstr "No service listed."
+
+#: templates/details.html:183
+msgid "État coopératif des pistes (dernières minutes/heures)"
+msgstr "Cooperative slope status (last minutes/hours)"
+
+#: templates/details.html:187
+msgid "Note moyenne piste:"
+msgstr "Average slope rating:"
+
+#: templates/details.html:193
+msgid "avis"
+msgstr "reviews"
+
+#: templates/details.html:196
+msgid "Pas encore de note piste"
+msgstr "No slope rating yet"
+
+#: templates/details.html:199
+msgid "Affluence actuelle:"
+msgstr "Current crowd:"
+
+#: templates/details.html:208
+msgid "Note piste:"
+msgstr "Slope rating:"
+
+#: templates/details.html:209
+msgid "Note piste"
+msgstr "Slope rating"
+
+#: templates/details.html:211
+msgid "5 étoiles"
+msgstr "5 stars"
+
+#: templates/details.html:213
+msgid "4 étoiles"
+msgstr "4 stars"
+
+#: templates/details.html:215
+msgid "3 étoiles"
+msgstr "3 stars"
+
+#: templates/details.html:217
+msgid "2 étoiles"
+msgstr "2 stars"
+
+#: templates/details.html:219
+msgid "1 étoile"
+msgstr "1 star"
+
+#: templates/details.html:227
+msgid "Enregistrer mon avis"
+msgstr "Save my review"
+
+#: templates/details.html:235
+msgid "Affluence actuelle (mise à jour instantanée):"
+msgstr "Current crowd (instant update):"
+
+#: templates/details.html:236
+msgid "Affluence actuelle"
+msgstr "Current crowd"
+
+#: templates/details.html:238 templates/details.html:441
+msgid "Peu"
+msgstr "Low"
+
+#: templates/details.html:240 templates/details.html:442
+msgid "Agréable"
+msgstr "Moderate"
+
+#: templates/details.html:242 templates/details.html:443
+msgid "Bondé"
+msgstr "Busy"
+
+#: templates/details.html:246
+msgid "Mettre à jour l'affluence"
+msgstr "Update crowd"
+
+#: templates/details.html:250 templates/details.html:319
+msgid "Connectez-vous"
+msgstr "Log in"
+
+#: templates/details.html:250
+msgid "pour partager l'état des pistes."
+msgstr "to share slope conditions."
+
+#: templates/details.html:259
+#, python-format
+msgid "il y a %(ago)s"
+msgstr "%(ago)s ago"
+
+#: templates/details.html:262
+msgid "Note:"
+msgstr "Rating:"
+
+#: templates/details.html:276
+msgid "Aucun retour piste coopératif pour le moment."
+msgstr "No cooperative slope feedback yet."
+
+#: templates/details.html:283
+msgid "Tendance sur"
+msgstr "Trend over"
+
+#: templates/details.html:292
+msgid ""
+"Affluence: 1 = peu de gens, 2 = agréable, 3 = bondé (basé sur les mises à "
+"jour instantanées)."
+msgstr "Crowd: 1 = low, 2 = moderate, 3 = busy (based on instant updates)."
+
+#: templates/details.html:300
+msgid "Conditions actuelles: partage photo"
+msgstr "Current conditions: photo sharing"
+
+#: templates/details.html:301
+msgid "Ajoutez une photo récente de la neige et un commentaire terrain."
+msgstr "Add a recent snow photo and an on-site comment."
+
+#: templates/details.html:316
+msgid "Publier l'actualisation"
+msgstr "Publish update"
+
+#: templates/details.html:319
+msgid "pour publier une photo des conditions."
+msgstr "to publish a conditions photo."
+
+#: templates/details.html:326
+msgid "Dernières actualisations"
+msgstr "Latest updates"
+
+#: templates/details.html:334
+msgid "Hauteur neige estimée:"
+msgstr "Estimated snow depth:"
+
+#: templates/details.html:340
+msgid "Photo conditions"
+msgstr "Conditions photo"
+
+#: templates/details.html:345
+msgid "Supprimer cette publication ?"
+msgstr "Delete this post?"
+
+#: templates/details.html:345
+msgid "Supprimer ma publication"
+msgstr "Delete my post"
+
+#: templates/details.html:350
+msgid "Aucune actualisation encore. Soyez le premier à publier une photo."
+msgstr "No updates yet. Be the first to post a photo."
+
+#: templates/details.html:380
+msgid "Nombre de retours"
+msgstr "Number of reports"
+
+#: templates/details.html:389
+msgid "Note moyenne piste"
+msgstr "Average slope rating"
+
+#: templates/details.html:399
+msgid "Affluence moyenne"
+msgstr "Average crowd"
+
+#: templates/details.html:420
+msgid "Retours"
+msgstr "Reports"
+
+#: templates/details.html:429
+msgid "Note /5"
+msgstr "Rating /5"
+
+#: templates/details.html:438
+msgid "Affluence"
+msgstr "Crowd"
+
+#: templates/details.html:494 templates/index.html:38
+msgid "personnes"
+msgstr "people"
+
+#: templates/details.html:517 templates/details.html:526
+msgid "Météo :"
+msgstr "Weather:"
+
+#: templates/details.html:517
+msgid "indisponible"
+msgstr "unavailable"
+
+#: templates/details.html:527
+msgid "Température :"
+msgstr "Temperature:"
+
+#: templates/details.html:528
+msgid "Niveau de neige :"
+msgstr "Snow level:"
+
+#: templates/details.html:528
+msgid "Pas de neige"
+msgstr "No snow"
+
+#: templates/details.html:529
+msgid "Ressenti :"
+msgstr "Feels like:"
+
+#: templates/details.html:530
+msgid "Humidité :"
+msgstr "Humidity:"
+
+#: templates/details.html:531
+msgid "Vitesse du vent :"
+msgstr "Wind speed:"
+
+#: templates/details.html:532
+msgid "Direction du vent :"
+msgstr "Wind direction:"
+
+#: templates/details.html:533
+msgid "Visibilité :"
+msgstr "Visibility:"
+
+#: templates/details.html:534
+msgid "Pression :"
+msgstr "Pressure:"
+
+#: templates/details.html:538
+msgid "Lever du soleil :"
+msgstr "Sunrise:"
+
+#: templates/details.html:539
+msgid "Coucher du soleil :"
+msgstr "Sunset:"
+
+#: templates/edit_instructor_service.html:4
+msgid "Modifier offre moniteur"
+msgstr "Edit instructor offer"
+
+#: templates/edit_instructor_service.html:8
+msgid "Modifier l'offre moniteur"
+msgstr "Edit instructor offer"
+
+#: templates/edit_instructor_service.html:12
+msgid "Enregistrer"
+msgstr "Save"
+
+#: templates/edit_instructor_service.html:13
+msgid "Annuler"
+msgstr "Cancel"
+
+#: templates/index.html:28
+msgid "Allez"
+msgstr "Go"
+
+#: templates/index.html:42
+msgid "Altitude:"
+msgstr "Altitude:"
+
+#: templates/index.html:46
+msgid "Distance de Grenoble:"
+msgstr "Distance from Grenoble:"
+
+#: templates/index.html:75
+msgid "Visitez l'une de nos stations de ski dès maintenant"
+msgstr "Visit one of our ski stations now"
+
+#: templates/index.html:76
+msgid ""
+"Découvrez les meilleures stations de ski que nous proposons, avec des "
+"informations détaillées et des visuels époustouflants."
+msgstr ""
+"Discover the best ski stations we offer, with detailed information and "
+"stunning visuals."
+
+#: templates/index.html:101
+msgid "Découvrez"
+msgstr "Discover"
+
+#: templates/index.html:103
+#, python-format
+msgid "Découvrez la beauté de %(station_name)s."
+msgstr "Discover the beauty of %(station_name)s."
+
+#: templates/index.html:105 templates/search.html:25
+msgid "Capacité"
+msgstr "Capacity"
+
+#: templates/index.html:106
+msgid "Pistes"
+msgstr "Runs"
+
+#: templates/index.html:109
+msgid "Besoin d'indications ?"
+msgstr "Need directions?"
+
+#: templates/index.html:128
+msgid "Stations les plus proches"
+msgstr "Nearest stations"
+
+#: templates/index.html:133
+#, python-format
+msgid ""
+"%(distance)s km de Grenoble • %(service_count)s services • "
+"%(instructor_count)s offres moniteur"
+msgstr ""
+"%(distance)s km from Grenoble • %(service_count)s services • "
+"%(instructor_count)s instructor offers"
+
+#: templates/index.html:135
+msgid "Météo: chargement..."
+msgstr "Weather: loading..."
+
+#: templates/index.html:145
+msgid "Précédent"
+msgstr "Previous"
+
+#: templates/index.html:147
+msgid "Suivant"
+msgstr "Next"
+
+#: templates/instructor_register.html:6
+msgid "Inscription Moniteur"
+msgstr "Instructor Registration"
+
+#: templates/instructor_register.html:11
+msgid "Devenir moniteur de ski"
+msgstr "Become a ski instructor"
+
+#: templates/instructor_register.html:12
+msgid ""
+"Créez un profil professionnel pour proposer vos cours et accompagnements."
+msgstr ""
+"Create a professional profile to offer your lessons and guided sessions."
+
+#: templates/instructor_register.html:23 templates/instructor_register.html:25
+msgid "Photo moniteur"
+msgstr "Instructor photo"
+
+#: templates/instructor_register.html:28
+msgid "Profil moniteur"
+msgstr "Instructor profile"
+
+#: templates/instructor_register.html:36
+msgid "Informations professionnelles"
+msgstr "Professional information"
+
+#: templates/instructor_register.html:43
+msgid "Bio"
+msgstr "Bio"
+
+#: templates/instructor_register.html:49
+msgid "Années d'expérience"
+msgstr "Years of experience"
+
+#: templates/instructor_register.html:53
+msgid "Certifications"
+msgstr "Certifications"
+
+#: templates/instructor_register.html:60
+msgid "Téléphone"
+msgstr "Phone"
+
+#: templates/instructor_register.html:64
+msgid "Profil actif"
+msgstr "Active profile"
+
+#: templates/instructor_register.html:70
+msgid "Photo professionnelle"
+msgstr "Professional photo"
+
+#: templates/instructor_register.html:72
+msgid "Ajoutez une photo claire pour inspirer confiance aux skieurs."
+msgstr "Add a clear photo to build trust with skiers."
+
+#: templates/instructor_register.html:75
+msgid "Enregistrer mon profil"
+msgstr "Save my profile"
+
+#: templates/instructors.html:63
+msgid "Moniteurs disponibles"
+msgstr "Available instructors"
+
+#: templates/instructors.html:64
+msgid ""
+"Trouvez un professionnel pour cours privés, perfectionnement et "
+"accompagnement piste."
+msgstr ""
+"Find a professional for private lessons, improvement training, and slope "
+"guidance."
+
+#: templates/instructors.html:74 templates/services.html:107
+msgid "Recherche libre"
+msgstr "Free search"
+
+#: templates/instructors.html:85 templates/services.html:129
+#: templates/services.html:170
+msgid "Station"
+msgstr "Station"
+
+#: templates/instructors.html:94
+msgid "Prix min (€)"
+msgstr "Min price (€)"
+
+#: templates/instructors.html:98
+msgid "Prix max (€)"
+msgstr "Max price (€)"
+
+#: templates/instructors.html:102
+msgid "Tri"
+msgstr "Sort"
+
+#: templates/instructors.html:104
+msgid "Pertinence"
+msgstr "Relevance"
+
+#: templates/instructors.html:112 templates/ski_material_listings.html:91
+msgid "Filtrer"
+msgstr "Filter"
+
+#: templates/instructors.html:121 templates/services.html:145
+#: templates/ski_material_listings.html:102
+msgid "Réinitialiser"
+msgstr "Reset"
+
+#: templates/instructors.html:129 templates/services.html:154
+#: templates/ski_material_listings.html:111
+msgid "Filtres actifs :"
+msgstr "Active filters:"
+
+#: templates/instructors.html:160
+msgid "ans d'expérience"
+msgstr "years of experience"
+
+#: templates/instructors.html:164
+msgid "Certifications:"
+msgstr "Certifications:"
+
+#: templates/instructors.html:185
+msgid "Pas encore d'évaluation"
+msgstr "No rating yet"
+
+#: templates/instructors.html:191
+msgid "Contacter"
+msgstr "Contact"
+
+#: templates/instructors.html:194
+msgid "Évaluer"
+msgstr "Rate"
+
+#: templates/instructors.html:198
+msgid "Se connecter pour contacter"
+msgstr "Log in to contact"
+
+#: templates/listing_detail.html:5
+msgid "Détail annonce"
+msgstr "Listing details"
+
+#: templates/listing_detail.html:15
+msgid "Type annonce:"
+msgstr "Listing type:"
+
+#: templates/listing_detail.html:16
+msgid "Matériel:"
+msgstr "Gear:"
+
+#: templates/listing_detail.html:17
+msgid "Ville:"
+msgstr "City:"
+
+#: templates/listing_detail.html:19 templates/listing_detail.html:21
+msgid "Prix:"
+msgstr "Price:"
+
+#: templates/listing_detail.html:19
+msgid "Gratuit"
+msgstr "Free"
+
+#: templates/listing_detail.html:24
+msgid "Contacter le propriétaire"
+msgstr "Contact owner"
+
+#: templates/listing_detail.html:27
+msgid "Modifier l'annonce"
+msgstr "Edit listing"
+
+#: templates/listing_detail.html:30
+msgid "Supprimer cette annonce ?"
+msgstr "Delete this listing?"
+
+#: templates/listing_detail.html:30
+msgid "Supprimer"
+msgstr "Delete"
+
+#: templates/messages/messages.html:82
+msgid "Discussions"
+msgstr "Conversations"
+
+#: templates/messages/messages.html:95
+msgid "Aucune conversation pour le moment."
+msgstr "No conversations yet."
+
+#: templates/messages/messages.html:100
+msgid "Démarrer un chat"
+msgstr "Start a chat"
+
+#: templates/messages/messages.html:122
+#, python-format
+msgid "Commencez la conversation avec %(username)s."
+msgstr "Start the conversation with %(username)s."
+
+#: templates/messages/messages.html:131
+msgid "Écrivez votre message..."
+msgstr "Write your message..."
+
+#: templates/messages/messages.html:132
+msgid "Envoyer"
+msgstr "Send"
+
+#: templates/messages/messages.html:138
+msgid "Sélectionnez une conversation à gauche."
+msgstr "Select a conversation on the left."
+
+#: templates/profile.html:5
+msgid "Profil de l'utilisateur"
+msgstr "User profile"
+
+#: templates/profile.html:10
+msgid "Profil utilisateur"
+msgstr "User profile"
+
+#: templates/profile.html:11
+msgid "Gérez vos informations personnelles et votre photo de profil."
+msgstr "Manage your personal information and profile picture."
+
+#: templates/profile.html:32 templates/profile.html:34
+#: templates/profile.html:87
+msgid "Photo de profil"
+msgstr "Profile picture"
+
+#: templates/profile.html:48
+msgid "Membre depuis :"
+msgstr "Member since:"
+
+#: templates/profile.html:49
+msgid "Dernière connexion :"
+msgstr "Last login:"
+
+#: templates/profile.html:58
+msgid "Mettre à jour vos informations"
+msgstr "Update your information"
+
+#: templates/profile.html:66
+msgid "Vérifiez les champs du formulaire avant de continuer."
+msgstr "Please check the form fields before continuing."
+
+#: templates/profile.html:72
+msgid "Prénom"
+msgstr "First name"
+
+#: templates/profile.html:76
+msgid "Nom"
+msgstr "Last name"
+
+#: templates/profile.html:82
+msgid "Email"
+msgstr "Email"
+
+#: templates/profile.html:89
+msgid "Choisissez une image carrée pour un meilleur rendu."
+msgstr "Choose a square image for better display."
+
+#: templates/profile.html:93
+msgid "Mettre à jour le profil"
+msgstr "Update profile"
+
+#: templates/profile.html:94
+msgid "Retour à l'accueil"
+msgstr "Back to home"
+
+#: templates/profile.html:104
+msgid ""
+"Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est "
+"irréversible."
+msgstr "Are you sure you want to delete your account? This action is irreversible."
+
+#: templates/profile.html:107
+msgid "Supprimer le compte"
+msgstr "Delete account"
+
+#: templates/register.html:16
+msgid "Créez votre compte"
+msgstr "Create your account"
+
+#: templates/search.html:13
+msgid "Trouvez la station de ski idéale"
+msgstr "Find the ideal ski station"
+
+#: templates/search.html:14
+msgid "Recherchez des stations de ski adaptées à vos préférences."
+msgstr "Search for ski stations that match your preferences."
+
+#: templates/search.html:27
+msgid "Capacité minimale"
+msgstr "Minimum capacity"
+
+#: templates/search.html:31
+msgid "Distance de Grenoble (km)"
+msgstr "Distance from Grenoble (km)"
+
+#: templates/search.html:33
+msgid "Distance maximale"
+msgstr "Maximum distance"
+
+#: templates/search.html:37
+msgid "Altitude (m)"
+msgstr "Altitude (m)"
+
+#: templates/search.html:39
+msgid "Altitude minimale"
+msgstr "Minimum altitude"
+
+#: templates/search.html:43
+msgid "Rechercher"
+msgstr "Search"
+
+#: templates/search.html:67
+msgid "Altitude :"
+msgstr "Altitude:"
+
+#: templates/search.html:68
+msgid "Distance :"
+msgstr "Distance:"
+
+#: templates/search.html:69
+msgid "Capacité :"
+msgstr "Capacity:"
+
+#: templates/search.html:71
+msgid "Voir plus de détails"
+msgstr "View more details"
+
+#: templates/search.html:80
+msgid ""
+"Aucune station de ski ne correspond à vos critères. Essayez de modifier les "
+"filtres."
+msgstr "No ski station matches your criteria. Try adjusting the filters."
+
+#: templates/service_detail.html:4
+msgid "Fiche Service"
+msgstr "Service details"
+
+#: templates/service_detail.html:16
+msgid "Retour services"
+msgstr "Back to services"
+
+#: templates/service_detail.html:22
+msgid "Localisation"
+msgstr "Location"
+
+#: templates/service_detail.html:23
+msgid "Adresse:"
+msgstr "Address:"
+
+#: templates/service_detail.html:24
+msgid "Coordonnées:"
+msgstr "Coordinates:"
+
+#: templates/service_detail.html:25
+msgid "Non renseigné"
+msgstr "Not provided"
+
+#: templates/service_detail.html:31
+msgid "Liens rapides"
+msgstr "Quick links"
+
+#: templates/service_detail.html:34 templates/services.html:216
+msgid "Site du service"
+msgstr "Service website"
+
+#: templates/service_detail.html:36
+msgid "Voir sur Google Maps"
+msgstr "View on Google Maps"
+
+#: templates/service_detail.html:37
+msgid "Itinéraire depuis Grenoble"
+msgstr "Route from Grenoble"
+
+#: templates/services.html:6
+msgid "Rechercher des Services"
+msgstr "Search Services"
+
+#: templates/services.html:98
+msgid "Services autour des stations"
+msgstr "Services around ski stations"
+
+#: templates/services.html:99
+msgid ""
+"Cliquez sur un service pour ouvrir son site ou sa localisation Google Maps."
+msgstr "Click a service to open its website or Google Maps location."
+
+#: templates/services.html:111 templates/ski_material_listings.html:77
+msgid "Type"
+msgstr "Type"
+
+#: templates/services.html:113
+msgid "Tous les types"
+msgstr "All types"
+
+#: templates/services.html:120
+msgid "Catégorie service"
+msgstr "Service category"
+
+#: templates/services.html:122
+msgid "Toutes les catégories"
+msgstr "All categories"
+
+#: templates/services.html:138
+msgid "OK"
+msgstr "OK"
+
+#: templates/services.html:143
+msgid "Mes offres moniteur"
+msgstr "My instructor offers"
+
+#: templates/services.html:165
+msgid "Quantité de services par station"
+msgstr "Number of services per station"
+
+#: templates/services.html:174
+msgid "Total"
+msgstr "Total"
+
+#: templates/services.html:188
+msgid "Aucune donnée de service pour cette recherche."
+msgstr "No service data for this search."
+
+#: templates/services.html:197
+msgid "Services commerce / location / secours"
+msgstr "Shops / rentals / rescue services"
+
+#: templates/services.html:204 templates/services.html:213
+msgid "Voir la fiche"
+msgstr "View details"
+
+#: templates/services.html:210
+msgid "Adresse :"
+msgstr "Address:"
+
+#: templates/services.html:211
+msgid "Horaires :"
+msgstr "Opening hours:"
+
+#: templates/services.html:218
+msgid "Rechercher le service"
+msgstr "Search service"
+
+#: templates/services.html:227
+msgid "Aucun service trouvé correspondant à vos critères."
+msgstr "No service matches your criteria."
+
+#: templates/services.html:232
+msgid "Offres de moniteurs"
+msgstr "Instructor offers"
+
+#: templates/ski_material_listings.html:7
+msgid "Donner ou Vendre du Matériel de Ski"
+msgstr "Lend or Sell Ski Gear"
+
+#: templates/ski_material_listings.html:54
+msgid "Marketplace Matériel de ski"
+msgstr "Ski Gear Marketplace"
+
+#: templates/ski_material_listings.html:55
+msgid "Recherche rapide, filtres flottants et gestion de vos offres."
+msgstr "Quick search, floating filters, and offer management."
+
+#: templates/ski_material_listings.html:58
+msgid "Ajouter une offre"
+msgstr "Add an offer"
+
+#: templates/ski_material_listings.html:66
+msgid "Recherche globale"
+msgstr "Global search"
+
+#: templates/ski_material_listings.html:80
+msgid "Prêt"
+msgstr "Lend"
+
+#: templates/ski_material_listings.html:81
+msgid "Vente"
+msgstr "Sell"
+
+#: templates/ski_material_listings.html:87
+msgid "Uniquement gratuit"
+msgstr "Free only"
+
+#: templates/ski_material_listings.html:172
+msgid "Aucune annonce trouvée avec ces critères."
+msgstr "No listing found with these criteria."
+
+#: templates/ski_material_listings.html:183
+msgid "Ajouter une annonce de matériel"
+msgstr "Add a gear listing"
+
+#: templates/socialaccount/login.html:5
+msgid "Sign In"
+msgstr "Sign In"
+
+#: templates/socialaccount/login.html:10
+#, python-format
+msgid "Connect %(provider)s"
+msgstr "Connect %(provider)s"
+
+#: templates/socialaccount/login.html:13
+#, python-format
+msgid "You are about to connect a new third-party account from %(provider)s."
+msgstr "You are about to connect a new third-party account from %(provider)s."
+
+#: templates/socialaccount/login.html:17
+#, python-format
+msgid "Sign In Via %(provider)s"
+msgstr "Sign In Via %(provider)s"
+
+#: templates/socialaccount/login.html:20
+#, python-format
+msgid "You are about to sign in using a third-party account from %(provider)s."
+msgstr ""
+"You are about to sign in using a third-party account from %(provider)s."
+
+#: templates/socialaccount/login.html:27
+msgid "Continue"
+msgstr "Continue"
+
+#~ msgid "Impossible d\\'afficher la tendance pour le moment."
+#~ msgstr "Unable to display trend at the moment."

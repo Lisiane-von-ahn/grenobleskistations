@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% load base64_filters %}
+{% load i18n %}
+
+{% block title %}{% trans "Détail annonce" %}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="card shadow-sm p-4">
+        <h2>{{ listing.title }}</h2>
+        {% if listing.image %}
+            <img src="data:image/jpeg;base64,{{ listing.image|b64encode }}" alt="{{ listing.title }}" class="img-fluid my-3" style="max-height: 350px; object-fit: cover;">
+        {% endif %}
+        <p>{{ listing.description }}</p>
+        <p><strong>{% trans "Type annonce:" %}</strong> {{ listing.get_listing_type_display }}</p>
+        <p><strong>{% trans "Matériel:" %}</strong> {{ listing.material_type }}</p>
+        <p><strong>{% trans "Ville:" %}</strong> {{ listing.city }}</p>
+        {% if listing.is_free %}
+            <p><strong>{% trans "Prix:" %}</strong> {% trans "Gratuit" %}</p>
+        {% elif listing.price %}
+            <p><strong>{% trans "Prix:" %}</strong> {{ listing.price }} €</p>
+        {% endif %}
+        {% if user.is_authenticated and listing.user != user %}
+            <a href="{% url 'messages' %}?user={{ listing.user.id }}" class="btn btn-primary">{% trans "Contacter le propriétaire" %}</a>
+        {% endif %}
+        {% if user.is_authenticated and listing.user == user %}
+            <a href="{% url 'edit_listing' id=listing.id %}" class="btn btn-outline-secondary">{% trans "Modifier l'annonce" %}</a>
+            <form method="post" action="{% url 'delete_listing' id=listing.id %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-danger" onclick="return confirm('{% trans "Supprimer cette annonce ?" %}');">{% trans "Supprimer" %}</button>
+            </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

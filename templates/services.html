@@ -1,86 +1,268 @@
 <!DOCTYPE html>
 {% extends 'base.html' %}
 {% load static %}
+{% load i18n %}
 
-{% block title %}Rechercher des Services{% endblock %}
+{% block title %}{% trans "Rechercher des Services" %}{% endblock %}
 
 {% block content %}
 
-<div class="page-heading text-center py-5 bg-light-blue">
+<style>
+    .btn.btn-sm {
+        border-radius: 0.5rem;
+    }
+
+    .service-card {
+        position: relative;
+        transition: transform 0.15s ease;
+    }
+
+    .service-card:hover {
+        transform: translateY(-2px);
+    }
+
+    .service-card-link {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+    }
+
+    .service-card .card-body > * {
+        position: relative;
+        z-index: 2;
+    }
+
+    .service-card.clickable {
+        cursor: pointer;
+    }
+
+    .service-card.clickable:hover {
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12) !important;
+    }
+
+    .click-hint {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 3;
+        opacity: 0;
+        transform: translateY(-2px);
+        transition: opacity 0.15s ease, transform 0.15s ease;
+    }
+
+    .service-card.clickable:hover .click-hint {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .card-actions .btn {
+        position: relative;
+        z-index: 3;
+    }
+
+    @media (max-width: 767.98px) {
+        .click-hint {
+            opacity: 1;
+            transform: none;
+            font-size: 0.72rem;
+            padding: 0.25rem 0.45rem;
+        }
+
+        .card-actions {
+            display: grid !important;
+            grid-template-columns: 1fr;
+            gap: 0.45rem;
+        }
+
+        .card-actions .btn {
+            width: 100%;
+        }
+
+        .services-toolbar {
+            flex-direction: column;
+            align-items: stretch !important;
+        }
+
+        .services-toolbar .btn,
+        .services-toolbar .btn-link {
+            width: 100%;
+            text-align: center;
+        }
+    }
+</style>
+
+<section class="py-5 bg-light">
     <div class="container">
-        <div class="row">
-            <div class="col-lg-12">
-                <h4 class="text-muted">Rechercher des Services</h4>
-                <h2 class="text-primary">Trouvez les services autour des stations de ski</h2>
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+            <div>
+                <h2 class="mb-1">{% trans "Services autour des stations" %}</h2>
+                <p class="text-muted mb-0">{% trans "Cliquez sur un service pour ouvrir son site ou sa localisation Google Maps." %}</p>
             </div>
         </div>
-    </div>
-</div>
 
-<!-- Formulaire de recherche -->
-<div class="search-form py-5">
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-lg-10">
-                <form method="GET" id="search-form" action="{% url 'services' %}">
-                    <div class="row g-3">
-                        <!-- Suppression du champ 'Nom du service' -->
-
-                        <div class="col-lg-6">
-                            <label for="type" class="form-label">Type de service</label>
-                            <select class="form-control form-control-lg" name="type" id="type">
-                                <option value="">Tous les types</option>
-                                {% for type in service_types %}
+        <div class="card border-0 shadow-sm sticky-top mb-4" style="top: 12px; z-index: 20;">
+            <div class="card-body">
+                <form method="get" action="{% url 'services' %}" class="row g-3 align-items-end">
+                    <div class="col-lg-5">
+                        <label for="q" class="form-label">{% trans "Recherche libre" %}</label>
+                        <input id="q" type="text" class="form-control" name="q" value="{{ search_query }}" placeholder="Nom, type, adresse, station...">
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <label for="type" class="form-label">{% trans "Type" %}</label>
+                        <select class="form-control" name="type" id="type">
+                            <option value="">{% trans "Tous les types" %}</option>
+                            {% for type in service_types %}
                                 <option value="{{ type }}" {% if request.GET.type == type %}selected{% endif %}>{{ type }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <div class="col-lg-6">
-                            <label for="ski_station" class="form-label">Station de ski</label>
-                            <select class="form-control form-control-lg" name="ski_station" id="ski_station">
-                                <option value="">Toutes les stations</option>
-                                {% for station in ski_stations %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <label for="service_category" class="form-label">{% trans "Catégorie service" %}</label>
+                        <select class="form-control" name="service_category" id="service_category">
+                            <option value="">{% trans "Toutes les catégories" %}</option>
+                            {% for category in service_categories %}
+                                <option value="{{ category }}" {% if selected_service_category == category %}selected{% endif %}>{{ category }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-lg-2 col-md-6">
+                        <label for="ski_station" class="form-label">{% trans "Station" %}</label>
+                        <select class="form-control" name="ski_station" id="ski_station">
+                            <option value="">{% trans "Toutes les stations" %}</option>
+                            {% for station in ski_stations %}
                                 <option value="{{ station.id }}" {% if request.GET.ski_station == station.id|stringformat:"s" %}selected{% endif %}>{{ station.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
+                            {% endfor %}
+                        </select>
                     </div>
-                    <div class="row mt-4">
-                        <div class="col-lg-12 text-center">
-                            <button type="submit" class="btn btn-primary btn-lg w-50">Rechercher</button>
-                        </div>
+                    <div class="col-lg-2 col-md-12">
+                        <button type="submit" class="btn btn-primary w-100">{% trans "OK" %}</button>
                     </div>
+                    {% if user.is_authenticated %}
+                        <div class="col-12 d-flex gap-2 flex-wrap services-toolbar">
+                            <a href="?q={{ search_query|default:'' }}&type={{ request.GET.type|default:'' }}&service_category={{ selected_service_category|default:'' }}&ski_station={{ request.GET.ski_station|default:'' }}{% if not request.GET.my_instructor_offers %}&my_instructor_offers=1{% endif %}" class="btn btn-sm {% if request.GET.my_instructor_offers %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                                {% trans "Mes offres moniteur" %}
+                            </a>
+                            <a href="{% url 'services' %}" class="btn btn-sm btn-link">{% trans "Réinitialiser" %}</a>
+                        </div>
+                    {% endif %}
                 </form>
             </div>
         </div>
-    </div>
-</div>
 
-<!-- Résultats -->
-<div class="amazing-deals py-5">
-    <div class="container">
+        {% if search_query or request.GET.type or selected_service_category or request.GET.ski_station or request.GET.my_instructor_offers %}
+            <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+                <span class="text-muted">{% trans "Filtres actifs :" %}</span>
+                {% if search_query %}<span class="badge bg-primary">Recherche: {{ search_query }}</span>{% endif %}
+                {% if request.GET.type %}<span class="badge bg-info">Type: {{ request.GET.type }}</span>{% endif %}
+                {% if selected_service_category %}<span class="badge bg-secondary">Catégorie: {{ selected_service_category }}</span>{% endif %}
+                {% if request.GET.ski_station %}<span class="badge bg-secondary">Station: {% if selected_station %}{{ selected_station.name }}{% endif %}</span>{% endif %}
+                {% if request.GET.my_instructor_offers %}<span class="badge bg-dark">Mes offres moniteur</span>{% endif %}
+            </div>
+        {% endif %}
+
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body">
+                <h5 class="mb-3">{% trans "Quantité de services par station" %}</h5>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>{% trans "Station" %}</th>
+                                {% for category in service_categories %}
+                                    <th>{{ category }}</th>
+                                {% endfor %}
+                                <th>{% trans "Total" %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in station_service_stats %}
+                                <tr>
+                                    <td><strong>{{ row.station.name }}</strong></td>
+                                    {% for count in row.ordered_counts %}
+                                        <td>{{ count }}</td>
+                                    {% endfor %}
+                                    <td><span class="badge bg-primary">{{ row.total }}</span></td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-muted">{% trans "Aucune donnée de service pour cette recherche." %}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <h3 class="text-primary mb-3">{% trans "Services commerce / location / secours" %}</h3>
         <div class="row g-4">
             {% if services %}
                 {% for service in services %}
-                <div class="col-lg-6 col-sm-6">
-                    <div class="card shadow-sm border-0 h-100">
-                        <div class="card-body d-flex flex-column justify-content-center">
-                            <h4 class="card-title text-primary">{{ service.name }}</h4>
-                            <p class="card-text">Type : {{ service.type }}</p>
-                            <p class="card-text">Station de ski : {{ service.ski_station.name }}</p>
-                            <p class="card-text">Heures d'ouverture : {{ service.opening_hours }}</p>
+                    <div class="col-lg-6 col-xl-4">
+                        <div class="card border-0 shadow-sm h-100 service-card clickable">
+                            <a href="{% url 'service_detail' service_id=service.id %}" class="service-card-link" aria-label="Ouvrir le service {{ service.name }}"></a>
+                            <span class="badge bg-secondary click-hint"><i class="fas fa-info-circle mr-1"></i>{% trans "Voir la fiche" %}</span>
+                            <div class="card-body d-flex flex-column">
+                                <h5 class="card-title mb-1">
+                                    <a href="{{ service.preferred_url }}" target="_blank" rel="noopener" class="text-decoration-none">{{ service.name }}</a>
+                                </h5>
+                                <p class="text-muted mb-2">{{ service.category_label }} • {{ service.ski_station.name }}</p>
+                                <p class="mb-2"><strong><i class="fas fa-map-marker-alt mr-1"></i>{% trans "Adresse :" %}</strong> {{ service.address_display }}</p>
+                                <p class="mb-3"><strong>{% trans "Horaires :" %}</strong> {{ service.opening_hours|default:'Non renseigné' }}</p>
+                                <div class="mt-auto d-flex flex-wrap gap-2 card-actions">
+                                    <a href="{% url 'service_detail' service_id=service.id %}" class="btn btn-outline-primary btn-sm">{% trans "Voir la fiche" %}</a>
+                                    <a href="{{ service.google_maps_url }}" target="_blank" rel="noopener" class="btn btn-outline-secondary btn-sm">Google Maps</a>
+                                    {% if service.website_url %}
+                                        <a href="{{ service.website_url }}" target="_blank" rel="noopener" class="btn btn-outline-success btn-sm">{% trans "Site du service" %}</a>
+                                    {% else %}
+                                        <a href="{{ service.search_url }}" target="_blank" rel="noopener" class="btn btn-outline-success btn-sm">{% trans "Rechercher le service" %}</a>
+                                    {% endif %}
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
                 {% endfor %}
             {% else %}
-                <div class="col-lg-12">
-                    <p class="text-muted text-center">Aucun service trouvé correspondant à vos critères.</p>
+                <div class="col-12">
+                    <div class="alert alert-light border mb-0">{% trans "Aucun service trouvé correspondant à vos critères." %}</div>
                 </div>
             {% endif %}
         </div>
+
+        <h3 class="text-primary mt-5 mb-3">{% trans "Offres de moniteurs" %}</h3>
+        <div class="row g-4">
+            {% for service in instructor_services %}
+                <div class="col-lg-6 col-xl-4">
+                    <div class="card border-0 shadow-sm h-100 service-card clickable">
+                        {% if user.is_authenticated %}
+                            <a href="{% url 'messages' %}?user={{ service.instructor.user.id }}" class="service-card-link" aria-label="Contacter le moniteur {{ service.instructor.user.username }}"></a>
+                        {% else %}
+                            <a href="{% url 'login' %}" class="service-card-link" aria-label="Se connecter pour contacter {{ service.instructor.user.username }}"></a>
+                        {% endif %}
+                        <span class="badge bg-primary click-hint"><i class="fas fa-comments mr-1"></i>Cliquer pour contacter</span>
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title mb-1">{{ service.title }}</h5>
+                            <p class="text-muted mb-2">Moniteur: {{ service.instructor.user.username }}</p>
+                            <p class="mb-1"><strong>Station :</strong> {{ service.ski_station.name }}</p>
+                            <p class="mb-1"><strong>Durée :</strong> {{ service.duration_minutes }} min</p>
+                            <p class="mb-1"><strong>Prix :</strong> {{ service.amount }} {{ service.currency }}</p>
+                            <p class="mb-3"><strong>Groupe max :</strong> {{ service.max_group_size }}</p>
+                            <p class="text-muted small">{{ service.description|truncatechars:130 }}</p>
+                            {% if user.is_authenticated %}
+                                <div class="card-actions mt-auto">
+                                    <a href="{% url 'messages' %}?user={{ service.instructor.user.id }}" class="btn btn-outline-primary btn-sm">Contacter ce moniteur</a>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="col-12">
+                    <div class="alert alert-light border mb-0">Aucune offre de moniteur active pour cette recherche.</div>
+                </div>
+            {% endfor %}
+        </div>
     </div>
-</div>
+</section>
 
 {% endblock %}

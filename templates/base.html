@@ -1,14 +1,17 @@
 <!DOCTYPE html>
 {% load static %}
 {% load base64_filters %}
+{% load i18n %}
 
-<html lang="fr">
+{% get_current_language as LANGUAGE_CODE %}
+
+<html lang="{{ LANGUAGE_CODE }}">
 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <title>{% block title %}Stations de Ski - Vue d'ensemble{% endblock %}</title>
+    <title>{% block title %}{% trans "Stations de Ski - Vue d'ensemble" %}{% endblock %}</title>
     <link rel="icon" type="image/png" href="{% static 'images/logo.png' %}" />
 
     <!-- Bootstrap core CSS -->
@@ -46,6 +49,118 @@
             color: #fff;
         }
 
+        .main-nav .nav li a.menu-chip {
+            background: rgba(255, 255, 255, 0.14);
+            border-radius: 8px;
+            padding: 8px 12px;
+            line-height: 1.2;
+        }
+
+        .main-nav .nav li a.logout-link {
+            background: #dc3545;
+            color: #fff;
+            border-radius: 8px;
+            padding: 8px 12px;
+            line-height: 1.2;
+        }
+
+        .main-nav .nav li a.logout-link:hover {
+            background: #bb2d3b;
+            color: #fff;
+        }
+
+        .main-nav .nav li.offers-dropdown {
+            position: relative;
+        }
+
+        .main-nav .nav li .offers-submenu {
+            list-style: none;
+            margin: 0;
+            padding: 6px;
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            min-width: 180px;
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 10px 22px rgba(0, 0, 0, 0.14);
+            display: none;
+            z-index: 1200;
+        }
+
+        .main-nav .nav li .offers-submenu li a {
+            display: block;
+            color: #2d3a4a;
+            border-radius: 8px;
+            padding: 8px 10px;
+            white-space: nowrap;
+        }
+
+        .main-nav .nav li .offers-submenu li a:hover {
+            background: rgba(13, 110, 253, 0.12);
+            color: #0d6efd;
+        }
+
+        .main-nav .nav li.offers-dropdown:hover .offers-submenu,
+        .main-nav .nav li.offers-dropdown:focus-within .offers-submenu {
+            display: block;
+        }
+
+        .mobile-label {
+            display: none;
+        }
+
+        .lang-form {
+            margin: 0;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .lang-select {
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.16);
+            color: #fff;
+            padding: 4px 8px;
+            font-size: 12px;
+            outline: none;
+        }
+
+        .lang-select option {
+            color: #1f2937;
+        }
+
+        @media (max-width: 991.98px) {
+            .main-nav .nav li.mobile-hide {
+                display: none !important;
+            }
+
+            .main-nav .nav li .offers-submenu {
+                position: static;
+                display: block;
+                box-shadow: none;
+                background: transparent;
+                padding: 0;
+                margin-top: 4px;
+                min-width: unset;
+            }
+
+            .main-nav .nav li .offers-submenu li a {
+                color: #ffffff;
+                opacity: 0.92;
+                padding-left: 14px;
+            }
+
+            .desktop-label {
+                display: none;
+            }
+
+            .mobile-label {
+                display: inline;
+            }
+        }
+
         /* Style pour la bannière de consentement des cookies */
         #cookie-banner {
             position: fixed;
@@ -77,28 +192,48 @@
                             <img src="{% static 'images/logo.png' %}" alt="Logo">
                         </a>
                         <ul class="nav">
-                            <li><a href="{% url 'my_template_view' %}" class="active">Accueil</a></li>
-                            <li><a href="{% url 'ski_material_listings' %}">Matériel de Ski</a></li>
-                            <li><a href="{% url 'ski_station_search' %}">Recherche</a></li>
-                            <li><a href="{% url 'services' %}">Services</a></li>
-                            <li><a href="{% url 'bus' %}">Lignes de Bus</a></li>
-                            <li><a href="{% url 'terms' %}">Terms</a></li>
-                            <li><a href="{% url 'schema-swagger-ui' %}">API</a></li>
+                            <li><a href="{% url 'my_template_view' %}" class="active">{% trans "Accueil" %}</a></li>
+                            <li><a href="{% url 'ski_material_listings' %}">{% trans "Matériel de Ski" %}</a></li>
+                            <li><a href="{% url 'ski_station_search' %}">{% trans "Recherche" %}</a></li>
+                            <li><a href="{% url 'services' %}">{% trans "Services" %}</a></li>
+                            <li><a href="{% url 'instructors' %}">{% trans "Moniteurs" %}</a></li>
+                            <li><a href="{% url 'bus' %}">{% trans "Lignes de Bus" %}</a></li>
+                            <li><a href="{% url 'messages' %}">Chat</a></li>
+                            <li class="mobile-hide"><a href="{% url 'terms' %}">{% trans "Conditions" %}</a></li>
+                            <li class="mobile-hide"><a href="{% url 'schema-swagger-ui' %}">API</a></li>
+                            <li>
+                                <form action="{% url 'set_language' %}" method="post" class="lang-form">
+                                    {% csrf_token %}
+                                    <input name="next" type="hidden" value="{{ request.get_full_path }}">
+                                    <select name="language" class="lang-select" onchange="this.form.submit()">
+                                        <option value="fr" {% if LANGUAGE_CODE == 'fr' %}selected{% endif %}>FR</option>
+                                        <option value="en" {% if LANGUAGE_CODE == 'en' %}selected{% endif %}>EN</option>
+                                    </select>
+                                </form>
+                            </li>
 
                             {% if user.is_authenticated %}
-                                <li><a href="{% url 'profile' %}">Bonjour, {{ user.first_name }} {{ user.last_name }}</a></li>
                                 <li>
-                                    <form method="POST" action="{% url 'logout' %}">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-danger">Déconnexion</button>
-                                    </form>
+                                    <a href="{% url 'profile' %}">
+                                        <span class="desktop-label">{% trans "Mon profil" %}</span>
+                                        <span class="mobile-label">{% trans "Profil" %}</span>
+                                    </a>
                                 </li>
+                                <li><a href="{% url 'become_instructor' %}">{% trans "Devenir moniteur" %}</a></li>
+                                <li class="offers-dropdown">
+                                    <a href="{% url 'ski_material_listings' %}?my_listings=1" class="menu-chip">{% trans "Mes offres" %}</a>
+                                    <ul class="offers-submenu">
+                                        <li><a href="{% url 'ski_material_listings' %}?my_listings=1">{% trans "Offres matériel" %}</a></li>
+                                        <li><a href="{% url 'instructor_services' %}">{% trans "Offres moniteur" %}</a></li>
+                                    </ul>
+                                </li>
+                                <li><a href="{% url 'logout' %}" class="logout-link">{% trans "Déconnexion" %}</a></li>
                             {% else %}
-                                <li><a href="{% url 'login' %}">Connexion</a></li>
+                                <li><a href="{% url 'login' %}">{% trans "Connexion" %}</a></li>
                             {% endif %}
                         </ul>
                         <a class='menu-trigger'>
-                            <span>Menu</span>
+                            <span>{% trans "Menu" %}</span>
                         </a>
                     </nav>
                 </div>
@@ -109,9 +244,9 @@
 
     <!-- Bannière de consentement des cookies -->
     <div id="cookie-banner" class="text-center">
-        <p>Nous utilisons des cookies pour améliorer votre expérience. <a href="{% url 'terms' %}" class="text-info">En savoir plus</a></p>
-        <button id="accept-cookies" class="btn btn-success">Accepter</button>
-        <button id="reject-cookies" class="btn btn-danger">Refuser</button>
+        <p>{% trans "Nous utilisons des cookies pour améliorer votre expérience." %} <a href="{% url 'terms' %}" class="text-info">{% trans "En savoir plus" %}</a></p>
+        <button id="accept-cookies" class="btn btn-success">{% trans "Accepter" %}</button>
+        <button id="reject-cookies" class="btn btn-danger">{% trans "Refuser" %}</button>
     </div>
 
     <!-- ***** Dynamic Content Section ***** -->

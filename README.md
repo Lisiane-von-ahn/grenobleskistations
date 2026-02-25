@@ -38,6 +38,58 @@ python manage.py migrate
 python manage.py createsuperuser
 python manage.py runserver
 ```
+
+## Déploiement Docker Compose (PostgreSQL + HTTPS)
+
+Le projet inclut un déploiement prêt pour serveur Linux avec:
+
+- `docker-compose.yml` (Django + PostgreSQL)
+- `docker-compose.letsencrypt.yml` (Traefik + certificats Let's Encrypt)
+- `deploy/install.sh` (installation Docker + génération `.env` + `docker compose up`)
+- `.github/workflows/deploy.yml` (déploiement SSH via GitHub Actions)
+
+### Secrets GitHub Actions requis
+
+- `SSH_HOST`
+- `SSH_USER`
+- `SSH_PRIVATE_KEY`
+- `DB_HOST`
+- `DB_USER`
+- `DB_PASSWORD`
+- `DB_NAME` (ex: `grenobleski`)
+- `DB_PORT` (ex: `5432`)
+- `DATABASE_URL` (optionnel, prioritaire si défini)
+- `WEATHER_API_KEY` (optionnel)
+
+### Set automatique des secrets GitHub
+
+1. Créez un fichier local non versionné:
+
+```bash
+cp .github/secrets/github-actions.secrets.example .github/secrets/github-actions.secrets
+```
+
+2. Renseignez les valeurs dans `.github/secrets/github-actions.secrets`.
+
+3. Poussez automatiquement les secrets vers GitHub (nécessite `gh auth login`):
+
+```bash
+chmod +x deploy/set-github-secrets.sh
+./deploy/set-github-secrets.sh .github/secrets/github-actions.secrets your-org/your-repo
+```
+
+### Exécution manuelle sur serveur
+
+```bash
+chmod +x deploy/install.sh
+./deploy/install.sh HOST USER PASSWORD WEATHER_API_KEY DB_NAME DB_PORT DATABASE_URL
+```
+
+Le domaine configuré par défaut dans le script est:
+
+- `grenobleski.fr`
+- `www.grenobleski.fr`
+
 ## Project Architecture
 
 The architecture of the project follows the standard **Model-View-Controller (MVC)** pattern. Here's a breakdown of each component:

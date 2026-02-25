@@ -2,99 +2,472 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load base64_filters %}
+{% load i18n %}
 
-{% block title %}Stations de Ski{% endblock %}
+{% block title %}{% trans "Stations de Ski" %}{% endblock %}
 
 {% block content %}
 
-    <!-- ***** Section Principale ***** -->
-    
-    <section class="weather-snow-level-ski-stations">
+    <style>
+        .station-hero-image {
+            width: 100%;
+            height: 260px;
+            object-fit: cover;
+            border-radius: 12px;
+        }
+        .station-stat {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 10px 12px;
+            margin-bottom: 10px;
+        }
+        .section-card {
+            border: 0;
+            border-radius: 14px;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+        }
+        .star-rating {
+            direction: rtl;
+            display: inline-flex;
+            gap: 2px;
+            align-items: center;
+            min-height: 38px;
+        }
+        .star-rating input {
+            display: none;
+        }
+        .star-rating label {
+            font-size: 1.45rem;
+            line-height: 1;
+            color: var(--bs-secondary-color, #6c757d);
+            cursor: pointer;
+            margin: 0;
+        }
+        .star-rating label:hover,
+        .star-rating label:hover ~ label,
+        .star-rating input:checked ~ label {
+            color: var(--bs-warning, #ffc107);
+        }
+        .rating-stars-display {
+            color: var(--bs-warning, #ffc107);
+            letter-spacing: 1px;
+            font-size: 0.95rem;
+        }
+        .crowd-choice {
+            display: inline-flex;
+            border: 1px solid #dfe3e6;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #fff;
+        }
+        .crowd-choice input {
+            display: none;
+        }
+        .crowd-choice label {
+            margin: 0;
+            padding: 0.45rem 0.8rem;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border-right: 1px solid #dfe3e6;
+        }
+        .crowd-choice label:last-child {
+            border-right: 0;
+        }
+        .crowd-choice input:checked + label {
+            background: var(--bs-primary, #0d6efd);
+            color: #fff;
+        }
+    </style>
+
+    <section class="py-4">
         <div class="container">
-            <div class="row">
+            <div class="row g-4">
+                <div class="col-lg-7">
+                    <div class="card section-card p-3 h-100">
+                        <h3 class="mb-3">{{ station.name }}</h3>
+                        {% if station.image %}
+                            <img src="data:image/jpeg;base64,{{ station.image|b64encode }}" class="station-hero-image mb-3" alt="{{ station.name }}">
+                        {% else %}
+                            <img src="{% static 'images/default.jpg' %}" class="station-hero-image mb-3" alt="{{ station.name }}">
+                        {% endif %}
 
-                <section class="ski-stations-map py-5">
-                    <div class="container">
-                        <div class="section-heading">
-                            <h2 class="mb-4">Carte des Stations de Ski</h2>
-                            <p>Explorez nos stations de ski à travers la carte interactive.</p>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="station-stat"><i class="fas fa-users"></i> {% trans "Capacité:" %} <strong>{{ station.capacity }}</strong></div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="station-stat"><i class="fas fa-road"></i> {% trans "Pistes:" %} <strong>{{ station.num_circuits }}</strong></div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="station-stat"><i class="fas fa-ruler-horizontal"></i> {% trans "Distance Grenoble:" %} <strong>{{ station.distanceFromGrenoble }} km</strong></div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="station-stat"><i class="fas fa-mountain"></i> {% trans "Altitude max:" %} <strong>{{ station.altitude }} m</strong></div>
+                            </div>
                         </div>
-                        <!-- Map container -->
-                        <div id="ski-map" style="height: 500px;"></div>
-                    </div>
-                </section>
-            
 
-                <section class="bus-lines-details py-2">
-                    <div class="row">
-                        <div class="col-md-32">
-                            {% for bus_line in bus_lines %}
-                            <div class="col-md-32 mb-4">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <h5 class="card-title"><i class="fas fa-bus"></i> Ligne de Bus : {{ bus_line.bus_number }}</h5>
-                                        <p class="card-text"><i class="fas fa-map-marker-alt"></i> Départ : {{ bus_line.departure_stop }}</p>
-                                        <p class="card-text"><i class="fas fa-map-signs"></i> Arrivée : {{ bus_line.arrival_stop }}</p>
-                                        <p class="card-text"><i class="fas fa-clock"></i> Fréquence : {{ bus_line.frequency }}</p>
-                                        <p class="card-text"><i class="fas fa-hourglass-half"></i> Durée du Trajet : {{ bus_line.travel_time }}</p>
+                        <div class="mt-2">
+                            <a href="{{ station_transit_url }}" class="btn btn-outline-primary btn-sm" target="_blank">{% trans "Venir en bus" %}</a>
+                            <a href="{{ station_driving_url }}" class="btn btn-outline-success btn-sm" target="_blank">{% trans "Venir en voiture" %}</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-5">
+                    <div class="card section-card p-4 mb-4">
+                        <h5 class="mb-3">{% trans "Conditions météorologiques actuelles" %}</h5>
+                        <div id="weather-icon" style="font-size: 42px;"></div>
+                        <p id="weather-condition" class="mb-1"></p>
+                        <p id="temperature" class="mb-1"></p>
+                        <p id="feels-like" class="mb-1"></p>
+                        <p id="snow-level" class="mb-1"></p>
+                        <p id="wind-speed" class="mb-1"></p>
+                        <p id="wind-direction" class="mb-1"></p>
+                        <p id="humidity" class="mb-1"></p>
+                        <p id="visibility" class="mb-1"></p>
+                        <p id="pressure" class="mb-1"></p>
+                        <p id="sunrise" class="mb-1"></p>
+                        <p id="sunset" class="mb-0"></p>
+                    </div>
+
+                    <div class="card section-card p-4">
+                        <h5 class="mb-3">{% trans "Lignes de bus vers la station" %}</h5>
+                        {% for bus_line in bus_lines %}
+                            <div class="border rounded p-3 mb-2">
+                                <strong><i class="fas fa-bus"></i> {{ bus_line.bus_number }}</strong><br>
+                                <small><i class="fas fa-map-marker-alt"></i> {% trans "Départ:" %} {{ bus_line.departure_stop }}</small><br>
+                                <small><i class="fas fa-map-signs"></i> {% trans "Arrivée:" %} {{ bus_line.arrival_stop }}</small><br>
+                                <small><i class="fas fa-clock"></i> {% trans "Fréquence:" %} {{ bus_line.frequency }}</small><br>
+                                <small><i class="fas fa-hourglass-half"></i> {% trans "Trajet:" %} {{ bus_line.travel_time }}</small>
+                            </div>
+                        {% empty %}
+                            <p class="text-muted mb-0">{% trans "Aucune ligne de bus renseignée." %}</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="col-lg-12">
+                    <div class="card section-card p-3">
+                        <h5 class="mb-3">{% trans "Carte de localisation" %}</h5>
+                        <div id="ski-map" style="height: 450px; border-radius: 12px;"></div>
+                    </div>
+                </div>
+
+                <div class="col-lg-12">
+                    <div class="card section-card p-4">
+                        <h5 class="mb-3">{% blocktrans with station_name=station.name %}Services disponibles à {{ station_name }}{% endblocktrans %}</h5>
+                        <div class="row">
+                            {% for store in station.servicestore_set.all %}
+                                <div class="col-md-6 mb-2">
+                                    <div class="border rounded p-3 h-100">
+                                        <strong>{{ store.name }}</strong><br>
+                                        <small>{% trans "Type:" %} {{ store.type }}</small><br>
+                                        <small>{% trans "Horaires:" %} {{ store.opening_hours }}</small>
                                     </div>
                                 </div>
-                            </div>
+                            {% empty %}
+                                <div class="col-12"><p class="text-muted mb-0">{% trans "Aucun service renseigné." %}</p></div>
                             {% endfor %}
                         </div>
                     </div>
-                </section>
-                <div class="col-md-6" py-2>
-                    <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title">Conditions Météorologiques</h5>
-                            <div id="weather-icon" style="font-size: 48px;"></div>
-                            <p id="weather-condition"></p>
-                            <p id="temperature"></p>
-                            <p id="feels-like"></p>
-                            <p id="humidity"></p>
-                            <p id="wind-speed"></p>
-                            <p id="wind-direction"></p>
-                            <p id="visibility"></p>
-                            <p id="pressure"></p>
-                            <p id="sunrise"></p>
-                            <p id="sunset"></p>
-                            <p id="snow-level"></p>
-                        </div>
-                    </div>
                 </div>
-
-                <!-- Ski Stations Details Section -->
-                <div class="col-md-6">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="card">
-                                <img src="data:image/jpeg;base64,{{ station.image|b64encode }}" class="card-img-top" alt="{{ station.name }}">
-                                
-                                <div class="card-body">
-                                    <h5 class="card-title">{{ station.name }}</h5>
-                                    <p class="card-text"><i class="fas fa-users"></i> Capacité : {{ station.capacity }} personnes</p>
-                                    <p class="card-text"><i class="fas fa-road"></i> Pistes : {{ station.num_circuits }} pistes</p>
-                                    <p class="card-text">
-                                        <strong>Services :</strong>
-                                        <ul>
-                                            {% for store in station.servicestore_set.all %}
-                                                <li>{{ store.name }} ({{ store.type }}) - {{ store.opening_hours }}</li>
-                                            {% endfor %}
-                                        </ul>
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Répétez la structure de la carte pour chaque station -->
-                    </div>
-                </div>
-
             </div>
         </div>
     </section>
 
+    <section class="py-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12 mb-4">
+                    <div class="card p-4 shadow-sm">
+                        <h4 class="mb-3">{% trans "État coopératif des pistes (dernières minutes/heures)" %}</h4>
+                        <div class="mb-3">
+                            {% if piste_average_rating %}
+                                <div class="d-flex flex-wrap align-items-center gap-2">
+                                    <span class="badge badge-primary">{% trans "Note moyenne piste:" %} {{ piste_average_rating|floatformat:1 }}/5</span>
+                                    <span class="rating-stars-display">
+                                        {% for _ in '12345' %}
+                                            {% if forloop.counter <= piste_average_rating_rounded %}★{% else %}☆{% endif %}
+                                        {% endfor %}
+                                    </span>
+                                    <small class="text-muted">({{ piste_report_count }} {% trans "avis" %})</small>
+                                </div>
+                            {% else %}
+                                <span class="badge badge-secondary">{% trans "Pas encore de note piste" %}</span>
+                            {% endif %}
+                            {% if piste_last_crowd %}
+                                <span class="badge badge-info">{% trans "Affluence actuelle:" %} {{ piste_last_crowd }}</span>
+                            {% endif %}
+                        </div>
+
+                        {% if user.is_authenticated %}
+                            <form method="post" class="row g-3 mb-3" id="piste-quick-form">
+                                {% csrf_token %}
+                                <input type="hidden" name="form_type" value="piste_report">
+                                <div class="col-md-3">
+                                    <label for="id_piste_rating">{% trans "Note piste:" %}</label>
+                                    <div class="star-rating" role="radiogroup" aria-label="{% trans 'Note piste' %}">
+                                        <input type="radio" id="star5" name="piste_rating" value="5" {% if piste_form.piste_rating.value|default:'5' == '5' %}checked{% endif %}>
+                                        <label for="star5" title="{% trans '5 étoiles' %}">★</label>
+                                        <input type="radio" id="star4" name="piste_rating" value="4" {% if piste_form.piste_rating.value == '4' %}checked{% endif %}>
+                                        <label for="star4" title="{% trans '4 étoiles' %}">★</label>
+                                        <input type="radio" id="star3" name="piste_rating" value="3" {% if piste_form.piste_rating.value == '3' %}checked{% endif %}>
+                                        <label for="star3" title="{% trans '3 étoiles' %}">★</label>
+                                        <input type="radio" id="star2" name="piste_rating" value="2" {% if piste_form.piste_rating.value == '2' %}checked{% endif %}>
+                                        <label for="star2" title="{% trans '2 étoiles' %}">★</label>
+                                        <input type="radio" id="star1" name="piste_rating" value="1" {% if piste_form.piste_rating.value == '1' %}checked{% endif %}>
+                                        <label for="star1" title="{% trans '1 étoile' %}">★</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-7">
+                                    {{ piste_form.comment.label_tag }}
+                                    {{ piste_form.comment }}
+                                </div>
+                                <div class="col-md-2 d-flex align-items-end">
+                                    <button type="submit" class="btn btn-primary w-100">{% trans "Enregistrer mon avis" %}</button>
+                                </div>
+                            </form>
+
+                            <form method="post" class="row g-2 mb-4">
+                                {% csrf_token %}
+                                <input type="hidden" name="form_type" value="crowd_update">
+                                <div class="col-md-8">
+                                    <label class="form-label d-block mb-1">{% trans "Affluence actuelle (mise à jour instantanée):" %}</label>
+                                    <div class="crowd-choice" role="radiogroup" aria-label="{% trans 'Affluence actuelle' %}">
+                                        <input type="radio" id="crowd_quiet" name="crowd_level" value="quiet" {% if piste_last_crowd_key == 'quiet' %}checked{% endif %}>
+                                        <label for="crowd_quiet">{% trans "Peu" %}</label>
+                                        <input type="radio" id="crowd_normal" name="crowd_level" value="normal" {% if piste_last_crowd_key == 'normal' %}checked{% endif %}>
+                                        <label for="crowd_normal">{% trans "Agréable" %}</label>
+                                        <input type="radio" id="crowd_busy" name="crowd_level" value="busy" {% if piste_last_crowd_key == 'busy' %}checked{% endif %}>
+                                        <label for="crowd_busy">{% trans "Bondé" %}</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 d-flex align-items-end">
+                                    <button type="submit" class="btn btn-outline-primary w-100">{% trans "Mettre à jour l'affluence" %}</button>
+                                </div>
+                            </form>
+                        {% else %}
+                            <p><a href="{% url 'login' %}">{% trans "Connectez-vous" %}</a> {% trans "pour partager l'état des pistes." %}</p>
+                        {% endif %}
+
+                        <div class="row">
+                            {% for report in piste_reports %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="border rounded p-3 h-100">
+                                        <div class="d-flex justify-content-between">
+                                            <strong>{{ report.user.username }}</strong>
+                                            <small class="text-muted">{% blocktrans with ago=report.created_at|timesince %}il y a {{ ago }}{% endblocktrans %}</small>
+                                        </div>
+                                        <div class="mt-2">
+                                            <span class="badge badge-primary">{% trans "Note:" %} {{ report.piste_rating }}/5</span>
+                                            <div class="rating-stars-display">
+                                                {% with ''|center:report.piste_rating as rating_range %}
+                                                    {% for _ in rating_range %}★{% endfor %}
+                                                {% endwith %}
+                                            </div>
+                                        </div>
+                                        {% if report.comment %}
+                                            <p class="mb-0 mt-2">{{ report.comment }}</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% empty %}
+                                <div class="col-12">
+                                    <p class="text-muted mb-0">{% trans "Aucun retour piste coopératif pour le moment." %}</p>
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mt-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="mb-0">{% trans "Tendance sur" %} {{ piste_window_label }}</h5>
+                                <div>
+                                    <a href="{% url 'ski_station_detail' station.id %}?trend=3h" class="btn btn-sm {% if piste_trend == '3h' %}btn-primary{% else %}btn-outline-primary{% endif %}">3h</a>
+                                    <a href="{% url 'ski_station_detail' station.id %}?trend=24h" class="btn btn-sm {% if piste_trend != '3h' %}btn-primary{% else %}btn-outline-primary{% endif %}">24h</a>
+                                </div>
+                            </div>
+                            <div style="height: 320px; position: relative;">
+                                <canvas id="pisteTrendChart"></canvas>
+                            </div>
+                            <small class="text-muted">{% trans "Affluence: 1 = peu de gens, 2 = agréable, 3 = bondé (basé sur les mises à jour instantanées)." %}</small>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="col-lg-6 mb-4">
+                    <div class="card p-4 shadow-sm">
+                        <h4 class="mb-3">{% trans "Conditions actuelles: partage photo" %}</h4>
+                        <p class="text-muted">{% trans "Ajoutez une photo récente de la neige et un commentaire terrain." %}</p>
+                        {% if user.is_authenticated %}
+                            <form method="post" enctype="multipart/form-data">
+                                {% csrf_token %}
+                                <input type="hidden" name="form_type" value="snow_update">
+                                {{ snow_form.note.label_tag }}
+                                {{ snow_form.note }}
+                                <div class="mt-2">
+                                    {{ snow_form.snow_depth_cm.label_tag }}
+                                    {{ snow_form.snow_depth_cm }}
+                                </div>
+                                <div class="mt-2">
+                                    {{ snow_form.image_file.label_tag }}
+                                    {{ snow_form.image_file }}
+                                </div>
+                                <button type="submit" class="btn btn-primary mt-3">{% trans "Publier l'actualisation" %}</button>
+                            </form>
+                        {% else %}
+                            <p><a href="{% url 'login' %}">{% trans "Connectez-vous" %}</a> {% trans "pour publier une photo des conditions." %}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="card p-4 shadow-sm">
+                        <h4 class="mb-3">{% trans "Dernières actualisations" %}</h4>
+                        {% for update in snow_updates %}
+                            <div class="mb-4 pb-3 border-bottom">
+                                <div class="d-flex justify-content-between">
+                                    <strong>{{ update.user.username }}</strong>
+                                    <small class="text-muted">{{ update.created_at|date:"d/m/Y H:i" }}</small>
+                                </div>
+                                {% if update.snow_depth_cm %}
+                                    <p class="mb-1">{% trans "Hauteur neige estimée:" %} {{ update.snow_depth_cm }} cm</p>
+                                {% endif %}
+                                {% if update.note %}
+                                    <p class="mb-2">{{ update.note }}</p>
+                                {% endif %}
+                                {% if update.image %}
+                                    <img src="data:image/jpeg;base64,{{ update.image|b64encode }}" alt="{% trans 'Photo conditions' %} {{ station.name }}" class="img-fluid rounded" style="max-height: 240px; object-fit: cover;">
+                                {% endif %}
+                                {% if user.is_authenticated and update.user == user %}
+                                    <form method="post" action="{% url 'delete_snow_update' station_id=station.id update_id=update.id %}" class="mt-2">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('{% trans "Supprimer cette publication ?" %}');">{% trans "Supprimer ma publication" %}</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        {% empty %}
+                            <p class="text-muted">{% trans "Aucune actualisation encore. Soyez le premier à publier une photo." %}</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
+        const chartLabels = {{ piste_chart_labels|safe }};
+        const chartReports = {{ piste_chart_reports|safe }};
+        const chartRatings = {{ piste_chart_ratings|safe }};
+        const chartCrowd = {{ piste_chart_crowd|safe }};
+
+        const chartCanvas = document.getElementById('pisteTrendChart');
+        if (chartCanvas && typeof Chart !== 'undefined') {
+            const existingChart = Chart.getChart(chartCanvas);
+            if (existingChart) {
+                existingChart.destroy();
+            }
+
+            try {
+                new Chart(chartCanvas, {
+                    type: 'bar',
+                    data: {
+                        labels: chartLabels,
+                        datasets: [
+                            {
+                                type: 'bar',
+                                label: '{% trans "Nombre de retours" %}',
+                                data: chartReports,
+                                backgroundColor: 'rgba(54, 162, 235, 0.25)',
+                                borderColor: 'rgba(54, 162, 235, 0.8)',
+                                borderWidth: 1,
+                                yAxisID: 'yReports'
+                            },
+                            {
+                                type: 'line',
+                                label: '{% trans "Note moyenne piste" %}',
+                                data: chartRatings,
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                tension: 0.35,
+                                spanGaps: true,
+                                yAxisID: 'yRating'
+                            },
+                            {
+                                type: 'line',
+                                label: '{% trans "Affluence moyenne" %}',
+                                data: chartCrowd,
+                                borderColor: 'rgba(255, 159, 64, 1)',
+                                backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                                borderDash: [6, 4],
+                                tension: 0.35,
+                                spanGaps: true,
+                                yAxisID: 'yCrowd'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: false,
+                        normalized: true,
+                        scales: {
+                            yReports: {
+                                type: 'linear',
+                                position: 'left',
+                                beginAtZero: true,
+                                title: { display: true, text: '{% trans "Retours" %}' }
+                            },
+                            yRating: {
+                                type: 'linear',
+                                position: 'right',
+                                beginAtZero: true,
+                                min: 0,
+                                max: 5,
+                                grid: { drawOnChartArea: false },
+                                title: { display: true, text: '{% trans "Note /5" %}' }
+                            },
+                            yCrowd: {
+                                type: 'linear',
+                                position: 'right',
+                                beginAtZero: true,
+                                min: 1,
+                                max: 3,
+                                grid: { drawOnChartArea: false },
+                                title: { display: true, text: '{% trans "Affluence" %}' },
+                                ticks: {
+                                    callback: function(value) {
+                                        if (value === 1) return '{% trans "Peu" %}';
+                                        if (value === 2) return '{% trans "Agréable" %}';
+                                        if (value === 3) return '{% trans "Bondé" %}';
+                                        return value;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                chartCanvas.parentElement.innerHTML = "<div class='alert alert-light border'>{% trans "Impossible d'afficher la tendance pour le moment." %}</div>";
+                console.error('Erreur chart tendance:', error);
+            }
+        }
+
+        const quickPisteForm = document.getElementById('piste-quick-form');
+        if (quickPisteForm) {
+            const quickInputs = quickPisteForm.querySelectorAll('input[name="piste_rating"], input[name="crowd_level"]');
+            quickInputs.forEach((input) => {
+                input.addEventListener('change', () => {
+                    if (typeof quickPisteForm.requestSubmit === 'function') {
+                        quickPisteForm.requestSubmit();
+                    } else {
+                        quickPisteForm.submit();
+                    }
+                });
+            });
+        }
+
         // Use the station's latitude and longitude to center the map dynamically
         var stationLat = {{ station.latitude }};
         var stationLng = {{ station.longitude }};
@@ -118,7 +491,7 @@
         var marker = L.marker([stationLat, stationLng], { icon: skiIcon }).addTo(map);
     
         // Bind a popup with the ski station's information
-        marker.bindPopup("<b>{{ station.name }}</b><br>Capacité: {{ station.capacity }} personnes<br>Pistes: {{ station.num_circuits }}<br>Difficulté: {{ station.difficulty }}");
+        marker.bindPopup("<b>{{ station.name }}</b><br>{% trans 'Capacité:' %} {{ station.capacity }} {% trans 'personnes' %}<br>{% trans 'Pistes:' %} {{ station.num_circuits }}");
     
         var apiKey = '{{ WEATHER_API_KEY }}';  
         var weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${stationLat}&lon=${stationLng}&appid=${apiKey}&units=metric`;
@@ -140,26 +513,30 @@
         fetch(weatherUrl)
             .then(response => response.json())
             .then(data => {
+                if (!data || !data.weather || !data.weather.length || !data.main) {
+                    document.getElementById('weather-condition').innerHTML = '<strong>{% trans "Météo :" %}</strong> {% trans "indisponible" %}';
+                    return;
+                }
                 
                 const weatherDescription = data.weather[0].description;
                 const weatherIconClass = weatherIcons[weatherDescription] || 'fas fa-question-circle';  // Fallback if no icon matches
                 
                 // Show the weather icon and data
                 document.getElementById('weather-icon').innerHTML = `<i class="${weatherIconClass}"></i>`;
-                document.getElementById('weather-condition').innerHTML = `<strong>Météo :</strong> ${weatherDescription}`;
-                document.getElementById('temperature').innerHTML = `<strong>Température :</strong> ${data.main.temp}°C`;
-                document.getElementById('snow-level').innerHTML = `<strong>Niveau de neige :</strong> ${data.snow ? data.snow['1h'] : 'Pas de neige'} cm`;
-                document.getElementById('feels-like').innerHTML = `<strong>Ressenti :</strong> ${data.main.feels_like}°C`;
-                document.getElementById('humidity').innerHTML = `<strong>Humidité :</strong> ${data.main.humidity}%`;
-                document.getElementById('wind-speed').innerHTML = `<strong>Vitesse du vent :</strong> ${data.wind.speed} m/s`;
-                document.getElementById('wind-direction').innerHTML = `<strong>Direction du vent :</strong> ${data.wind.deg}°`;
-                document.getElementById('visibility').innerHTML = `<strong>Visibilité :</strong> ${(data.visibility / 1000).toFixed(1)} km`;
-                document.getElementById('pressure').innerHTML = `<strong>Pression :</strong> ${data.main.pressure} hPa`;
+                document.getElementById('weather-condition').innerHTML = `<strong>{% trans "Météo :" %}</strong> ${weatherDescription}`;
+                document.getElementById('temperature').innerHTML = `<strong>{% trans "Température :" %}</strong> ${data.main.temp}°C`;
+                document.getElementById('snow-level').innerHTML = `<strong>{% trans "Niveau de neige :" %}</strong> ${data.snow ? data.snow['1h'] : '{% trans "Pas de neige" %}'} cm`;
+                document.getElementById('feels-like').innerHTML = `<strong>{% trans "Ressenti :" %}</strong> ${data.main.feels_like}°C`;
+                document.getElementById('humidity').innerHTML = `<strong>{% trans "Humidité :" %}</strong> ${data.main.humidity}%`;
+                document.getElementById('wind-speed').innerHTML = `<strong>{% trans "Vitesse du vent :" %}</strong> ${data.wind.speed} m/s`;
+                document.getElementById('wind-direction').innerHTML = `<strong>{% trans "Direction du vent :" %}</strong> ${data.wind.deg}°`;
+                document.getElementById('visibility').innerHTML = `<strong>{% trans "Visibilité :" %}</strong> ${(data.visibility / 1000).toFixed(1)} km`;
+                document.getElementById('pressure').innerHTML = `<strong>{% trans "Pression :" %}</strong> ${data.main.pressure} hPa`;
         
                 let sunrise = new Date(data.sys.sunrise * 1000).toLocaleTimeString();
                 let sunset = new Date(data.sys.sunset * 1000).toLocaleTimeString();
-                document.getElementById('sunrise').innerHTML = `<strong>Lever du soleil :</strong> ${sunrise}`;
-                document.getElementById('sunset').innerHTML = `<strong>Coucher du soleil :</strong> ${sunset}`;
+                document.getElementById('sunrise').innerHTML = `<strong>{% trans "Lever du soleil :" %}</strong> ${sunrise}`;
+                document.getElementById('sunset').innerHTML = `<strong>{% trans "Coucher du soleil :" %}</strong> ${sunset}`;
 
             })
             .catch(error => {
