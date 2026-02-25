@@ -146,7 +146,7 @@ DEBUG=False
 ALLOWED_HOSTS=${APP_HOSTNAME},${APP_HOSTNAME_WWW},localhost,127.0.0.1,[::1]
 DJANGO_SECRET_KEY=${secret_key}
 WEATHER_API_KEY=${WEATHER_API_KEY_ARG}
-RUN_SEED_ON_STARTUP=true
+RUN_SEED_ON_STARTUP=false
 
 DATABASE_URL=${database_url_effective}
 
@@ -184,6 +184,25 @@ run_compose() {
 
   echo "✅ Stack running"
   docker compose ps
+
+  echo "🌱 Running seed in configured PostgreSQL database"
+  local seed_ok=false
+  for i in $(seq 1 20); do
+    if docker compose "${compose_files[@]}" exec -T web python /app/load_ski_stations.py; then
+      seed_ok=true
+      break
+    fi
+    echo "Seed attempt ${i}/20 failed, retrying in 5s..."
+    sleep 5
+  done
+
+  if [[ "${seed_ok}" != "true" ]]; then
+    echo "❌ Seed failed after retries"
+    docker compose "${compose_files[@]}" logs --tail=200 web || true
+    exit 1
+  fi
+
+  echo "✅ Seed completed"
   echo
   if [[ "${USE_INTERNAL_TRAEFIK}" == "true" ]]; then
     echo "🌍 App: https://${APP_HOSTNAME}/ and https://${APP_HOSTNAME_WWW}/"
