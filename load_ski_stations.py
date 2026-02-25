@@ -49,16 +49,94 @@ STATION_IMAGE_MAP = {
 
 SERVICE_SEED_BY_STATION = {
     'Chamrousse': [
-        {'name': 'Location Ski Chamrousse', 'type': 'Location matériel', 'opening_hours': '08:30-18:30', 'address': 'Front de neige, 38410 Chamrousse'},
-        {'name': 'Secours Piste Chamrousse', 'type': 'Secours', 'opening_hours': '08:00-17:00', 'address': 'Poste de secours central, 38410 Chamrousse'},
+        {'name': 'Office de Tourisme de Chamrousse', 'type': 'Information', 'opening_hours': '09:00-12:30 / 14:00-18:00', 'address': 'Avenue Henry Duhamel, 38410 Chamrousse'},
+        {'name': 'ESF Chamrousse 1750', 'type': 'École de ski', 'opening_hours': '08:45-17:30', 'address': 'Recoin, 38410 Chamrousse'},
+        {'name': 'Intersport Chamrousse 1750', 'type': 'Magasin / Location', 'opening_hours': '08:30-19:00', 'address': 'Recoin, 38410 Chamrousse'},
+        {'name': 'Secours des pistes Chamrousse', 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': 'Poste de secours, 38410 Chamrousse'},
     ],
     'Les 7 Laux': [
-        {'name': 'Atelier Ski 7 Laux', 'type': 'Atelier / réparation', 'opening_hours': '09:00-18:00', 'address': 'Prapoutel centre, 38190 Les 7 Laux'},
-        {'name': 'Restaurant Sommet 7 Laux', 'type': 'Restauration', 'opening_hours': '11:30-16:30', 'address': 'Sommet Pipay, 38190 Les 7 Laux'},
+        {'name': 'Office de Tourisme Les 7 Laux', 'type': 'Information', 'opening_hours': '09:00-12:30 / 14:00-18:00', 'address': 'Prapoutel, 38190 Les Adrets'},
+        {'name': 'ESF Les 7 Laux', 'type': 'École de ski', 'opening_hours': '08:45-17:30', 'address': 'Prapoutel, 38190 Les Adrets'},
+        {'name': 'Skimium Les 7 Laux', 'type': 'Magasin / Location', 'opening_hours': '08:30-19:00', 'address': 'Prapoutel centre, 38190 Les Adrets'},
+        {'name': 'Secours des pistes Les 7 Laux', 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': 'Prapoutel, 38190 Les Adrets'},
     ],
     "Alpe d'Huez": [
-        {'name': 'Location Premium Alpe d\'Huez', 'type': 'Location matériel', 'opening_hours': '08:00-19:00', 'address': 'Avenue des Jeux, 38750 Huez'},
-        {'name': 'Point Info Alpe d\'Huez', 'type': 'Information', 'opening_hours': '08:30-17:30', 'address': 'Office de tourisme, 38750 Huez'},
+        {'name': 'Office de Tourisme Alpe d\'Huez', 'type': 'Information', 'opening_hours': '09:00-12:30 / 14:00-18:30', 'address': 'Place Paganon, 38750 Huez'},
+        {'name': 'ESF Alpe d\'Huez', 'type': 'École de ski', 'opening_hours': '08:45-18:00', 'address': 'Avenue des Jeux, 38750 Huez'},
+        {'name': 'Sport 2000 Alpe d\'Huez', 'type': 'Magasin / Location', 'opening_hours': '08:30-19:30', 'address': 'Avenue des Jeux, 38750 Huez'},
+        {'name': 'Secours des pistes Alpe d\'Huez', 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': 'Poste de secours, 38750 Huez'},
+    ],
+    'Villard-de-Lans / Corrençon': [
+        {'name': 'Office de Tourisme Villard-de-Lans', 'type': 'Information', 'opening_hours': '09:00-12:30 / 14:00-18:00', 'address': 'Place Mure Ravaud, 38250 Villard-de-Lans'},
+        {'name': 'ESF Villard-de-Lans / Corrençon', 'type': 'École de ski', 'opening_hours': '08:45-17:30', 'address': 'Côte 2000, 38250 Villard-de-Lans'},
+        {'name': 'Skimium Villard-Côte 2000', 'type': 'Magasin / Location', 'opening_hours': '08:30-18:30', 'address': 'Côte 2000, 38250 Villard-de-Lans'},
+        {'name': 'Secours des pistes Villard-Corrençon', 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': 'Côte 2000, 38250 Villard-de-Lans'},
+    ],
+    'Autrans-Méaudre en Vercors': [
+        {'name': 'Office de Tourisme Autrans-Méaudre', 'type': 'Information', 'opening_hours': '09:00-12:30 / 14:00-18:00', 'address': 'Le Village, 38880 Autrans-Méaudre en Vercors'},
+        {'name': 'ESF Autrans', 'type': 'École de ski', 'opening_hours': '09:00-17:00', 'address': 'Autrans Centre Nordique, 38880 Autrans-Méaudre en Vercors'},
+        {'name': 'Sport 2000 Autrans', 'type': 'Magasin / Location', 'opening_hours': '08:30-18:30', 'address': 'Centre village, 38880 Autrans-Méaudre en Vercors'},
+        {'name': 'Secours des pistes Autrans-Méaudre', 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': 'Autrans / Méaudre, 38880 Autrans-Méaudre en Vercors'},
+    ],
+    "Le Collet d'Allevard": [
+        {'name': 'Office de Tourisme Allevard-les-Bains', 'type': 'Information', 'opening_hours': '09:00-12:30 / 14:00-17:30', 'address': '3 Place de la Résistance, 38580 Allevard'},
+        {'name': 'ESF Le Collet d\'Allevard', 'type': 'École de ski', 'opening_hours': '09:00-17:00', 'address': 'Front de neige, 38580 Le Collet d\'Allevard'},
+        {'name': 'Skimium Le Collet', 'type': 'Magasin / Location', 'opening_hours': '08:30-18:30', 'address': 'Front de neige, 38580 Le Collet d\'Allevard'},
+        {'name': 'Secours des pistes Le Collet', 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': 'Poste de secours, 38580 Le Collet d\'Allevard'},
+    ],
+    'Les 2 Alpes': [
+        {'name': 'Office de Tourisme Les 2 Alpes', 'type': 'Information', 'opening_hours': '09:00-12:30 / 14:00-18:30', 'address': 'Place des 2 Alpes, 38860 Les Deux Alpes'},
+        {'name': 'ESF Les 2 Alpes', 'type': 'École de ski', 'opening_hours': '08:30-18:00', 'address': 'Centre station, 38860 Les Deux Alpes'},
+        {'name': 'Intersport Les 2 Alpes', 'type': 'Magasin / Location', 'opening_hours': '08:30-19:30', 'address': 'Avenue de la Muzelle, 38860 Les Deux Alpes'},
+        {'name': 'Secours des pistes Les 2 Alpes', 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': 'Poste de secours, 38860 Les Deux Alpes'},
+    ],
+    'La Grave - La Meije': [
+        {'name': 'Office de Tourisme La Grave', 'type': 'Information', 'opening_hours': '09:00-12:00 / 14:00-17:30', 'address': 'Le Bourg, 05320 La Grave'},
+        {'name': 'École de Ski Oxygène La Grave', 'type': 'École de ski', 'opening_hours': '09:00-17:00', 'address': 'Téléphérique, 05320 La Grave'},
+        {'name': 'Location Ski La Grave', 'type': 'Magasin / Location', 'opening_hours': '08:30-18:00', 'address': 'Le Village, 05320 La Grave'},
+        {'name': 'Secours des pistes La Meije', 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': 'Téléphérique, 05320 La Grave'},
+    ],
+    'Oz 3300': [
+        {'name': 'Office de Tourisme Oz 3300', 'type': 'Information', 'opening_hours': '09:00-12:30 / 14:00-18:00', 'address': 'Station Oz 3300, 38114 Oz-en-Oisans'},
+        {'name': 'ESF Oz 3300', 'type': 'École de ski', 'opening_hours': '09:00-17:30', 'address': 'Front de neige, 38114 Oz-en-Oisans'},
+        {'name': 'Skiset Oz 3300', 'type': 'Magasin / Location', 'opening_hours': '08:30-18:30', 'address': 'Galerie commerçante, 38114 Oz-en-Oisans'},
+        {'name': 'Secours des pistes Oz', 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': 'Poste de secours, 38114 Oz-en-Oisans'},
+    ],
+    'Vaujany': [
+        {'name': 'Office de Tourisme de Vaujany', 'type': 'Information', 'opening_hours': '09:00-12:30 / 14:00-18:00', 'address': 'Maison de Vaujany, 38114 Vaujany'},
+        {'name': 'ESF Vaujany', 'type': 'École de ski', 'opening_hours': '09:00-17:30', 'address': 'Place de la Fare, 38114 Vaujany'},
+        {'name': 'Skimium Vaujany', 'type': 'Magasin / Location', 'opening_hours': '08:30-18:30', 'address': 'Centre station, 38114 Vaujany'},
+        {'name': 'Secours des pistes Vaujany', 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': 'Poste de secours, 38114 Vaujany'},
+    ],
+    'Auris-en-Oisans': [
+        {'name': 'Office de Tourisme Auris-en-Oisans', 'type': 'Information', 'opening_hours': '09:00-12:30 / 14:00-18:00', 'address': 'Auris Station, 38142 Auris'},
+        {'name': 'ESF Auris-en-Oisans', 'type': 'École de ski', 'opening_hours': '09:00-17:00', 'address': 'Front de neige, 38142 Auris'},
+        {'name': 'Skiset Auris', 'type': 'Magasin / Location', 'opening_hours': '08:30-18:30', 'address': 'Centre station, 38142 Auris'},
+        {'name': 'Secours des pistes Auris', 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': 'Poste de secours, 38142 Auris'},
+    ],
+    'Le Sappey-en-Chartreuse': [
+        {'name': 'Mairie / Info Le Sappey-en-Chartreuse', 'type': 'Information', 'opening_hours': '09:00-12:00 / 14:00-17:00', 'address': 'Le Bourg, 38700 Le Sappey-en-Chartreuse'},
+        {'name': 'ESF Le Sappey', 'type': 'École de ski', 'opening_hours': '09:00-16:30', 'address': 'Domaine du Sappey, 38700 Le Sappey-en-Chartreuse'},
+        {'name': 'Location Le Sappey Ski', 'type': 'Magasin / Location', 'opening_hours': '08:30-17:30', 'address': 'Centre village, 38700 Le Sappey-en-Chartreuse'},
+        {'name': 'Secours des pistes Le Sappey', 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': 'Domaine du Sappey, 38700 Le Sappey-en-Chartreuse'},
+    ],
+    'Saint-Pierre-de-Chartreuse': [
+        {'name': 'Office de Tourisme Coeur de Chartreuse', 'type': 'Information', 'opening_hours': '09:00-12:30 / 14:00-17:30', 'address': 'Place de la Mairie, 38380 Saint-Pierre-de-Chartreuse'},
+        {'name': 'ESF Saint-Pierre-de-Chartreuse', 'type': 'École de ski', 'opening_hours': '09:00-17:00', 'address': 'Le Planolet, 38380 Saint-Pierre-de-Chartreuse'},
+        {'name': 'Sport 2000 Saint-Pierre', 'type': 'Magasin / Location', 'opening_hours': '08:30-18:00', 'address': 'Plan de Ville, 38380 Saint-Pierre-de-Chartreuse'},
+        {'name': 'Secours des pistes Saint-Pierre', 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': 'Le Planolet, 38380 Saint-Pierre-de-Chartreuse'},
+    ],
+    'Lans-en-Vercors': [
+        {'name': 'Office de Tourisme de Lans-en-Vercors', 'type': 'Information', 'opening_hours': '09:00-12:30 / 14:00-17:30', 'address': 'Place de la Mairie, 38250 Lans-en-Vercors'},
+        {'name': 'ESF Lans-en-Vercors', 'type': 'École de ski', 'opening_hours': '09:00-17:00', 'address': 'Domaine de l\'Aigle, 38250 Lans-en-Vercors'},
+        {'name': 'Location Ski Lans', 'type': 'Magasin / Location', 'opening_hours': '08:30-17:30', 'address': 'Centre village, 38250 Lans-en-Vercors'},
+        {'name': 'Secours des pistes Lans-en-Vercors', 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': 'Domaine de l\'Aigle, 38250 Lans-en-Vercors'},
+    ],
+    'Gresse-en-Vercors': [
+        {'name': 'Office de Tourisme de Gresse-en-Vercors', 'type': 'Information', 'opening_hours': '09:00-12:30 / 14:00-17:30', 'address': 'Place de la Mairie, 38650 Gresse-en-Vercors'},
+        {'name': 'ESF Gresse-en-Vercors', 'type': 'École de ski', 'opening_hours': '09:00-17:00', 'address': 'La Station, 38650 Gresse-en-Vercors'},
+        {'name': 'Skimium Gresse', 'type': 'Magasin / Location', 'opening_hours': '08:30-18:00', 'address': 'Front de neige, 38650 Gresse-en-Vercors'},
+        {'name': 'Secours des pistes Gresse-en-Vercors', 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': 'Poste de secours, 38650 Gresse-en-Vercors'},
     ],
 }
 
@@ -113,13 +191,58 @@ DEFAULT_SERVICE_BLUEPRINTS = [
     },
 ]
 
+STATION_OFFICIAL_CONTACTS = {
+    'Chamrousse': {'website_url': 'https://www.chamrousse.com', 'phone': '+33 4 76 89 92 65'},
+    'Les 7 Laux': {'website_url': 'https://www.les7laux.com', 'phone': '+33 4 76 08 17 86'},
+    "Alpe d'Huez": {'website_url': 'https://www.alpedhuez.com', 'phone': '+33 4 76 11 44 44'},
+    'Villard-de-Lans / Corrençon': {'website_url': 'https://www.villarddelans-correnconenvercors.com', 'phone': '+33 4 76 95 10 38'},
+    'Autrans-Méaudre en Vercors': {'website_url': 'https://www.autrans-meaudre.com', 'phone': '+33 4 76 95 30 70'},
+    "Le Collet d'Allevard": {'website_url': 'https://www.lecollet.com', 'phone': '+33 4 76 45 10 11'},
+    'Les 2 Alpes': {'website_url': 'https://www.les2alpes.com', 'phone': '+33 4 76 79 22 00'},
+    'La Grave - La Meije': {'website_url': 'https://www.lagrave-lameije.com', 'phone': '+33 4 76 79 90 05'},
+    'Oz 3300': {'website_url': 'https://www.oz3300.com', 'phone': '+33 4 76 80 78 01'},
+    'Vaujany': {'website_url': 'https://www.vaujany.com', 'phone': '+33 4 76 80 72 37'},
+    'Auris-en-Oisans': {'website_url': 'https://www.auris-en-oisans.fr', 'phone': '+33 4 76 80 13 52'},
+    'Le Sappey-en-Chartreuse': {'website_url': 'https://www.chartreuse-tourisme.com', 'phone': '+33 4 76 88 84 05'},
+    'Saint-Pierre-de-Chartreuse': {'website_url': 'https://www.coeur-de-chartreuse.com', 'phone': '+33 4 76 88 62 08'},
+    'Lans-en-Vercors': {'website_url': 'https://www.lansenvercors.com', 'phone': '+33 4 76 95 42 62'},
+    'Gresse-en-Vercors': {'website_url': 'https://www.gresse-en-vercors.fr', 'phone': '+33 4 76 34 33 40'},
+}
+
 
 def clip_text(value, max_length):
     return value if len(value) <= max_length else value[:max_length]
 
 
+def get_station_contact(station_name):
+    return STATION_OFFICIAL_CONTACTS.get(station_name, {})
+
+
+def enrich_service_data(service, station_name):
+    station_contact = get_station_contact(station_name)
+    normalized_type = (service.get('type', '') or '').lower()
+    is_information_service = 'information' in normalized_type or 'office' in (service.get('name', '') or '').lower()
+
+    website_url = service.get('website_url') or (station_contact.get('website_url') if is_information_service else '')
+    phone = service.get('phone') or station_contact.get('phone', '')
+    source_note = service.get('source_note') or 'Source: office de tourisme / domaine skiable (à vérifier avant déplacement).'
+
+    return {
+        'name': clip_text(service.get('name', ''), 100),
+        'type': clip_text(service.get('type', ''), 100),
+        'opening_hours': clip_text(service.get('opening_hours', ''), 100),
+        'address': clip_text(service.get('address', ''), 255),
+        'website_url': clip_text(website_url, 255) if website_url else '',
+        'phone': clip_text(phone, 40) if phone else '',
+        'source_note': clip_text(source_note, 255) if source_note else '',
+    }
+
+
 def get_services_for_station(station_name):
     specific_services = list(SERVICE_SEED_BY_STATION.get(station_name, []))
+    if specific_services:
+        return [enrich_service_data(service, station_name) for service in specific_services]
+
     specific_names = {service.get('name', '') for service in specific_services}
 
     generated_services = []
@@ -132,19 +255,12 @@ def get_services_for_station(station_name):
             'type': clip_text(blueprint['type'], 100),
             'opening_hours': clip_text(blueprint['opening_hours'], 100),
             'address': clip_text(blueprint['address_tpl'].format(station=station_name), 255),
+            'source_note': 'Service générique de démonstration (non vérifié localement).',
         })
 
-    normalized_specific_services = [
-        {
-            'name': clip_text(service.get('name', ''), 100),
-            'type': clip_text(service.get('type', ''), 100),
-            'opening_hours': clip_text(service.get('opening_hours', ''), 100),
-            'address': clip_text(service.get('address', ''), 255),
-        }
-        for service in specific_services
-    ]
+    normalized_specific_services = [enrich_service_data(service, station_name) for service in specific_services]
 
-    return normalized_specific_services + generated_services
+    return normalized_specific_services + [enrich_service_data(service, station_name) for service in generated_services]
 
 BUS_LINES_SEED = [
     {
@@ -366,6 +482,9 @@ def seed_ski_stations():
                     'type': service['type'],
                     'opening_hours': service['opening_hours'],
                     'address': service.get('address', ''),
+                    'website_url': service.get('website_url', ''),
+                    'phone': service.get('phone', ''),
+                    'source_note': service.get('source_note', ''),
                     'latitude': float(station.latitude) + lat_offset,
                     'longitude': float(station.longitude) + lng_offset,
                 }

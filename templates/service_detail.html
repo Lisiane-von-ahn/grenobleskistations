@@ -22,6 +22,9 @@
                             <h5 class="mb-3">{% trans "Localisation" %}</h5>
                             <p class="mb-2"><strong>{% trans "Adresse:" %}</strong> {{ address_display }}</p>
                             <p class="mb-2"><strong>{% trans "Coordonnées:" %}</strong> {{ service.latitude }}, {{ service.longitude }}</p>
+                            {% if service.phone %}
+                                <p class="mb-2"><strong>{% trans "Téléphone:" %}</strong> {{ service.phone }}</p>
+                            {% endif %}
                             <p class="mb-0"><strong>{% trans "Horaires:" %}</strong> {% if service.opening_hours %}{{ service.opening_hours }}{% else %}{% trans "Non renseigné" %}{% endif %}</p>
                         </div>
                     </div>
@@ -29,6 +32,9 @@
                     <div class="col-lg-6">
                         <div class="border rounded p-3 h-100">
                             <h5 class="mb-3">{% trans "Liens rapides" %}</h5>
+                            {% if service.source_note %}
+                                <p class="text-muted small">{{ service.source_note }}</p>
+                            {% endif %}
                             <div class="d-flex flex-wrap gap-2">
                                 {% if service.website_url %}
                                     <a href="{{ service.website_url }}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">{% trans "Site du service" %}</a>

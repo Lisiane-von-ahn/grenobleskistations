@@ -208,7 +208,13 @@
                                 </h5>
                                 <p class="text-muted mb-2">{{ service.category_label }} • {{ service.ski_station.name }}</p>
                                 <p class="mb-2"><strong><i class="fas fa-map-marker-alt mr-1"></i>{% trans "Adresse :" %}</strong> {{ service.address_display }}</p>
+                                {% if service.phone %}
+                                    <p class="mb-2"><strong><i class="fas fa-phone mr-1"></i>{% trans "Téléphone :" %}</strong> {{ service.phone }}</p>
+                                {% endif %}
                                 <p class="mb-3"><strong>{% trans "Horaires :" %}</strong> {{ service.opening_hours|default:'Non renseigné' }}</p>
+                                {% if service.source_note %}
+                                    <p class="text-muted small mb-3">{{ service.source_note }}</p>
+                                {% endif %}
                                 <div class="mt-auto d-flex flex-wrap gap-2 card-actions">
                                     <a href="{% url 'service_detail' service_id=service.id %}" class="btn btn-outline-primary btn-sm">{% trans "Voir la fiche" %}</a>
                                     <a href="{{ service.google_maps_url }}" target="_blank" rel="noopener" class="btn btn-outline-secondary btn-sm">Google Maps</a>
