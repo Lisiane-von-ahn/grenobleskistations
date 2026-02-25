@@ -26,10 +26,10 @@ services:
       - "8000"
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS -H 'Host: ${APP_HOSTNAME:-grenobleski.fr}' http://127.0.0.1:8000/ >/dev/null || exit 1"]
-      interval: 15s
+      interval: 10s
       timeout: 5s
-      retries: 10
-      start_period: 20s
+      retries: 30
+      start_period: 120s
 
   db:
     image: postgres:16

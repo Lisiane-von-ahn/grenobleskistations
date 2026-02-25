@@ -43,8 +43,22 @@ fi
 python manage.py migrate --noinput
 
 if [[ "${RUN_SEED_ON_STARTUP:-true}" == "true" ]]; then
-    echo "Running initial seed..."
-    python /app/load_ski_stations.py
+    SHOULD_SEED=$(python - <<'PY'
+import os
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'skistation_project.settings')
+import django
+django.setup()
+from api.models import SkiStation
+print("yes" if SkiStation.objects.count() == 0 else "no")
+PY
+)
+
+    if [[ "${SHOULD_SEED}" == "yes" ]]; then
+        echo "Running initial seed..."
+        python /app/load_ski_stations.py
+    else
+        echo "Seed skipped (data already present)."
+    fi
 fi
 
 python manage.py collectstatic --noinput
