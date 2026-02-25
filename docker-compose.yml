@@ -20,6 +20,8 @@ services:
     volumes:
       - static_volume:/app/staticfiles
       - media_volume:/app/media
+    ports:
+      - "8081:8000"
     expose:
       - "8000"
 
