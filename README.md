@@ -85,6 +85,9 @@ chmod +x deploy/install.sh
 ./deploy/install.sh HOST USER PASSWORD WEATHER_API_KEY DB_NAME DB_PORT DATABASE_URL
 ```
 
+Le seed initial (`load_ski_stations.py`) est exécuté automatiquement au démarrage du conteneur web.
+Pour le désactiver, définir `RUN_SEED_ON_STARTUP=false` dans `.env`.
+
 Le domaine configuré par défaut dans le script est:
 
 - `grenobleski.fr`

@@ -41,6 +41,12 @@ PY
 fi
 
 python manage.py migrate --noinput
+
+if [[ "${RUN_SEED_ON_STARTUP:-true}" == "true" ]]; then
+    echo "Running initial seed..."
+    python /app/load_ski_stations.py
+fi
+
 python manage.py collectstatic --noinput
 
 exec "$@"
