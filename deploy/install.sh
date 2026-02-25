@@ -10,6 +10,8 @@ set -euo pipefail
 # HOST/USER/PASSWORD/DB_* are DB inputs.
 # If DATABASE_URL is provided, it takes precedence.
 # If HOST is localhost/127.0.0.1, app uses host.docker.internal from container.
+# By default, this script does NOT start an internal Traefik (shared-server safe).
+# Set USE_INTERNAL_TRAEFIK=true to enable docker-compose.letsencrypt.yml.
 # =============================================================================
 
 DOMAIN="grenobleski.fr"
@@ -33,6 +35,7 @@ fi
 
 APP_HOSTNAME="${DOMAIN}"
 APP_HOSTNAME_WWW="${WWW_DOMAIN}"
+USE_INTERNAL_TRAEFIK="${USE_INTERNAL_TRAEFIK:-false}"
 
 need_cmd() { command -v "$1" >/dev/null 2>&1; }
 
@@ -156,28 +159,46 @@ EOF
 run_compose() {
   cd "${APP_DIR}"
 
-  if [[ ! -f docker-compose.yml || ! -f docker-compose.letsencrypt.yml ]]; then
-    echo "❌ Missing docker compose files in ${APP_DIR}"
+  if [[ ! -f docker-compose.yml ]]; then
+    echo "❌ Missing docker-compose.yml in ${APP_DIR}"
     exit 1
   fi
 
+  local compose_files=("-f" "docker-compose.yml")
+
+  if [[ "${USE_INTERNAL_TRAEFIK}" == "true" ]]; then
+    if [[ ! -f docker-compose.letsencrypt.yml ]]; then
+      echo "❌ Missing docker-compose.letsencrypt.yml in ${APP_DIR}"
+      exit 1
+    fi
+    compose_files+=("-f" "docker-compose.letsencrypt.yml")
+  fi
+
   echo "🐳 Starting/updating stack"
-  if ! docker compose -f docker-compose.yml -f docker-compose.letsencrypt.yml up -d --build; then
+  if ! docker compose "${compose_files[@]}" up -d --build; then
     echo "⚠️ compose up failed; trying clean restart"
-    docker compose -f docker-compose.yml -f docker-compose.letsencrypt.yml down || true
-    docker compose -f docker-compose.yml -f docker-compose.letsencrypt.yml up -d --build
+    docker compose "${compose_files[@]}" down || true
+    docker compose "${compose_files[@]}" up -d --build
   fi
 
   echo "✅ Stack running"
   docker compose ps
   echo
-  echo "🌍 App: https://${APP_HOSTNAME}/ and https://${APP_HOSTNAME_WWW}/"
+  if [[ "${USE_INTERNAL_TRAEFIK}" == "true" ]]; then
+    echo "🌍 App: https://${APP_HOSTNAME}/ and https://${APP_HOSTNAME_WWW}/"
+  else
+    echo "🌍 App: http://SERVER_IP:8081 (mode Traefik externe)"
+  fi
 }
 
 main() {
   ensure_app_dir
   install_docker_if_needed
-  free_ports_80_443
+  if [[ "${USE_INTERNAL_TRAEFIK}" == "true" ]]; then
+    free_ports_80_443
+  else
+    echo "ℹ️ USE_INTERNAL_TRAEFIK=false: keep existing reverse proxy on ports 80/443"
+  fi
   ensure_env_file
   run_compose
 }
