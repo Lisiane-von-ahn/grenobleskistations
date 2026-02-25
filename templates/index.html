@@ -3,6 +3,7 @@
 {% load static %}
 {% load base64_filters %}
 {% load i18n %}
+{% load l10n %}
 
 {% block title %}{% trans "Stations de Ski" %}{% endblock %}
 
@@ -128,7 +129,7 @@
                   <h5>{% trans "Stations les plus proches" %}</h5>
                   <ul class="list-unstyled mb-0">
                     {% for station in nearest_stations %}
-                      <li class="mb-2 nearest-station-weather" data-lat="{{ station.latitude }}" data-lng="{{ station.longitude }}" data-station-id="{{ station.id }}">
+                      <li class="mb-2 nearest-station-weather" data-lat="{{ station.latitude|unlocalize }}" data-lng="{{ station.longitude|unlocalize }}" data-station-id="{{ station.id }}">
                         <strong>{{ station.name }}</strong><br>
                         <small>{% blocktrans with distance=station.distanceFromGrenoble service_count=station.service_count instructor_count=station.instructor_service_count %}{{ distance }} km de Grenoble • {{ service_count }} services • {{ instructor_count }} offres moniteur{% endblocktrans %}</small>
                         <br>
@@ -187,8 +188,8 @@
       {% for station in map_stations %}
       {
         name: "{{ station.name|escapejs }}",
-        lat: {{ station.latitude }},
-        lng: {{ station.longitude }},
+        lat: {{ station.latitude|unlocalize }},
+        lng: {{ station.longitude|unlocalize }},
         capacity: {{ station.capacity|default:0 }},
         altitude: {{ station.altitude|default:0 }},
         distance: {{ station.distanceFromGrenoble|default:0 }},
@@ -286,7 +287,5 @@
         });
     });
   </script>
-
-  </body>
 
   {% endblock %}

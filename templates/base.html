@@ -202,8 +202,7 @@
                             <li class="mobile-hide"><a href="{% url 'terms' %}">{% trans "Conditions" %}</a></li>
                             <li class="mobile-hide"><a href="{% url 'schema-swagger-ui' %}">API</a></li>
                             <li>
-                                <form action="{% url 'set_language' %}" method="post" class="lang-form">
-                                    {% csrf_token %}
+                                <form action="{% url 'set_language_safe' %}" method="get" class="lang-form">
                                     <input name="next" type="hidden" value="{{ request.get_full_path }}">
                                     <select name="language" class="lang-select" onchange="this.form.submit()">
                                         <option value="fr" {% if LANGUAGE_CODE == 'fr' %}selected{% endif %}>FR</option>

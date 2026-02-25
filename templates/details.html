@@ -3,6 +3,7 @@
 {% load static %}
 {% load base64_filters %}
 {% load i18n %}
+{% load l10n %}
 
 {% block title %}{% trans "Stations de Ski" %}{% endblock %}
 
@@ -469,8 +470,8 @@
         }
 
         // Use the station's latitude and longitude to center the map dynamically
-        var stationLat = {{ station.latitude }};
-        var stationLng = {{ station.longitude }};
+        var stationLat = {{ station.latitude|unlocalize }};
+        var stationLng = {{ station.longitude|unlocalize }};
         
         // Initialize the map and set its view to the ski station's coordinates
         var map = L.map('ski-map').setView([stationLat, stationLng], 15);  // Adjust zoom level if necessary

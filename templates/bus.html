@@ -2,6 +2,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load i18n %}
+{% load l10n %}
 
 {% block title %}{% trans "Lignes de Bus" %}{% endblock %}
 
@@ -124,8 +125,8 @@
             station: "{{ point.station_name|escapejs }}",
             stop: "{{ point.departure_stop|escapejs }}",
             route: "{{ point.route_points|escapejs }}",
-            lat: {{ point.lat }},
-            lng: {{ point.lng }}
+            lat: {{ point.lat|unlocalize }},
+            lng: {{ point.lng|unlocalize }}
         },
         {% endfor %}
     ];
