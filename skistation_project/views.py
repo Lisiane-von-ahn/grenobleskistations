@@ -40,11 +40,26 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.http import HttpResponseForbidden
+from django.http import HttpResponseRedirect
 from urllib.parse import quote_plus
 from django.utils import timezone
+from django.utils.translation import check_for_language, activate
 from datetime import timedelta
 import json
 import base64
+
+
+def set_language_view(request):
+    language = request.GET.get('language', '').strip()
+    next_url = request.GET.get('next', '/') or '/'
+
+    response = HttpResponseRedirect(next_url)
+    if language and check_for_language(language):
+        activate(language)
+        if hasattr(request, 'session'):
+            request.session['django_language'] = language
+        response.set_cookie('django_language', language)
+    return response
 
 
 SERVICE_CATEGORY_ORDER = [
