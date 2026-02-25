@@ -90,6 +90,19 @@ Le domaine configuré par défaut dans le script est:
 - `grenobleski.fr`
 - `www.grenobleski.fr`
 
+### Traefik déjà présent sur le serveur (audela)
+
+Si un Traefik existe déjà sur le serveur (ports 80/443 occupés), gardez ce projet en mode externe (`USE_INTERNAL_TRAEFIK=false`) et utilisez le snippet suivant côté Traefik existant:
+
+- [deploy/traefik-dynamic-grenobleski.yml](deploy/traefik-dynamic-grenobleski.yml)
+
+Ce snippet route:
+
+- `grenobleski.fr` -> `http://127.0.0.1:8081`
+- `www.grenobleski.fr` -> `http://127.0.0.1:8081`
+
+Vérifiez que le `certResolver` (`letsencrypt`) correspond bien au nom utilisé dans votre Traefik existant.
+
 ## Project Architecture
 
 The architecture of the project follows the standard **Model-View-Controller (MVC)** pattern. Here's a breakdown of each component:
