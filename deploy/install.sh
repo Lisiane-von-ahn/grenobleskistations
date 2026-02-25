@@ -185,6 +185,23 @@ run_compose() {
   echo "✅ Stack running"
   docker compose ps
 
+  echo "🗄️ Ensuring migrations are applied before seed"
+  local migrate_ok=false
+  for i in $(seq 1 20); do
+    if docker compose "${compose_files[@]}" exec -T web python manage.py migrate --noinput; then
+      migrate_ok=true
+      break
+    fi
+    echo "Migrate attempt ${i}/20 failed, retrying in 5s..."
+    sleep 5
+  done
+
+  if [[ "${migrate_ok}" != "true" ]]; then
+    echo "❌ Migrate failed after retries"
+    docker compose "${compose_files[@]}" logs --tail=200 web || true
+    exit 1
+  fi
+
   echo "🌱 Running seed in configured PostgreSQL database"
   local seed_ok=false
   for i in $(seq 1 20); do
