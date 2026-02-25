@@ -102,6 +102,7 @@ Ce snippet route:
 - `www.grenobleski.fr` -> `http://127.0.0.1:8081`
 
 Vérifiez que le `certResolver` (`letsencrypt`) correspond bien au nom utilisé dans votre Traefik existant.
+Si vous voyez encore un `404 page not found` Traefik, le plus fréquent est que le fichier dynamique n'est pas chargé par le provider file (mauvais dossier ou pas de reload).
 
 ## Project Architecture
 

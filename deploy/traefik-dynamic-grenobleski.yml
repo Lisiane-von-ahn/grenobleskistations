@@ -2,16 +2,12 @@ http:
   routers:
     grenobleski-http:
       rule: "Host(`grenobleski.fr`) || Host(`www.grenobleski.fr`)"
-      entryPoints:
-        - web
       middlewares:
         - grenobleski-https-redirect
       service: grenobleski-svc
 
     grenobleski-https:
       rule: "Host(`grenobleski.fr`) || Host(`www.grenobleski.fr`)"
-      entryPoints:
-        - websecure
       tls:
         certResolver: letsencrypt
       service: grenobleski-svc
