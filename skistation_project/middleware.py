@@ -1,4 +1,27 @@
+import logging
+
 from django.utils.deprecation import MiddlewareMixin
+
+
+exception_logger = logging.getLogger('skistation.exceptions')
+
+
+class ExceptionLoggingMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        return self.get_response(request)
+
+    def process_exception(self, request, exception):
+        exception_logger.exception(
+            "Unhandled exception path=%s method=%s user=%s ip=%s",
+            request.path,
+            request.method,
+            getattr(getattr(request, 'user', None), 'id', 'anonymous'),
+            request.META.get('REMOTE_ADDR', ''),
+        )
+        return None
 
 class CookieConsentMiddleware(MiddlewareMixin):
     def process_request(self, request):
