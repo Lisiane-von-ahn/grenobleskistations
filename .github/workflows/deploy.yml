@@ -40,3 +40,17 @@ jobs:
               "${{ secrets.DB_NAME }}" \
               "${{ secrets.DB_PORT }}" \
               "${{ secrets.DATABASE_URL }}"
+
+            echo "⏳ Waiting for app on http://127.0.0.1:8081"
+            for i in $(seq 1 30); do
+              if curl -fsS "http://127.0.0.1:8081" >/dev/null; then
+                echo "✅ App is reachable on port 8081"
+                exit 0
+              fi
+              sleep 5
+            done
+
+            echo "❌ App did not become ready on port 8081"
+            docker compose -f docker-compose.yml -f docker-compose.letsencrypt.yml ps || true
+            docker compose -f docker-compose.yml -f docker-compose.letsencrypt.yml logs --tail=200 web || true
+            exit 1
