@@ -1,7 +1,9 @@
 import os
 
 from django.contrib.auth import get_user_model
+from django.contrib.sites.models import Site
 from django.core.management.base import BaseCommand
+from django.conf import settings
 
 from api.models import UserProfile
 
@@ -10,6 +12,18 @@ class Command(BaseCommand):
     help = "Create bootstrap admin superuser once and mark password reset mandatory on first login."
 
     def handle(self, *args, **options):
+        site_id = getattr(settings, 'SITE_ID', 1)
+        site_domain = (os.getenv('DJANGO_SITE_DOMAIN', 'www.grenobleski.fr') or 'www.grenobleski.fr').strip()
+        site_name = (os.getenv('DJANGO_SITE_NAME', 'GrenobleSki') or 'GrenobleSki').strip()
+
+        Site.objects.update_or_create(
+            id=site_id,
+            defaults={
+                'domain': site_domain,
+                'name': site_name,
+            },
+        )
+
         username = (os.getenv('BOOTSTRAP_ADMIN_USERNAME', 'admin') or 'admin').strip()
         email = (os.getenv('BOOTSTRAP_ADMIN_EMAIL', 'admin@grenobleski.local') or 'admin@grenobleski.local').strip().lower()
         password = os.getenv('BOOTSTRAP_ADMIN_PASSWORD', 'admin')

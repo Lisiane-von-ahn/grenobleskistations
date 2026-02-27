@@ -83,7 +83,10 @@ ACCOUNT_ADAPTER = 'skistation_project.adapters.CustomAccountAdapter'
 
 SOCIALACCOUNT_ADAPTER = 'skistation_project.adapters.CustomSocialAccountAdapter'
 
-SITE_ID = 1
+try:
+    SITE_ID = int(os.getenv('SITE_ID', '1'))
+except (TypeError, ValueError):
+    SITE_ID = 1
 LOGIN_REDIRECT_URL = '/'
 LOGIN_URL = '/accounts/login/'
 MEDIA_URL = '/media/'
