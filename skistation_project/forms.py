@@ -3,6 +3,7 @@ from api.models import SkiMaterialListing, UserProfile, SkiMaterialImage
 from io import BytesIO
 from PIL import Image
 from django.contrib.auth import get_user_model
+from allauth.account.forms import LoginForm, SignupForm
 
 
 class MultipleFileInput(forms.ClearableFileInput):
@@ -11,6 +12,44 @@ class MultipleFileInput(forms.ClearableFileInput):
 
 class MultipleFileField(forms.FileField):
     widget = MultipleFileInput
+
+
+class CustomLoginForm(LoginForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'login' in self.fields:
+            self.fields['login'].widget.attrs.update({
+                'class': 'form-control',
+                'placeholder': 'Email',
+                'autocomplete': 'email',
+            })
+        if 'password' in self.fields:
+            self.fields['password'].widget.attrs.update({
+                'class': 'form-control',
+                'placeholder': 'Mot de passe / Password',
+                'autocomplete': 'current-password',
+            })
+
+
+class CustomSignupForm(SignupForm):
+    first_name = forms.CharField(max_length=150, required=False)
+    last_name = forms.CharField(max_length=150, required=False)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name in ('email', 'password1', 'password2', 'first_name', 'last_name'):
+            if field_name in self.fields:
+                self.fields[field_name].widget.attrs.update({'class': 'form-control'})
+
+    def save(self, request):
+        user = super().save(request)
+        email = (user.email or '').strip().lower()
+        if email and user.username != email:
+            user.username = email
+        user.first_name = self.cleaned_data.get('first_name', '').strip()
+        user.last_name = self.cleaned_data.get('last_name', '').strip()
+        user.save(update_fields=['username', 'first_name', 'last_name'])
+        return user
 
 class UserRegistrationForm(forms.Form):
     username = forms.CharField(max_length=100)
