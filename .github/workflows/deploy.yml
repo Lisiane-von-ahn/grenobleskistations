@@ -1,0 +1,85 @@
+name: Deploy GrenobleSki
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+
+            APP_DIR="/root/grenobleskistations"
+            REPO_URL="https://github.com/${{ github.repository }}.git"
+
+            if [ ! -d "$APP_DIR/.git" ]; then
+              rm -rf "$APP_DIR"
+              git clone "$REPO_URL" "$APP_DIR"
+            fi
+
+            cd "$APP_DIR"
+            git fetch --all
+            git checkout "${{ github.ref_name }}"
+            git reset --hard "origin/${{ github.ref_name }}"
+
+            chmod +x deploy/install.sh
+            export USE_INTERNAL_TRAEFIK=false
+            ./deploy/install.sh \
+              "${{ secrets.DB_HOST }}" \
+              "${{ secrets.DB_USER }}" \
+              "${{ secrets.DB_PASSWORD }}" \
+              "${{ secrets.WEATHER_API_KEY }}" \
+              "${{ secrets.DB_NAME }}" \
+              "${{ secrets.DB_PORT }}" \
+              "${{ secrets.DATABASE_URL }}" \
+              "${{ secrets.BOOTSTRAP_ADMIN_USERNAME }}" \
+              "${{ secrets.BOOTSTRAP_ADMIN_PASSWORD }}" \
+              "${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}"
+
+            echo "⏳ Waiting for web container health"
+            for i in $(seq 1 60); do
+              HEALTH_STATE=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' grenobleski-web 2>/dev/null || echo "missing")
+              CONTAINER_STATE=$(docker inspect --format='{{.State.Status}}' grenobleski-web 2>/dev/null || echo "missing")
+              RESTART_COUNT=$(docker inspect --format='{{.RestartCount}}' grenobleski-web 2>/dev/null || echo "0")
+              echo "web state: ${CONTAINER_STATE}, health: ${HEALTH_STATE}, restarts: ${RESTART_COUNT}"
+
+              if [ "${RESTART_COUNT}" -ge 3 ] || [ "${HEALTH_STATE}" = "unhealthy" ]; then
+                echo "❌ Web container unstable (restarts/unhealthy). Showing logs."
+                docker compose -f docker-compose.yml ps || true
+                docker compose -f docker-compose.yml logs --tail=200 web || true
+                exit 1
+              fi
+
+              if [ "${CONTAINER_STATE}" = "running" ] && { [ "${HEALTH_STATE}" = "healthy" ] || [ "${HEALTH_STATE}" = "none" ]; }; then
+                break
+              fi
+
+              sleep 5
+            done
+
+            echo "⏳ Waiting for app on http://127.0.0.1:8081"
+            for i in $(seq 1 60); do
+              if curl -fsS -H "Host: grenobleski.fr" "http://127.0.0.1:8081" >/dev/null; then
+                echo "✅ App is reachable on port 8081"
+                exit 0
+              fi
+              sleep 5
+            done
+
+            echo "❌ App did not become ready on port 8081"
+            docker compose -f docker-compose.yml ps || true
+            docker compose -f docker-compose.yml logs --tail=200 web || true
+            exit 1

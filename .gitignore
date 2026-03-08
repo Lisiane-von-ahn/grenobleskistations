@@ -124,12 +124,29 @@ celerybeat.pid
 
 # Environments
 .env
+.env.*
 .venv
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
+
+# GitHub Actions secrets local sources
+.github/secrets/*.secrets
+.github/secrets/*.env
+.github/secrets/*.key
+.github/secrets/*.pem
+.github/secrets/*.txt
+
+# Local SSH private keys / exports
+*.pem
+*.key
+id_rsa
+id_ed25519
+
+# Local one-shot deploy scripts (hardcoded secrets)
+deploy/local/
 
 # Spyder project settings
 .spyderproject

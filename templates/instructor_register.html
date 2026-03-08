@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load base64_filters %}
+{% load i18n %}
+
+{% block title %}{% trans "Inscription Moniteur" %}{% endblock %}
+
+{% block content %}
+<section class="py-5" style="background: linear-gradient(135deg, #2ca7b7, #1f8f9e);">
+    <div class="container text-white">
+        <h2 class="display-5 mb-2">{% trans "Devenir moniteur de ski" %}</h2>
+        <p class="mb-0">{% trans "Créez un profil professionnel pour proposer vos cours et accompagnements." %}</p>
+    </div>
+</section>
+
+<section class="py-5" style="background: #f5f7fa;">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body text-center p-4">
+                        {% if profile.profile_photo %}
+                            <img src="data:image/png;base64,{{ profile.profile_photo|b64encode }}" alt="{% trans 'Photo moniteur' %}" class="rounded-circle mb-3" style="width:150px;height:150px;object-fit:cover;">
+                        {% else %}
+                            <img src="{% static 'images/default-profile.png' %}" alt="{% trans 'Photo moniteur' %}" class="rounded-circle mb-3" style="width:150px;height:150px;object-fit:cover;">
+                        {% endif %}
+                        <h5 class="mb-1">{{ request.user.username }}</h5>
+                        <p class="text-muted mb-0">{% trans "Profil moniteur" %}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header border-0 text-white" style="background: linear-gradient(135deg, #2ca7b7, #1f8f9e);">
+                        <h4 class="mb-0">{% trans "Informations professionnelles" %}</h4>
+                    </div>
+                    <div class="card-body p-4">
+                        <form method="post" enctype="multipart/form-data">
+                            {% csrf_token %}
+
+                            <div class="form-group mb-3">
+                                <label for="id_bio">{% trans "Bio" %}</label>
+                                {{ form.bio }}
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group col-md-4 mb-3">
+                                    <label for="id_years_experience">{% trans "Années d'expérience" %}</label>
+                                    {{ form.years_experience }}
+                                </div>
+                                <div class="form-group col-md-8 mb-3">
+                                    <label for="id_certifications">{% trans "Certifications" %}</label>
+                                    {{ form.certifications }}
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group col-md-8 mb-3">
+                                    <label for="id_phone">{% trans "Téléphone" %}</label>
+                                    {{ form.phone }}
+                                </div>
+                                <div class="form-group col-md-4 mb-3">
+                                    <label for="id_is_active">{% trans "Profil actif" %}</label><br>
+                                    {{ form.is_active }}
+                                </div>
+                            </div>
+
+                            <div class="form-group mb-4">
+                                <label for="id_image_file">{% trans "Photo professionnelle" %}</label>
+                                {{ form.image_file }}
+                                <small class="text-muted d-block mt-1">{% trans "Ajoutez une photo claire pour inspirer confiance aux skieurs." %}</small>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary btn-lg w-100">{% trans "Enregistrer mon profil" %}</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 import dj_database_url
 import os
+import logging
 
 
 # settings.py
@@ -24,12 +25,25 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-xhlkfv0em#28h(+*zfl^p2*a$pbzp0ff_fp^sbj6*=g$1hw-^q'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-xhlkfv0em#28h(+*zfl^p2*a$pbzp0ff_fp^sbj6*=g$1hw-^q')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True').lower() in ('1', 'true', 'yes', 'on')
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', '*').split(',') if h.strip()]
+
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip() for origin in os.getenv(
+        'CSRF_TRUSTED_ORIGINS',
+        'https://grenobleski.fr,https://www.grenobleski.fr'
+    ).split(',') if origin.strip()
+]
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
 
 WEATHER_API_KEY = os.getenv('WEATHER_API_KEY', 'qssdsdsd')
 
@@ -42,12 +56,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',
     'api',
     'rest_framework',
     'rest_framework.authtoken',
     'drf_yasg',
     'drf_spectacular',
-    'skistation_project',
+    'skistation_project.apps.SkistationProjectConfig',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
@@ -59,6 +74,7 @@ REST_FRAMEWORK = {
 }
 
 AUTHENTICATION_BACKENDS = [
+    'skistation_project.backends.EmailOrUsernameModelBackend',
     'django.contrib.auth.backends.ModelBackend',
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
@@ -67,8 +83,12 @@ ACCOUNT_ADAPTER = 'skistation_project.adapters.CustomAccountAdapter'
 
 SOCIALACCOUNT_ADAPTER = 'skistation_project.adapters.CustomSocialAccountAdapter'
 
-SITE_ID = 1
+try:
+    SITE_ID = int(os.getenv('SITE_ID', '1'))
+except (TypeError, ValueError):
+    SITE_ID = 1
 LOGIN_REDIRECT_URL = '/'
+LOGIN_URL = '/accounts/login/'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
@@ -79,10 +99,13 @@ REST_FRAMEWORK = {
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'skistation_project.middleware.ExceptionLoggingMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'skistation_project.middleware.ForcePasswordResetMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -119,7 +142,7 @@ WSGI_APPLICATION = 'skistation_project.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',  # This will create the SQLite database file in your project base directory
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
@@ -149,7 +172,16 @@ STATICFILES_DIRS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'fr'
+
+LANGUAGES = [
+    ('fr', 'Français'),
+    ('en', 'English'),
+]
+
+LOCALE_PATHS = [
+    BASE_DIR / 'locale',
+]
 
 TIME_ZONE = 'UTC'
 
@@ -165,21 +197,37 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # Directory to store collec
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-if not os.getenv('DEBUG', 'False') == 'True':
-    # Override the database settings with JAWSDB if in production
-    DATABASES['default'] = {
-        'ENGINE': 'skistation_project.db_backends.postgresql',
-        'NAME': os.getenv('database', 'qssdsdsd'),
-        'USER': os.getenv('user', 'qssdsdsd'),
-        'PASSWORD': os.getenv('password', 'qssdsdsd'),
-        'HOST': os.getenv('host', 'qssdsdsd'),
-        'PORT': os.getenv('port', 'qssdsdsd'),
-    }
-    DATABASES['default'] = dj_database_url.config(default=os.environ.get('JAWSDB_URL'))
+database_url = os.getenv('DATABASE_URL') or os.getenv('JAWSDB_URL')
+
+if database_url:
+    DATABASES['default'] = dj_database_url.parse(database_url)
+else:
+    has_pg_parts = all([
+        os.getenv('database'),
+        os.getenv('user'),
+        os.getenv('password'),
+        os.getenv('host'),
+        os.getenv('port'),
+    ])
+
+    if has_pg_parts:
+        DATABASES['default'] = {
+            'ENGINE': 'skistation_project.db_backends.postgresql',
+            'NAME': os.getenv('database'),
+            'USER': os.getenv('user'),
+            'PASSWORD': os.getenv('password'),
+            'HOST': os.getenv('host'),
+            'PORT': os.getenv('port'),
+        }
+    else:
+        DATABASES['default'] = {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db_test.sqlite3',
+        }
 
 
 SOCIALACCOUNT_LOGIN_REDIRECT_URL = '/'
-SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URL ="http://127.0.0.1:8000/accounts/google/login/callback/"
+SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URL = "http://127.0.0.1:8000/accounts/google/login/callback/"
 
 # settings.py
 LOGOUT_REDIRECT_URL = '/'
@@ -190,7 +238,96 @@ SOCIALACCOUNT_PROVIDERS = {
         'SCOPE': ['profile', 'email'],
         'AUTH_PARAMS': {'access_type': 'online'},
         'OAUTH_PKCE_ENABLED': True,
+        'VERIFIED_EMAIL': True,
     }
 }
+SOCIALACCOUNT_QUERY_EMAIL = True
+SOCIALACCOUNT_AUTO_SIGNUP = True
 
-ACCOUNT_AUTHENTICATION_METHOD = "username_email"
+ACCOUNT_AUTHENTICATION_METHOD = "email"
+ACCOUNT_LOGIN_METHODS = {"email"}
+ACCOUNT_USER_MODEL_USERNAME_FIELD = 'username'
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_UNIQUE_EMAIL = True
+ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE = True
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+ACCOUNT_CONFIRM_EMAIL_ON_GET = True
+ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
+ACCOUNT_EMAIL_VERIFICATION_BY_CODE_ENABLED = True
+ACCOUNT_EMAIL_VERIFICATION_BY_CODE_MAX_ATTEMPTS = 3
+ACCOUNT_EMAIL_VERIFICATION_BY_CODE_TIMEOUT = 900
+
+ACCOUNT_FORMS = {
+    'signup': 'skistation_project.forms.CustomSignupForm',
+    'login': 'skistation_project.forms.CustomLoginForm',
+}
+
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('1', 'true', 'yes', 'on')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER or 'no-reply@grenobleski.fr')
+
+LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '%(asctime)s %(levelname)s [%(name)s] %(message)s'
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': LOG_LEVEL,
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': LOG_LEVEL,
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.security': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'django.server': {
+            'handlers': ['console'],
+            'level': LOG_LEVEL,
+            'propagate': False,
+        },
+        'skistation.auth': {
+            'handlers': ['console'],
+            'level': LOG_LEVEL,
+            'propagate': False,
+        },
+        'skistation.exceptions': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'skistation.adapters': {
+            'handlers': ['console'],
+            'level': LOG_LEVEL,
+            'propagate': False,
+        },
+    },
+}
+
+logging.captureWarnings(True)
