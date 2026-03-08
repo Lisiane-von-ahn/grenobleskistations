@@ -1,0 +1,111 @@
+:root {
+    --mk-bg: linear-gradient(120deg, #eef7ff 0%, #fdf3e7 100%);
+    --mk-card: #ffffff;
+    --mk-primary: #0a6c7d;
+    --mk-secondary: #f29e4c;
+    --mk-muted: #6c757d;
+    --mk-border: #e9ecef;
+}
+
+.market-hero {
+    background: var(--mk-bg);
+    border-radius: 24px;
+    padding: 2rem;
+    border: 1px solid var(--mk-border);
+}
+
+.market-section-title {
+    font-weight: 700;
+    color: #17313a;
+}
+
+.market-search-panel {
+    background: #fff;
+    border-radius: 18px;
+    border: 1px solid var(--mk-border);
+    box-shadow: 0 12px 28px rgba(26, 42, 71, 0.06);
+    padding: 1.25rem;
+    margin-bottom: 2rem;
+}
+
+.filter-chip {
+    border-radius: 999px;
+    border: 1px solid #dce6ea;
+    padding: 0.3rem 0.75rem;
+    font-size: 0.8rem;
+    color: #30444f;
+    background: #f7fafb;
+    display: inline-block;
+}
+
+.market-card {
+    border: 1px solid var(--mk-border);
+    border-radius: 18px;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    background: var(--mk-card);
+    height: 100%;
+}
+
+.market-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(23, 49, 58, 0.12);
+}
+
+.market-image {
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+    background: #f2f4f5;
+}
+
+.badge-soft {
+    background: #eaf4f7;
+    color: #174b59;
+    border: 1px solid #d5e9ee;
+    border-radius: 999px;
+    font-weight: 500;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.78rem;
+    margin-right: 0.3rem;
+    margin-bottom: 0.3rem;
+    display: inline-block;
+}
+
+.badge-action {
+    background: #fff3e6;
+    color: #8f4f00;
+    border-color: #ffd9b1;
+}
+
+.slider-wrap label {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #324a53;
+}
+
+.slider-wrap input[type='range'] {
+    width: 100%;
+}
+
+.market-subtle {
+    color: var(--mk-muted);
+    font-size: 0.9rem;
+}
+
+.chat-box {
+    border: 1px solid var(--mk-border);
+    border-radius: 14px;
+    padding: 1rem;
+    background: #fff;
+}
+
+@media (max-width: 768px) {
+    .market-hero {
+        padding: 1.25rem;
+    }
+
+    .market-image {
+        height: 180px;
+    }
+}

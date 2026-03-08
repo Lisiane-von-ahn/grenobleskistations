@@ -52,18 +52,58 @@ class SkiCircuit(models.Model):
         return f"{self.difficulty} - {self.num_pistes} pistes"
 
 class SkiMaterialListing(models.Model):    
+    TRANSACTION_CHOICES = [
+        ('sale', 'For Sale'),
+        ('rent', 'For Rent'),
+        ('lend', 'For Loan'),
+    ]
+
+    CONDITION_CHOICES = [
+        ('new', 'New'),
+        ('excellent', 'Excellent'),
+        ('good', 'Good'),
+        ('fair', 'Fair'),
+    ]
+
+    MATERIAL_CHOICES = [
+        ('ski', 'Ski'),
+        ('boots', 'Boots'),
+        ('helmet', 'Helmet'),
+        ('jacket', 'Jacket'),
+        ('pants', 'Pants'),
+        ('gloves', 'Gloves'),
+        ('goggles', 'Goggles'),
+        ('other', 'Other'),
+    ]
+
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.CharField(max_length=200)
     description = models.TextField()
     ski_station = models.ForeignKey(SkiStation, on_delete=models.SET_NULL, null=True, blank=True)
     city = models.CharField(max_length=100)  # New field to specify pickup city
     price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    material_type = models.CharField(max_length=10)
+    material_type = models.CharField(max_length=20, choices=MATERIAL_CHOICES, default='ski')
+    transaction_type = models.CharField(max_length=10, choices=TRANSACTION_CHOICES, default='sale')
+    condition = models.CharField(max_length=12, choices=CONDITION_CHOICES, default='good')
+    brand = models.CharField(max_length=100, blank=True)
+    size = models.CharField(max_length=30, blank=True)
     image = models.BinaryField(null=True, blank=True, editable=True) 
     posted_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.title
+
+
+class SkiMaterialImage(models.Model):
+    listing = models.ForeignKey(SkiMaterialListing, on_delete=models.CASCADE, related_name='images')
+    image = models.BinaryField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Image for {self.listing.title}"
 
 
 class Message(models.Model):

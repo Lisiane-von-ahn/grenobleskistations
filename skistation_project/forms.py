@@ -1,13 +1,16 @@
 from django import forms
-from django.contrib.auth.models import User
-from api.models import SkiMaterialListing,UserProfile
-from django.db import models
-from django.contrib.auth.models import User
+from api.models import SkiMaterialListing, UserProfile, SkiMaterialImage
 from io import BytesIO
-from django.core.files.base import ContentFile
 from PIL import Image
-import os
 from django.contrib.auth import get_user_model
+
+
+class MultipleFileInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
+
+
+class MultipleFileField(forms.FileField):
+    widget = MultipleFileInput
 
 class UserRegistrationForm(forms.Form):
     username = forms.CharField(max_length=100)
@@ -24,22 +27,55 @@ class UserRegistrationForm(forms.Form):
             raise forms.ValidationError("The passwords do not match.")
 
 class SkiMaterialListingForm(forms.ModelForm):
-    image_file = forms.ImageField(required=False)  
+    image_file = forms.ImageField(required=False)
+    images = MultipleFileField(
+        required=False,
+        widget=MultipleFileInput(attrs={'class': 'form-control'})
+    )
 
     class Meta:
         model = SkiMaterialListing
-        fields = ['title', 'description', 'ski_station', 'city', 'price', 'material_type','image']
+        fields = [
+            'title',
+            'description',
+            'ski_station',
+            'city',
+            'price',
+            'material_type',
+            'transaction_type',
+            'condition',
+            'brand',
+            'size',
+            'image',
+        ]
 
     def __init__(self, *args, **kwargs):
         super(SkiMaterialListingForm, self).__init__(*args, **kwargs)
         # Ajout des classes Bootstrap à chaque champ
-        self.fields['title'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Titre de l\'article'})
-        self.fields['description'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Description'})
+        self.fields['title'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Titre / Title'})
+        self.fields['description'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Description / Description'})
         self.fields['ski_station'].widget.attrs.update({'class': 'form-control'})
-        self.fields['city'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Ville de prise en charge'})
-        self.fields['price'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Prix'})
+        self.fields['city'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Ville / City'})
+        self.fields['price'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Prix / Price'})
         self.fields['material_type'].widget.attrs.update({'class': 'form-control'})
+        self.fields['transaction_type'].widget.attrs.update({'class': 'form-control'})
+        self.fields['condition'].widget.attrs.update({'class': 'form-control'})
+        self.fields['brand'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Marque / Brand'})
+        self.fields['size'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Taille / Size'})
         self.fields['image'].widget.attrs.update({'class': 'form-control'})
+
+        self.fields['title'].label = 'Titre / Title'
+        self.fields['description'].label = 'Description / Description'
+        self.fields['ski_station'].label = 'Station de ski / Ski station'
+        self.fields['city'].label = 'Ville / City'
+        self.fields['price'].label = 'Prix / Price'
+        self.fields['material_type'].label = 'Catégorie / Category'
+        self.fields['transaction_type'].label = 'Type d\'offre / Offer type'
+        self.fields['condition'].label = 'État / Condition'
+        self.fields['brand'].label = 'Marque / Brand'
+        self.fields['size'].label = 'Taille / Size'
+        self.fields['image'].label = 'Photo principale / Main photo'
+        self.fields['images'].label = 'Photos supplémentaires / Extra photos'
     
     def save(self, commit=True):
         instance = super(SkiMaterialListingForm, self).save(commit=False)
@@ -51,6 +87,13 @@ class SkiMaterialListingForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
+
+    def save_extra_images(self, listing, uploaded_files):
+        for uploaded in uploaded_files:
+            uploaded.seek(0)
+            image_bytes = uploaded.read()
+            if image_bytes:
+                SkiMaterialImage.objects.create(listing=listing, image=image_bytes)
     
 class ProfileForm(forms.ModelForm):
     profile_picture = forms.ImageField(required=False)  # Image field for the profile picture
@@ -82,3 +125,22 @@ class ProfileForm(forms.ModelForm):
 
         return instance
         
+class MaterielForm(forms.ModelForm):
+    class Meta:
+        model = SkiMaterialListing
+        fields = [
+            'title',
+            'description',
+            'city',
+            'material_type',
+            'transaction_type',
+            'condition',
+            'brand',
+            'size',
+            'price',
+            'image',
+        ]
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 4}),
+            'price': forms.NumberInput(attrs={'step': '0.01'}),
+        }

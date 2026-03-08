@@ -1,69 +1,180 @@
-<!DOCTYPE html>
 {% extends 'base.html' %}
 {% load static %}
 {% load base64_filters %}
 
-{% block title %}Donner ou Vendre du Matériel de Ski{% endblock %}
+{% block title %}Marketplace Matériel de Ski / Ski Gear Marketplace{% endblock %}
 
 {% block content %}
+<div class="container py-4">
+    <section class="market-hero mb-4">
+        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3">
+            <div>
+                <h2 class="mb-2 market-section-title">Marketplace Matériel de Ski / Ski Gear Marketplace</h2>
+                <p class="market-subtle mb-0">Vendre, louer ou prêter facilement. Search everything in one place.</p>
+            </div>
+            <a href="{% url 'ajouter_materiel' %}" class="btn btn-success btn-lg">Ajouter un article / Add listing</a>
+        </div>
+    </section>
 
-<div class="page-heading text-center py-5 bg-light-blue">
-    <div class="container">
-        <h2 class="display-4 text-primary">Donnez ou Vendez du Matériel de Ski</h2>
-        <p class="lead text-muted">Publiez votre matériel de ski à vendre ou à donner.</p>
-    </div>
-</div>
+    <section class="market-search-panel">
+        <form method="get">
+            <div class="row g-3">
+                <div class="col-lg-4">
+                    <label class="form-label fw-semibold">Recherche globale / Global search</label>
+                    <input type="text" name="q" class="form-control" value="{{ query_text }}" placeholder="Marque, ville, type, utilisateur...">
+                </div>
+                <div class="col-lg-2">
+                    <label class="form-label fw-semibold">Offre / Offer</label>
+                    <select name="transaction_type" class="form-control">
+                        <option value="">Tous / All</option>
+                        {% for code, label in transaction_choices %}
+                        <option value="{{ code }}" {% if selected_transaction_type == code %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-lg-2">
+                    <label class="form-label fw-semibold">Catégorie / Category</label>
+                    <select name="material_type" class="form-control">
+                        <option value="">Toutes / All</option>
+                        {% for code, label in material_choices %}
+                        <option value="{{ code }}" {% if selected_material_type == code %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-lg-2">
+                    <label class="form-label fw-semibold">État / Condition</label>
+                    <select name="condition" class="form-control">
+                        <option value="">Tous / All</option>
+                        {% for code, label in condition_choices %}
+                        <option value="{{ code }}" {% if selected_condition == code %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-lg-2">
+                    <label class="form-label fw-semibold">Vue / Scope</label>
+                    <select name="scope" class="form-control">
+                        <option value="all" {% if selected_scope == 'all' %}selected{% endif %}>Tout / All</option>
+                        <option value="mine" {% if selected_scope == 'mine' %}selected{% endif %}>Mes annonces / My listings</option>
+                    </select>
+                </div>
+            </div>
 
-<!-- Formulaire de publication de matériel -->
-<div class="publish-form py-5">
-    <div class="container">
-        <form method="POST" enctype="multipart/form-data">
-            {% csrf_token %}
-            {{ form.as_p }}
-            <button type="submit" class="btn btn-primary btn-lg mt-3">Publier</button>
+            <div class="row g-3 mt-1">
+                <div class="col-lg-3">
+                    <label class="form-label fw-semibold">Ville / City</label>
+                    <input type="text" name="city" class="form-control" value="{{ city }}" placeholder="Grenoble...">
+                </div>
+                <div class="col-lg-3 slider-wrap">
+                    <label for="min-price">Prix min / Min price: <span id="min-price-value">{{ min_price|default:'0' }}</span> EUR</label>
+                    <input id="min-price" type="range" min="0" max="1200" step="10" name="min_price" value="{{ min_price|default:'0' }}">
+                </div>
+                <div class="col-lg-3 slider-wrap">
+                    <label for="max-price">Prix max / Max price: <span id="max-price-value">{{ max_price|default:'1200' }}</span> EUR</label>
+                    <input id="max-price" type="range" min="0" max="1200" step="10" name="max_price" value="{{ max_price|default:'1200' }}">
+                </div>
+                <div class="col-lg-3 d-flex align-items-end gap-2">
+                    <button class="btn btn-primary w-100" type="submit">Rechercher / Search</button>
+                    <a class="btn btn-outline-secondary" href="{% url 'ski_material_listings' %}">Reset</a>
+                </div>
+            </div>
         </form>
-    </div>
-</div>
+    </section>
 
-<!-- Affichage des annonces existantes -->
-<div class="listings py-5 bg-light">
-    <div class="container">
-        <h3 class="text-primary mb-4">Annonces de matériel de ski</h3>
+    <section class="mb-5">
+        <h3 class="market-section-title mb-3">Mes annonces / My listings ({{ my_listings|length }})</h3>
         <div class="row g-4">
-            {% if listings %}
-                {% for listing in listings %}
-                <div class="col-lg-6 col-sm-12">
-                    <div class="card shadow-sm border-0 h-100">
-                        <div class="row g-0">
-                            <div class="col-md-6">
-                                <img src="data:image/jpeg;base64,{{ listing.image|b64encode }}" class="img-fluid rounded-start" alt="{{ listing.title }}">
-                            </div>
-                            <div class="col-md-6 d-flex align-items-center">
-                                <div class="card-body">
-                                    <h4 class="card-title text-primary">{{ listing.title }}</h4>
-                                    <ul class="list-unstyled">
-                                        <li><strong>Ville :</strong> {{ listing.city }}</li>
-                                        <li><strong>Type :</strong> {{ listing.get_material_type_display }}</li>
-                                        {% if listing.price %}
-                                            <li><strong>Prix :</strong> {{ listing.price }} €</li>
-                                        {% else %}
-                                            <li><strong>Prix :</strong> Gratuit</li>
-                                        {% endif %}
-                                    </ul>
-                                    <a href="{% url 'listing_detail' id=listing.id %}" class="btn btn-outline-primary btn-sm">Voir plus de détails</a>
-                                </div>
-                            </div>
+            {% for listing in my_listings %}
+            <div class="col-lg-4 col-md-6">
+                <article class="market-card">
+                    {% if listing.image %}
+                    <img class="market-image" src="data:image/jpeg;base64,{{ listing.image|b64encode }}" alt="{{ listing.title }}">
+                    {% else %}
+                    <img class="market-image" src="{% static 'images/default.jpg' %}" alt="Default image">
+                    {% endif %}
+                    <div class="p-3">
+                        <h5 class="mb-2">{{ listing.title }}</h5>
+                        <div class="mb-2">
+                            <span class="badge-soft badge-action">{{ listing.get_transaction_type_display }}</span>
+                            <span class="badge-soft">{{ listing.get_material_type_display }}</span>
+                            <span class="badge-soft">{{ listing.get_condition_display }}</span>
+                        </div>
+                        <div class="mb-2 market-subtle">{{ listing.city }}{% if listing.ski_station %} - {{ listing.ski_station.name }}{% endif %}</div>
+                        <div class="mb-3">
+                            {% if listing.brand %}<span class="filter-chip">{{ listing.brand }}</span>{% endif %}
+                            {% if listing.size %}<span class="filter-chip">{{ listing.size }}</span>{% endif %}
+                            <span class="filter-chip">{{ listing.images.count }} photos</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <strong>{% if listing.price %}{{ listing.price }} EUR{% else %}Gratuit / Free{% endif %}</strong>
+                            <a href="{% url 'listing_detail' id=listing.id %}" class="btn btn-sm btn-outline-primary">Détails / Details</a>
                         </div>
                     </div>
-                </div>
-                {% endfor %}
-            {% else %}
-                <div class="col-lg-12 text-center">
-                    <p class="text-muted">Aucune annonce disponible pour le moment.</p>
-                </div>
-            {% endif %}
+                </article>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <p class="market-subtle">Aucune annonce personnelle dans ce filtre. / No personal listing in this filter.</p>
+            </div>
+            {% endfor %}
         </div>
-    </div>
+    </section>
+
+    <section>
+        <h3 class="market-section-title mb-3">Marketplace ({{ marketplace_listings|length }})</h3>
+        <div class="row g-4">
+            {% for listing in marketplace_listings %}
+            <div class="col-lg-4 col-md-6">
+                <article class="market-card">
+                    {% if listing.image %}
+                    <img class="market-image" src="data:image/jpeg;base64,{{ listing.image|b64encode }}" alt="{{ listing.title }}">
+                    {% else %}
+                    <img class="market-image" src="{% static 'images/default.jpg' %}" alt="Default image">
+                    {% endif %}
+                    <div class="p-3">
+                        <h5 class="mb-2">{{ listing.title }}</h5>
+                        <div class="mb-2">
+                            <span class="badge-soft badge-action">{{ listing.get_transaction_type_display }}</span>
+                            <span class="badge-soft">{{ listing.get_material_type_display }}</span>
+                            <span class="badge-soft">{{ listing.get_condition_display }}</span>
+                        </div>
+                        <div class="mb-2 market-subtle">Par / By {{ listing.user.username }} - {{ listing.city }}</div>
+                        <div class="mb-3">
+                            {% if listing.brand %}<span class="filter-chip">{{ listing.brand }}</span>{% endif %}
+                            {% if listing.size %}<span class="filter-chip">{{ listing.size }}</span>{% endif %}
+                            <span class="filter-chip">{{ listing.images.count }} photos</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <strong>{% if listing.price %}{{ listing.price }} EUR{% else %}Gratuit / Free{% endif %}</strong>
+                            <a href="{% url 'listing_detail' id=listing.id %}" class="btn btn-sm btn-primary">Contacter / Contact</a>
+                        </div>
+                    </div>
+                </article>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <p class="market-subtle">Aucun article trouvé. / No listing found.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
 </div>
 
+<script>
+    const minPrice = document.getElementById('min-price');
+    const maxPrice = document.getElementById('max-price');
+    const minOut = document.getElementById('min-price-value');
+    const maxOut = document.getElementById('max-price-value');
+
+    if (minPrice && minOut) {
+        minPrice.addEventListener('input', () => {
+            minOut.textContent = minPrice.value;
+        });
+    }
+
+    if (maxPrice && maxOut) {
+        maxPrice.addEventListener('input', () => {
+            maxOut.textContent = maxPrice.value;
+        });
+    }
+</script>
 {% endblock %}

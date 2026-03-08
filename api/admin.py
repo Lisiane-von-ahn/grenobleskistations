@@ -1,7 +1,16 @@
 from django.contrib import admin
 from django import forms
 import io
-from .models import SkiStation, BusLine, ServiceStore, SkiCircuit, Message, UserProfile
+from .models import (
+    SkiStation,
+    BusLine,
+    ServiceStore,
+    SkiCircuit,
+    Message,
+    UserProfile,
+    SkiMaterialListing,
+    SkiMaterialImage,
+)
 
 class SkiStationForm(forms.ModelForm):
     class Meta:
@@ -38,3 +47,5 @@ admin.site.register(ServiceStore)
 admin.site.register(SkiCircuit)
 admin.site.register(Message)
 admin.site.register(UserProfile)
+admin.site.register(SkiMaterialListing)
+admin.site.register(SkiMaterialImage)

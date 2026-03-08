@@ -35,4 +35,5 @@ urlpatterns = [
     path('messages/', views.messages_view, name='messages'),
     path('profile/', views.profile_view, name='profile'),
     path('delete_account/', views.delete_account, name='delete_account'),
+    path('ajouter-materiel/', views.ajouter_materiel, name='ajouter_materiel'),
 ]

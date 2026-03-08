@@ -1,17 +1,23 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from api.models import SkiStation, BusLine, ServiceStore, SkiCircuit, SkiMaterialListing,Message, UserProfile
+from api.models import (
+    SkiStation,
+    BusLine,
+    ServiceStore,
+    SkiCircuit,
+    SkiMaterialListing,
+    Message,
+    UserProfile,
+)
 from django.db.models import Sum
+from django.db.models import Q
 from django.contrib.auth.forms import UserCreationForm
-from .forms import UserRegistrationForm,SkiMaterialListingForm, ProfileForm
+from .forms import SkiMaterialListingForm, ProfileForm
 from allauth.socialaccount.providers.google.views import OAuth2LoginView
 from allauth.socialaccount.providers.google.views import OAuth2CallbackView
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from allauth.account.adapter import DefaultAccountAdapter
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.contrib.auth import get_user_model
 import base64
 
 
@@ -137,7 +143,41 @@ class CustomAccountAdapter(DefaultAccountAdapter):
     
 @login_required(login_url='login')
 def ski_material_listings(request):
-    listings = SkiMaterialListing.objects.all().order_by('-posted_at')
+    all_listings = SkiMaterialListing.objects.select_related('user', 'ski_station').prefetch_related('images').order_by('-posted_at')
+
+    q = request.GET.get('q', '').strip()
+    transaction_type = request.GET.get('transaction_type', '').strip()
+    material_type = request.GET.get('material_type', '').strip()
+    condition = request.GET.get('condition', '').strip()
+    city = request.GET.get('city', '').strip()
+    min_price = request.GET.get('min_price', '').strip()
+    max_price = request.GET.get('max_price', '').strip()
+    scope = request.GET.get('scope', 'all').strip()
+
+    if q:
+        all_listings = all_listings.filter(
+            Q(title__icontains=q)
+            | Q(description__icontains=q)
+            | Q(city__icontains=q)
+            | Q(brand__icontains=q)
+            | Q(size__icontains=q)
+            | Q(user__username__icontains=q)
+            | Q(ski_station__name__icontains=q)
+        )
+    if transaction_type:
+        all_listings = all_listings.filter(transaction_type=transaction_type)
+    if material_type:
+        all_listings = all_listings.filter(material_type=material_type)
+    if condition:
+        all_listings = all_listings.filter(condition=condition)
+    if city:
+        all_listings = all_listings.filter(city__icontains=city)
+    if min_price:
+        all_listings = all_listings.filter(price__gte=min_price)
+    if max_price:
+        all_listings = all_listings.filter(price__lte=max_price)
+    if scope == 'mine':
+        all_listings = all_listings.filter(user=request.user)
 
     if request.method == 'POST':
         form = SkiMaterialListingForm(request.POST, request.FILES)
@@ -145,32 +185,107 @@ def ski_material_listings(request):
             listing = form.save(commit=False)
             listing.user = request.user  # Set the current user as the listing creator
             listing.save()
+
+            uploaded_images = request.FILES.getlist('images')
+            if not listing.image and uploaded_images:
+                first_image = uploaded_images[0].read()
+                if first_image:
+                    listing.image = first_image
+                    listing.save(update_fields=['image'])
+                uploaded_images[0].seek(0)
+            form.save_extra_images(listing, uploaded_images)
+
             return redirect('ski_material_listings')
     else:
         form = SkiMaterialListingForm()
 
-    return render(request, 'ski_material_listings.html', {'form': form, 'listings': listings})
+    my_listings = all_listings.filter(user=request.user)
+    marketplace_listings = all_listings.exclude(user=request.user)
+
+    return render(
+        request,
+        'ski_material_listings.html',
+        {
+            'form': form,
+            'listings': all_listings,
+            'my_listings': my_listings,
+            'marketplace_listings': marketplace_listings,
+            'selected_scope': scope,
+            'selected_transaction_type': transaction_type,
+            'selected_material_type': material_type,
+            'selected_condition': condition,
+            'query_text': q,
+            'min_price': min_price,
+            'max_price': max_price,
+            'city': city,
+            'material_choices': SkiMaterialListing.MATERIAL_CHOICES,
+            'condition_choices': SkiMaterialListing.CONDITION_CHOICES,
+            'transaction_choices': SkiMaterialListing.TRANSACTION_CHOICES,
+        },
+    )
 
 def listing_detail(request, id):
     listing = get_object_or_404(SkiMaterialListing, id=id)
-    return render(request, 'listing_detail.html', {'listing': listing})
+    gallery_images = listing.images.all()
+
+    if request.method == 'POST' and request.user.is_authenticated and request.user != listing.user:
+        body = request.POST.get('body', '').strip()
+        if body:
+            Message.objects.create(
+                sender=request.user,
+                recipient=listing.user,
+                subject=f"À propos de: {listing.title}",
+                body=body,
+            )
+            messages.success(
+                request,
+                'Message envoyé au vendeur. / Message sent to the seller.'
+            )
+            return redirect('listing_detail', id=listing.id)
+
+    return render(request, 'listing_detail.html', {'listing': listing, 'gallery_images': gallery_images})
+
+
+@login_required
+def ajouter_materiel(request):
+    if request.method == 'POST':
+        form = SkiMaterialListingForm(request.POST, request.FILES)
+        if form.is_valid():
+            listing = form.save(commit=False)
+            listing.user = request.user  # Set the current user as the listing creator
+            listing.save()
+
+            uploaded_images = request.FILES.getlist('images')
+            if not listing.image and uploaded_images:
+                first_image = uploaded_images[0].read()
+                if first_image:
+                    listing.image = first_image
+                    listing.save(update_fields=['image'])
+                uploaded_images[0].seek(0)
+            form.save_extra_images(listing, uploaded_images)
+
+            return redirect('ski_material_listings')
+    else:
+        form = SkiMaterialListingForm()
+    return render(request, 'ajouter_materiel.html', {'form': form})
+
 
 @login_required
 def messages_view(request):
-    messages, unread_count = getMessagesAndCount(request)
+    inbox_messages, unread_count = getMessagesAndCount(request)
+    sent_messages = Message.objects.filter(sender=request.user).exclude(recipient=request.user).order_by('-created_at')
 
     return render(request, 'messages/messages.html', {
-        'messages': messages,
-        'unread_count': unread_count
+        'messages': inbox_messages,
+        'sent_messages': sent_messages,
+        'unread_count': unread_count,
     })
 
 def getMessagesAndCount(request):
     messages = Message.objects.filter(recipient=request.user).order_by('-created_at')
-    
-    unread_messages = messages.filter(is_read=False)
-    unread_messages.update(is_read=True)
 
     unread_count = messages.filter(is_read=False).count()
+    messages.filter(is_read=False).update(is_read=True)
     return messages,unread_count
 
 @login_required
