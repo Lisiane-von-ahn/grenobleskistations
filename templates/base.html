@@ -50,6 +50,43 @@
             color: #fff;
         }
 
+        /* Keep all menu items inside the header even when labels are long. */
+        .header-area {
+            height: auto;
+            min-height: 162px;
+        }
+
+        .header-area .main-nav {
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .header-area .main-nav .logo {
+            flex-basis: auto;
+            flex-shrink: 0;
+        }
+
+        .header-area .main-nav .nav {
+            flex-basis: auto;
+            flex-grow: 1;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 6px;
+            margin-top: 38px;
+        }
+
+        .header-area .main-nav .nav li {
+            padding-left: 0;
+            padding-right: 0;
+        }
+
+        .header-area .main-nav .nav li a {
+            padding: 6px 10px;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
         .main-nav .nav li a.menu-chip {
             background: rgba(255, 255, 255, 0.14);
             border-radius: 8px;
@@ -137,7 +174,7 @@
         }
 
         main > div {
-            margin-top: 128px !important;
+            margin-top: 170px !important;
         }
 
         .floating-btn {
@@ -154,13 +191,39 @@
         }
 
         @media (max-width: 1199.98px) {
+            .header-area {
+                min-height: 152px;
+            }
+
             .main-nav .nav li a {
-                padding: 8px 10px;
-                font-size: 14px;
+                padding: 6px 8px;
+                font-size: 12px;
+            }
+
+            .header-area .main-nav .nav {
+                margin-top: 34px;
+            }
+
+            main > div {
+                margin-top: 160px !important;
             }
         }
 
         @media (max-width: 991.98px) {
+            .header-area {
+                min-height: 122px;
+            }
+
+            .header-area .main-nav {
+                align-items: center;
+            }
+
+            .header-area .main-nav .nav {
+                display: block;
+                margin-top: 0;
+                gap: 0;
+            }
+
             .main-nav .nav li.mobile-hide {
                 display: none !important;
             }
@@ -352,7 +415,7 @@
 
     <!-- ***** Dynamic Content Section ***** -->
     <main>
-        <div style="margin-top: 141px">
+        <div style="margin-top: 170px">
             {% block content %} 
             {% endblock %}
         </div>

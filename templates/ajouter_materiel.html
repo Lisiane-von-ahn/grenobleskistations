@@ -1,19 +1,20 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load i18n %}
 
-{% block title %}Ajouter un Matériel / Add Gear{% endblock %}
+{% block title %}{% trans "Ajouter un materiel" %}{% endblock %}
 
 {% block content %}
 <div class="container py-4">
     <section class="market-hero mb-4">
-        <h2 class="market-section-title mb-2">Ajouter un Matériel / Add New Listing</h2>
-        <p class="market-subtle mb-0">Interface propre en sections pour publier rapidement une annonce complète.</p>
+        <h2 class="market-section-title mb-2">{% trans "Ajouter un materiel" %}</h2>
+        <p class="market-subtle mb-0">{% trans "Publiez rapidement une annonce complete." %}</p>
     </section>
 
     <form method="POST" enctype="multipart/form-data" class="market-search-panel">
         {% csrf_token %}
 
-        <h5 class="mb-3">Infos principales / Main info</h5>
+        <h5 class="mb-3">{% trans "Infos principales" %}</h5>
         <div class="row g-3 mb-4">
             <div class="col-md-6">{{ form.title.label_tag }}{{ form.title }}</div>
             <div class="col-md-3">{{ form.city.label_tag }}{{ form.city }}</div>
@@ -21,7 +22,7 @@
             <div class="col-12">{{ form.description.label_tag }}{{ form.description }}</div>
         </div>
 
-        <h5 class="mb-3">Type et caractéristiques / Type and features</h5>
+        <h5 class="mb-3">{% trans "Type et caracteristiques" %}</h5>
         <div class="row g-3 mb-4">
             <div class="col-md-3">{{ form.transaction_type.label_tag }}{{ form.transaction_type }}</div>
             <div class="col-md-3">{{ form.material_type.label_tag }}{{ form.material_type }}</div>
@@ -31,15 +32,15 @@
             <div class="col-md-6">{{ form.size.label_tag }}{{ form.size }}</div>
         </div>
 
-        <h5 class="mb-3">Photos / Photos</h5>
+        <h5 class="mb-3">{% trans "Photos" %}</h5>
         <div class="row g-3 mb-4">
             <div class="col-md-6">{{ form.image.label_tag }}{{ form.image }}</div>
             <div class="col-md-6">{{ form.images.label_tag }}{{ form.images }}</div>
         </div>
 
         <div class="d-flex gap-2 justify-content-end">
-            <a href="{% url 'ski_material_listings' %}" class="btn btn-outline-secondary">Retour / Back</a>
-            <button type="submit" class="btn btn-primary">Publier / Publish</button>
+            <a href="{% url 'ski_material_listings' %}" class="btn btn-outline-secondary">{% trans "Retour" %}</a>
+            <button type="submit" class="btn btn-primary">{% trans "Publier" %}</button>
         </div>
     </form>
 </div>

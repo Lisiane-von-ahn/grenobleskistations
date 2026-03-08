@@ -8,14 +8,26 @@ from api.models import (
     ServiceStore,
     SkiCircuit,
     SkiMaterialListing,
+    PisteConditionReport,
+    SnowConditionUpdate,
+    CrowdStatusUpdate,
     Message,
     UserProfile,
 )
 from django.db.models import Sum
 from django.db.models import Q
+from django.db.models import Avg
+from django.db.models import Count
+from django.db.models import Value
+from django.db.models import IntegerField
 from django.urls import reverse
 from django.contrib.auth.forms import UserCreationForm
-from .forms import SkiMaterialListingForm, ProfileForm
+from .forms import (
+    SkiMaterialListingForm,
+    ProfileForm,
+    PisteConditionReportForm,
+    SnowConditionUpdateForm,
+)
 from allauth.socialaccount.providers.google.views import OAuth2LoginView
 from allauth.socialaccount.providers.google.views import OAuth2CallbackView
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
@@ -23,37 +35,175 @@ from allauth.account.adapter import DefaultAccountAdapter
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 import base64
+import json
+from datetime import timedelta
 from django.utils.translation import check_for_language
 from django.utils import translation
+from django.utils.translation import gettext as _
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils import timezone
+from allauth.socialaccount.models import SocialAccount
 
 
 def home(request):
-
-    queryset = SkiStation.objects.annotate(num_circuits=Sum('skicircuit__num_pistes'))
+    queryset = SkiStation.objects.annotate(
+        num_circuits=Sum('skicircuit__num_pistes'),
+        service_count=Count('servicestore', distinct=True),
+        instructor_service_count=Value(0, output_field=IntegerField()),
+    )
 
     print(queryset.query)  # This will print the SQL query in the console
     for station in queryset:
         print(f"{station.name}: {station.num_circuits} circuits")
 
     random_ski_stations = queryset.order_by('?')
+    nearest_stations = queryset.order_by('distanceFromGrenoble', 'name')[:5]
+    map_stations = queryset.order_by('distanceFromGrenoble', 'name')
 
-    return render(request, 'index.html', {'ski_stations': random_ski_stations, 'all': queryset})
+    return render(
+        request,
+        'index.html',
+        {
+            'ski_stations': random_ski_stations,
+            'all': queryset,
+            'nearest_stations': nearest_stations,
+            'map_stations': map_stations,
+        },
+    )
 
 
 def ski_station_detail(request, station_id):
-    ski_station = get_object_or_404(SkiStation.objects.annotate(num_circuits=Sum('skicircuit__num_pistes')), id=station_id)
+    ski_station = get_object_or_404(
+        SkiStation.objects.annotate(num_circuits=Sum('skicircuit__num_pistes')),
+        id=station_id,
+    )
     bus_lines = BusLine.objects.filter(ski_station=ski_station)
     service_stores = ServiceStore.objects.filter(ski_station=ski_station)
     ski_circuits = SkiCircuit.objects.filter(ski_station=ski_station)
+
+    trend = request.GET.get('trend', '24h')
+    if trend not in ('3h', '24h'):
+        trend = '24h'
+    window_delta = timedelta(hours=3 if trend == '3h' else 24)
+    window_start = timezone.now() - window_delta
+
+    if request.method == 'POST' and request.user.is_authenticated:
+        form_type = request.POST.get('form_type', '').strip()
+
+        if form_type == 'piste_report':
+            piste_form_post = PisteConditionReportForm(request.POST)
+            if piste_form_post.is_valid():
+                PisteConditionReport.objects.update_or_create(
+                    ski_station=ski_station,
+                    user=request.user,
+                    defaults={
+                        'piste_rating': piste_form_post.cleaned_data['piste_rating'],
+                        'comment': piste_form_post.cleaned_data.get('comment', '').strip(),
+                        'crowd_level': PisteConditionReport.CROWD_NORMAL,
+                    },
+                )
+                messages.success(request, _('Avis piste enregistre.'))
+            else:
+                messages.error(request, _('Veuillez verifier le formulaire piste.'))
+            return redirect(f"{reverse('ski_station_detail', args=[station_id])}?trend={trend}")
+
+        if form_type == 'crowd_update':
+            crowd_level = request.POST.get('crowd_level', '').strip()
+            valid_levels = {choice[0] for choice in PisteConditionReport.CROWD_CHOICES}
+            if crowd_level in valid_levels:
+                CrowdStatusUpdate.objects.create(
+                    ski_station=ski_station,
+                    user=request.user,
+                    crowd_level=crowd_level,
+                )
+                messages.success(request, _('Affluence mise a jour.'))
+            else:
+                messages.error(request, _('Valeur d\'affluence invalide.'))
+            return redirect(f"{reverse('ski_station_detail', args=[station_id])}?trend={trend}")
+
+        if form_type == 'snow_update':
+            snow_form_post = SnowConditionUpdateForm(request.POST, request.FILES)
+            if snow_form_post.is_valid():
+                update = snow_form_post.save(commit=False)
+                update.ski_station = ski_station
+                update.user = request.user
+                image_file = snow_form_post.cleaned_data.get('image_file')
+                if image_file:
+                    update.image = image_file.read()
+                update.save()
+                messages.success(request, _('Actualisation neige publiee.'))
+            else:
+                messages.error(request, _('Veuillez verifier le formulaire neige.'))
+            return redirect(f"{reverse('ski_station_detail', args=[station_id])}?trend={trend}")
+
+    user_piste_report = None
+    if request.user.is_authenticated:
+        user_piste_report = PisteConditionReport.objects.filter(
+            ski_station=ski_station,
+            user=request.user,
+        ).first()
+
+    piste_form = PisteConditionReportForm(instance=user_piste_report)
+    snow_form = SnowConditionUpdateForm()
+
+    snow_updates = SnowConditionUpdate.objects.filter(ski_station=ski_station).select_related('user').order_by('-created_at')[:20]
+    piste_reports = PisteConditionReport.objects.filter(ski_station=ski_station).select_related('user').order_by('-created_at')[:20]
+    window_reports = PisteConditionReport.objects.filter(
+        ski_station=ski_station,
+        created_at__gte=window_start,
+    ).order_by('created_at')
+
+    crowd_to_value = {
+        PisteConditionReport.CROWD_QUIET: 1,
+        PisteConditionReport.CROWD_NORMAL: 2,
+        PisteConditionReport.CROWD_BUSY: 3,
+    }
+
+    chart_labels = [report.created_at.strftime('%H:%M') for report in window_reports]
+    chart_reports = [1 for _ in window_reports]
+    chart_ratings = [report.piste_rating for report in window_reports]
+    chart_crowd = [crowd_to_value.get(report.crowd_level, 2) for report in window_reports]
+
+    avg_rating = PisteConditionReport.objects.filter(ski_station=ski_station).aggregate(avg=Avg('piste_rating')).get('avg')
+    report_count = PisteConditionReport.objects.filter(ski_station=ski_station).count()
+
+    last_crowd = CrowdStatusUpdate.objects.filter(ski_station=ski_station).order_by('-created_at').first()
+    crowd_display_map = {
+        PisteConditionReport.CROWD_QUIET: _('Peu'),
+        PisteConditionReport.CROWD_NORMAL: _('Agreable'),
+        PisteConditionReport.CROWD_BUSY: _('Bonde'),
+    }
+    last_crowd_key = last_crowd.crowd_level if last_crowd else None
+    last_crowd_label = crowd_display_map.get(last_crowd_key)
+
+    destination = f"{ski_station.latitude},{ski_station.longitude}"
+    station_transit_url = f"https://www.google.com/maps/dir/?api=1&destination={destination}&travelmode=transit"
+    station_driving_url = f"https://www.google.com/maps/dir/?api=1&destination={destination}&travelmode=driving"
 
     context = {
         'station': ski_station,
         'bus_lines': bus_lines,
         'service_stores': service_stores,
         'ski_circuits': ski_circuits,
+        'station_transit_url': station_transit_url,
+        'station_driving_url': station_driving_url,
+        'piste_form': piste_form,
+        'snow_form': snow_form,
+        'piste_reports': piste_reports,
+        'snow_updates': snow_updates,
+        'piste_average_rating': avg_rating,
+        'piste_average_rating_rounded': int(round(avg_rating)) if avg_rating else 0,
+        'piste_report_count': report_count,
+        'piste_last_crowd': last_crowd_label,
+        'piste_last_crowd_key': last_crowd_key,
+        'piste_window_label': _('3 heures') if trend == '3h' else _('24 heures'),
+        'piste_trend': trend,
+        'piste_chart_labels': json.dumps(chart_labels),
+        'piste_chart_reports': json.dumps(chart_reports),
+        'piste_chart_ratings': json.dumps(chart_ratings),
+        'piste_chart_crowd': json.dumps(chart_crowd),
     }
-    
+
     return render(request, 'details.html', context)
 
 
@@ -165,7 +315,8 @@ def set_language_view(request):
     
 @login_required(login_url='login')
 def ski_material_listings(request):
-    all_listings = SkiMaterialListing.objects.select_related('user', 'ski_station').prefetch_related('images').order_by('-posted_at')
+    base_queryset = SkiMaterialListing.objects.select_related('user', 'ski_station').prefetch_related('images').order_by('-posted_at')
+    all_listings = base_queryset
 
     q = request.GET.get('q', '').strip()
     transaction_type = request.GET.get('transaction_type', '').strip()
@@ -221,8 +372,12 @@ def ski_material_listings(request):
     else:
         form = SkiMaterialListingForm()
 
-    my_listings = all_listings.filter(user=request.user)
-    marketplace_listings = all_listings.exclude(user=request.user)
+    if mine_only:
+        my_listings = all_listings
+        marketplace_listings = SkiMaterialListing.objects.none()
+    else:
+        my_listings = all_listings.filter(user=request.user)
+        marketplace_listings = all_listings.exclude(user=request.user)
 
     return render(
         request,
@@ -315,6 +470,8 @@ def profile_view(request):
     user = request.user  # Get the current user
 
     profile_picture_data = None
+    google_profile_picture_url = None
+    google_full_name = None
     try:
         user_profile = UserProfile.objects.get(user=user)  # Get the user profile
         if user_profile.profile_picture:
@@ -322,6 +479,16 @@ def profile_view(request):
             profile_picture_data = base64.b64encode(user_profile.profile_picture).decode('utf-8')
     except UserProfile.DoesNotExist:
         pass  # Handle case where UserProfile does not exist for the user
+
+    # If the user signed in with Google, expose Google profile info as fallback.
+    social = SocialAccount.objects.filter(user=user, provider='google').first()
+    if social:
+        extra = social.extra_data or {}
+        google_profile_picture_url = extra.get('picture')
+        given_name = (extra.get('given_name') or '').strip()
+        family_name = (extra.get('family_name') or '').strip()
+        full_name = (extra.get('name') or '').strip()
+        google_full_name = full_name or f"{given_name} {family_name}".strip() or None
 
     if request.method == 'POST':
         form = ProfileForm(request.POST, request.FILES, instance=user)  # Add request.FILES
@@ -333,7 +500,9 @@ def profile_view(request):
 
     return render(request, 'profile.html', {
         'form': form,
-        'profile_picture': profile_picture_data  # Pass the profile picture in base64
+        'profile_picture': profile_picture_data,  # Pass local profile picture in base64
+        'google_profile_picture_url': google_profile_picture_url,
+        'google_full_name': google_full_name,
     })
 
 @login_required
@@ -370,7 +539,14 @@ def delete_listing(request, id):
 
 @login_required
 def delete_snow_update(request, station_id, update_id):
-    messages.info(request, 'Suppression indisponible pour le moment.')
+    update = get_object_or_404(
+        SnowConditionUpdate,
+        id=update_id,
+        ski_station_id=station_id,
+        user=request.user,
+    )
+    update.delete()
+    messages.success(request, _('Publication supprimee.'))
     return redirect('ski_station_detail', station_id=station_id)
 
 

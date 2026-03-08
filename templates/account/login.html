@@ -3,51 +3,165 @@
 {% load i18n %}
 
 {% block content %}
-<section class="py-5 auth-section">
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-12 col-md-9 col-lg-6">
-                <div class="card border-0 shadow-sm auth-card">
-                    <div class="card-body p-4 p-md-5">
-                        <h2 class="h4 mb-3 text-center">{% trans "Connexion" %}</h2>
-                        <p class="text-muted text-center mb-4">{% trans "Connectez-vous avec votre e-mail." %}</p>
+<style>
+    .login-shell {
+        background:
+            radial-gradient(circle at 10% 20%, rgba(44, 167, 183, 0.16), transparent 44%),
+            radial-gradient(circle at 95% 15%, rgba(255, 169, 109, 0.2), transparent 40%),
+            linear-gradient(160deg, #f2f8fc 0%, #fdf6ec 100%);
+        min-height: calc(100vh - 150px);
+        padding: 2.2rem 0;
+    }
 
-                        <form method="post" action="{% url 'account_login' %}">
+    .login-side {
+        color: #11313c;
+    }
+
+    .login-side h1 {
+        font-weight: 700;
+        line-height: 1.18;
+        margin-bottom: 0.85rem;
+    }
+
+    .login-side p {
+        color: #43606a;
+    }
+
+    .login-benefit {
+        background: #ffffff;
+        border: 1px solid #e8eef1;
+        border-radius: 12px;
+        padding: 0.75rem 0.9rem;
+        margin-bottom: 0.65rem;
+        font-size: 0.95rem;
+        color: #2e4a54;
+    }
+
+    .login-card {
+        border: 1px solid #e9eff3;
+        border-radius: 18px;
+        box-shadow: 0 16px 42px rgba(15, 42, 62, 0.12);
+        overflow: hidden;
+    }
+
+    .login-card .card-body {
+        padding: 2rem;
+    }
+
+    .login-card-title {
+        font-size: 1.55rem;
+        font-weight: 700;
+        color: #163542;
+        margin-bottom: 0.25rem;
+    }
+
+    .login-card-subtitle {
+        color: #69808a;
+        margin-bottom: 1.35rem;
+    }
+
+    .login-form label {
+        font-weight: 600;
+        color: #244554;
+    }
+
+    .login-form .form-control {
+        border: 1px solid #d6e1e7;
+        border-radius: 10px;
+        padding: 0.68rem 0.85rem;
+        min-height: 44px;
+    }
+
+    .google-btn {
+        border-radius: 10px;
+        border-color: #d7dde2;
+        color: #1f3540;
+    }
+
+    .login-footer-link {
+        color: #0f6c7f;
+        font-weight: 500;
+        text-decoration: none;
+    }
+
+    .login-footer-link:hover {
+        text-decoration: underline;
+    }
+
+    @media (max-width: 991.98px) {
+        .login-shell {
+            padding: 1.4rem 0;
+        }
+
+        .login-side {
+            margin-bottom: 1rem;
+        }
+    }
+</style>
+
+<section class="login-shell auth-section">
+    <div class="container">
+        <div class="row align-items-center g-4">
+            <div class="col-lg-6">
+                <div class="login-side">
+                    <h1>{% trans "Bienvenue sur GrenobleSki" %}</h1>
+                    <p>{% trans "Connectez-vous pour gérer vos annonces, échanger via le chat et réserver vos services en quelques clics." %}</p>
+                    <div class="login-benefit">{% trans "Marketplace achat, location et prêt" %}</div>
+                    <div class="login-benefit">{% trans "Messagerie directe vendeur / acheteur" %}</div>
+                    <div class="login-benefit">{% trans "Recherche simple et filtres rapides" %}</div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card login-card border-0 bg-white">
+                    <div class="card-body">
+                        <h2 class="login-card-title">{% trans "Connexion" %}</h2>
+                        <p class="login-card-subtitle">{% trans "Accédez à votre espace avec votre e-mail." %}</p>
+
+                        <form method="post" action="{% url 'account_login' %}" class="login-form">
                             {% csrf_token %}
+
                             {% if form.non_field_errors %}
-                                <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                                <div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>
                             {% endif %}
 
                             <div class="form-group mb-3">
                                 <label for="id_login">{% trans "Email" %}</label>
-                                <input type="email" name="login" id="id_login" class="form-control" placeholder="you@example.com" required autocomplete="email">
+                                <input type="email" name="login" id="id_login" class="form-control" value="{{ form.login.value|default:'' }}" placeholder="you@example.com" required autocomplete="email">
+                                {% if form.login.errors %}<small class="text-danger">{{ form.login.errors|striptags }}</small>{% endif %}
                             </div>
 
                             <div class="form-group mb-3">
                                 <label for="id_password">{% trans "Mot de passe" %}</label>
                                 <input type="password" name="password" id="id_password" class="form-control" placeholder="{% trans 'Entrez votre mot de passe' %}" required autocomplete="current-password">
+                                {% if form.password.errors %}<small class="text-danger">{{ form.password.errors|striptags }}</small>{% endif %}
                             </div>
+
+                            {% if form.remember %}
+                                <div class="form-check mb-3">
+                                    {{ form.remember }}
+                                    <label for="id_remember" class="form-check-label">{% trans "Rester connecté" %}</label>
+                                </div>
+                            {% endif %}
 
                             {% if redirect_field_value %}
                                 <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">
                             {% endif %}
 
-                            <button type="submit" class="btn btn-primary w-100">{% trans "Se connecter" %}</button>
+                            <button type="submit" class="btn btn-primary w-100 mb-2">{% trans "Se connecter" %}</button>
                         </form>
 
-                        <div class="text-center my-3">
-                            <a href="{% url 'account_reset_password' %}" class="small">{% trans "Mot de passe oublié ?" %}</a>
+                        <div class="text-center mb-3">
+                            <a href="{% url 'account_reset_password' %}" class="small login-footer-link">{% trans "Mot de passe oublié ?" %}</a>
                         </div>
 
-                        <hr>
-
-                        <a href="/accounts/google/login/" class="btn btn-outline-dark w-100 mb-3">
+                        <a href="/accounts/google/login/" class="btn btn-outline-dark google-btn w-100 mb-3">
                             <i class="fab fa-google"></i> {% trans "Continuer avec Google" %}
                         </a>
 
-                        <p class="mb-0 text-center">
+                        <p class="mb-0 text-center text-muted">
                             {% trans "Pas encore de compte ?" %}
-                            <a href="{% url 'account_signup' %}">{% trans "Créer un compte" %}</a>
+                            <a href="{% url 'account_signup' %}" class="login-footer-link">{% trans "Créer un compte" %}</a>
                         </p>
                     </div>
                 </div>

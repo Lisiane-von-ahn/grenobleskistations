@@ -1,8 +1,9 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load base64_filters %}
+{% load i18n %}
 
-{% block title %}Détail Annonce / Listing Detail{% endblock %}
+{% block title %}{% trans "Detail annonce" %}{% endblock %}
 
 {% block content %}
 <div class="container py-4">
@@ -10,7 +11,7 @@
         <div class="col-lg-8">
             <div class="market-search-panel">
                 <h2 class="market-section-title">{{ listing.title }}</h2>
-                <p class="market-subtle">Par / By {{ listing.user.username }} - {{ listing.posted_at|date:'d/m/Y H:i' }}</p>
+                <p class="market-subtle">{% trans "Par" %} {{ listing.user.username }} - {{ listing.posted_at|date:'d/m/Y H:i' }}</p>
 
                 <div class="mb-3">
                     <span class="badge-soft badge-action">{{ listing.get_transaction_type_display }}</span>
@@ -26,7 +27,7 @@
                 {% endif %}
 
                 {% if gallery_images %}
-                <h5 class="mb-2">Galerie / Gallery</h5>
+                <h5 class="mb-2">{% trans "Galerie" %}</h5>
                 <div class="row g-2 mb-3">
                     {% for image in gallery_images %}
                     <div class="col-md-4">
@@ -37,7 +38,7 @@
                 {% endif %}
 
                 <div class="chat-box">
-                    <h5>Description</h5>
+                    <h5>{% trans "Description" %}</h5>
                     <p class="mb-0">{{ listing.description }}</p>
                 </div>
             </div>
@@ -45,23 +46,23 @@
 
         <div class="col-lg-4">
             <div class="market-search-panel">
-                <h4>Prix / Price</h4>
-                <p class="display-6 mb-2">{% if listing.price %}{{ listing.price }} EUR{% else %}Gratuit / Free{% endif %}</p>
-                <p class="market-subtle">Station: {% if listing.ski_station %}{{ listing.ski_station.name }}{% else %}-{% endif %}</p>
+                <h4>{% trans "Prix" %}</h4>
+                <p class="display-6 mb-2">{% if listing.price %}{{ listing.price }} EUR{% else %}{% trans "Gratuit" %}{% endif %}</p>
+                <p class="market-subtle">{% trans "Station" %}: {% if listing.ski_station %}{{ listing.ski_station.name }}{% else %}-{% endif %}</p>
 
                 {% if user.is_authenticated and user != listing.user %}
                 <hr>
-                <h5>Contacter le vendeur / Contact seller</h5>
+                <h5>{% trans "Contacter le vendeur" %}</h5>
                 <form method="POST" class="chat-box">
                     {% csrf_token %}
-                    <label class="form-label">Message / Message</label>
+                    <label class="form-label">{% trans "Message" %}</label>
                     <textarea name="body" rows="5" class="form-control mb-3" required placeholder="Bonjour, votre article est-il toujours disponible ?"></textarea>
-                    <button type="submit" class="btn btn-primary w-100">Envoyer / Send</button>
+                    <button type="submit" class="btn btn-primary w-100">{% trans "Envoyer" %}</button>
                 </form>
                 {% elif user == listing.user %}
-                <div class="alert alert-info">C'est votre annonce. / This is your listing.</div>
+                <div class="alert alert-info">{% trans "C'est votre annonce." %}</div>
                 {% else %}
-                <a href="{% url 'login' %}" class="btn btn-primary w-100">Se connecter pour écrire / Login to contact</a>
+                <a href="{% url 'login' %}" class="btn btn-primary w-100">{% trans "Se connecter pour ecrire" %}</a>
                 {% endif %}
             </div>
         </div>

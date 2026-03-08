@@ -116,6 +116,7 @@
     </section>
     {% endif %}
 
+    {% if not mine_only %}
     <section>
         <h3 class="market-section-title mb-3">Marketplace ({{ marketplace_listings|length }})</h3>
         <div class="row g-4">
@@ -154,6 +155,7 @@
             {% endfor %}
         </div>
     </section>
+    {% endif %}
 </div>
 
 <script>

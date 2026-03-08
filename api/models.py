@@ -106,6 +106,60 @@ class SkiMaterialImage(models.Model):
         return f"Image for {self.listing.title}"
 
 
+class SnowConditionUpdate(models.Model):
+    ski_station = models.ForeignKey(SkiStation, on_delete=models.CASCADE, related_name='snow_updates')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='snow_updates')
+    note = models.TextField(blank=True)
+    snow_depth_cm = models.PositiveIntegerField(null=True, blank=True)
+    image = models.BinaryField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Snow update {self.ski_station.name} by {self.user.username}"
+
+
+class PisteConditionReport(models.Model):
+    CROWD_QUIET = 'quiet'
+    CROWD_NORMAL = 'normal'
+    CROWD_BUSY = 'busy'
+
+    CROWD_CHOICES = [
+        (CROWD_QUIET, 'Peu de gens'),
+        (CROWD_NORMAL, 'Agreable'),
+        (CROWD_BUSY, 'Bonde'),
+    ]
+
+    ski_station = models.ForeignKey(SkiStation, on_delete=models.CASCADE, related_name='piste_reports')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='piste_reports')
+    piste_rating = models.PositiveSmallIntegerField()
+    crowd_level = models.CharField(max_length=10, choices=CROWD_CHOICES, default=CROWD_NORMAL)
+    comment = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('ski_station', 'user')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Piste report {self.ski_station.name} by {self.user.username}"
+
+
+class CrowdStatusUpdate(models.Model):
+    ski_station = models.ForeignKey(SkiStation, on_delete=models.CASCADE, related_name='crowd_updates')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='crowd_updates')
+    crowd_level = models.CharField(max_length=10, choices=PisteConditionReport.CROWD_CHOICES, default=PisteConditionReport.CROWD_NORMAL)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Crowd update {self.ski_station.name} by {self.user.username}"
+
+
 class Message(models.Model):
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
     recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_messages')

@@ -1,6 +1,12 @@
 from django import forms
 from django.utils.translation import gettext_lazy as _
-from api.models import SkiMaterialListing, UserProfile, SkiMaterialImage
+from api.models import (
+    SkiMaterialListing,
+    UserProfile,
+    SkiMaterialImage,
+    PisteConditionReport,
+    SnowConditionUpdate,
+)
 from io import BytesIO
 from PIL import Image
 from django.contrib.auth import get_user_model
@@ -184,3 +190,38 @@ class MaterielForm(forms.ModelForm):
             'description': forms.Textarea(attrs={'rows': 4}),
             'price': forms.NumberInput(attrs={'step': '0.01'}),
         }
+
+
+class PisteConditionReportForm(forms.ModelForm):
+    class Meta:
+        model = PisteConditionReport
+        fields = ['piste_rating', 'comment']
+        widgets = {
+            'comment': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': _('Partagez les conditions de piste...')}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['piste_rating'].required = True
+        self.fields['comment'].required = False
+        self.fields['comment'].label = _('Commentaire')
+
+
+class SnowConditionUpdateForm(forms.ModelForm):
+    image_file = forms.ImageField(required=False)
+
+    class Meta:
+        model = SnowConditionUpdate
+        fields = ['note', 'snow_depth_cm']
+        widgets = {
+            'note': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': _('Ex: neige fraiche ce matin, piste centrale verglacee...')}),
+            'snow_depth_cm': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'step': '1'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['note'].required = False
+        self.fields['snow_depth_cm'].required = False
+        self.fields['note'].label = _('Commentaire')
+        self.fields['snow_depth_cm'].label = _('Hauteur de neige (cm)')
+        self.fields['image_file'].label = _('Photo')
