@@ -38,6 +38,27 @@
         white-space: nowrap;
     }
 
+    .bus-table-row {
+        cursor: pointer;
+        transition: background-color 0.18s ease;
+    }
+
+    .bus-table-row:hover {
+        background-color: #f3fbff;
+    }
+
+    .bus-line-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        border-radius: 999px;
+        border: 1px solid #b9d6e0;
+        background: #eef8fc;
+        color: #0d5e6f;
+        padding: 0.2rem 0.65rem;
+        font-weight: 600;
+    }
+
     @media (max-width: 991.98px) {
         .bus-hero h2 {
             font-size: 1.6rem;
@@ -165,14 +186,17 @@
                                 </thead>
                                 <tbody>
                                     {% for line in bus_lines %}
-                                    <tr>
-                                        <td>{{ line.bus_number }}</td>
+                                    <tr class="bus-table-row" data-line-url="{{ line.line_url }}" title="{% trans 'Ouvrir la fiche de cette ligne' %}">
+                                        <td><span class="bus-line-chip">{{ line.bus_number }}</span></td>
                                         <td>{{ line.departure_stop }}</td>
                                         <td>{{ line.arrival_stop }}</td>
                                         <td>{{ line.frequency }}</td>
                                         <td>{{ line.travel_time }}</td>
                                         <td>{{ line.route_points|default:"-" }}</td>
-                                        <td>{{ line.ski_station.name }}</td>
+                                        <td>
+                                            {{ line.ski_station.name }}
+                                            <div><small class="text-muted">{% trans "Cliquer pour ouvrir" %}</small></div>
+                                        </td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -212,6 +236,28 @@
     busPoints.forEach((point) => {
         const popup = `<strong>{% trans "Ligne" %} ${point.line}</strong><br>${point.stop}<br>{% trans "Vers" %} ${point.station}<br>${point.route}`;
         L.marker([point.lat, point.lng]).addTo(map).bindPopup(popup);
+    });
+
+    document.querySelectorAll('.bus-table-row').forEach((row) => {
+        row.addEventListener('click', () => {
+            const url = row.dataset.lineUrl;
+            if (url) {
+                window.open(url, '_blank', 'noopener');
+            }
+        });
+
+        row.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                const url = row.dataset.lineUrl;
+                if (url) {
+                    window.open(url, '_blank', 'noopener');
+                }
+            }
+        });
+
+        row.setAttribute('tabindex', '0');
+        row.setAttribute('role', 'button');
     });
 </script>
 

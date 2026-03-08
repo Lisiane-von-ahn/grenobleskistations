@@ -27,6 +27,7 @@ from .forms import (
     ProfileForm,
     PisteConditionReportForm,
     SnowConditionUpdateForm,
+    get_marketplace_choices,
 )
 from allauth.socialaccount.providers.google.views import OAuth2LoginView
 from allauth.socialaccount.providers.google.views import OAuth2CallbackView
@@ -37,6 +38,8 @@ from django.contrib import messages
 import base64
 import json
 from datetime import timedelta
+from urllib.parse import quote_plus
+import re
 from django.utils.translation import check_for_language
 from django.utils import translation
 from django.utils.translation import gettext as _
@@ -258,11 +261,99 @@ def service_search(request):
     return render(request, 'services.html', context)
 
 def bus_lines(request):
-    # Récupérer toutes les lignes de bus
-    bus_lines = BusLine.objects.all()
+    def _extract_url(text):
+        if not text:
+            return None
+        match = re.search(r'https?://\S+', str(text))
+        return match.group(0) if match else None
+
+    def _line_url(line):
+        # Try explicit URL fields first when available in the model instance.
+        for field_name in ('website_url', 'line_url', 'info_url', 'url'):
+            value = getattr(line, field_name, None)
+            if value:
+                return value
+
+        # Try extracting a URL embedded in textual fields.
+        for text_field in ('route_points', 'frequency', 'travel_time'):
+            embedded = _extract_url(getattr(line, text_field, None))
+            if embedded:
+                return embedded
+
+        # Fallback: search the official mobility provider with line + destination.
+        query = quote_plus(f"metromobilite ligne {line.bus_number} {line.arrival_stop or ''}")
+        return f"https://www.google.com/search?q={query}"
+
+    all_lines = BusLine.objects.select_related('ski_station').all().order_by('bus_number')
+    stations = SkiStation.objects.order_by('name')
+
+    departure = request.GET.get('departure', '').strip() or 'Grenoble Gare Routiere'
+    station_id = request.GET.get('station', '').strip()
+    schedule = request.GET.get('schedule', '').strip().lower()
+
+    lines = all_lines
+    selected_station = None
+
+    if station_id:
+        try:
+            selected_station = stations.get(id=station_id)
+            lines = lines.filter(ski_station=selected_station)
+        except SkiStation.DoesNotExist:
+            selected_station = None
+
+    if schedule == 'weekday':
+        lines = lines.exclude(frequency__icontains='week-end').exclude(frequency__icontains='weekend')
+    elif schedule == 'weekend':
+        lines = lines.filter(Q(frequency__icontains='week-end') | Q(frequency__icontains='weekend'))
+
+    bus_lines_data = []
+    bus_map_points = []
+    for line in lines:
+        line_url = _line_url(line)
+        item = {
+            'id': line.id,
+            'bus_number': line.bus_number,
+            'departure_stop': line.departure_stop,
+            'arrival_stop': line.arrival_stop,
+            'frequency': line.frequency,
+            'travel_time': line.travel_time,
+            'route_points': getattr(line, 'route_points', ''),
+            'ski_station': line.ski_station,
+            'line_url': line_url,
+        }
+        bus_lines_data.append(item)
+
+        dep_lat = getattr(line, 'departure_latitude', None)
+        dep_lng = getattr(line, 'departure_longitude', None)
+        if dep_lat is not None and dep_lng is not None:
+            bus_map_points.append(
+                {
+                    'line': line.bus_number,
+                    'station_name': line.ski_station.name if line.ski_station else '',
+                    'departure_stop': line.departure_stop,
+                    'route_points': getattr(line, 'route_points', ''),
+                    'lat': dep_lat,
+                    'lng': dep_lng,
+                }
+            )
+
+    transit_url = None
+    driving_url = None
+    if selected_station:
+        destination = f"{selected_station.latitude},{selected_station.longitude}"
+        origin = quote_plus(departure)
+        transit_url = f"https://www.google.com/maps/dir/?api=1&origin={origin}&destination={destination}&travelmode=transit"
+        driving_url = f"https://www.google.com/maps/dir/?api=1&origin={origin}&destination={destination}&travelmode=driving"
 
     context = {
-        'bus_lines': bus_lines,
+        'bus_lines': bus_lines_data,
+        'stations': stations,
+        'selected_station': selected_station,
+        'departure': departure,
+        'schedule': schedule,
+        'transit_url': transit_url,
+        'driving_url': driving_url,
+        'bus_map_points': bus_map_points,
     }
 
     return render(request, 'bus.html', context)
@@ -379,6 +470,8 @@ def ski_material_listings(request):
         my_listings = all_listings.filter(user=request.user)
         marketplace_listings = all_listings.exclude(user=request.user)
 
+    choice_labels = get_marketplace_choices(translation.get_language())
+
     return render(
         request,
         'ski_material_listings.html',
@@ -395,9 +488,9 @@ def ski_material_listings(request):
             'min_price': min_price,
             'max_price': max_price,
             'city': city,
-            'material_choices': SkiMaterialListing.MATERIAL_CHOICES,
-            'condition_choices': SkiMaterialListing.CONDITION_CHOICES,
-            'transaction_choices': SkiMaterialListing.TRANSACTION_CHOICES,
+            'material_choices': choice_labels['material_type'],
+            'condition_choices': choice_labels['condition'],
+            'transaction_choices': choice_labels['transaction_type'],
         },
     )
 

@@ -100,6 +100,94 @@
     background: #fff;
 }
 
+.listing-builder-panel {
+    border-radius: 22px;
+    padding: 1.5rem;
+}
+
+.builder-section {
+    border: 1px solid #e8edf1;
+    border-radius: 16px;
+    padding: 1rem;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+}
+
+.upload-dropzone {
+    border: 2px dashed #b8d5de;
+    background: linear-gradient(135deg, #f6fbfe 0%, #f3f7fa 100%);
+    border-radius: 14px;
+    min-height: 160px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.upload-dropzone:hover,
+.upload-dropzone.is-dragover {
+    border-color: #3aa2b7;
+    background: #eef8fc;
+    transform: translateY(-1px);
+}
+
+.upload-dropzone-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    background: #e1f2f7;
+    color: #0b6373;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.5rem;
+}
+
+.upload-dropzone-title {
+    font-weight: 600;
+    color: #17313a;
+    margin-bottom: 0.25rem;
+}
+
+.upload-dropzone-subtitle {
+    color: #5b717b;
+    font-size: 0.88rem;
+}
+
+.upload-preview-grid {
+    margin-top: 0.75rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 10px;
+}
+
+.upload-preview-card {
+    border: 1px solid #dfe7ec;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.upload-preview-image {
+    width: 100%;
+    height: 86px;
+    object-fit: cover;
+    background: #f0f4f8;
+}
+
+.upload-preview-name {
+    font-size: 0.75rem;
+    color: #445a64;
+    padding: 0.35rem 0.45rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 @media (max-width: 768px) {
     .market-hero {
         padding: 1.25rem;
@@ -107,5 +195,13 @@
 
     .market-image {
         height: 180px;
+    }
+
+    .builder-section {
+        padding: 0.85rem;
+    }
+
+    .upload-dropzone {
+        min-height: 140px;
     }
 }

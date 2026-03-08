@@ -1,5 +1,6 @@
 from django import forms
 from django.utils.translation import gettext_lazy as _
+from django.utils.translation import get_language
 from api.models import (
     SkiMaterialListing,
     UserProfile,
@@ -19,6 +20,60 @@ class MultipleFileInput(forms.ClearableFileInput):
 
 class MultipleFileField(forms.FileField):
     widget = MultipleFileInput
+
+
+def get_marketplace_choices(lang_code=None):
+    lang = (lang_code or get_language() or 'fr').lower()
+    is_en = lang.startswith('en')
+
+    if is_en:
+        return {
+            'transaction_type': [
+                ('sale', 'For sale'),
+                ('rent', 'For rent'),
+                ('lend', 'For loan'),
+            ],
+            'material_type': [
+                ('ski', 'Skis'),
+                ('boots', 'Boots'),
+                ('helmet', 'Helmet'),
+                ('jacket', 'Jacket'),
+                ('pants', 'Pants'),
+                ('gloves', 'Gloves'),
+                ('goggles', 'Goggles'),
+                ('other', 'Other'),
+            ],
+            'condition': [
+                ('new', 'New'),
+                ('excellent', 'Excellent'),
+                ('good', 'Good'),
+                ('fair', 'Fair'),
+            ],
+        }
+
+    return {
+        'transaction_type': [
+            ('sale', 'A vendre'),
+            ('rent', 'A louer'),
+            ('lend', 'A preter'),
+        ],
+        'material_type': [
+            ('ski', 'Skis'),
+            ('boots', 'Chaussures'),
+            ('helmet', 'Casque'),
+            ('jacket', 'Veste'),
+            ('pants', 'Pantalon'),
+            ('gloves', 'Gants'),
+            ('goggles', 'Masque'),
+            ('other', 'Autre'),
+        ],
+        'condition': [
+            ('new', 'Neuf'),
+            ('excellent', 'Excellent'),
+            ('good', 'Bon'),
+            ('fair', 'Correct'),
+        ],
+    }
 
 
 class CustomLoginForm(LoginForm):
@@ -76,7 +131,7 @@ class SkiMaterialListingForm(forms.ModelForm):
     image_file = forms.ImageField(required=False)
     images = MultipleFileField(
         required=False,
-        widget=MultipleFileInput(attrs={'class': 'form-control'})
+        widget=MultipleFileInput(attrs={'class': 'visually-hidden', 'id': 'extra-images-input', 'accept': 'image/*'})
     )
 
     class Meta:
@@ -97,35 +152,50 @@ class SkiMaterialListingForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(SkiMaterialListingForm, self).__init__(*args, **kwargs)
-        # Ajout des classes Bootstrap à chaque champ
-        self.fields['title'].widget.attrs.update({'class': 'form-control', 'placeholder': _('Titre')})
-        self.fields['description'].widget.attrs.update({'class': 'form-control', 'placeholder': _('Description')})
-        self.fields['ski_station'].widget.attrs.update({'class': 'form-control'})
-        self.fields['city'].widget.attrs.update({'class': 'form-control', 'placeholder': _('Ville')})
-        self.fields['price'].widget.attrs.update({'class': 'form-control', 'placeholder': _('Prix')})
-        self.fields['material_type'].widget.attrs.update({'class': 'form-control'})
-        self.fields['transaction_type'].widget.attrs.update({'class': 'form-control'})
-        self.fields['condition'].widget.attrs.update({'class': 'form-control'})
-        self.fields['brand'].widget.attrs.update({'class': 'form-control', 'placeholder': _('Marque')})
-        self.fields['size'].widget.attrs.update({'class': 'form-control', 'placeholder': _('Taille')})
-        self.fields['image'].widget.attrs.update({'class': 'form-control'})
+        lang = (get_language() or 'fr').lower()
+        is_en = lang.startswith('en')
+        choices = get_marketplace_choices(lang)
 
-        self.fields['title'].label = _('Titre')
+        self.fields['title'].widget.attrs.update({'class': 'form-control form-control-lg', 'placeholder': 'Title' if is_en else 'Titre'})
+        self.fields['description'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Describe the item condition, age, and usage' if is_en else 'Decrivez l\'etat, l\'anciennete et l\'usage'})
+        self.fields['description'].widget.attrs.update({'rows': 4})
+        self.fields['ski_station'].widget.attrs.update({'class': 'form-select'})
+        self.fields['city'].widget.attrs.update({'class': 'form-control', 'placeholder': 'City' if is_en else 'Ville'})
+        self.fields['price'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Price in EUR' if is_en else 'Prix en EUR'})
+        self.fields['material_type'].widget.attrs.update({'class': 'form-select'})
+        self.fields['transaction_type'].widget.attrs.update({'class': 'form-select'})
+        self.fields['condition'].widget.attrs.update({'class': 'form-select'})
+        self.fields['brand'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Brand (optional)' if is_en else 'Marque (optionnel)'})
+        self.fields['size'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Size (optional)' if is_en else 'Taille (optionnel)'})
+        self.fields['image'].widget.attrs.update({'class': 'visually-hidden', 'id': 'main-image-input', 'accept': 'image/*'})
+
+        self.fields['transaction_type'].choices = choices['transaction_type']
+        self.fields['material_type'].choices = choices['material_type']
+        self.fields['condition'].choices = choices['condition']
+
+        self.fields['title'].label = _('Titre') if not is_en else _('Title')
         self.fields['description'].label = _('Description')
-        self.fields['ski_station'].label = _('Station de ski')
-        self.fields['city'].label = _('Ville')
-        self.fields['price'].label = _('Prix')
-        self.fields['material_type'].label = _('Categorie')
-        self.fields['transaction_type'].label = _('Type d\'offre')
-        self.fields['condition'].label = _('Etat')
-        self.fields['brand'].label = _('Marque')
-        self.fields['size'].label = _('Taille')
-        self.fields['image'].label = _('Photo principale')
-        self.fields['images'].label = _('Photos supplementaires')
+        self.fields['ski_station'].label = _('Station de ski') if not is_en else _('Ski station')
+        self.fields['city'].label = _('Ville') if not is_en else _('City')
+        self.fields['price'].label = _('Prix') if not is_en else _('Price')
+        self.fields['material_type'].label = _('Categorie') if not is_en else _('Category')
+        self.fields['transaction_type'].label = _('Type d\'offre') if not is_en else _('Offer type')
+        self.fields['condition'].label = _('Etat') if not is_en else _('Condition')
+        self.fields['brand'].label = _('Marque') if not is_en else _('Brand')
+        self.fields['size'].label = _('Taille') if not is_en else _('Size')
+        self.fields['image'].label = _('Photo principale') if not is_en else _('Main photo')
+        self.fields['images'].label = _('Photos supplementaires') if not is_en else _('Extra photos')
     
     def save(self, commit=True):
         instance = super(SkiMaterialListingForm, self).save(commit=False)
+        main_image = self.cleaned_data.get('image')
         image_file = self.cleaned_data.get('image_file')
+
+        if main_image and hasattr(main_image, 'read'):
+            main_image.seek(0)
+            instance.image = main_image.read()
+        elif main_image:
+            instance.image = main_image
 
         if image_file:
             instance.image = image_file.read()  # Convert image to binary

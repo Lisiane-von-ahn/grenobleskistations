@@ -11,31 +11,81 @@
         <p class="market-subtle mb-0">{% trans "Publiez rapidement une annonce complete." %}</p>
     </section>
 
-    <form method="POST" enctype="multipart/form-data" class="market-search-panel">
+    <form method="POST" enctype="multipart/form-data" class="market-search-panel listing-builder-panel" id="listing-builder-form">
         {% csrf_token %}
 
-        <h5 class="mb-3">{% trans "Infos principales" %}</h5>
-        <div class="row g-3 mb-4">
-            <div class="col-md-6">{{ form.title.label_tag }}{{ form.title }}</div>
-            <div class="col-md-3">{{ form.city.label_tag }}{{ form.city }}</div>
-            <div class="col-md-3">{{ form.ski_station.label_tag }}{{ form.ski_station }}</div>
-            <div class="col-12">{{ form.description.label_tag }}{{ form.description }}</div>
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger mb-3" role="alert">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="builder-section mb-4">
+            <h5 class="mb-3">{% trans "Infos principales" %}</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    {{ form.title.label_tag }}
+                    {{ form.title }}
+                    {{ form.title.errors }}
+                </div>
+                <div class="col-md-3">
+                    {{ form.city.label_tag }}
+                    {{ form.city }}
+                    {{ form.city.errors }}
+                </div>
+                <div class="col-md-3">
+                    {{ form.ski_station.label_tag }}
+                    {{ form.ski_station }}
+                    {{ form.ski_station.errors }}
+                </div>
+                <div class="col-12">
+                    {{ form.description.label_tag }}
+                    {{ form.description }}
+                    {{ form.description.errors }}
+                </div>
+            </div>
         </div>
 
-        <h5 class="mb-3">{% trans "Type et caracteristiques" %}</h5>
-        <div class="row g-3 mb-4">
-            <div class="col-md-3">{{ form.transaction_type.label_tag }}{{ form.transaction_type }}</div>
-            <div class="col-md-3">{{ form.material_type.label_tag }}{{ form.material_type }}</div>
-            <div class="col-md-3">{{ form.condition.label_tag }}{{ form.condition }}</div>
-            <div class="col-md-3">{{ form.price.label_tag }}{{ form.price }}</div>
-            <div class="col-md-6">{{ form.brand.label_tag }}{{ form.brand }}</div>
-            <div class="col-md-6">{{ form.size.label_tag }}{{ form.size }}</div>
+        <div class="builder-section mb-4">
+            <h5 class="mb-3">{% trans "Type et caracteristiques" %}</h5>
+            <div class="row g-3">
+                <div class="col-md-3">{{ form.transaction_type.label_tag }}{{ form.transaction_type }}{{ form.transaction_type.errors }}</div>
+                <div class="col-md-3">{{ form.material_type.label_tag }}{{ form.material_type }}{{ form.material_type.errors }}</div>
+                <div class="col-md-3">{{ form.condition.label_tag }}{{ form.condition }}{{ form.condition.errors }}</div>
+                <div class="col-md-3">{{ form.price.label_tag }}{{ form.price }}{{ form.price.errors }}</div>
+                <div class="col-md-6">{{ form.brand.label_tag }}{{ form.brand }}{{ form.brand.errors }}</div>
+                <div class="col-md-6">{{ form.size.label_tag }}{{ form.size }}{{ form.size.errors }}</div>
+            </div>
         </div>
 
-        <h5 class="mb-3">{% trans "Photos" %}</h5>
-        <div class="row g-3 mb-4">
-            <div class="col-md-6">{{ form.image.label_tag }}{{ form.image }}</div>
-            <div class="col-md-6">{{ form.images.label_tag }}{{ form.images }}</div>
+        <div class="builder-section mb-4">
+            <h5 class="mb-3">{% trans "Photos" %}</h5>
+            <p class="market-subtle mb-3">{% trans "Glissez-deposez vos images ou cliquez pour selectionner." %}</p>
+
+            {{ form.image }}
+            {{ form.images }}
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">{{ form.image.label }}</label>
+                    <div class="upload-dropzone" data-input-id="main-image-input" data-preview-id="main-image-preview" data-multiple="false">
+                        <div class="upload-dropzone-icon">+</div>
+                        <div class="upload-dropzone-title">{% trans "Photo principale" %}</div>
+                        <div class="upload-dropzone-subtitle">{% trans "Une image de couverture claire et nette" %}</div>
+                    </div>
+                    <div id="main-image-preview" class="upload-preview-grid"></div>
+                    {{ form.image.errors }}
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">{{ form.images.label }}</label>
+                    <div class="upload-dropzone" data-input-id="extra-images-input" data-preview-id="extra-images-preview" data-multiple="true">
+                        <div class="upload-dropzone-icon">+</div>
+                        <div class="upload-dropzone-title">{% trans "Photos supplementaires" %}</div>
+                        <div class="upload-dropzone-subtitle">{% trans "Ajoutez plusieurs angles: detail, semelle, fixations..." %}</div>
+                    </div>
+                    <div id="extra-images-preview" class="upload-preview-grid"></div>
+                    {{ form.images.errors }}
+                </div>
+            </div>
         </div>
 
         <div class="d-flex gap-2 justify-content-end">
@@ -44,4 +94,107 @@
         </div>
     </form>
 </div>
+
+<script>
+    (function () {
+        function toArray(fileList) {
+            return Array.prototype.slice.call(fileList || []);
+        }
+
+        function renderPreview(previewEl, files, multiple) {
+            previewEl.innerHTML = '';
+            if (!files.length) {
+                return;
+            }
+
+            var filesToRender = multiple ? files : [files[0]];
+            filesToRender.forEach(function (file) {
+                if (!file.type || !file.type.startsWith('image/')) {
+                    return;
+                }
+                var card = document.createElement('div');
+                card.className = 'upload-preview-card';
+
+                var image = document.createElement('img');
+                image.className = 'upload-preview-image';
+                image.alt = file.name;
+
+                var label = document.createElement('div');
+                label.className = 'upload-preview-name';
+                label.textContent = file.name;
+
+                var reader = new FileReader();
+                reader.onload = function (event) {
+                    image.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+
+                card.appendChild(image);
+                card.appendChild(label);
+                previewEl.appendChild(card);
+            });
+        }
+
+        function assignFiles(input, files, multiple) {
+            var dt = new DataTransfer();
+            var merged = multiple ? toArray(input.files).concat(toArray(files)) : toArray(files).slice(0, 1);
+
+            merged.forEach(function (file) {
+                if (file && file.type && file.type.startsWith('image/')) {
+                    dt.items.add(file);
+                }
+            });
+
+            input.files = dt.files;
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        function setupDropzone(zone) {
+            var inputId = zone.getAttribute('data-input-id');
+            var previewId = zone.getAttribute('data-preview-id');
+            var multiple = zone.getAttribute('data-multiple') === 'true';
+            var input = document.getElementById(inputId);
+            var previewEl = document.getElementById(previewId);
+
+            if (!input || !previewEl) {
+                return;
+            }
+
+            zone.addEventListener('click', function () {
+                input.click();
+            });
+
+            ['dragenter', 'dragover'].forEach(function (evt) {
+                zone.addEventListener(evt, function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    zone.classList.add('is-dragover');
+                });
+            });
+
+            ['dragleave', 'drop'].forEach(function (evt) {
+                zone.addEventListener(evt, function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    zone.classList.remove('is-dragover');
+                });
+            });
+
+            zone.addEventListener('drop', function (event) {
+                var droppedFiles = event.dataTransfer ? event.dataTransfer.files : null;
+                if (droppedFiles && droppedFiles.length) {
+                    assignFiles(input, droppedFiles, multiple);
+                }
+            });
+
+            input.addEventListener('change', function () {
+                renderPreview(previewEl, toArray(input.files), multiple);
+            });
+
+            renderPreview(previewEl, toArray(input.files), multiple);
+        }
+
+        document.querySelectorAll('.upload-dropzone').forEach(setupDropzone);
+    })();
+</script>
 {% endblock %}
