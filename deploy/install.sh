@@ -194,12 +194,13 @@ run_compose() {
   echo "🗄️ Ensuring migrations are applied before seed"
   local migrate_ok=false
   for i in $(seq 1 20); do
-    if docker compose "${compose_files[@]}" exec -T web python manage.py migrate --noinput && \
-       docker compose "${compose_files[@]}" exec -T web python manage.py ensure_bootstrap_admin; then
+    if docker compose "${compose_files[@]}" run --rm --no-deps --entrypoint "" web python manage.py migrate --noinput && \
+       docker compose "${compose_files[@]}" run --rm --no-deps --entrypoint "" web python manage.py ensure_bootstrap_admin; then
       migrate_ok=true
       break
     fi
     echo "Migrate attempt ${i}/20 failed, retrying in 5s..."
+    docker compose "${compose_files[@]}" logs --tail=80 web || true
     sleep 5
   done
 
@@ -212,7 +213,7 @@ run_compose() {
   echo "🌱 Running seed in configured PostgreSQL database"
   local seed_ok=false
   for i in $(seq 1 20); do
-    if docker compose "${compose_files[@]}" exec -T web python /app/load_ski_stations.py; then
+    if docker compose "${compose_files[@]}" run --rm --no-deps --entrypoint "" web python /app/load_ski_stations.py; then
       seed_ok=true
       break
     fi
