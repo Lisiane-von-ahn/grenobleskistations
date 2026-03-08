@@ -6,8 +6,18 @@
 {% block title %}{% trans "Inscription Moniteur" %}{% endblock %}
 
 {% block content %}
+<style>
+    .instructor-register-hero {
+        color: #f8fbff;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    }
+
+    .instructor-register-hero p {
+        color: #eef6fb;
+    }
+</style>
 <section class="py-5" style="background: linear-gradient(135deg, #2ca7b7, #1f8f9e);">
-    <div class="container text-white">
+    <div class="container text-white instructor-register-hero">
         <h2 class="display-5 mb-2">{% trans "Devenir moniteur de ski" %}</h2>
         <p class="mb-0">{% trans "Créez un profil professionnel pour proposer vos cours et accompagnements." %}</p>
     </div>

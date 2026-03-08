@@ -49,6 +49,9 @@ jobs:
               "${{ secrets.BOOTSTRAP_ADMIN_PASSWORD }}" \
               "${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}"
 
+            echo "🗄️ Running explicit migration from GitHub Action"
+            docker compose -f docker-compose.yml exec -T web python manage.py migrate --noinput
+
             echo "⏳ Waiting for web container health"
             for i in $(seq 1 60); do
               HEALTH_STATE=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' grenobleski-web 2>/dev/null || echo "missing")

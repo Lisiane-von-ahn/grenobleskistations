@@ -14,12 +14,10 @@ from .models import (
     SkiMaterialListing,
     Message,
     UserProfile,
-    InstructorProfile,
-    InstructorService,
 )
 from .serializers import (SkiStationSerializer, BusLineSerializer, ServiceStoreSerializer, 
                           SkiCircuitSerializer, SkiMaterialListingSerializer, MessageSerializer, UserProfileSerializer,
-                          InstructorProfileSerializer, InstructorServiceSerializer)
+)
 from rest_framework.exceptions import ValidationError
 
 
@@ -73,23 +71,6 @@ class UserProfileViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(profile)
         return Response(serializer.data)
 
-
-class InstructorProfileViewSet(viewsets.ModelViewSet):
-    queryset = InstructorProfile.objects.all()
-    serializer_class = InstructorProfileSerializer
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-
-
-class InstructorServiceViewSet(viewsets.ModelViewSet):
-    queryset = InstructorService.objects.all()
-    serializer_class = InstructorServiceSerializer
-
-    def perform_create(self, serializer):
-        instructor = InstructorProfile.objects.get(user=self.request.user)
-        serializer.save(instructor=instructor)
-        
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserProfileSerializer
