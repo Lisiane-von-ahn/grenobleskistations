@@ -320,11 +320,11 @@
                                         <span class="mobile-label">{% trans "Profil" %}</span>
                                     </a>
                                 </li>
+                                <li><a href="{% url 'ski_material_listings' %}?my_listings=1">{% trans "Mes annonces" %}</a></li>
                                 <li><a href="{% url 'become_instructor' %}">{% trans "Devenir moniteur" %}</a></li>
                                 <li class="offers-dropdown">
-                                    <a href="{% url 'ski_material_listings' %}?my_listings=1" class="menu-chip">{% trans "Mes offres" %}</a>
+                                    <a href="{% url 'instructor_services' %}" class="menu-chip">{% trans "Mes offres" %}</a>
                                     <ul class="offers-submenu">
-                                        <li><a href="{% url 'ski_material_listings' %}?my_listings=1">{% trans "Offres matériel" %}</a></li>
                                         <li><a href="{% url 'instructor_services' %}">{% trans "Offres moniteur" %}</a></li>
                                     </ul>
                                 </li>

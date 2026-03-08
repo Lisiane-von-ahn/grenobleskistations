@@ -1,6 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponseRedirect
 from django.views.decorators.http import require_GET
+from django.conf import settings
 from api.models import (
     SkiStation,
     BusLine,
@@ -24,6 +25,7 @@ from django.contrib import messages
 import base64
 from django.utils.translation import check_for_language
 from django.utils import translation
+from django.utils.http import url_has_allowed_host_and_scheme
 
 
 def home(request):
@@ -151,10 +153,15 @@ class CustomAccountAdapter(DefaultAccountAdapter):
 def set_language_view(request):
     lang_code = request.GET.get('language', '').strip()
     next_url = request.GET.get('next', '/')
+    if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+        next_url = '/'
+
+    response = HttpResponseRedirect(next_url)
     if check_for_language(lang_code):
         translation.activate(lang_code)
-        request.session[translation.LANGUAGE_SESSION_KEY] = lang_code
-    return HttpResponseRedirect(next_url)
+        request.session[settings.LANGUAGE_COOKIE_NAME] = lang_code
+        response.set_cookie(settings.LANGUAGE_COOKIE_NAME, lang_code)
+    return response
     
 @login_required(login_url='login')
 def ski_material_listings(request):
@@ -167,7 +174,7 @@ def ski_material_listings(request):
     city = request.GET.get('city', '').strip()
     min_price = request.GET.get('min_price', '').strip()
     max_price = request.GET.get('max_price', '').strip()
-    scope = request.GET.get('scope', 'all').strip()
+    mine_only = request.GET.get('my_listings', '').strip().lower() in ('1', 'true', 'yes')
 
     if q:
         all_listings = all_listings.filter(
@@ -191,7 +198,7 @@ def ski_material_listings(request):
         all_listings = all_listings.filter(price__gte=min_price)
     if max_price:
         all_listings = all_listings.filter(price__lte=max_price)
-    if scope == 'mine':
+    if mine_only:
         all_listings = all_listings.filter(user=request.user)
 
     if request.method == 'POST':
@@ -225,7 +232,7 @@ def ski_material_listings(request):
             'listings': all_listings,
             'my_listings': my_listings,
             'marketplace_listings': marketplace_listings,
-            'selected_scope': scope,
+            'mine_only': mine_only,
             'selected_transaction_type': transaction_type,
             'selected_material_type': material_type,
             'selected_condition': condition,
@@ -254,7 +261,7 @@ def listing_detail(request, id):
             )
             messages.success(
                 request,
-                'Message envoyé au vendeur. / Message sent to the seller.'
+                'Message envoye au vendeur.'
             )
             return redirect('listing_detail', id=listing.id)
 
@@ -346,7 +353,7 @@ def edit_listing(request, id):
             listing = form.save()
             uploaded_images = request.FILES.getlist('images')
             form.save_extra_images(listing, uploaded_images)
-            messages.success(request, 'Annonce mise a jour. / Listing updated.')
+            messages.success(request, 'Annonce mise a jour.')
             return redirect('listing_detail', id=listing.id)
     else:
         form = SkiMaterialListingForm(instance=listing)
@@ -357,13 +364,13 @@ def edit_listing(request, id):
 def delete_listing(request, id):
     listing = get_object_or_404(SkiMaterialListing, id=id, user=request.user)
     listing.delete()
-    messages.success(request, 'Annonce supprimee. / Listing deleted.')
+    messages.success(request, 'Annonce supprimee.')
     return redirect('ski_material_listings')
 
 
 @login_required
 def delete_snow_update(request, station_id, update_id):
-    messages.info(request, 'Suppression indisponible pour le moment. / Delete not available yet.')
+    messages.info(request, 'Suppression indisponible pour le moment.')
     return redirect('ski_station_detail', station_id=station_id)
 
 
@@ -379,7 +386,7 @@ def instructors_list(request):
 @login_required
 def become_instructor(request):
     if request.method == 'POST':
-        messages.success(request, 'Demande moniteur enregistree. / Instructor request saved.')
+        messages.success(request, 'Demande moniteur enregistree.')
         return redirect('instructors')
     return render(request, 'instructor_register.html')
 

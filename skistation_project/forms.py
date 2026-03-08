@@ -1,4 +1,5 @@
 from django import forms
+from django.utils.translation import gettext_lazy as _
 from api.models import SkiMaterialListing, UserProfile, SkiMaterialImage
 from io import BytesIO
 from PIL import Image
@@ -91,30 +92,30 @@ class SkiMaterialListingForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(SkiMaterialListingForm, self).__init__(*args, **kwargs)
         # Ajout des classes Bootstrap à chaque champ
-        self.fields['title'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Titre / Title'})
-        self.fields['description'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Description / Description'})
+        self.fields['title'].widget.attrs.update({'class': 'form-control', 'placeholder': _('Titre')})
+        self.fields['description'].widget.attrs.update({'class': 'form-control', 'placeholder': _('Description')})
         self.fields['ski_station'].widget.attrs.update({'class': 'form-control'})
-        self.fields['city'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Ville / City'})
-        self.fields['price'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Prix / Price'})
+        self.fields['city'].widget.attrs.update({'class': 'form-control', 'placeholder': _('Ville')})
+        self.fields['price'].widget.attrs.update({'class': 'form-control', 'placeholder': _('Prix')})
         self.fields['material_type'].widget.attrs.update({'class': 'form-control'})
         self.fields['transaction_type'].widget.attrs.update({'class': 'form-control'})
         self.fields['condition'].widget.attrs.update({'class': 'form-control'})
-        self.fields['brand'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Marque / Brand'})
-        self.fields['size'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Taille / Size'})
+        self.fields['brand'].widget.attrs.update({'class': 'form-control', 'placeholder': _('Marque')})
+        self.fields['size'].widget.attrs.update({'class': 'form-control', 'placeholder': _('Taille')})
         self.fields['image'].widget.attrs.update({'class': 'form-control'})
 
-        self.fields['title'].label = 'Titre / Title'
-        self.fields['description'].label = 'Description / Description'
-        self.fields['ski_station'].label = 'Station de ski / Ski station'
-        self.fields['city'].label = 'Ville / City'
-        self.fields['price'].label = 'Prix / Price'
-        self.fields['material_type'].label = 'Catégorie / Category'
-        self.fields['transaction_type'].label = 'Type d\'offre / Offer type'
-        self.fields['condition'].label = 'État / Condition'
-        self.fields['brand'].label = 'Marque / Brand'
-        self.fields['size'].label = 'Taille / Size'
-        self.fields['image'].label = 'Photo principale / Main photo'
-        self.fields['images'].label = 'Photos supplémentaires / Extra photos'
+        self.fields['title'].label = _('Titre')
+        self.fields['description'].label = _('Description')
+        self.fields['ski_station'].label = _('Station de ski')
+        self.fields['city'].label = _('Ville')
+        self.fields['price'].label = _('Prix')
+        self.fields['material_type'].label = _('Categorie')
+        self.fields['transaction_type'].label = _('Type d\'offre')
+        self.fields['condition'].label = _('Etat')
+        self.fields['brand'].label = _('Marque')
+        self.fields['size'].label = _('Taille')
+        self.fields['image'].label = _('Photo principale')
+        self.fields['images'].label = _('Photos supplementaires')
     
     def save(self, commit=True):
         instance = super(SkiMaterialListingForm, self).save(commit=False)
