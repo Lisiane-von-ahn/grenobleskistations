@@ -46,7 +46,7 @@ class Command(BaseCommand):
                 existing.save(update_fields=['is_staff', 'is_superuser'])
 
             profile, _ = UserProfile.objects.get_or_create(user=existing)
-            if profile.force_password_reset:
+            if hasattr(profile, 'force_password_reset') and profile.force_password_reset:
                 self.stdout.write(self.style.SUCCESS(f"Bootstrap admin already exists: {existing.username} (password reset still required)."))
             else:
                 self.stdout.write(self.style.SUCCESS(f"Bootstrap admin already exists: {existing.username}."))
@@ -58,7 +58,10 @@ class Command(BaseCommand):
             password=password,
         )
         profile, _ = UserProfile.objects.get_or_create(user=admin)
-        profile.force_password_reset = True
-        profile.save(update_fields=['force_password_reset'])
+        if hasattr(profile, 'force_password_reset'):
+            profile.force_password_reset = True
+            profile.save(update_fields=['force_password_reset'])
+        else:
+            profile.save()
 
         self.stdout.write(self.style.SUCCESS(f"Created bootstrap superuser '{username}' (first-login password reset required)."))
