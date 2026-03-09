@@ -40,8 +40,13 @@ for attempt in range(1, max_attempts + 1):
 PY
 fi
 
-python manage.py migrate --noinput
-python manage.py ensure_bootstrap_admin
+if [[ "${RUN_MIGRATIONS_ON_STARTUP:-true}" == "true" ]]; then
+    echo "Applying migrations on startup..."
+    python manage.py migrate --noinput
+    python manage.py ensure_bootstrap_admin
+else
+    echo "Skipping startup migrations (RUN_MIGRATIONS_ON_STARTUP=false)."
+fi
 
 if [[ "${RUN_SEED_ON_STARTUP:-true}" == "true" ]]; then
     SHOULD_SEED=$(python - <<'PY'
