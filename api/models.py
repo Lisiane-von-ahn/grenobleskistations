@@ -170,6 +170,106 @@ class Message(models.Model):
 
     def __str__(self):
         return f"Message from {self.sender} to {self.recipient} on {self.created_at}"
+
+
+class MarketplaceSavedFilter(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='marketplace_saved_filters')
+    name = models.CharField(max_length=40)
+    query = models.CharField(max_length=500)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'name'], name='uniq_marketplace_filter_per_user_name'),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username}: {self.name}"
+
+
+class SkiPartnerPost(models.Model):
+    LEVEL_BEGINNER = 'beginner'
+    LEVEL_INTERMEDIATE = 'intermediate'
+    LEVEL_ADVANCED = 'advanced'
+
+    LEVEL_CHOICES = [
+        (LEVEL_BEGINNER, 'Debutant'),
+        (LEVEL_INTERMEDIATE, 'Intermediaire'),
+        (LEVEL_ADVANCED, 'Avance'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ski_partner_posts')
+    ski_station = models.ForeignKey(SkiStation, on_delete=models.SET_NULL, null=True, blank=True)
+    title = models.CharField(max_length=120)
+    message = models.TextField()
+    city = models.CharField(max_length=80, blank=True)
+    skill_level = models.CharField(max_length=16, choices=LEVEL_CHOICES, default=LEVEL_INTERMEDIATE)
+    preferred_date = models.DateField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username}: {self.title}"
+
+
+class SkiPartnerReport(models.Model):
+    post = models.ForeignKey(SkiPartnerPost, on_delete=models.CASCADE, related_name='reports')
+    reporter = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ski_partner_reports')
+    reason = models.CharField(max_length=220, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['post', 'reporter'], name='uniq_partner_report_per_user_post'),
+        ]
+
+    def __str__(self):
+        return f"Report {self.reporter.username} -> post#{self.post_id}"
+
+
+class MarketplaceDeal(models.Model):
+    listing = models.ForeignKey(SkiMaterialListing, on_delete=models.CASCADE, related_name='deals')
+    buyer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='marketplace_deals_as_buyer')
+    seller = models.ForeignKey(User, on_delete=models.CASCADE, related_name='marketplace_deals_as_seller')
+    buyer_confirmed = models.BooleanField(default=False)
+    seller_confirmed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+        constraints = [
+            models.UniqueConstraint(fields=['listing', 'buyer'], name='uniq_marketplace_deal_per_listing_buyer'),
+        ]
+
+    def __str__(self):
+        return f"Deal listing#{self.listing_id} buyer={self.buyer_id}"
+
+
+class MarketplaceUserRating(models.Model):
+    SCORE_CHOICES = [(i, str(i)) for i in range(1, 6)]
+
+    listing = models.ForeignKey(SkiMaterialListing, on_delete=models.CASCADE, related_name='buyer_ratings')
+    rater = models.ForeignKey(User, on_delete=models.CASCADE, related_name='marketplace_ratings_given')
+    rated_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='marketplace_ratings_received')
+    score = models.PositiveSmallIntegerField(choices=SCORE_CHOICES)
+    comment = models.CharField(max_length=300, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+        constraints = [
+            models.UniqueConstraint(fields=['listing', 'rater'], name='uniq_marketplace_rating_per_listing_buyer'),
+        ]
+
+    def __str__(self):
+        return f"{self.rater.username} -> {self.rated_user.username} ({self.score})"
     
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile_api")

@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}Ski Partners{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <section class="market-hero mb-4">
+        <h2 class="market-section-title mb-1">Trouver des partenaires de ski</h2>
+        <p class="market-subtle mb-0">Publiez votre sortie et trouvez des personnes avec le meme niveau.</p>
+    </section>
+
+    <section class="market-search-panel mb-4">
+        <form method="get" class="row g-3">
+            <div class="col-lg-4">
+                <label class="form-label">Station</label>
+                <select name="station" class="form-control">
+                    <option value="">Toutes</option>
+                    {% for station in stations %}
+                    <option value="{{ station.id }}" {% if selected_station == station.id|stringformat:'s' %}selected{% endif %}>{{ station.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-lg-4">
+                <label class="form-label">Niveau</label>
+                <select name="level" class="form-control">
+                    <option value="">Tous</option>
+                    {% for code, label in level_choices %}
+                    <option value="{{ code }}" {% if selected_level == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-lg-4">
+                <label class="form-label">Ville</label>
+                <input type="text" name="city" value="{{ selected_city }}" class="form-control" placeholder="Grenoble...">
+            </div>
+            <div class="col-12 d-flex gap-2">
+                <button class="btn btn-primary" type="submit">Filtrer</button>
+                <a class="btn btn-outline-secondary" href="{% url 'ski_partners' %}">Reinitialiser</a>
+            </div>
+        </form>
+    </section>
+
+    {% if user.is_authenticated %}
+    <section class="market-search-panel mb-4">
+        <h4 class="mb-3">Publier une sortie</h4>
+        <form method="post" class="row g-3">
+            {% csrf_token %}
+            <input type="hidden" name="form_type" value="create">
+            <div class="col-lg-6">
+                <label class="form-label">Titre</label>
+                <input type="text" name="title" maxlength="120" class="form-control" required placeholder="Ex: Ski samedi matin a Chamrousse">
+            </div>
+            <div class="col-lg-3">
+                <label class="form-label">Niveau</label>
+                <select name="skill_level" class="form-control" required>
+                    {% for code, label in level_choices %}
+                    <option value="{{ code }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-lg-3">
+                <label class="form-label">Date</label>
+                <input type="date" name="preferred_date" class="form-control">
+            </div>
+            <div class="col-lg-6">
+                <label class="form-label">Station</label>
+                <select name="ski_station" class="form-control">
+                    <option value="">Pas de preference</option>
+                    {% for station in stations %}
+                    <option value="{{ station.id }}">{{ station.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-lg-6">
+                <label class="form-label">Ville de depart</label>
+                <input type="text" name="city" maxlength="80" class="form-control" placeholder="Grenoble">
+            </div>
+            <div class="col-12">
+                <label class="form-label">Description</label>
+                <textarea name="message" rows="4" class="form-control" required placeholder="Niveau, rythme, covoiturage, horaires..."></textarea>
+            </div>
+            <div class="col-12">
+                <button class="btn btn-success" type="submit">Publier</button>
+            </div>
+        </form>
+    </section>
+    {% endif %}
+
+    <section>
+        <div class="row g-3">
+            {% for post in partner_posts %}
+            <div class="col-lg-6">
+                <article class="market-card p-3">
+                    <h5 class="mb-1">{{ post.title }}</h5>
+                    <div class="market-subtle mb-2">Par {{ post.user.username }} - {{ post.created_at|date:'d/m/Y H:i' }}</div>
+                    <div class="mb-2">
+                        <span class="badge-soft">{{ post.get_skill_level_display }}</span>
+                        {% if post.preferred_date %}<span class="badge-soft">{{ post.preferred_date|date:'d/m/Y' }}</span>{% endif %}
+                        {% if post.ski_station %}<span class="badge-soft">{{ post.ski_station.name }}</span>{% endif %}
+                        {% if post.city %}<span class="badge-soft">{{ post.city }}</span>{% endif %}
+                    </div>
+                    <p class="mb-3">{{ post.message }}</p>
+                    {% if user.is_authenticated and user != post.user %}
+                    <div class="d-flex gap-2">
+                        <a class="btn btn-sm btn-primary" href="{% url 'messages' %}">Contacter via chat</a>
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="form_type" value="report">
+                            <input type="hidden" name="post_id" value="{{ post.id }}">
+                            <input type="hidden" name="reason" value="Contenu inapproprie ou spam">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Signaler</button>
+                        </form>
+                    </div>
+                    {% endif %}
+                </article>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <p class="market-subtle">Aucune annonce pour le moment.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

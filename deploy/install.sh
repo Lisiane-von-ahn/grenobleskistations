@@ -210,6 +210,13 @@ run_compose() {
     exit 1
   fi
 
+  echo "✅ Verifying no pending migrations remain"
+  if ! docker compose "${compose_files[@]}" run --rm --no-deps --entrypoint "" web python manage.py migrate --check --noinput; then
+    echo "❌ Pending migrations detected after migrate"
+    docker compose "${compose_files[@]}" logs --tail=200 web || true
+    exit 1
+  fi
+
   echo "🌱 Running seed in configured PostgreSQL database"
   local seed_ok=false
   for i in $(seq 1 20); do

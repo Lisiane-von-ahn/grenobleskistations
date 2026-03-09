@@ -29,6 +29,12 @@ jobs:
       - name: Apply migrations
         run: python manage.py migrate --noinput
 
+      - name: Verify migrations are complete
+        run: python manage.py migrate --check --noinput
+
+      - name: Verify migration files are committed
+        run: python manage.py makemigrations --check --dry-run
+
       - name: Check project
         run: python manage.py check
 

@@ -51,6 +51,8 @@ jobs:
 
             echo "🗄️ Running explicit migration from GitHub Action"
             docker compose -f docker-compose.yml run --rm --no-deps --entrypoint "" web python manage.py migrate --noinput
+            echo "✅ Verifying no pending migrations remain"
+            docker compose -f docker-compose.yml run --rm --no-deps --entrypoint "" web python manage.py migrate --check --noinput
 
             echo "⏳ Waiting for web container health"
             for i in $(seq 1 60); do

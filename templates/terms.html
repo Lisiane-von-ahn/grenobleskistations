@@ -1,81 +1,95 @@
-<!DOCTYPE html>
 {% extends 'base.html' %}
-{% load static %}
 
-{% block title %}Terms and Conditions / Conditions Générales{% endblock %}
+{% block title %}Terms of Service - Grenoble Ski{% endblock %}
 
 {% block content %}
-<!-- Page Header -->
-<div class="page-heading text-center py-5 bg-primary text-white">
-    <div class="container">
-        <div class="row">
-            <div class="col-lg-12">
-                <h4 class="text-white-50">Terms and Conditions / Conditions Générales</h4>
-                <h2 class="display-4 font-weight-bold">Data Protection in Europe / Protection des Données en Europe</h2>
-            </div>
+<section class="legal-page">
+    <div class="container legal-container">
+        <div class="legal-hero card">
+            <p class="legal-kicker">Grenoble Ski</p>
+            <h1>Terms of Service</h1>
+            <p class="legal-lead">
+                These terms explain how to use the platform responsibly and safely.
+                They apply to all users browsing ski stations, posting listings, messaging,
+                and booking instructor-related services.
+            </p>
+            <p class="legal-meta">Last updated: 9 March 2026</p>
+        </div>
+
+        <div class="legal-card card">
+            <h2>1. Scope of Service</h2>
+            <p>
+                Grenoble Ski provides information about ski stations, transport options,
+                marketplace listings, and instructor or store services. We may update,
+                pause, or improve features at any time to maintain quality and security.
+            </p>
+        </div>
+
+        <div class="legal-card card">
+            <h2>2. Accounts and Responsibilities</h2>
+            <p>
+                You are responsible for the accuracy of your profile information and activity
+                under your account. Keep your credentials private. If you suspect unauthorized
+                access, change your password immediately and contact support.
+            </p>
+        </div>
+
+        <div class="legal-card card">
+            <h2>3. User Content and Conduct</h2>
+            <p>
+                Content you submit (listings, reviews, messages, media) must be lawful,
+                respectful, and accurate. You must not post illegal, fraudulent, abusive,
+                or misleading content. We may moderate or remove content that violates
+                these terms or applicable law.
+            </p>
+        </div>
+
+        <div class="legal-card card">
+            <h2>4. Marketplace and Instructor Services</h2>
+            <p>
+                Transactions between users are their own responsibility. Grenoble Ski
+                facilitates discovery and contact but does not guarantee every listing,
+                service quality, or user behavior. Use caution when arranging payments,
+                meetings, or equipment rentals.
+            </p>
+        </div>
+
+        <div class="legal-card card">
+            <h2>5. Data Protection and GDPR</h2>
+            <p>
+                Personal data is processed according to EU GDPR principles: lawfulness,
+                transparency, purpose limitation, data minimization, and security.
+                For details about legal basis, retention, and your rights, see the
+                <a href="{% url 'privacy' %}">Privacy Policy</a>.
+            </p>
+        </div>
+
+        <div class="legal-card card">
+            <h2>6. Cookies and Consent</h2>
+            <p>
+                We use technical cookies to operate core platform features and optional
+                cookies only after consent where required. You can accept, reject, or
+                update your preference at any time from the cookie banner.
+            </p>
+        </div>
+
+        <div class="legal-card card">
+            <h2>7. Limitation of Liability</h2>
+            <p>
+                To the maximum extent permitted by law, Grenoble Ski is not liable for
+                indirect damages, service interruptions, or user-to-user disputes.
+                Nothing in these terms excludes mandatory legal rights.
+            </p>
+        </div>
+
+        <div class="legal-card card">
+            <h2>8. Contact</h2>
+            <p>
+                Questions about these terms or legal requests can be sent via the platform
+                contact channels. You can also request privacy-related help on the
+                <a href="{% url 'privacy' %}">Privacy Policy</a> page.
+            </p>
         </div>
     </div>
-</div>
-
-<!-- Bilingual Terms Section -->
-<div class="terms-section py-5">
-    <div class="container">
-        <div class="row">
-            <div class="col-lg-12">
-
-                <h3 class="text-primary mb-4">Introduction</h3>
-                <p><strong>English:</strong> This page explains how we handle personal data in compliance with the General Data Protection Regulation (GDPR) and other European data protection laws.</p>
-                <p><strong>Français:</strong> Cette page explique comment nous traitons les données personnelles conformément au Règlement Général sur la Protection des Données (RGPD) et autres lois européennes sur la protection des données.</p>
-
-                <hr class="my-5">
-
-                <h3 class="text-primary mb-4">1. Collection of Personal Data / Collecte des Données Personnelles</h3>
-                <p><strong>English:</strong> We collect personal data such as your name, email, IP address, and other information necessary for the operation of our services. This data is processed to improve user experience, fulfill legal obligations, prevent fraud, and provide the services you have requested. We also collect data generated by user interactions, such as messages sent between users. Data will be retained for as long as necessary to fulfill these purposes, after which it will be securely deleted or anonymized.</p>
-                <p><strong>Français:</strong> Nous collectons des données personnelles telles que votre nom, votre adresse e-mail, votre adresse IP et d'autres informations nécessaires à l'exploitation de nos services. Ces données sont traitées pour améliorer l'expérience utilisateur, respecter les obligations légales, prévenir la fraude et fournir les services que vous avez demandés. Nous collectons également des données générées par les interactions des utilisateurs, telles que les messages envoyés entre utilisateurs. Les données seront conservées aussi longtemps que nécessaire pour remplir ces objectifs, après quoi elles seront supprimées ou anonymisées de manière sécurisée.</p>
-
-                <hr class="my-5">
-
-                <h3 class="text-primary mb-4">2. Use of Personal Data / Utilisation des Données Personnelles</h3>
-                <p><strong>English:</strong> Your data is used solely for providing the services you requested, improving the platform, and complying with legal requirements. We may share your data with third-party service providers such as cloud storage providers, payment processors, and analytics services, but only as necessary for the operation of our platform. We do not control or monitor the content of messages sent between users; however, we may review content in case of abuse or violations of our terms. We will never sell or rent your personal data to third parties.</p>
-                <p><strong>Français:</strong> Vos données sont utilisées uniquement pour fournir les services que vous avez demandés, améliorer la plateforme et respecter les exigences légales. Nous pouvons partager vos données avec des prestataires de services tiers tels que des fournisseurs de stockage en nuage, des processeurs de paiement et des services d'analyse, mais uniquement dans la mesure nécessaire à l'exploitation de notre plateforme. Nous ne contrôlons ni ne surveillons le contenu des messages envoyés entre utilisateurs, mais nous pouvons examiner le contenu en cas d'abus ou de violation de nos conditions. Nous ne vendons ni ne louons jamais vos données personnelles à des tiers.</p>
-
-                <hr class="my-5">
-
-                <h3 class="text-primary mb-4">3. Your Rights / Vos Droits</h3>
-                <p><strong>English:</strong> Under the GDPR, you have the following rights regarding your personal data:</p>
-                <ul class="list-group list-group-flush">
-                    <li class="list-group-item">Right to access your data and receive a copy of it.</li>
-                    <li class="list-group-item">Right to correct inaccurate data.</li>
-                    <li class="list-group-item">Right to delete your data when it is no longer necessary for the purpose it was collected for.</li>
-                    <li class="list-group-item">Right to object to the processing of your data for direct marketing or other purposes.</li>
-                    <li class="list-group-item">Right to withdraw your consent at any time if processing is based on consent.</li>
-                    <li class="list-group-item">Right to lodge a complaint with the relevant supervisory authority.</li>
-                </ul>
-                <p><strong>Français:</strong> Conformément au RGPD, vous avez les droits suivants concernant vos données personnelles :</p>
-                <ul class="list-group list-group-flush">
-                    <li class="list-group-item">Droit d'accéder à vos données et d'en recevoir une copie.</li>
-                    <li class="list-group-item">Droit de corriger des données inexactes.</li>
-                    <li class="list-group-item">Droit de supprimer vos données lorsque celles-ci ne sont plus nécessaires aux fins pour lesquelles elles ont été collectées.</li>
-                    <li class="list-group-item">Droit de vous opposer au traitement de vos données à des fins de marketing direct ou d'autres fins.</li>
-                    <li class="list-group-item">Droit de retirer votre consentement à tout moment si le traitement repose sur ce consentement.</li>
-                    <li class="list-group-item">Droit de déposer une plainte auprès de l'autorité de contrôle compétente.</li>
-                </ul>
-
-                <hr class="my-5">
-
-                <h3 class="text-primary mb-4">4. Cookies and Tracking Technologies / Cookies et Technologies de Suivi</h3>
-                <p><strong>English:</strong> We use cookies and similar technologies to enhance your experience on our platform. These cookies help us analyze website traffic, personalize content, and serve relevant ads. By using our platform, you consent to the use of cookies in accordance with our Cookie Policy. You can manage your cookie preferences in your browser settings.</p>
-                <p><strong>Français:</strong> Nous utilisons des cookies et des technologies similaires pour améliorer votre expérience sur notre plateforme. Ces cookies nous aident à analyser le trafic du site Web, à personnaliser le contenu et à diffuser des publicités pertinentes. En utilisant notre plateforme, vous consentez à l'utilisation de cookies conformément à notre Politique de Cookies. Vous pouvez gérer vos préférences de cookies dans les paramètres de votre navigateur.</p>
-
-                <hr class="my-5">
-
-                <h3 class="text-primary mb-4">5. Contact Us / Nous Contacter</h3>
-                <p><strong>English:</strong> If you have any questions about our data protection practices, please contact us at [email].</p>
-                <p><strong>Français:</strong> Si vous avez des questions concernant nos pratiques en matière de protection des données, veuillez nous contacter à [email].</p>
-
-            </div>
-        </div>
-    </div>
-</div>
-
+</section>
 {% endblock %}

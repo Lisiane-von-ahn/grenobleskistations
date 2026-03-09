@@ -12,6 +12,11 @@ from api.models import (
     SnowConditionUpdate,
     CrowdStatusUpdate,
     Message,
+    MarketplaceSavedFilter,
+    MarketplaceDeal,
+    MarketplaceUserRating,
+    SkiPartnerPost,
+    SkiPartnerReport,
     UserProfile,
 )
 from django.db.models import Sum
@@ -22,6 +27,7 @@ from django.db.models import Value
 from django.db.models import IntegerField
 from django.urls import reverse
 from django.contrib.auth.forms import UserCreationForm
+from django.core.paginator import Paginator
 from .forms import (
     SkiMaterialListingForm,
     ProfileForm,
@@ -361,6 +367,10 @@ def bus_lines(request):
 def terms_and_conditions(request):
     return render(request, 'terms.html')
 
+
+def privacy_policy(request):
+    return render(request, 'privacy.html')
+
 def register(request):
     if request.method == 'POST':
         form = UserCreationForm(request.POST, request.FILES)
@@ -406,9 +416,47 @@ def set_language_view(request):
     
 @login_required(login_url='login')
 def ski_material_listings(request):
-    base_queryset = SkiMaterialListing.objects.select_related('user', 'ski_station').prefetch_related('images').order_by('-posted_at')
-    all_listings = base_queryset
+    saved_filters_qs = MarketplaceSavedFilter.objects.filter(user=request.user).order_by('-updated_at')
+    max_saved_filters = 10
 
+    if request.method == 'POST' and request.POST.get('filter_action'):
+        filter_action = request.POST.get('filter_action', '').strip()
+        filter_query = request.POST.get('filter_query', '').strip()
+
+        if filter_action == 'save':
+            filter_name = request.POST.get('filter_name', '').strip()
+            if not filter_name:
+                messages.error(request, _('Nom de filtre requis.'))
+            else:
+                MarketplaceSavedFilter.objects.update_or_create(
+                    user=request.user,
+                    name=filter_name[:40],
+                    defaults={'query': filter_query[:500]},
+                )
+
+                # Keep only the most recent N saved filters per user.
+                stale_ids = list(
+                    MarketplaceSavedFilter.objects.filter(user=request.user)
+                    .order_by('-updated_at')
+                    .values_list('id', flat=True)[max_saved_filters:]
+                )
+                if stale_ids:
+                    MarketplaceSavedFilter.objects.filter(id__in=stale_ids).delete()
+
+                messages.success(request, _('Filtre enregistre.'))
+
+        if filter_action == 'delete':
+            filter_name = request.POST.get('filter_name', '').strip()
+            MarketplaceSavedFilter.objects.filter(user=request.user, name=filter_name).delete()
+            messages.success(request, _('Filtre supprime.'))
+
+        redirect_query = f"?{filter_query}" if filter_query else ''
+        return redirect(f"{reverse('ski_material_listings')}{redirect_query}")
+
+    base_queryset = SkiMaterialListing.objects.select_related('user', 'ski_station').prefetch_related('images').order_by('-posted_at')
+    filtered_listings = base_queryset
+
+    preset = request.GET.get('preset', '').strip().lower()
     q = request.GET.get('q', '').strip()
     transaction_type = request.GET.get('transaction_type', '').strip()
     material_type = request.GET.get('material_type', '').strip()
@@ -417,9 +465,37 @@ def ski_material_listings(request):
     min_price = request.GET.get('min_price', '').strip()
     max_price = request.GET.get('max_price', '').strip()
     mine_only = request.GET.get('my_listings', '').strip().lower() in ('1', 'true', 'yes')
+    sort = request.GET.get('sort', 'recent').strip() or 'recent'
+    per_page_raw = request.GET.get('per_page', '9').strip()
+
+    # Fast presets for common marketplace journeys on mobile and desktop.
+    if preset == 'weekend':
+        if not transaction_type:
+            transaction_type = 'rent'
+        if not max_price:
+            max_price = '120'
+        if 'sort' not in request.GET:
+            sort = 'price_asc'
+    elif preset == 'budget':
+        if not max_price:
+            max_price = '200'
+        if condition == '':
+            condition = 'good'
+        if 'sort' not in request.GET:
+            sort = 'price_asc'
+    elif preset == 'premium':
+        if not condition:
+            condition = 'excellent'
+        if 'sort' not in request.GET:
+            sort = 'price_desc'
+    elif preset == 'safety':
+        if not material_type:
+            material_type = 'helmet'
+        if not transaction_type:
+            transaction_type = 'rent'
 
     if q:
-        all_listings = all_listings.filter(
+        filtered_listings = filtered_listings.filter(
             Q(title__icontains=q)
             | Q(description__icontains=q)
             | Q(city__icontains=q)
@@ -429,19 +505,17 @@ def ski_material_listings(request):
             | Q(ski_station__name__icontains=q)
         )
     if transaction_type:
-        all_listings = all_listings.filter(transaction_type=transaction_type)
+        filtered_listings = filtered_listings.filter(transaction_type=transaction_type)
     if material_type:
-        all_listings = all_listings.filter(material_type=material_type)
+        filtered_listings = filtered_listings.filter(material_type=material_type)
     if condition:
-        all_listings = all_listings.filter(condition=condition)
+        filtered_listings = filtered_listings.filter(condition=condition)
     if city:
-        all_listings = all_listings.filter(city__icontains=city)
+        filtered_listings = filtered_listings.filter(city__icontains=city)
     if min_price:
-        all_listings = all_listings.filter(price__gte=min_price)
+        filtered_listings = filtered_listings.filter(price__gte=min_price)
     if max_price:
-        all_listings = all_listings.filter(price__lte=max_price)
-    if mine_only:
-        all_listings = all_listings.filter(user=request.user)
+        filtered_listings = filtered_listings.filter(price__lte=max_price)
 
     if request.method == 'POST':
         form = SkiMaterialListingForm(request.POST, request.FILES)
@@ -463,31 +537,113 @@ def ski_material_listings(request):
     else:
         form = SkiMaterialListingForm()
 
-    if mine_only:
-        my_listings = all_listings
-        marketplace_listings = SkiMaterialListing.objects.none()
-    else:
-        my_listings = all_listings.filter(user=request.user)
-        marketplace_listings = all_listings.exclude(user=request.user)
-
     choice_labels = get_marketplace_choices(translation.get_language())
+
+    sort_choices = {
+        'recent': '-posted_at',
+        'oldest': 'posted_at',
+        'price_asc': 'price',
+        'price_desc': '-price',
+        'title_asc': 'title',
+    }
+    if sort not in sort_choices:
+        sort = 'recent'
+
+    try:
+        per_page = int(per_page_raw)
+    except (TypeError, ValueError):
+        per_page = 9
+    if per_page not in (9, 18, 30):
+        per_page = 9
+
+    my_filtered_qs = filtered_listings.filter(user=request.user)
+    marketplace_filtered_qs = filtered_listings.exclude(user=request.user)
+
+    visible_queryset = my_filtered_qs if mine_only else marketplace_filtered_qs
+    visible_queryset = visible_queryset.order_by(sort_choices[sort], '-id')
+
+    paginator = Paginator(visible_queryset, per_page)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    seller_ids = {item.user_id for item in page_obj.object_list}
+    seller_rating_map = {
+        row['rated_user']: {
+            'avg': row['avg'],
+            'count': row['count'],
+        }
+        for row in MarketplaceUserRating.objects.filter(rated_user_id__in=seller_ids)
+        .values('rated_user')
+        .annotate(avg=Avg('score'), count=Count('id'))
+    }
+    for item in page_obj.object_list:
+        stats = seller_rating_map.get(item.user_id)
+        item.seller_rating_avg = stats['avg'] if stats else None
+        item.seller_rating_count = stats['count'] if stats else 0
+
+    query_params = request.GET.copy()
+    query_params.pop('page', None)
+    pagination_query = query_params.urlencode()
+
+    transaction_totals = {
+        item['transaction_type']: item['total']
+        for item in filtered_listings.values('transaction_type').annotate(total=Count('id'))
+    }
+    material_totals = {
+        item['material_type']: item['total']
+        for item in filtered_listings.values('material_type').annotate(total=Count('id'))
+    }
+
+    transaction_stats = [
+        {
+            'code': code,
+            'label': label,
+            'total': transaction_totals.get(code, 0),
+        }
+        for code, label in choice_labels['transaction_type']
+    ]
+    material_stats = [
+        {
+            'code': code,
+            'label': label,
+            'total': material_totals.get(code, 0),
+        }
+        for code, label in choice_labels['material_type']
+    ]
+
+    visible_total_count = visible_queryset.count()
+    facilities = {
+        'with_photo_count': filtered_listings.exclude(image__isnull=True).count(),
+        'with_station_count': filtered_listings.exclude(ski_station__isnull=True).count(),
+        'mine_count': my_filtered_qs.count(),
+        'market_count': marketplace_filtered_qs.count(),
+    }
 
     return render(
         request,
         'ski_material_listings.html',
         {
             'form': form,
-            'listings': all_listings,
-            'my_listings': my_listings,
-            'marketplace_listings': marketplace_listings,
+            'listings': filtered_listings,
+            'listings_page': page_obj,
             'mine_only': mine_only,
+            'visible_total_count': visible_total_count,
             'selected_transaction_type': transaction_type,
             'selected_material_type': material_type,
             'selected_condition': condition,
             'query_text': q,
+            'preset': preset,
+            'sort': sort,
+            'per_page': per_page,
             'min_price': min_price,
             'max_price': max_price,
             'city': city,
+            'pagination_query': pagination_query,
+            'current_filter_query': pagination_query,
+            'saved_filters': saved_filters_qs,
+            'saved_filters_limit': max_saved_filters,
+            'transaction_stats': transaction_stats,
+            'material_stats': material_stats,
+            'facilities': facilities,
             'material_choices': choice_labels['material_type'],
             'condition_choices': choice_labels['condition'],
             'transaction_choices': choice_labels['transaction_type'],
@@ -497,23 +653,200 @@ def ski_material_listings(request):
 def listing_detail(request, id):
     listing = get_object_or_404(SkiMaterialListing, id=id)
     gallery_images = listing.images.all()
+    seller_pending_deals = MarketplaceDeal.objects.none()
 
     if request.method == 'POST' and request.user.is_authenticated and request.user != listing.user:
-        body = request.POST.get('body', '').strip()
-        if body:
-            Message.objects.create(
-                sender=request.user,
-                recipient=listing.user,
-                subject=f"À propos de: {listing.title}",
-                body=body,
-            )
-            messages.success(
-                request,
-                'Message envoye au vendeur.'
-            )
+        form_type = request.POST.get('form_type', '').strip()
+
+        if form_type == 'contact':
+            body = request.POST.get('body', '').strip()
+            if body:
+                Message.objects.create(
+                    sender=request.user,
+                    recipient=listing.user,
+                    subject=f"A propos de: {listing.title}",
+                    body=body,
+                )
+                messages.success(request, 'Message envoye au vendeur.')
             return redirect('listing_detail', id=listing.id)
 
-    return render(request, 'listing_detail.html', {'listing': listing, 'gallery_images': gallery_images})
+        if form_type == 'deal_request':
+            MarketplaceDeal.objects.get_or_create(
+                listing=listing,
+                buyer=request.user,
+                defaults={'seller': listing.user},
+            )
+            messages.success(request, 'Demande de transaction envoyee.')
+            return redirect('listing_detail', id=listing.id)
+
+        if form_type == 'deal_confirm_buyer':
+            deal, _ = MarketplaceDeal.objects.get_or_create(
+                listing=listing,
+                buyer=request.user,
+                defaults={'seller': listing.user},
+            )
+            deal.buyer_confirmed = True
+            deal.save(update_fields=['buyer_confirmed', 'updated_at'])
+            messages.success(request, 'Vous avez confirme la transaction.')
+            return redirect('listing_detail', id=listing.id)
+
+        if form_type == 'rating':
+            try:
+                score = int(request.POST.get('score', '').strip())
+            except (TypeError, ValueError):
+                score = 0
+            comment = request.POST.get('comment', '').strip()
+            verified_deal = MarketplaceDeal.objects.filter(
+                listing=listing,
+                buyer=request.user,
+                seller=listing.user,
+                buyer_confirmed=True,
+                seller_confirmed=True,
+            ).exists()
+            if not verified_deal:
+                messages.error(request, 'La note est disponible uniquement pour une transaction confirmee par les deux parties.')
+            elif score not in (1, 2, 3, 4, 5):
+                messages.error(request, 'Note invalide.')
+            else:
+                MarketplaceUserRating.objects.update_or_create(
+                    listing=listing,
+                    rater=request.user,
+                    defaults={
+                        'rated_user': listing.user,
+                        'score': score,
+                        'comment': comment[:300],
+                    },
+                )
+                messages.success(request, 'Merci pour votre note.')
+            return redirect('listing_detail', id=listing.id)
+
+    if request.method == 'POST' and request.user.is_authenticated and request.user == listing.user:
+        form_type = request.POST.get('form_type', '').strip()
+        if form_type == 'deal_confirm_seller':
+            deal_id = request.POST.get('deal_id', '').strip()
+            deal = MarketplaceDeal.objects.filter(id=deal_id, listing=listing, seller=request.user).first()
+            if deal:
+                deal.seller_confirmed = True
+                deal.save(update_fields=['seller_confirmed', 'updated_at'])
+                messages.success(request, 'Transaction confirmee cote vendeur.')
+            return redirect('listing_detail', id=listing.id)
+
+    seller_rating_stats = MarketplaceUserRating.objects.filter(rated_user=listing.user).aggregate(
+        avg=Avg('score'),
+        count=Count('id'),
+    )
+
+    score_rows = MarketplaceUserRating.objects.filter(rated_user=listing.user).values('score').annotate(total=Count('id'))
+    score_count_map = {row['score']: row['total'] for row in score_rows}
+    total_scores = seller_rating_stats.get('count') or 0
+    seller_rating_breakdown = []
+    for score in (5, 4, 3, 2, 1):
+        score_total = score_count_map.get(score, 0)
+        pct = int(round((score_total * 100) / total_scores)) if total_scores else 0
+        seller_rating_breakdown.append({'score': score, 'total': score_total, 'pct': pct})
+
+    existing_user_rating = None
+    user_deal = None
+    can_rate = False
+    if request.user.is_authenticated and request.user != listing.user:
+        existing_user_rating = MarketplaceUserRating.objects.filter(listing=listing, rater=request.user).first()
+        user_deal = MarketplaceDeal.objects.filter(listing=listing, buyer=request.user).first()
+        can_rate = bool(user_deal and user_deal.buyer_confirmed and user_deal.seller_confirmed)
+
+    if request.user.is_authenticated and request.user == listing.user:
+        seller_pending_deals = MarketplaceDeal.objects.filter(listing=listing, seller=request.user).select_related('buyer')[:20]
+
+    listing_ratings = MarketplaceUserRating.objects.filter(listing=listing).select_related('rater')[:10]
+
+    return render(
+        request,
+        'listing_detail.html',
+        {
+            'listing': listing,
+            'gallery_images': gallery_images,
+            'seller_rating_avg': seller_rating_stats.get('avg'),
+            'seller_rating_count': seller_rating_stats.get('count') or 0,
+            'seller_rating_breakdown': seller_rating_breakdown,
+            'existing_user_rating': existing_user_rating,
+            'user_deal': user_deal,
+            'can_rate': can_rate,
+            'seller_pending_deals': seller_pending_deals,
+            'listing_ratings': listing_ratings,
+        },
+    )
+
+
+def ski_partners(request):
+    station_id = request.GET.get('station', '').strip()
+    level = request.GET.get('level', '').strip()
+    city = request.GET.get('city', '').strip()
+
+    posts = SkiPartnerPost.objects.filter(is_active=True).select_related('user', 'ski_station').annotate(report_count=Count('reports'))
+    posts = posts.filter(report_count__lt=3)
+    if station_id:
+        posts = posts.filter(ski_station_id=station_id)
+    if level:
+        posts = posts.filter(skill_level=level)
+    if city:
+        posts = posts.filter(city__icontains=city)
+
+    if request.method == 'POST' and request.user.is_authenticated:
+        form_type = request.POST.get('form_type', 'create').strip()
+        if form_type == 'create':
+            title = request.POST.get('title', '').strip()
+            message_body = request.POST.get('message', '').strip()
+            skill_level = request.POST.get('skill_level', SkiPartnerPost.LEVEL_INTERMEDIATE).strip()
+            preferred_date = request.POST.get('preferred_date', '').strip() or None
+            city_post = request.POST.get('city', '').strip()
+            station_post = request.POST.get('ski_station', '').strip() or None
+
+            valid_levels = {choice[0] for choice in SkiPartnerPost.LEVEL_CHOICES}
+            if not title or not message_body:
+                messages.error(request, 'Titre et description requis.')
+            elif skill_level not in valid_levels:
+                messages.error(request, 'Niveau invalide.')
+            else:
+                SkiPartnerPost.objects.create(
+                    user=request.user,
+                    ski_station_id=int(station_post) if station_post and station_post.isdigit() else None,
+                    title=title[:120],
+                    message=message_body,
+                    city=city_post[:80],
+                    skill_level=skill_level,
+                    preferred_date=preferred_date,
+                )
+                messages.success(request, 'Annonce partenaire publiee.')
+                return redirect('ski_partners')
+
+        if form_type == 'report':
+            post_id = request.POST.get('post_id', '').strip()
+            reason = request.POST.get('reason', '').strip()
+            post = SkiPartnerPost.objects.filter(id=post_id, is_active=True).first()
+            if post and post.user_id != request.user.id:
+                SkiPartnerReport.objects.update_or_create(
+                    post=post,
+                    reporter=request.user,
+                    defaults={'reason': reason[:220]},
+                )
+                report_count = SkiPartnerReport.objects.filter(post=post).count()
+                if report_count >= 3:
+                    post.is_active = False
+                    post.save(update_fields=['is_active'])
+                messages.success(request, 'Signalement enregistre.')
+            return redirect('ski_partners')
+
+    return render(
+        request,
+        'ski_partners.html',
+        {
+            'partner_posts': posts[:60],
+            'stations': SkiStation.objects.order_by('name'),
+            'selected_station': station_id,
+            'selected_level': level,
+            'selected_city': city,
+            'level_choices': SkiPartnerPost.LEVEL_CHOICES,
+        },
+    )
 
 
 @login_required

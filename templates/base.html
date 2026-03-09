@@ -190,6 +190,115 @@
             right: -6px;
         }
 
+        .mobile-bottom-nav {
+            display: none;
+        }
+
+        .legal-page {
+            padding: 16px 0 36px;
+        }
+
+        .legal-container {
+            max-width: 920px;
+        }
+
+        .legal-hero {
+            margin-bottom: 16px;
+            padding: 24px;
+            border: 0;
+            background: linear-gradient(135deg, #0b4f6c 0%, #1481ba 100%);
+            color: #fff;
+        }
+
+        .legal-kicker {
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: rgba(255, 255, 255, 0.82);
+        }
+
+        .legal-hero h1 {
+            color: #fff;
+            margin-bottom: 12px;
+        }
+
+        .legal-lead {
+            color: rgba(255, 255, 255, 0.94);
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .legal-meta {
+            color: rgba(255, 255, 255, 0.72);
+            margin: 0;
+            font-size: 13px;
+        }
+
+        .legal-card {
+            border: 0;
+            margin-bottom: 14px;
+            padding: 18px 20px;
+        }
+
+        .legal-card h2 {
+            font-size: 20px;
+            margin-bottom: 8px;
+        }
+
+        .legal-card p {
+            color: #4b5563;
+            line-height: 1.7;
+            margin: 0;
+        }
+
+        .legal-list {
+            margin: 0;
+            padding-left: 18px;
+            color: #4b5563;
+        }
+
+        .legal-list li {
+            margin-bottom: 6px;
+        }
+
+        .site-footer {
+            padding: 18px 0 26px;
+            border-top: 1px solid #e5e7eb;
+            background: #f8fafc;
+            margin-top: 24px;
+        }
+
+        .site-footer p {
+            margin-bottom: 6px;
+            color: #374151;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .footer-links a {
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 8px;
+            color: #1f2937;
+            font-weight: 500;
+            font-size: 14px;
+            background: #eef2ff;
+        }
+
+        .footer-links a:hover {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
         @media (max-width: 1199.98px) {
             .header-area {
                 min-height: 152px;
@@ -249,11 +358,70 @@
 
             #cookie-banner .btn {
                 margin-top: 6px;
+                margin-left: 0;
+                width: 100%;
             }
 
             .floating-btn {
                 right: 12px;
-                bottom: 12px;
+                bottom: 74px;
+            }
+
+            body {
+                padding-bottom: 76px;
+            }
+
+            .mobile-bottom-nav {
+                position: fixed;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 1090;
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 4px;
+                padding: 8px 8px max(8px, env(safe-area-inset-bottom));
+                background: rgba(10, 19, 30, 0.92);
+                border-top: 1px solid rgba(255, 255, 255, 0.12);
+                backdrop-filter: blur(4px);
+            }
+
+            .mobile-bottom-nav a {
+                color: #e5e7eb;
+                text-align: center;
+                border-radius: 10px;
+                padding: 8px 4px;
+                font-size: 11px;
+                line-height: 1.2;
+                min-height: 46px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                gap: 4px;
+                font-weight: 600;
+            }
+
+            .mobile-bottom-nav a i {
+                font-size: 13px;
+            }
+
+            .mobile-bottom-nav a.active {
+                color: #ffffff;
+                background: #0d6efd;
+            }
+
+            .legal-hero,
+            .legal-card {
+                padding: 16px;
+            }
+
+            .legal-card h2 {
+                font-size: 18px;
+            }
+
+            .footer-links a {
+                width: 100%;
+                text-align: center;
             }
         }
 
@@ -333,6 +501,12 @@
             z-index: 1000;
         }
 
+        #cookie-banner p {
+            color: #f8fafc;
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+
         #cookie-banner .btn {
             margin-left: 10px;
         }
@@ -350,15 +524,18 @@
                         <a href="{% url 'my_template_view' %}" class="logo">
                             <img src="{% static 'images/logo.png' %}" alt="Logo">
                         </a>
+                        {% with current=request.resolver_match.url_name %}
                         <ul class="nav" id="site-main-nav">
-                            <li><a href="{% url 'my_template_view' %}" class="active">{% trans "Accueil" %}</a></li>
-                            <li><a href="{% url 'ski_material_listings' %}">{% trans "Matériel de Ski" %}</a></li>
-                            <li><a href="{% url 'ski_station_search' %}">{% trans "Recherche" %}</a></li>
-                            <li><a href="{% url 'services' %}">{% trans "Services" %}</a></li>
-                            <li><a href="{% url 'instructors' %}">{% trans "Moniteurs" %}</a></li>
-                            <li><a href="{% url 'bus' %}">{% trans "Lignes de Bus" %}</a></li>
-                            <li><a href="{% url 'messages' %}">Chat</a></li>
-                            <li class="mobile-hide"><a href="{% url 'terms' %}">{% trans "Conditions" %}</a></li>
+                            <li><a href="{% url 'my_template_view' %}" class="{% if current == 'my_template_view' %}active{% endif %}">{% trans "Accueil" %}</a></li>
+                            <li><a href="{% url 'ski_material_listings' %}" class="{% if current == 'ski_material_listings' or current == 'listing_detail' or current == 'ajouter_materiel' or current == 'edit_listing' %}active{% endif %}">{% trans "Matériel de Ski" %}</a></li>
+                            <li><a href="{% url 'ski_station_search' %}" class="{% if current == 'ski_station_search' or current == 'ski_station_detail' %}active{% endif %}">{% trans "Recherche" %}</a></li>
+                            <li><a href="{% url 'services' %}" class="{% if current == 'services' or current == 'service_detail' %}active{% endif %}">{% trans "Services" %}</a></li>
+                            <li><a href="{% url 'instructors' %}" class="{% if current == 'instructors' or current == 'become_instructor' or current == 'instructor_services' %}active{% endif %}">{% trans "Moniteurs" %}</a></li>
+                            <li><a href="{% url 'bus' %}" class="{% if current == 'bus' %}active{% endif %}">{% trans "Lignes de Bus" %}</a></li>
+                            <li><a href="{% url 'ski_partners' %}" class="{% if current == 'ski_partners' %}active{% endif %}">{% trans "Partenaires" %}</a></li>
+                            <li><a href="{% url 'messages' %}" class="{% if current == 'messages' %}active{% endif %}">Chat</a></li>
+                            <li><a href="{% url 'terms' %}" class="{% if current == 'terms' %}active{% endif %}">{% trans "Conditions" %}</a></li>
+                            <li><a href="{% url 'privacy' %}" class="{% if current == 'privacy' %}active{% endif %}">{% trans "Confidentialité" %}</a></li>
                             <li class="mobile-hide"><a href="{% url 'schema-swagger-ui' %}">API</a></li>
                             <li>
                                 <form action="{% url 'set_language_safe' %}" method="get" class="lang-form">
@@ -396,6 +573,7 @@
                                 <li><a href="{% url 'login' %}">{% trans "Connexion" %}</a></li>
                             {% endif %}
                         </ul>
+                        {% endwith %}
                         <a class='menu-trigger' href="#" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="site-main-nav">
                             <span>{% trans "Menu" %}</span>
                         </a>
@@ -408,9 +586,10 @@
 
     <!-- Bannière de consentement des cookies -->
     <div id="cookie-banner" class="text-center">
-        <p>{% trans "Nous utilisons des cookies pour améliorer votre expérience." %} <a href="{% url 'terms' %}" class="text-info">{% trans "En savoir plus" %}</a></p>
+        <p>{% trans "Nous utilisons des cookies nécessaires pour le fonctionnement du site et des cookies optionnels pour améliorer l'expérience." %} <a href="{% url 'privacy' %}" class="text-info">{% trans "Politique de confidentialité" %}</a></p>
         <button id="accept-cookies" class="btn btn-success">{% trans "Accepter" %}</button>
         <button id="reject-cookies" class="btn btn-danger">{% trans "Refuser" %}</button>
+        <button id="manage-cookies" class="btn btn-outline-light">{% trans "Gérer" %}</button>
     </div>
 
     <!-- ***** Dynamic Content Section ***** -->
@@ -420,11 +599,16 @@
             {% endblock %}
         </div>
     
-        <footer>
+        <footer class="site-footer">
             <div class="container">
                 <div class="row">
                     <div class="col-lg-12">
-                        <p>Copyright © 2025 Grenoble Ski Station</p>
+                        <p>Copyright © 2026 Grenoble Ski Station</p>
+                        <div class="footer-links">
+                            <a href="{% url 'terms' %}">{% trans "Conditions d'utilisation" %}</a>
+                            <a href="{% url 'privacy' %}">{% trans "Politique de confidentialité" %}</a>
+                            <a href="#" id="open-cookie-settings">{% trans "Préférences cookies" %}</a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -497,28 +681,57 @@
     <!-- Script pour gérer la bannière de consentement des cookies -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Vérifie si l'utilisateur a déjà donné son consentement
-            const cookieConsent = "{{ request.cookie_consent }}";
+            const cookieBanner = document.getElementById('cookie-banner');
+            const acceptBtn = document.getElementById('accept-cookies');
+            const rejectBtn = document.getElementById('reject-cookies');
+            const manageBtn = document.getElementById('manage-cookies');
+            const openSettingsLink = document.getElementById('open-cookie-settings');
+            if (!cookieBanner || !acceptBtn || !rejectBtn || !manageBtn) return;
+
+            const cookieConsent = getCookie('cookie_consent');
 
             if (!cookieConsent || cookieConsent === 'unknown') {
-                document.getElementById('cookie-banner').style.display = 'block';
+                cookieBanner.style.display = 'block';
             }
 
-            document.getElementById('accept-cookies').addEventListener('click', function() {
+            acceptBtn.addEventListener('click', function() {
                 setCookie('cookie_consent', 'accepted', 365);
-                document.getElementById('cookie-banner').style.display = 'none';
+                cookieBanner.style.display = 'none';
             });
 
-            document.getElementById('reject-cookies').addEventListener('click', function() {
+            rejectBtn.addEventListener('click', function() {
                 setCookie('cookie_consent', 'rejected', 365);
-                document.getElementById('cookie-banner').style.display = 'none';
+                cookieBanner.style.display = 'none';
             });
+
+            manageBtn.addEventListener('click', function() {
+                cookieBanner.style.display = 'block';
+            });
+
+            if (openSettingsLink) {
+                openSettingsLink.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    cookieBanner.style.display = 'block';
+                });
+            }
 
             function setCookie(name, value, days) {
                 const date = new Date();
                 date.setTime(date.getTime() + (days*24*60*60*1000));
                 const expires = "expires=" + date.toUTCString();
                 document.cookie = name + "=" + value + ";" + expires + ";path=/";
+            }
+
+            function getCookie(name) {
+                const target = name + '=';
+                const parts = document.cookie.split(';');
+                for (let i = 0; i < parts.length; i += 1) {
+                    const item = parts[i].trim();
+                    if (item.indexOf(target) === 0) {
+                        return item.substring(target.length);
+                    }
+                }
+                return '';
             }
         });
     </script>
@@ -529,6 +742,27 @@
             <span class="badge badge-danger">{{ unread_count }}</span>
         {% endif %}
     </a>
+
+    {% with current=request.resolver_match.url_name %}
+    <nav class="mobile-bottom-nav" aria-label="Navigation mobile">
+        <a href="{% url 'my_template_view' %}" class="{% if current == 'my_template_view' %}active{% endif %}">
+            <i class="fas fa-home" aria-hidden="true"></i>
+            <span>{% trans "Accueil" %}</span>
+        </a>
+        <a href="{% url 'ski_station_search' %}" class="{% if current == 'ski_station_search' or current == 'ski_station_detail' %}active{% endif %}">
+            <i class="fas fa-search" aria-hidden="true"></i>
+            <span>{% trans "Recherche" %}</span>
+        </a>
+        <a href="{% url 'ski_material_listings' %}" class="{% if current == 'ski_material_listings' or current == 'listing_detail' or current == 'ajouter_materiel' or current == 'edit_listing' %}active{% endif %}">
+            <i class="fas fa-skiing" aria-hidden="true"></i>
+            <span>{% trans "Marketplace" %}</span>
+        </a>
+        <a href="{% url 'messages' %}" class="{% if current == 'messages' %}active{% endif %}">
+            <i class="fas fa-comment-dots" aria-hidden="true"></i>
+            <span>{% trans "Messages" %}</span>
+        </a>
+    </nav>
+    {% endwith %}
 
 </body>
 </html>

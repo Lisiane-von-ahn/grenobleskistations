@@ -12,6 +12,18 @@
             <div class="market-search-panel">
                 <h2 class="market-section-title">{{ listing.title }}</h2>
                 <p class="market-subtle">{% trans "Par" %} {{ listing.user.username }} - {{ listing.posted_at|date:'d/m/Y H:i' }}</p>
+                {% if seller_rating_avg %}
+                <p class="market-subtle mb-3">Vendeur note {{ seller_rating_avg|floatformat:1 }}/5 ({{ seller_rating_count }} avis)</p>
+                <div class="mb-3">
+                    {% for row in seller_rating_breakdown %}
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <small style="width: 32px">{{ row.score }}★</small>
+                        <progress value="{{ row.pct }}" max="100" style="height: 8px; width: 100%"></progress>
+                        <small class="market-subtle" style="width: 40px">{{ row.total }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
 
                 <div class="mb-3">
                     <span class="badge-soft badge-action">{{ listing.get_transaction_type_display }}</span>
@@ -55,14 +67,85 @@
                 <h5>{% trans "Contacter le vendeur" %}</h5>
                 <form method="POST" class="chat-box">
                     {% csrf_token %}
+                    <input type="hidden" name="form_type" value="contact">
                     <label class="form-label">{% trans "Message" %}</label>
                     <textarea name="body" rows="5" class="form-control mb-3" required placeholder="Bonjour, votre article est-il toujours disponible ?"></textarea>
                     <button type="submit" class="btn btn-primary w-100">{% trans "Envoyer" %}</button>
                 </form>
+
+                <hr>
+                <h5>Transaction</h5>
+                {% if user_deal %}
+                    <div class="market-subtle mb-2">Statut: acheteur {% if user_deal.buyer_confirmed %}confirme{% else %}en attente{% endif %}, vendeur {% if user_deal.seller_confirmed %}confirme{% else %}en attente{% endif %}</div>
+                {% else %}
+                    <div class="market-subtle mb-2">Aucune transaction demandee.</div>
+                {% endif %}
+
+                <form method="POST" class="mb-2">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="deal_request">
+                    <button type="submit" class="btn btn-outline-secondary w-100">Demander transaction</button>
+                </form>
+                <form method="POST" class="mb-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="deal_confirm_buyer">
+                    <button type="submit" class="btn btn-outline-success w-100">Confirmer transaction cote acheteur</button>
+                </form>
+
+                <hr>
+                <h5>Noter le vendeur</h5>
+                {% if can_rate %}
+                <form method="POST" class="chat-box">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="rating">
+                    <label class="form-label">Note</label>
+                    <select name="score" class="form-control mb-2" required>
+                        <option value="">Choisir</option>
+                        {% for value in '12345' %}
+                        <option value="{{ value }}" {% if existing_user_rating and existing_user_rating.score|stringformat:'s' == value %}selected{% endif %}>{{ value }}/5</option>
+                        {% endfor %}
+                    </select>
+                    <label class="form-label">Commentaire</label>
+                    <textarea name="comment" rows="3" class="form-control mb-3" placeholder="Votre avis...">{% if existing_user_rating %}{{ existing_user_rating.comment }}{% endif %}</textarea>
+                    <button type="submit" class="btn btn-outline-primary w-100">Enregistrer ma note</button>
+                </form>
+                {% else %}
+                <div class="alert alert-warning py-2">La note est disponible apres confirmation de la transaction par les deux parties.</div>
+                {% endif %}
                 {% elif user == listing.user %}
                 <div class="alert alert-info">{% trans "C'est votre annonce." %}</div>
+                {% if seller_pending_deals %}
+                <hr>
+                <h5>Transactions a confirmer</h5>
+                {% for deal in seller_pending_deals %}
+                <div class="chat-box mb-2">
+                    <div class="market-subtle mb-2">Acheteur: {{ deal.buyer.username }} | acheteur {% if deal.buyer_confirmed %}confirme{% else %}en attente{% endif %}</div>
+                    {% if not deal.seller_confirmed %}
+                    <form method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_type" value="deal_confirm_seller">
+                        <input type="hidden" name="deal_id" value="{{ deal.id }}">
+                        <button class="btn btn-sm btn-outline-success" type="submit">Confirmer cote vendeur</button>
+                    </form>
+                    {% else %}
+                    <div class="text-success small">Deja confirme cote vendeur.</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                {% endif %}
                 {% else %}
                 <a href="{% url 'login' %}" class="btn btn-primary w-100">{% trans "Se connecter pour ecrire" %}</a>
+                {% endif %}
+
+                {% if listing_ratings %}
+                <hr>
+                <h5>Avis recents</h5>
+                {% for item in listing_ratings %}
+                <div class="mb-2">
+                    <strong>{{ item.rater.username }}</strong> - {{ item.score }}/5
+                    {% if item.comment %}<div class="market-subtle">{{ item.comment }}</div>{% endif %}
+                </div>
+                {% endfor %}
                 {% endif %}
             </div>
         </div>

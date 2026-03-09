@@ -15,6 +15,13 @@
             </div>
             <a href="{% url 'ajouter_materiel' %}" class="btn btn-success btn-lg">{% trans "Ajouter un article" %}</a>
         </div>
+        <div class="d-flex flex-wrap gap-2 mt-3">
+            <a class="preset-chip {% if preset == 'weekend' %}active{% endif %}" href="{% url 'ski_material_listings' %}?preset=weekend&transaction_type=rent&max_price=120&sort=price_asc&my_listings={% if mine_only %}1{% else %}0{% endif %}">{% trans "Week-end malin" %}</a>
+            <a class="preset-chip {% if preset == 'budget' %}active{% endif %}" href="{% url 'ski_material_listings' %}?preset=budget&max_price=200&condition=good&sort=price_asc&my_listings={% if mine_only %}1{% else %}0{% endif %}">{% trans "Petit budget" %}</a>
+            <a class="preset-chip {% if preset == 'premium' %}active{% endif %}" href="{% url 'ski_material_listings' %}?preset=premium&condition=excellent&sort=price_desc&my_listings={% if mine_only %}1{% else %}0{% endif %}">{% trans "Premium" %}</a>
+            <a class="preset-chip {% if preset == 'safety' %}active{% endif %}" href="{% url 'ski_material_listings' %}?preset=safety&material_type=helmet&transaction_type=rent&my_listings={% if mine_only %}1{% else %}0{% endif %}">{% trans "Pack securite" %}</a>
+            <a class="preset-chip" href="{% url 'ski_material_listings' %}?my_listings={% if mine_only %}1{% else %}0{% endif %}">{% trans "Tout voir" %}</a>
+        </div>
     </section>
 
     <section class="market-search-panel">
@@ -22,7 +29,7 @@
             <div class="row g-3">
                 <div class="col-lg-4">
                     <label class="form-label fw-semibold">{% trans "Recherche globale" %}</label>
-                    <input type="text" name="q" class="form-control" value="{{ query_text }}" placeholder="Marque, ville, type, utilisateur...">
+                    <input type="text" name="q" class="form-control" value="{{ query_text }}" placeholder="{% trans 'Marque, ville, type, utilisateur...' %}">
                 </div>
                 <div class="col-lg-2">
                     <label class="form-label fw-semibold">{% trans "Offre" %}</label>
@@ -51,111 +58,246 @@
                         {% endfor %}
                     </select>
                 </div>
+                <div class="col-lg-2">
+                    <label class="form-label fw-semibold">{% trans "Tri" %}</label>
+                    <select name="sort" class="form-control">
+                        <option value="recent" {% if sort == 'recent' %}selected{% endif %}>{% trans "Plus recents" %}</option>
+                        <option value="oldest" {% if sort == 'oldest' %}selected{% endif %}>{% trans "Plus anciens" %}</option>
+                        <option value="price_asc" {% if sort == 'price_asc' %}selected{% endif %}>{% trans "Prix croissant" %}</option>
+                        <option value="price_desc" {% if sort == 'price_desc' %}selected{% endif %}>{% trans "Prix decroissant" %}</option>
+                        <option value="title_asc" {% if sort == 'title_asc' %}selected{% endif %}>{% trans "Titre A-Z" %}</option>
+                    </select>
+                </div>
                 <input type="hidden" name="my_listings" value="{% if mine_only %}1{% else %}0{% endif %}">
             </div>
 
             <div class="row g-3 mt-1">
                 <div class="col-lg-3">
                     <label class="form-label fw-semibold">{% trans "Ville" %}</label>
-                    <input type="text" name="city" class="form-control" value="{{ city }}" placeholder="Grenoble...">
+                    <input type="text" name="city" class="form-control" value="{{ city }}" placeholder="{% trans 'Grenoble...' %}">
                 </div>
                 <div class="col-lg-3 slider-wrap">
-                    <label for="min-price">{% trans "Prix min" %}: <span id="min-price-value">{{ min_price|default:'0' }}</span> EUR</label>
-                    <input id="min-price" type="range" min="0" max="1200" step="10" name="min_price" value="{{ min_price|default:'0' }}">
+                    <div class="price-slider-card">
+                        <label for="min-price" class="d-flex justify-content-between align-items-center">
+                            <span>{% trans "Prix min" %}</span>
+                            <span class="price-pill"><span id="min-price-value">{{ min_price|default:'0' }}</span> EUR</span>
+                        </label>
+                        <input id="min-price" class="range-input-modern" type="range" min="0" max="1200" step="10" name="min_price" value="{{ min_price|default:'0' }}">
+                    </div>
                 </div>
                 <div class="col-lg-3 slider-wrap">
-                    <label for="max-price">{% trans "Prix max" %}: <span id="max-price-value">{{ max_price|default:'1200' }}</span> EUR</label>
-                    <input id="max-price" type="range" min="0" max="1200" step="10" name="max_price" value="{{ max_price|default:'1200' }}">
+                    <div class="price-slider-card">
+                        <label for="max-price" class="d-flex justify-content-between align-items-center">
+                            <span>{% trans "Prix max" %}</span>
+                            <span class="price-pill"><span id="max-price-value">{{ max_price|default:'1200' }}</span> EUR</span>
+                        </label>
+                        <input id="max-price" class="range-input-modern" type="range" min="0" max="1200" step="10" name="max_price" value="{{ max_price|default:'1200' }}">
+                    </div>
                 </div>
                 <div class="col-lg-3 d-flex align-items-end gap-2">
                     <button class="btn btn-primary w-100" type="submit">{% trans "Rechercher" %}</button>
                     <a class="btn btn-outline-secondary" href="{% url 'ski_material_listings' %}">{% trans "Reinitialiser" %}</a>
                 </div>
+                <div class="col-lg-3">
+                    <label class="form-label fw-semibold">{% trans "Articles par page" %}</label>
+                    <select name="per_page" class="form-control">
+                        <option value="9" {% if per_page == 9 %}selected{% endif %}>9</option>
+                        <option value="18" {% if per_page == 18 %}selected{% endif %}>18</option>
+                        <option value="30" {% if per_page == 30 %}selected{% endif %}>30</option>
+                    </select>
+                </div>
             </div>
         </form>
     </section>
 
-    {% if mine_only %}
-    <section class="mb-5">
-        <h3 class="market-section-title mb-3">{% trans "Mes annonces" %} ({{ my_listings|length }})</h3>
-        <div class="row g-4">
-            {% for listing in my_listings %}
-            <div class="col-lg-4 col-md-6">
-                <article class="market-card">
-                    {% if listing.image %}
-                    <img class="market-image" src="data:image/jpeg;base64,{{ listing.image|b64encode }}" alt="{{ listing.title }}">
-                    {% else %}
-                    <img class="market-image" src="{% static 'images/default.jpg' %}" alt="Default image">
-                    {% endif %}
-                    <div class="p-3">
-                        <h5 class="mb-2">{{ listing.title }}</h5>
-                        <div class="mb-2">
-                            <span class="badge-soft badge-action">{{ listing.get_transaction_type_display }}</span>
-                            <span class="badge-soft">{{ listing.get_material_type_display }}</span>
-                            <span class="badge-soft">{{ listing.get_condition_display }}</span>
-                        </div>
-                        <div class="mb-2 market-subtle">{{ listing.city }}{% if listing.ski_station %} - {{ listing.ski_station.name }}{% endif %}</div>
-                        <div class="mb-3">
-                            {% if listing.brand %}<span class="filter-chip">{{ listing.brand }}</span>{% endif %}
-                            {% if listing.size %}<span class="filter-chip">{{ listing.size }}</span>{% endif %}
-                            <span class="filter-chip">{{ listing.images.count }} photos</span>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <strong>{% if listing.price %}{{ listing.price }} EUR{% else %}{% trans "Gratuit" %}{% endif %}</strong>
-                            <a href="{% url 'listing_detail' id=listing.id %}" class="btn btn-sm btn-outline-primary">{% trans "Details" %}</a>
-                        </div>
-                    </div>
-                </article>
+    <section class="mb-4">
+        <div class="row g-3">
+            <div class="col-lg-3 col-md-6">
+                <div class="market-card p-3 h-100">
+                    <div class="market-subtle">{% trans "Annonces visibles" %}</div>
+                    <h4 class="mb-0">{{ visible_total_count }}</h4>
+                </div>
             </div>
-            {% empty %}
-            <div class="col-12">
-                <p class="market-subtle">{% trans "Aucune annonce personnelle dans ce filtre." %}</p>
+            <div class="col-lg-3 col-md-6">
+                <div class="market-card p-3 h-100">
+                    <div class="market-subtle">{% trans "Avec photo" %}</div>
+                    <h4 class="mb-0">{{ facilities.with_photo_count }}</h4>
+                </div>
             </div>
-            {% endfor %}
+            <div class="col-lg-3 col-md-6">
+                <div class="market-card p-3 h-100">
+                    <div class="market-subtle">{% trans "Liees a une station" %}</div>
+                    <h4 class="mb-0">{{ facilities.with_station_count }}</h4>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="market-card p-3 h-100">
+                    <div class="market-subtle">{% trans "Mes annonces" %}</div>
+                    <h4 class="mb-0">{{ facilities.mine_count }}</h4>
+                </div>
+            </div>
         </div>
     </section>
-    {% endif %}
 
-    {% if not mine_only %}
+    <section class="mb-5">
+        <div class="row g-3">
+            <div class="col-lg-6">
+                <div class="market-card p-3 h-100">
+                    <h5 class="mb-3">{% trans "Par type d'offre" %}</h5>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for row in transaction_stats %}
+                        <span class="filter-chip">{{ row.label }}: {{ row.total }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="market-card p-3 h-100">
+                    <h5 class="mb-3">{% trans "Par materiel" %}</h5>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for row in material_stats %}
+                        <span class="filter-chip">{{ row.label }}: {{ row.total }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="mb-5">
+        <div class="market-card p-3 p-lg-4">
+            <div class="d-flex flex-column flex-lg-row align-items-start align-items-lg-end gap-3 justify-content-between">
+                <div>
+                    <h5 class="mb-1">{% trans "Filtres enregistres" %}</h5>
+                    <p class="market-subtle mb-0">
+                        {% trans "Sauvegardez votre recherche actuelle pour la relancer en un clic." %}
+                        {% blocktrans with saved_filters_limit=saved_filters_limit %}(maximum {{ saved_filters_limit }} filtres).{% endblocktrans %}
+                    </p>
+                </div>
+                <form method="post" class="d-flex flex-column flex-sm-row gap-2 w-100 w-lg-auto">
+                    {% csrf_token %}
+                    <input type="hidden" name="filter_action" value="save">
+                    <input type="hidden" name="filter_query" value="{{ current_filter_query }}">
+                    <input type="text" name="filter_name" class="form-control" maxlength="40" placeholder="{% trans 'Nom du filtre' %}" required>
+                    <button class="btn btn-outline-primary" type="submit">{% trans "Enregistrer" %}</button>
+                </form>
+            </div>
+
+            <div class="saved-filters mt-3">
+                {% for item in saved_filters %}
+                <div class="saved-filter-item">
+                    <a href="?{{ item.query }}" class="saved-filter-link">{{ item.name }}</a>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="filter_action" value="delete">
+                        <input type="hidden" name="filter_name" value="{{ item.name }}">
+                        <input type="hidden" name="filter_query" value="{{ current_filter_query }}">
+                        <button type="submit" class="btn btn-sm btn-link text-danger p-0">{% trans "Supprimer" %}</button>
+                    </form>
+                </div>
+                {% empty %}
+                <p class="market-subtle mb-0">{% trans "Aucun filtre enregistre pour le moment." %}</p>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
     <section>
-        <h3 class="market-section-title mb-3">Marketplace ({{ marketplace_listings|length }})</h3>
+        <h3 class="market-section-title mb-3">
+            {% if mine_only %}
+                {% trans "Mes annonces" %}
+            {% else %}
+                {% trans "Marketplace" %}
+            {% endif %}
+            ({{ visible_total_count }})
+        </h3>
         <div class="row g-4">
-            {% for listing in marketplace_listings %}
+            {% for listing in listings_page.object_list %}
             <div class="col-lg-4 col-md-6">
-                <article class="market-card">
+                <article class="market-card market-listing-card">
                     {% if listing.image %}
                     <img class="market-image" src="data:image/jpeg;base64,{{ listing.image|b64encode }}" alt="{{ listing.title }}">
                     {% else %}
                     <img class="market-image" src="{% static 'images/default.jpg' %}" alt="Default image">
                     {% endif %}
-                    <div class="p-3">
-                        <h5 class="mb-2">{{ listing.title }}</h5>
-                        <div class="mb-2">
+                    <div class="p-3 market-card-body">
+                        <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                            <h5 class="mb-0 market-card-title">{{ listing.title }}</h5>
+                            <span class="price-bubble">{% if listing.price %}{{ listing.price }} EUR{% else %}{% trans "Gratuit" %}{% endif %}</span>
+                        </div>
+                        <div class="mb-2 card-tags">
                             <span class="badge-soft badge-action">{{ listing.get_transaction_type_display }}</span>
                             <span class="badge-soft">{{ listing.get_material_type_display }}</span>
                             <span class="badge-soft">{{ listing.get_condition_display }}</span>
                         </div>
-                        <div class="mb-2 market-subtle">{% trans "Par" %} {{ listing.user.username }} - {{ listing.city }}</div>
-                        <div class="mb-3">
+                        <div class="mb-2 market-subtle listing-meta-row">
+                            {% if mine_only %}
+                                {{ listing.city }}{% if listing.ski_station %} - {{ listing.ski_station.name }}{% endif %}
+                            {% else %}
+                                {% trans "Par" %} {{ listing.user.username }} - {{ listing.city }}
+                            {% endif %}
+                        </div>
+                        {% if listing.seller_rating_avg %}
+                        <div class="seller-rating mb-2">
+                            <span class="seller-stars">{{ listing.seller_rating_avg|floatformat:1 }}/5</span>
+                            <span class="market-subtle">({{ listing.seller_rating_count }} avis)</span>
+                        </div>
+                        {% endif %}
+                        <div class="mb-3 d-flex flex-wrap gap-2">
                             {% if listing.brand %}<span class="filter-chip">{{ listing.brand }}</span>{% endif %}
                             {% if listing.size %}<span class="filter-chip">{{ listing.size }}</span>{% endif %}
                             <span class="filter-chip">{{ listing.images.count }} photos</span>
+                            {% if listing.ski_station %}<span class="filter-chip station-chip">{{ listing.ski_station.name }}</span>{% endif %}
                         </div>
                         <div class="d-flex justify-content-between align-items-center">
-                            <strong>{% if listing.price %}{{ listing.price }} EUR{% else %}{% trans "Gratuit" %}{% endif %}</strong>
-                            <a href="{% url 'listing_detail' id=listing.id %}" class="btn btn-sm btn-primary">{% trans "Contacter" %}</a>
+                            <a href="{% url 'listing_detail' id=listing.id %}" class="btn btn-sm {% if mine_only %}btn-outline-primary{% else %}btn-primary{% endif %}">
+                                {% if mine_only %}{% trans "Details" %}{% else %}{% trans "Contacter" %}{% endif %}
+                            </a>
                         </div>
                     </div>
                 </article>
             </div>
             {% empty %}
             <div class="col-12">
-                <p class="market-subtle">{% trans "Aucun article trouve." %}</p>
+                <p class="market-subtle">
+                    {% if mine_only %}
+                        {% trans "Aucune annonce personnelle dans ce filtre." %}
+                    {% else %}
+                        {% trans "Aucun article trouve." %}
+                    {% endif %}
+                </p>
             </div>
             {% endfor %}
         </div>
+
+        {% if listings_page.paginator.num_pages > 1 %}
+        <nav class="mt-4" aria-label="Marketplace pagination">
+            <ul class="pagination justify-content-center flex-wrap gap-2">
+                {% if listings_page.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ listings_page.previous_page_number }}">{% trans "Precedent" %}</a>
+                </li>
+                {% endif %}
+
+                {% for p in listings_page.paginator.page_range %}
+                    {% if p == listings_page.number %}
+                    <li class="page-item active"><span class="page-link">{{ p }}</span></li>
+                    {% elif p >= listings_page.number|add:'-2' and p <= listings_page.number|add:'2' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ p }}">{{ p }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if listings_page.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ listings_page.next_page_number }}">{% trans "Suivant" %}</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
     </section>
-    {% endif %}
 </div>
 
 <script>
@@ -164,16 +306,48 @@
     const minOut = document.getElementById('min-price-value');
     const maxOut = document.getElementById('max-price-value');
 
+    function applyRangeBackground(input) {
+        if (!input) return;
+        const min = Number(input.min || 0);
+        const max = Number(input.max || 100);
+        const value = Number(input.value || min);
+        const pct = ((value - min) * 100) / (max - min || 1);
+        input.style.background = `linear-gradient(90deg, #0d8bb5 ${pct}%, #dbeafe ${pct}%)`;
+    }
+
+    function syncPriceBounds(changed) {
+        if (!minPrice || !maxPrice) return;
+        let minValue = Number(minPrice.value);
+        let maxValue = Number(maxPrice.value);
+
+        if (minValue > maxValue) {
+            if (changed === 'min') {
+                maxValue = minValue;
+                maxPrice.value = String(maxValue);
+            } else {
+                minValue = maxValue;
+                minPrice.value = String(minValue);
+            }
+        }
+
+        if (minOut) minOut.textContent = minPrice.value;
+        if (maxOut) maxOut.textContent = maxPrice.value;
+        applyRangeBackground(minPrice);
+        applyRangeBackground(maxPrice);
+    }
+
     if (minPrice && minOut) {
         minPrice.addEventListener('input', () => {
-            minOut.textContent = minPrice.value;
+            syncPriceBounds('min');
         });
     }
 
     if (maxPrice && maxOut) {
         maxPrice.addEventListener('input', () => {
-            maxOut.textContent = maxPrice.value;
+            syncPriceBounds('max');
         });
     }
+
+    syncPriceBounds('init');
 </script>
 {% endblock %}

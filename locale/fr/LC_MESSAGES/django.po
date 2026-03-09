@@ -1,0 +1,73 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: grenobleski\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-09 00:00+0000\n"
+"PO-Revision-Date: 2026-03-09 00:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: French\n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: templates/base.html:744
+msgid "Marketplace"
+msgstr "Marketplace"
+
+#: templates/base.html:748
+msgid "Messages"
+msgstr "Messages"
+
+#: templates/ski_material_listings.html:18
+msgid "Week-end malin"
+msgstr "Week-end malin"
+
+#: templates/ski_material_listings.html:19
+msgid "Petit budget"
+msgstr "Petit budget"
+
+#: templates/ski_material_listings.html:21
+msgid "Pack securite"
+msgstr "Pack securite"
+
+#: templates/ski_material_listings.html:22
+msgid "Tout voir"
+msgstr "Tout voir"
+
+#: templates/ski_material_listings.html:152
+msgid "Filtres enregistres"
+msgstr "Filtres enregistres"
+
+#: templates/ski_material_listings.html:153
+msgid "Sauvegardez votre recherche actuelle pour la relancer en un clic."
+msgstr "Sauvegardez votre recherche actuelle pour la relancer en un clic."
+
+#: templates/ski_material_listings.html:160
+msgid "Nom du filtre"
+msgstr "Nom du filtre"
+
+#: templates/ski_material_listings.html:161
+msgid "Enregistrer"
+msgstr "Enregistrer"
+
+#: templates/ski_material_listings.html:173
+msgid "Supprimer"
+msgstr "Supprimer"
+
+#: templates/ski_material_listings.html:176
+msgid "Aucun filtre enregistre pour le moment."
+msgstr "Aucun filtre enregistre pour le moment."
+
+#: skistation_project/views.py:420
+msgid "Nom de filtre requis."
+msgstr "Nom de filtre requis."
+
+#: skistation_project/views.py:426
+msgid "Filtre enregistre."
+msgstr "Filtre enregistre."
+
+#: skistation_project/views.py:434
+msgid "Filtre supprime."
+msgstr "Filtre supprime."

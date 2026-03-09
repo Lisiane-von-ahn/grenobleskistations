@@ -1142,5 +1142,97 @@ msgstr ""
 msgid "Continue"
 msgstr "Continue"
 
+#: templates/base.html:744
+msgid "Marketplace"
+msgstr "Marketplace"
+
+#: templates/base.html:748
+msgid "Messages"
+msgstr "Messages"
+
+#: templates/ski_material_listings.html:14
+msgid "Vendre, louer ou preter facilement."
+msgstr "Sell, rent, or lend easily."
+
+#: templates/ski_material_listings.html:18
+msgid "Week-end malin"
+msgstr "Smart weekend"
+
+#: templates/ski_material_listings.html:19
+msgid "Petit budget"
+msgstr "Budget picks"
+
+#: templates/ski_material_listings.html:20
+msgid "Premium"
+msgstr "Premium"
+
+#: templates/ski_material_listings.html:21
+msgid "Pack securite"
+msgstr "Safety pack"
+
+#: templates/ski_material_listings.html:22
+msgid "Tout voir"
+msgstr "View all"
+
+#: templates/ski_material_listings.html:56
+msgid "Plus recents"
+msgstr "Newest first"
+
+#: templates/ski_material_listings.html:59
+msgid "Prix decroissant"
+msgstr "Price: high to low"
+
+#: templates/ski_material_listings.html:88
+msgid "Articles par page"
+msgstr "Items per page"
+
+#: templates/ski_material_listings.html:102
+msgid "Annonces visibles"
+msgstr "Visible listings"
+
+#: templates/ski_material_listings.html:108
+msgid "Avec photo"
+msgstr "With photo"
+
+#: templates/ski_material_listings.html:114
+msgid "Liees a une station"
+msgstr "Linked to a station"
+
+#: templates/ski_material_listings.html:129
+msgid "Par type d'offre"
+msgstr "By offer type"
+
+#: templates/ski_material_listings.html:139
+msgid "Par materiel"
+msgstr "By gear type"
+
+#: templates/ski_material_listings.html:152
+msgid "Filtres enregistres"
+msgstr "Saved filters"
+
+#: templates/ski_material_listings.html:153
+msgid "Sauvegardez votre recherche actuelle pour la relancer en un clic."
+msgstr "Save your current search and reuse it in one click."
+
+#: templates/ski_material_listings.html:160
+msgid "Nom du filtre"
+msgstr "Filter name"
+
+#: templates/ski_material_listings.html:176
+msgid "Aucun filtre enregistre pour le moment."
+msgstr "No saved filters yet."
+
+#: skistation_project/views.py:420
+msgid "Nom de filtre requis."
+msgstr "Filter name is required."
+
+#: skistation_project/views.py:426
+msgid "Filtre enregistre."
+msgstr "Filter saved."
+
+#: skistation_project/views.py:434
+msgid "Filtre supprime."
+msgstr "Filter deleted."
+
 #~ msgid "Impossible d\\'afficher la tendance pour le moment."
 #~ msgstr "Unable to display trend at the moment."
