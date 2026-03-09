@@ -195,7 +195,17 @@ run_compose() {
   echo "🗄️ Ensuring migrations are applied before seed"
   local migrate_ok=false
   for i in $(seq 1 20); do
-    if docker compose "${compose_files[@]}" run --rm --no-deps --entrypoint "" web python manage.py migrate --noinput && \
+    local migrate_step_ok=false
+    if docker compose "${compose_files[@]}" run --rm --no-deps --entrypoint "" web python manage.py migrate --noinput; then
+      migrate_step_ok=true
+    else
+      echo "⚠️ Migrate command failed; checking whether migrations are already fully applied"
+      if docker compose "${compose_files[@]}" run --rm --no-deps --entrypoint "" web python manage.py migrate --check --noinput; then
+        migrate_step_ok=true
+      fi
+    fi
+
+    if [[ "${migrate_step_ok}" == "true" ]] && \
        docker compose "${compose_files[@]}" run --rm --no-deps --entrypoint "" web python manage.py ensure_bootstrap_admin; then
       migrate_ok=true
       break
@@ -214,6 +224,13 @@ run_compose() {
   echo "✅ Verifying no pending migrations remain"
   if ! docker compose "${compose_files[@]}" run --rm --no-deps --entrypoint "" web python manage.py migrate --check --noinput; then
     echo "❌ Pending migrations detected after migrate"
+    docker compose "${compose_files[@]}" logs --tail=200 web || true
+    exit 1
+  fi
+
+  echo "🔍 Verifying migration files are in sync with models"
+  if ! docker compose "${compose_files[@]}" run --rm --no-deps --entrypoint "" web python manage.py makemigrations --check --dry-run; then
+    echo "❌ Model changes detected without migration files"
     docker compose "${compose_files[@]}" logs --tail=200 web || true
     exit 1
   fi

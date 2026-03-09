@@ -50,7 +50,12 @@ jobs:
               "${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}"
 
             echo "🗄️ Running explicit migration from GitHub Action"
-            docker compose -f docker-compose.yml run --rm --no-deps --entrypoint "" web python manage.py migrate --noinput
+            if ! docker compose -f docker-compose.yml run --rm --no-deps --entrypoint "" web python manage.py migrate --noinput; then
+              echo "⚠️ migrate failed, checking whether migrations are already fully applied"
+              docker compose -f docker-compose.yml run --rm --no-deps --entrypoint "" web python manage.py migrate --check --noinput
+            fi
+            echo "🔍 Verifying migration files are in sync with models"
+            docker compose -f docker-compose.yml run --rm --no-deps --entrypoint "" web python manage.py makemigrations --check --dry-run
             echo "✅ Verifying no pending migrations remain"
             docker compose -f docker-compose.yml run --rm --no-deps --entrypoint "" web python manage.py migrate --check --noinput
 
@@ -80,7 +85,7 @@ jobs:
               if curl -fsS -H "Host: grenobleski.fr" "http://127.0.0.1:8081" >/dev/null; then
                 echo "✅ App is reachable on port 8081"
                 echo "🔄 Restarting Traefik"
-                if systemctl list-unit-files | grep -q '^traefik\.service'; then
+                if command -v systemctl >/dev/null 2>&1 && systemctl list-unit-files 2>/dev/null | grep -q '^traefik\.service'; then
                   systemctl restart traefik || true
                 elif docker ps -a --format '{{.Names}}' | grep -Eq '^traefik$|^grenobleski-traefik-1$'; then
                   docker restart traefik >/dev/null 2>&1 || docker restart grenobleski-traefik-1 >/dev/null 2>&1 || true
