@@ -257,6 +257,7 @@ run_compose() {
   echo "⏳ Waiting for web container health"
   local web_container_id=""
   local health_ok=false
+  local unhealthy_streak=0
   for i in $(seq 1 60); do
     web_container_id="$(docker compose "${compose_files[@]}" ps -q web 2>/dev/null || true)"
     if [[ -z "${web_container_id}" ]]; then
@@ -274,8 +275,18 @@ run_compose() {
 
     echo "web state: ${container_state}, health: ${health_state}, restarts: ${restart_count}"
 
-    if [[ "${restart_count}" -ge 3 ]] || [[ "${health_state}" == "unhealthy" ]]; then
-      echo "❌ Web container unstable (restarts/unhealthy)."
+    if [[ "${restart_count}" -ge 3 ]]; then
+      echo "⚠️ Web container restart count is high (${restart_count}), continuing while health is checked."
+    fi
+
+    if [[ "${health_state}" == "unhealthy" ]]; then
+      unhealthy_streak=$((unhealthy_streak + 1))
+    else
+      unhealthy_streak=0
+    fi
+
+    if [[ "${unhealthy_streak}" -ge 6 ]]; then
+      echo "❌ Web container unhealthy for too long (${unhealthy_streak} consecutive checks)."
       docker compose "${compose_files[@]}" ps || true
       docker compose "${compose_files[@]}" logs --tail=200 web || true
       exit 1

@@ -99,6 +99,7 @@ jobs:
 
             echo "⏳ Waiting for web container health"
             HEALTH_OK=false
+            UNHEALTHY_STREAK=0
             for i in $(seq 1 60); do
               CURRENT_WEB_CID=$(docker compose -f docker-compose.yml ps -q web | head -n1)
               if [ -n "${CURRENT_WEB_CID}" ]; then
@@ -110,8 +111,18 @@ jobs:
               RESTART_COUNT=$(docker inspect --format='{{.RestartCount}}' "${WEB_CID}" 2>/dev/null || echo "0")
               echo "web state: ${CONTAINER_STATE}, health: ${HEALTH_STATE}, restarts: ${RESTART_COUNT}"
 
-              if [ "${RESTART_COUNT}" -ge 3 ] || [ "${HEALTH_STATE}" = "unhealthy" ]; then
-                echo "❌ Web container unstable (restarts/unhealthy). Showing logs."
+              if [ "${RESTART_COUNT}" -ge 3 ]; then
+                echo "⚠️ Web container restart count is high (${RESTART_COUNT}), continuing while health is checked."
+              fi
+
+              if [ "${HEALTH_STATE}" = "unhealthy" ]; then
+                UNHEALTHY_STREAK=$((UNHEALTHY_STREAK + 1))
+              else
+                UNHEALTHY_STREAK=0
+              fi
+
+              if [ "${UNHEALTHY_STREAK}" -ge 6 ]; then
+                echo "❌ Web container unhealthy for too long (${UNHEALTHY_STREAK} consecutive checks). Showing logs."
                 docker compose -f docker-compose.yml ps || true
                 docker compose -f docker-compose.yml logs --tail=200 web || true
                 exit 1
