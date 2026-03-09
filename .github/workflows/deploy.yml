@@ -49,21 +49,22 @@ jobs:
               "${{ secrets.BOOTSTRAP_ADMIN_PASSWORD }}" \
               "${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}"
 
-            echo "🗄️ Running explicit migration from GitHub Action"
-            if ! docker compose -f docker-compose.yml run --rm --no-deps --entrypoint "" web python manage.py migrate --noinput; then
-              echo "⚠️ migrate failed, checking whether migrations are already fully applied"
-              docker compose -f docker-compose.yml run --rm --no-deps --entrypoint "" web python manage.py migrate --check --noinput
-            fi
-            echo "🔍 Verifying migration files are in sync with models"
-            docker compose -f docker-compose.yml run --rm --no-deps --entrypoint "" web python manage.py makemigrations --check --dry-run
-            echo "✅ Verifying no pending migrations remain"
+            echo "✅ install.sh already applied and verified migrations"
+            echo "✅ Re-checking no pending migrations remain"
             docker compose -f docker-compose.yml run --rm --no-deps --entrypoint "" web python manage.py migrate --check --noinput
+
+            WEB_CID=$(docker compose -f docker-compose.yml ps -q web)
+            if [ -z "${WEB_CID}" ]; then
+              echo "❌ Could not resolve web container ID from docker compose"
+              docker compose -f docker-compose.yml ps || true
+              exit 1
+            fi
 
             echo "⏳ Waiting for web container health"
             for i in $(seq 1 60); do
-              HEALTH_STATE=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' grenobleski-web 2>/dev/null || echo "missing")
-              CONTAINER_STATE=$(docker inspect --format='{{.State.Status}}' grenobleski-web 2>/dev/null || echo "missing")
-              RESTART_COUNT=$(docker inspect --format='{{.RestartCount}}' grenobleski-web 2>/dev/null || echo "0")
+              HEALTH_STATE=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "${WEB_CID}" 2>/dev/null || echo "missing")
+              CONTAINER_STATE=$(docker inspect --format='{{.State.Status}}' "${WEB_CID}" 2>/dev/null || echo "missing")
+              RESTART_COUNT=$(docker inspect --format='{{.RestartCount}}' "${WEB_CID}" 2>/dev/null || echo "0")
               echo "web state: ${CONTAINER_STATE}, health: ${HEALTH_STATE}, restarts: ${RESTART_COUNT}"
 
               if [ "${RESTART_COUNT}" -ge 3 ] || [ "${HEALTH_STATE}" = "unhealthy" ]; then
@@ -83,7 +84,7 @@ jobs:
             echo "⏳ Verifying app response from inside web container (:8000)"
             INTERNAL_OK=false
             for i in $(seq 1 40); do
-              if docker exec grenobleski-web sh -lc "curl -fsS -H 'Host: grenobleski.fr' http://127.0.0.1:8000/ >/dev/null"; then
+              if docker exec "${WEB_CID}" sh -lc "curl -fsS -H 'Host: grenobleski.fr' http://127.0.0.1:8000/ >/dev/null"; then
                 INTERNAL_OK=true
                 echo "✅ App responds inside container"
                 break
