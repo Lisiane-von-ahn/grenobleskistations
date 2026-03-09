@@ -17,6 +17,7 @@ from api.models import (
     MarketplaceUserRating,
     SkiPartnerPost,
     SkiPartnerReport,
+    SkiStory,
     UserProfile,
     InstructorProfile,
     InstructorService,
@@ -30,6 +31,7 @@ from django.db.models import Value
 from django.db.models import IntegerField
 from django.urls import reverse
 from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from .forms import (
     SkiMaterialListingForm,
@@ -796,33 +798,7 @@ def ski_partners(request):
         posts = posts.filter(city__icontains=city)
 
     if request.method == 'POST' and request.user.is_authenticated:
-        form_type = request.POST.get('form_type', 'create').strip()
-        if form_type == 'create':
-            title = request.POST.get('title', '').strip()
-            message_body = request.POST.get('message', '').strip()
-            skill_level = request.POST.get('skill_level', SkiPartnerPost.LEVEL_INTERMEDIATE).strip()
-            preferred_date = request.POST.get('preferred_date', '').strip() or None
-            city_post = request.POST.get('city', '').strip()
-            station_post = request.POST.get('ski_station', '').strip() or None
-
-            valid_levels = {choice[0] for choice in SkiPartnerPost.LEVEL_CHOICES}
-            if not title or not message_body:
-                messages.error(request, 'Titre et description requis.')
-            elif skill_level not in valid_levels:
-                messages.error(request, 'Niveau invalide.')
-            else:
-                SkiPartnerPost.objects.create(
-                    user=request.user,
-                    ski_station_id=int(station_post) if station_post and station_post.isdigit() else None,
-                    title=title[:120],
-                    message=message_body,
-                    city=city_post[:80],
-                    skill_level=skill_level,
-                    preferred_date=preferred_date,
-                )
-                messages.success(request, 'Annonce partenaire publiee.')
-                return redirect('ski_partners')
-
+        form_type = request.POST.get('form_type', '').strip()
         if form_type == 'report':
             post_id = request.POST.get('post_id', '').strip()
             reason = request.POST.get('reason', '').strip()
@@ -855,6 +831,83 @@ def ski_partners(request):
 
 
 @login_required
+def ski_partner_publish(request):
+    if request.method == 'POST':
+        title = request.POST.get('title', '').strip()
+        message_body = request.POST.get('message', '').strip()
+        skill_level = request.POST.get('skill_level', SkiPartnerPost.LEVEL_INTERMEDIATE).strip()
+        preferred_date = request.POST.get('preferred_date', '').strip() or None
+        city_post = request.POST.get('city', '').strip()
+        station_post = request.POST.get('ski_station', '').strip() or None
+
+        valid_levels = {choice[0] for choice in SkiPartnerPost.LEVEL_CHOICES}
+        if not title or not message_body:
+            messages.error(request, 'Titre et description requis.')
+        elif skill_level not in valid_levels:
+            messages.error(request, 'Niveau invalide.')
+        else:
+            SkiPartnerPost.objects.create(
+                user=request.user,
+                ski_station_id=int(station_post) if station_post and station_post.isdigit() else None,
+                title=title[:120],
+                message=message_body,
+                city=city_post[:80],
+                skill_level=skill_level,
+                preferred_date=preferred_date,
+            )
+            messages.success(request, 'Sortie partenaire publiee.')
+            return redirect('ski_partners')
+
+    return render(
+        request,
+        'ski_partner_publish.html',
+        {
+            'stations': SkiStation.objects.order_by('name'),
+            'level_choices': SkiPartnerPost.LEVEL_CHOICES,
+        },
+    )
+
+
+def ski_stories(request):
+    now = timezone.now()
+    active_stories = SkiStory.objects.filter(expires_at__gt=now).select_related('user', 'ski_station')
+
+    if request.method == 'POST':
+        if not request.user.is_authenticated:
+            return redirect('login')
+
+        caption = request.POST.get('caption', '').strip()
+        station_post = request.POST.get('ski_station', '').strip() or None
+        image_file = request.FILES.get('image_file')
+
+        if not image_file:
+            messages.error(request, 'Photo requise pour publier une story.')
+        elif not (getattr(image_file, 'content_type', '') or '').lower().startswith('image/'):
+            messages.error(request, 'Le fichier doit etre une image.')
+        elif getattr(image_file, 'size', 0) > 5 * 1024 * 1024:
+            messages.error(request, 'Image trop volumineuse (max 5 Mo).')
+        else:
+            SkiStory.objects.create(
+                user=request.user,
+                ski_station_id=int(station_post) if station_post and station_post.isdigit() else None,
+                caption=caption[:180],
+                image=image_file.read(),
+                expires_at=now + timedelta(hours=24),
+            )
+            messages.success(request, 'Story publiee pour 24h.')
+            return redirect('ski_stories')
+
+    return render(
+        request,
+        'ski_stories.html',
+        {
+            'stories': active_stories[:120],
+            'stations': SkiStation.objects.order_by('name'),
+        },
+    )
+
+
+@login_required
 def ajouter_materiel(request):
     if request.method == 'POST':
         form = SkiMaterialListingForm(request.POST, request.FILES)
@@ -880,21 +933,87 @@ def ajouter_materiel(request):
 
 @login_required
 def messages_view(request):
+    selected_user_id = request.GET.get('user', '').strip()
+    listing_id = request.GET.get('listing', '').strip()
+    prefill_subject = request.GET.get('subject', '').strip()
+    prefill_body = request.GET.get('body', '').strip()
+
+    selected_recipient = None
+    if selected_user_id:
+        selected_recipient = User.objects.filter(id=selected_user_id).exclude(id=request.user.id).first()
+
+    listing = None
+    if listing_id:
+        listing = SkiMaterialListing.objects.filter(id=listing_id).select_related('user').first()
+
+    if request.method == 'POST':
+        recipient_id = request.POST.get('recipient_id', '').strip()
+        subject = request.POST.get('subject', '').strip()
+        body = request.POST.get('body', '').strip()
+
+        recipient = User.objects.filter(id=recipient_id).exclude(id=request.user.id).first()
+        if not recipient:
+            messages.error(request, 'Destinataire invalide.')
+        elif not subject:
+            messages.error(request, 'Veuillez saisir un sujet.')
+        elif not body:
+            messages.error(request, 'Veuillez saisir un message.')
+        else:
+            Message.objects.create(
+                sender=request.user,
+                recipient=recipient,
+                subject=subject[:255],
+                body=body,
+            )
+            messages.success(request, 'Message envoye.')
+            return redirect(f"{reverse('messages')}?user={recipient.id}")
+
+        selected_recipient = recipient or selected_recipient
+        prefill_subject = subject
+        prefill_body = body
+
+    if listing and not prefill_subject:
+        prefill_subject = f"Question annonce: {listing.title}"
+    if listing and not prefill_body:
+        prefill_body = 'Bonjour, votre article est-il toujours disponible ?'
+
     inbox_messages, unread_count = getMessagesAndCount(request)
     sent_messages = Message.objects.filter(sender=request.user).exclude(recipient=request.user).order_by('-created_at')
 
+    contact_ids = set(
+        Message.objects.filter(Q(sender=request.user) | Q(recipient=request.user))
+        .values_list('sender_id', 'recipient_id')
+        .distinct()
+        .iterator()
+    )
+    flattened_ids = set()
+    for sender_id, recipient_id in contact_ids:
+        if sender_id != request.user.id:
+            flattened_ids.add(sender_id)
+        if recipient_id != request.user.id:
+            flattened_ids.add(recipient_id)
+    if selected_recipient:
+        flattened_ids.add(selected_recipient.id)
+
+    contacts = User.objects.filter(id__in=flattened_ids).order_by('username')
+
     return render(request, 'messages/messages.html', {
-        'messages': inbox_messages,
+        'inbox_messages': inbox_messages,
         'sent_messages': sent_messages,
         'unread_count': unread_count,
+        'contacts': contacts,
+        'selected_recipient': selected_recipient,
+        'prefill_subject': prefill_subject,
+        'prefill_body': prefill_body,
+        'context_listing': listing,
     })
 
 def getMessagesAndCount(request):
-    messages = Message.objects.filter(recipient=request.user).order_by('-created_at')
+    inbox_messages = Message.objects.filter(recipient=request.user).order_by('-created_at')
 
-    unread_count = messages.filter(is_read=False).count()
-    messages.filter(is_read=False).update(is_read=True)
-    return messages,unread_count
+    unread_count = inbox_messages.filter(is_read=False).count()
+    inbox_messages.filter(is_read=False).update(is_read=True)
+    return inbox_messages, unread_count
 
 @login_required
 def profile_view(request):

@@ -31,6 +31,8 @@ urlpatterns = [
    path('services/<int:service_id>/', views.service_detail, name='service_detail'),
     path('bus/', views.bus_lines, name='bus'),
    path('ski-partners/', views.ski_partners, name='ski_partners'),
+   path('ski-partners/new/', views.ski_partner_publish, name='ski_partner_publish'),
+   path('ski-stories/', views.ski_stories, name='ski_stories'),
     path('terms/', views.terms_and_conditions, name='terms'),
    path('privacy/', views.privacy_policy, name='privacy'),
    path('login/', RedirectView.as_view(pattern_name='account_login', permanent=False), name='login'),

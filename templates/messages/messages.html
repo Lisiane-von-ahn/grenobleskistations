@@ -7,13 +7,45 @@
         <p class="market-subtle mb-0">Échanges vendeur-acheteur ou location/prêt. Unread: {{ unread_count }}</p>
     </section>
 
+    <div class="market-search-panel mb-4">
+        <h4 class="mb-3">Nouveau message / New message</h4>
+        {% if context_listing %}
+        <div class="alert alert-light border py-2 mb-3">
+            Contexte: annonce "{{ context_listing.title }}".
+        </div>
+        {% endif %}
+        <form method="post" class="row g-3">
+            {% csrf_token %}
+            <div class="col-md-4">
+                <label class="form-label">Destinataire / Recipient</label>
+                <select name="recipient_id" class="form-control" required>
+                    <option value="">Choisir...</option>
+                    {% for contact in contacts %}
+                    <option value="{{ contact.id }}" {% if selected_recipient and selected_recipient.id == contact.id %}selected{% endif %}>{{ contact.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-8">
+                <label class="form-label">Sujet / Subject</label>
+                <input name="subject" class="form-control" maxlength="255" value="{{ prefill_subject }}" required>
+            </div>
+            <div class="col-12">
+                <label class="form-label">Message</label>
+                <textarea name="body" class="form-control" rows="4" required>{{ prefill_body }}</textarea>
+            </div>
+            <div class="col-12 d-flex justify-content-end">
+                <button type="submit" class="btn btn-primary">Envoyer</button>
+            </div>
+        </form>
+    </div>
+
     <div class="row g-4">
         <div class="col-lg-6">
             <div class="market-search-panel">
                 <h4 class="mb-3">Boîte de réception / Received</h4>
-                {% if messages %}
+                {% if inbox_messages %}
                     <div class="list-group">
-                        {% for message in messages %}
+                        {% for message in inbox_messages %}
                         <div class="list-group-item {% if not message.is_read %}list-group-item-warning{% endif %}">
                             <div class="d-flex justify-content-between">
                                 <strong>{{ message.subject }}</strong>

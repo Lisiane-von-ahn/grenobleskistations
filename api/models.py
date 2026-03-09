@@ -3,8 +3,14 @@ from django.contrib.auth.models import User
 from django.dispatch import receiver
 from django.db.models.signals import post_save
 from django.core.files.base import ContentFile
+from django.utils import timezone
 from io import BytesIO
+from datetime import timedelta
 from PIL import Image
+
+
+def story_default_expiration():
+    return timezone.now() + timedelta(hours=24)
 
 class SkiStation(models.Model):
     name = models.CharField(max_length=100)
@@ -281,6 +287,21 @@ class SkiPartnerReport(models.Model):
 
     def __str__(self):
         return f"Report {self.reporter.username} -> post#{self.post_id}"
+
+
+class SkiStory(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ski_stories')
+    ski_station = models.ForeignKey(SkiStation, on_delete=models.SET_NULL, null=True, blank=True, related_name='ski_stories')
+    caption = models.CharField(max_length=180, blank=True)
+    image = models.BinaryField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(default=story_default_expiration)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Story {self.user.username} #{self.id}"
 
 
 class MarketplaceDeal(models.Model):

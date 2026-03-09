@@ -65,13 +65,10 @@
                 {% if user.is_authenticated and user != listing.user %}
                 <hr>
                 <h5>{% trans "Contacter le vendeur" %}</h5>
-                <form method="POST" class="chat-box">
-                    {% csrf_token %}
-                    <input type="hidden" name="form_type" value="contact">
-                    <label class="form-label">{% trans "Message" %}</label>
-                    <textarea name="body" rows="5" class="form-control mb-3" required placeholder="Bonjour, votre article est-il toujours disponible ?"></textarea>
-                    <button type="submit" class="btn btn-primary w-100">{% trans "Envoyer" %}</button>
-                </form>
+                <div class="chat-box">
+                    <p class="market-subtle mb-3">{% trans "Ouvrez une conversation directe avec le vendeur." %}</p>
+                    <a href="{% url 'messages' %}?user={{ listing.user.id }}&listing={{ listing.id }}" class="btn btn-primary w-100">{% trans "Poser une question" %}</a>
+                </div>
 
                 <hr>
                 <h5>Transaction</h5>

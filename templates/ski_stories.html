@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load base64_filters %}
+
+{% block title %}Stories ski{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <section class="market-hero mb-4">
+        <h2 class="market-section-title mb-1">Stories ski (24h)</h2>
+        <p class="market-subtle mb-0">Partagez rapidement les conditions, l'ambiance et vos spots du jour.</p>
+    </section>
+
+    {% if user.is_authenticated %}
+    <section class="market-search-panel mb-4">
+        <h4 class="mb-3">Publier une story</h4>
+        <form method="post" enctype="multipart/form-data" class="row g-3">
+            {% csrf_token %}
+            <div class="col-lg-4">
+                <label class="form-label">Photo</label>
+                <input type="file" name="image_file" accept="image/*" class="form-control" required>
+            </div>
+            <div class="col-lg-4">
+                <label class="form-label">Station</label>
+                <select name="ski_station" class="form-control">
+                    <option value="">Pas de station</option>
+                    {% for station in stations %}
+                    <option value="{{ station.id }}">{{ station.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-lg-4">
+                <label class="form-label">Legende</label>
+                <input type="text" name="caption" maxlength="180" class="form-control" placeholder="Poudreuse top ce matin !">
+            </div>
+            <div class="col-12">
+                <small class="market-subtle">Formats acceptes: JPG, PNG, WEBP - max 5 Mo. Expiration automatique en 24h.</small>
+            </div>
+            <div class="col-12 d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Publier ma story</button>
+                <a href="{% url 'ski_partners' %}" class="btn btn-outline-secondary">Retour partenaires</a>
+            </div>
+        </form>
+    </section>
+    {% else %}
+    <section class="market-search-panel mb-4">
+        <a href="{% url 'login' %}" class="btn btn-primary">Se connecter pour publier une story</a>
+    </section>
+    {% endif %}
+
+    <section>
+        <div class="row g-3">
+            {% for story in stories %}
+            <div class="col-lg-3 col-md-4 col-sm-6">
+                <article class="market-card p-2 h-100">
+                    <img src="data:image/jpeg;base64,{{ story.image|b64encode }}" alt="Story" class="market-image" style="height: 230px; object-fit: cover;">
+                    <div class="p-2">
+                        <div class="small"><strong>{{ story.user.username }}</strong></div>
+                        <div class="market-subtle small">{{ story.created_at|date:'d/m H:i' }}{% if story.ski_station %} - {{ story.ski_station.name }}{% endif %}</div>
+                        {% if story.caption %}<p class="mb-0 small mt-1">{{ story.caption }}</p>{% endif %}
+                    </div>
+                </article>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <p class="market-subtle">Aucune story active pour le moment.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

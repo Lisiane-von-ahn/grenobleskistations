@@ -16,12 +16,22 @@ from django.contrib.auth import get_user_model
 from allauth.account.forms import LoginForm, SignupForm
 
 
+MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024
+
+
 class MultipleFileInput(forms.ClearableFileInput):
     allow_multiple_selected = True
 
 
 class MultipleFileField(forms.FileField):
     widget = MultipleFileInput
+
+    def clean(self, data, initial=None):
+        single_clean = super().clean
+        if isinstance(data, (list, tuple)):
+            cleaned = [single_clean(item, initial) for item in data if item]
+            return cleaned
+        return single_clean(data, initial)
 
 
 def get_marketplace_choices(lang_code=None):
@@ -188,6 +198,42 @@ class SkiMaterialListingForm(forms.ModelForm):
         self.fields['size'].label = _('Taille') if not is_en else _('Size')
         self.fields['image_file'].label = _('Photo principale') if not is_en else _('Main photo')
         self.fields['images'].label = _('Photos supplementaires') if not is_en else _('Extra photos')
+
+    def _validate_uploaded_image(self, uploaded, label):
+        if not uploaded:
+            return uploaded
+
+        content_type = (getattr(uploaded, 'content_type', '') or '').lower()
+        if content_type and not content_type.startswith('image/'):
+            raise forms.ValidationError(_('%(label)s: format invalide. Veuillez utiliser une image.'), params={'label': label})
+
+        if getattr(uploaded, 'size', 0) > MAX_IMAGE_SIZE_BYTES:
+            raise forms.ValidationError(
+                _('%(label)s: fichier trop volumineux (max 5 Mo).'),
+                params={'label': label},
+            )
+
+        # Verify image payload to avoid non-image files renamed with image extensions.
+        try:
+            uploaded.seek(0)
+            img = Image.open(uploaded)
+            img.verify()
+            uploaded.seek(0)
+        except Exception:
+            raise forms.ValidationError(_('%(label)s: image corrompue ou non prise en charge.'), params={'label': label})
+
+        return uploaded
+
+    def clean_image_file(self):
+        image_file = self.cleaned_data.get('image_file')
+        return self._validate_uploaded_image(image_file, _('Photo principale'))
+
+    def clean_images(self):
+        images = self.cleaned_data.get('images') or []
+        validated = []
+        for index, uploaded in enumerate(images, start=1):
+            validated.append(self._validate_uploaded_image(uploaded, _('Photo supplementaire %(index)s') % {'index': index}))
+        return validated
     
     def save(self, commit=True):
         instance = super(SkiMaterialListingForm, self).save(commit=False)

@@ -254,7 +254,7 @@
 
                     <div class="mt-auto d-flex flex-wrap gap-2 instructor-actions">
                         {% if user.is_authenticated %}
-                            <a href="{% url 'messages' %}?user={{ instructor.user.id }}" class="btn btn-primary btn-sm">{% trans "Contacter" %}</a>
+                            <a href="{% url 'messages' %}?user={{ instructor.user.id }}&subject={{ 'Question cours de ski'|urlencode }}" class="btn btn-primary btn-sm">{% trans "Contacter" %}</a>
                             {% if user != instructor.user %}
                                 <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#review-form-{{ instructor.id }}" aria-expanded="false" aria-controls="review-form-{{ instructor.id }}">
                                     {% trans "Évaluer" %}

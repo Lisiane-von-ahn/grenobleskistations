@@ -253,6 +253,83 @@ run_compose() {
   fi
 
   echo "✅ Seed completed"
+
+  echo "⏳ Waiting for web container health"
+  local web_container_id=""
+  local health_ok=false
+  for i in $(seq 1 60); do
+    web_container_id="$(docker compose "${compose_files[@]}" ps -q web 2>/dev/null || true)"
+    if [[ -z "${web_container_id}" ]]; then
+      echo "web container: missing"
+      sleep 5
+      continue
+    fi
+
+    local health_state
+    health_state="$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "${web_container_id}" 2>/dev/null || echo "missing")"
+    local container_state
+    container_state="$(docker inspect --format='{{.State.Status}}' "${web_container_id}" 2>/dev/null || echo "missing")"
+    local restart_count
+    restart_count="$(docker inspect --format='{{.RestartCount}}' "${web_container_id}" 2>/dev/null || echo "0")"
+
+    echo "web state: ${container_state}, health: ${health_state}, restarts: ${restart_count}"
+
+    if [[ "${restart_count}" -ge 3 ]] || [[ "${health_state}" == "unhealthy" ]]; then
+      echo "❌ Web container unstable (restarts/unhealthy)."
+      docker compose "${compose_files[@]}" ps || true
+      docker compose "${compose_files[@]}" logs --tail=200 web || true
+      exit 1
+    fi
+
+    if [[ "${container_state}" == "running" ]] && [[ "${health_state}" == "healthy" || "${health_state}" == "none" ]]; then
+      health_ok=true
+      break
+    fi
+
+    sleep 5
+  done
+
+  if [[ "${health_ok}" != "true" || -z "${web_container_id}" ]]; then
+    echo "❌ Web container did not become healthy in time"
+    docker compose "${compose_files[@]}" ps || true
+    docker compose "${compose_files[@]}" logs --tail=200 web || true
+    exit 1
+  fi
+
+  echo "⏳ Verifying app response from inside web container (:8000)"
+  local internal_ok=false
+  for i in $(seq 1 40); do
+    if docker exec "${web_container_id}" sh -lc "curl -fsS -H 'Host: ${APP_HOSTNAME}' http://127.0.0.1:8000/ >/dev/null"; then
+      internal_ok=true
+      echo "✅ App responds inside container"
+      break
+    fi
+    sleep 3
+  done
+
+  if [[ "${internal_ok}" != "true" ]]; then
+    echo "❌ App is not responding on internal HTTP endpoint"
+    docker compose "${compose_files[@]}" ps || true
+    docker compose "${compose_files[@]}" logs --tail=200 web || true
+    exit 1
+  fi
+
+  echo "⏳ Checking app reachability on host port 8081 (best effort)"
+  local host_ok=false
+  for i in $(seq 1 30); do
+    if curl -fsS "http://127.0.0.1:8081" >/dev/null || curl -fsS -H "Host: ${APP_HOSTNAME}" "http://127.0.0.1:8081" >/dev/null; then
+      host_ok=true
+      echo "✅ App is reachable on host port 8081"
+      break
+    fi
+    sleep 2
+  done
+
+  if [[ "${host_ok}" != "true" ]]; then
+    echo "⚠️ Host port 8081 not reachable yet, but container is healthy and serving internally."
+    echo "ℹ️ Continuing deployment; verify reverse proxy routing if needed."
+  fi
+
   echo
   if [[ "${USE_INTERNAL_TRAEFIK}" == "true" ]]; then
     echo "🌍 App: https://${APP_HOSTNAME}/ and https://${APP_HOSTNAME_WWW}/"
