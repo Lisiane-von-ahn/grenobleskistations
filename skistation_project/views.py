@@ -967,6 +967,18 @@ def ski_stories(request):
 
 
 @login_required
+def delete_story(request, story_id):
+    if request.method != 'POST':
+        messages.error(request, 'Methode non autorisee pour la suppression.')
+        return redirect('ski_stories')
+
+    story = get_object_or_404(SkiStory, id=story_id, user=request.user)
+    story.delete()
+    messages.success(request, 'Story supprimee.')
+    return redirect('ski_stories')
+
+
+@login_required
 def ajouter_materiel(request):
     if request.method == 'POST':
         form = SkiMaterialListingForm(request.POST, request.FILES)
@@ -1282,6 +1294,10 @@ def edit_listing(request, id):
 
 @login_required
 def delete_listing(request, id):
+    if request.method != 'POST':
+        messages.error(request, 'Methode non autorisee pour la suppression.')
+        return redirect('listing_detail', id=id)
+
     listing = get_object_or_404(SkiMaterialListing, id=id, user=request.user)
     listing.delete()
     messages.success(request, 'Annonce supprimee.')

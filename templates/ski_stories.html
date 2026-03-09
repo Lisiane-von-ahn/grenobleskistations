@@ -58,6 +58,12 @@
                         <div class="small"><strong>{{ story.user.username }}</strong></div>
                         <div class="market-subtle small">{{ story.created_at|date:'d/m H:i' }}{% if story.ski_station %} - {{ story.ski_station.name }}{% endif %}</div>
                         {% if story.caption %}<p class="mb-0 small mt-1">{{ story.caption }}</p>{% endif %}
+                        {% if user.is_authenticated and user == story.user %}
+                        <form method="post" action="{% url 'delete_story' story_id=story.id %}" class="mt-2" onsubmit="return confirm('Supprimer cette story ?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger w-100">Supprimer</button>
+                        </form>
+                        {% endif %}
                     </div>
                 </article>
             </div>

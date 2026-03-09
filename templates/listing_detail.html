@@ -111,6 +111,13 @@
                 {% endif %}
                 {% elif user == listing.user %}
                 <div class="alert alert-info">{% trans "C'est votre annonce." %}</div>
+                <div class="d-grid gap-2 mb-3">
+                    <a href="{% url 'edit_listing' id=listing.id %}" class="btn btn-outline-primary">{% trans "Modifier l'annonce" %}</a>
+                    <form method="post" action="{% url 'delete_listing' id=listing.id %}" onsubmit="return confirm('{% trans "Supprimer cette annonce ?" %}');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger w-100">{% trans "Supprimer l'annonce" %}</button>
+                    </form>
+                </div>
                 {% if seller_pending_deals %}
                 <hr>
                 <h5>Transactions a confirmer</h5>
