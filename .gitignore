@@ -3,7 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 staticfiles/
-
+install_fifa22_ubuntu.sh
 # C extensions
 *.so
 

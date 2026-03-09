@@ -38,7 +38,7 @@
             </div>
             <div class="col-lg-4">
                 <label class="form-label">Ville</label>
-                <input type="text" name="city" value="{{ selected_city }}" class="form-control" placeholder="Grenoble...">
+                <input type="text" name="city" value="{{ selected_city }}" class="form-control" placeholder="Grenoble..." list="city-autocomplete-list" data-city-autocomplete="true" autocomplete="address-level2">
             </div>
             <div class="col-12 d-flex gap-2">
                 <button class="btn btn-primary" type="submit">Filtrer</button>

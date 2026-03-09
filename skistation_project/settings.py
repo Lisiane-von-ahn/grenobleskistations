@@ -128,6 +128,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'skistation_project.context_processors.global_variables',
                 'skistation_project.context_processors.unread_message_count',
+                'skistation_project.context_processors.city_autocomplete_values',
             ],
         },
     },

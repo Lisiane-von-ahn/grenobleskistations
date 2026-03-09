@@ -174,7 +174,13 @@ class SkiMaterialListingForm(forms.ModelForm):
         self.fields['description'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Describe the item condition, age, and usage' if is_en else 'Decrivez l\'etat, l\'anciennete et l\'usage'})
         self.fields['description'].widget.attrs.update({'rows': 4})
         self.fields['ski_station'].widget.attrs.update({'class': 'form-select'})
-        self.fields['city'].widget.attrs.update({'class': 'form-control', 'placeholder': 'City' if is_en else 'Ville'})
+        self.fields['city'].widget.attrs.update({
+            'class': 'form-control',
+            'placeholder': 'City' if is_en else 'Ville',
+            'list': 'city-autocomplete-list',
+            'data-city-autocomplete': 'true',
+            'autocomplete': 'address-level2',
+        })
         self.fields['price'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Price in EUR' if is_en else 'Prix en EUR'})
         self.fields['material_type'].widget.attrs.update({'class': 'form-select'})
         self.fields['transaction_type'].widget.attrs.update({'class': 'form-select'})
@@ -301,6 +307,12 @@ class MaterielForm(forms.ModelForm):
         widgets = {
             'description': forms.Textarea(attrs={'rows': 4}),
             'price': forms.NumberInput(attrs={'step': '0.01'}),
+            'city': forms.TextInput(attrs={
+                'class': 'form-control',
+                'list': 'city-autocomplete-list',
+                'data-city-autocomplete': 'true',
+                'autocomplete': 'address-level2',
+            }),
         }
 
 

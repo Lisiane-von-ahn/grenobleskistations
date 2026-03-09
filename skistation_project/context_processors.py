@@ -1,14 +1,31 @@
 from django.conf import settings
-from api.models import Message
+from api.models import Message, SkiMaterialListing, SkiPartnerPost
 
 def global_variables(request):
-    
-    print ("tets")
-    print (settings.WEATHER_API_KEY)
-    
     return {
         'WEATHER_API_KEY': settings.WEATHER_API_KEY,
     }
+
+
+def city_autocomplete_values(request):
+    values = []
+    seen = set()
+
+    for city_name in SkiMaterialListing.objects.exclude(city='').values_list('city', flat=True).distinct()[:300]:
+        cleaned = (city_name or '').strip()
+        key = cleaned.lower()
+        if cleaned and key not in seen:
+            seen.add(key)
+            values.append(cleaned)
+
+    for city_name in SkiPartnerPost.objects.exclude(city='').values_list('city', flat=True).distinct()[:300]:
+        cleaned = (city_name or '').strip()
+        key = cleaned.lower()
+        if cleaned and key not in seen:
+            seen.add(key)
+            values.append(cleaned)
+
+    return {'city_autocomplete_values': values}
 
 def unread_message_count(request):
     if request.user.is_authenticated:  # Ensure the user is logged in

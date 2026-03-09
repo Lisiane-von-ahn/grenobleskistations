@@ -88,7 +88,7 @@
             <div class="row g-3 mt-1">
                 <div class="col-lg-3">
                     <label class="form-label fw-semibold">{% trans "Ville" %}</label>
-                    <input type="text" name="city" class="form-control" value="{{ city }}" placeholder="{% trans 'Grenoble...' %}">
+                    <input type="text" name="city" class="form-control" value="{{ city }}" placeholder="{% trans 'Grenoble...' %}" list="city-autocomplete-list" data-city-autocomplete="true" autocomplete="address-level2">
                 </div>
                 <div class="col-lg-3 slider-wrap">
                     <div class="price-slider-card">

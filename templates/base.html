@@ -764,5 +764,66 @@
     </nav>
     {% endwith %}
 
+    <datalist id="city-autocomplete-list"></datalist>
+    {{ city_autocomplete_values|json_script:"city-autocomplete-json" }}
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const datalist = document.getElementById('city-autocomplete-list');
+            if (!datalist) return;
+
+            const frenchCities = [
+                'Paris', 'Marseille', 'Lyon', 'Toulouse', 'Nice', 'Nantes', 'Montpellier', 'Strasbourg',
+                'Bordeaux', 'Lille', 'Rennes', 'Reims', 'Le Havre', 'Saint-Etienne', 'Toulon', 'Grenoble',
+                'Dijon', 'Angers', 'Nimes', 'Villeurbanne', 'Le Mans', 'Aix-en-Provence', 'Brest', 'Tours',
+                'Amiens', 'Limoges', 'Annecy', 'Perpignan', 'Metz', 'Besancon', 'Orleans', 'Rouen',
+                'Mulhouse', 'Caen', 'Nancy', 'Saint-Denis', 'Argenteuil', 'Montreuil', 'Roubaix', 'Avignon',
+                'Poitiers', 'Nanterre', 'Versailles', 'Courbevoie', 'Pau', 'La Rochelle', 'Calais', 'Bourges',
+                'Valence', 'Colmar', 'Antibes', 'Cannes', 'Chambery', 'Chamonix-Mont-Blanc', 'Albertville',
+                'Gap', 'Briancon', 'Uriage-les-Bains', 'Meylan', 'Seyssins', 'Saint-Martin-d-Heres',
+                'Villard-de-Lans', 'Autrans', 'Lans-en-Vercors', 'Huez', 'Alpe d\'Huez', 'Les Deux Alpes',
+                'Chamrousse', 'Les Menuires', 'Val Thorens', 'Courchevel', 'Meribel', 'La Plagne',
+                'Tignes', 'Val d\'Isere', 'Morzine', 'Les Gets', 'Samoens', 'Flaine', 'Cluses',
+                'Bourg-Saint-Maurice', 'Auron', 'Isola', 'Vars', 'Risoul', 'Serre-Chevalier'
+            ];
+
+            const seen = new Set();
+            function appendOption(cityName) {
+                const normalized = (cityName || '').trim();
+                if (!normalized) return;
+                const key = normalized.toLowerCase();
+                if (seen.has(key)) return;
+                seen.add(key);
+                const option = document.createElement('option');
+                option.value = normalized;
+                datalist.appendChild(option);
+            }
+
+            frenchCities.forEach(appendOption);
+
+            const dynamicCityNode = document.getElementById('city-autocomplete-json');
+            if (dynamicCityNode) {
+                try {
+                    const dynamicCities = JSON.parse(dynamicCityNode.textContent || '[]');
+                    if (Array.isArray(dynamicCities)) {
+                        dynamicCities.forEach(appendOption);
+                    }
+                } catch (error) {
+                    console.warn('City autocomplete JSON parsing failed', error);
+                }
+            }
+
+            const cityInputs = document.querySelectorAll('input[name="city"], input[data-city-autocomplete="true"]');
+            cityInputs.forEach(function (input) {
+                if (!input.getAttribute('list')) {
+                    input.setAttribute('list', 'city-autocomplete-list');
+                }
+                if (!input.getAttribute('autocomplete')) {
+                    input.setAttribute('autocomplete', 'address-level2');
+                }
+            });
+        });
+    </script>
+
 </body>
 </html>
