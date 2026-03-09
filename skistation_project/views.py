@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, JsonResponse
 from django.views.decorators.http import require_GET
 from django.conf import settings
 from api.models import (
@@ -19,6 +19,7 @@ from api.models import (
     SkiPartnerReport,
     SkiStory,
     UserProfile,
+    UserFriend,
     InstructorProfile,
     InstructorService,
 )
@@ -50,7 +51,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 import base64
 import json
-from datetime import timedelta
+from datetime import timedelta, date
 from urllib.parse import quote_plus
 import re
 from django.utils.translation import check_for_language
@@ -59,6 +60,27 @@ from django.utils.translation import gettext as _
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import timezone
 from allauth.socialaccount.models import SocialAccount
+
+
+PARTNER_POST_ACTIVE_LIMIT = 5
+PARTNER_POST_COOLDOWN_MINUTES = 5
+
+
+def _mask_sensitive_contact_data(text):
+    if not text:
+        return text
+    # Hide direct contact details in public posts to keep messaging inside platform chat.
+    value = re.sub(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}', '[email masque]', text)
+    value = re.sub(r'(?:\+?\d[\d\s().-]{7,}\d)', '[telephone masque]', value)
+    return value
+
+
+def _partner_organizer_display(user):
+    first = (user.first_name or '').strip()
+    last = (user.last_name or '').strip()
+    if first or last:
+        return f"{first} {last}".strip()
+    return user.username
 
 
 def home(request):
@@ -824,11 +846,15 @@ def ski_partners(request):
                 messages.success(request, 'Signalement enregistre.')
             return redirect('ski_partners')
 
+    post_list = list(posts[:60])
+    for post in post_list:
+        post.organizer_display = _partner_organizer_display(post.user)
+
     return render(
         request,
         'ski_partners.html',
         {
-            'partner_posts': posts[:60],
+            'partner_posts': post_list,
             'stations': SkiStation.objects.order_by('name'),
             'selected_station': station_id,
             'selected_level': level,
@@ -849,15 +875,40 @@ def ski_partner_publish(request):
         station_post = request.POST.get('ski_station', '').strip() or None
 
         valid_levels = {choice[0] for choice in SkiPartnerPost.LEVEL_CHOICES}
+        title = _mask_sensitive_contact_data(title[:120])
+        message_body = _mask_sensitive_contact_data(message_body)
+
+        active_count = SkiPartnerPost.objects.filter(user=request.user, is_active=True).count()
+        latest_post = SkiPartnerPost.objects.filter(user=request.user).order_by('-created_at').first()
+        too_soon = bool(
+            latest_post and latest_post.created_at >= timezone.now() - timedelta(minutes=PARTNER_POST_COOLDOWN_MINUTES)
+        )
+
         if not title or not message_body:
             messages.error(request, 'Titre et description requis.')
         elif skill_level not in valid_levels:
             messages.error(request, 'Niveau invalide.')
+        elif active_count >= PARTNER_POST_ACTIVE_LIMIT:
+            messages.error(request, 'Limite atteinte: desactivez/supprimez une sortie active avant d\'en publier une nouvelle.')
+        elif too_soon:
+            messages.error(request, 'Publication trop rapide. Merci d\'attendre quelques minutes avant une nouvelle annonce.')
+        elif preferred_date:
+            try:
+                parsed_date = date.fromisoformat(preferred_date)
+            except ValueError:
+                parsed_date = None
+            if not parsed_date:
+                messages.error(request, 'Date invalide.')
+                return redirect('ski_partner_publish')
+            if parsed_date < timezone.localdate():
+                messages.error(request, 'La date de sortie doit etre aujourd\'hui ou plus tard.')
+                return redirect('ski_partner_publish')
+            preferred_date = parsed_date
         else:
             SkiPartnerPost.objects.create(
                 user=request.user,
                 ski_station_id=int(station_post) if station_post and station_post.isdigit() else None,
-                title=title[:120],
+                title=title,
                 message=message_body,
                 city=city_post[:80],
                 skill_level=skill_level,
@@ -962,22 +1013,21 @@ def messages_view(request):
         recipient = User.objects.filter(id=recipient_id).exclude(id=request.user.id).first()
         if not recipient:
             messages.error(request, 'Destinataire invalide.')
-        elif not subject:
-            messages.error(request, 'Veuillez saisir un sujet.')
         elif not body:
             messages.error(request, 'Veuillez saisir un message.')
         else:
+            effective_subject = subject or prefill_subject or 'Message chat'
             Message.objects.create(
                 sender=request.user,
                 recipient=recipient,
-                subject=subject[:255],
+                subject=effective_subject[:255],
                 body=body,
             )
             messages.success(request, 'Message envoye.')
             return redirect(f"{reverse('messages')}?user={recipient.id}")
 
         selected_recipient = recipient or selected_recipient
-        prefill_subject = subject
+        prefill_subject = subject or prefill_subject
         prefill_body = body
 
     if listing and not prefill_subject:
@@ -985,36 +1035,179 @@ def messages_view(request):
     if listing and not prefill_body:
         prefill_body = 'Bonjour, votre article est-il toujours disponible ?'
 
-    inbox_messages, unread_count = getMessagesAndCount(request)
-    sent_messages = Message.objects.filter(sender=request.user).exclude(recipient=request.user).order_by('-created_at')
-
-    contact_ids = set(
+    message_pairs = (
         Message.objects.filter(Q(sender=request.user) | Q(recipient=request.user))
-        .values_list('sender_id', 'recipient_id')
-        .distinct()
-        .iterator()
+        .select_related('sender', 'recipient')
+        .order_by('created_at')
     )
+
     flattened_ids = set()
-    for sender_id, recipient_id in contact_ids:
-        if sender_id != request.user.id:
-            flattened_ids.add(sender_id)
-        if recipient_id != request.user.id:
-            flattened_ids.add(recipient_id)
+    for row in message_pairs:
+        if row.sender_id != request.user.id:
+            flattened_ids.add(row.sender_id)
+        if row.recipient_id != request.user.id:
+            flattened_ids.add(row.recipient_id)
+
+    friend_ids = set(UserFriend.objects.filter(user=request.user).values_list('friend_id', flat=True))
+    flattened_ids |= friend_ids
+
     if selected_recipient:
         flattened_ids.add(selected_recipient.id)
 
-    contacts = User.objects.filter(id__in=flattened_ids).order_by('username')
+    contacts_qs = User.objects.filter(id__in=flattened_ids)
+    contacts_map = {user.id: user for user in contacts_qs}
+    contacts = []
+
+    for user_id, contact in contacts_map.items():
+        last_message = Message.objects.filter(
+            (Q(sender=request.user, recipient_id=user_id) | Q(sender_id=user_id, recipient=request.user))
+        ).order_by('-created_at').first()
+
+        unread_for_contact = Message.objects.filter(
+            sender_id=user_id,
+            recipient=request.user,
+            is_read=False,
+        ).count()
+
+        contacts.append({
+            'user': contact,
+            'last_message': last_message,
+            'unread_count': unread_for_contact,
+            'is_friend': user_id in friend_ids,
+        })
+
+    contacts.sort(
+        key=lambda row: row['last_message'].created_at if row['last_message'] else timezone.make_aware(timezone.datetime.min),
+        reverse=True,
+    )
+
+    if not selected_recipient and contacts:
+        selected_recipient = contacts[0]['user']
+
+    selected_is_friend = bool(selected_recipient and selected_recipient.id in friend_ids)
+
+    conversation_messages = []
+    if selected_recipient:
+        conversation_qs = Message.objects.filter(
+            Q(sender=request.user, recipient=selected_recipient)
+            | Q(sender=selected_recipient, recipient=request.user)
+        ).order_by('created_at')
+        conversation_messages = list(conversation_qs)
+        Message.objects.filter(sender=selected_recipient, recipient=request.user, is_read=False).update(is_read=True)
+
+    unread_count = Message.objects.filter(recipient=request.user, is_read=False).count()
+
+    contact_user_ids = {item['user'].id for item in contacts}
+    suggestion_ids = []
+
+    instructor_ids = list(
+        InstructorProfile.objects.filter(is_active=True)
+        .exclude(user=request.user)
+        .values_list('user_id', flat=True)[:30]
+    )
+    seller_ids = list(
+        SkiMaterialListing.objects.exclude(user=request.user)
+        .order_by('-posted_at')
+        .values_list('user_id', flat=True)[:40]
+    )
+    partner_ids = list(
+        SkiPartnerPost.objects.filter(is_active=True)
+        .exclude(user=request.user)
+        .order_by('-created_at')
+        .values_list('user_id', flat=True)[:40]
+    )
+
+    for user_id in instructor_ids + seller_ids + partner_ids:
+        if user_id in contact_user_ids:
+            continue
+        if user_id in suggestion_ids:
+            continue
+        suggestion_ids.append(user_id)
+        if len(suggestion_ids) >= 8:
+            break
+
+    suggestions_map = {
+        user.id: user
+        for user in User.objects.filter(id__in=suggestion_ids)
+    }
+    suggestions = []
+    for user_id in suggestion_ids:
+        user = suggestions_map.get(user_id)
+        if user:
+            suggestions.append({'user': user, 'is_friend': user_id in friend_ids})
 
     return render(request, 'messages/messages.html', {
-        'inbox_messages': inbox_messages,
-        'sent_messages': sent_messages,
         'unread_count': unread_count,
         'contacts': contacts,
         'selected_recipient': selected_recipient,
         'prefill_subject': prefill_subject,
         'prefill_body': prefill_body,
         'context_listing': listing,
+        'conversation_messages': conversation_messages,
+        'selected_is_friend': selected_is_friend,
+        'suggestions': suggestions,
     })
+
+
+@login_required
+def messages_user_search(request):
+    query = request.GET.get('q', '').strip()
+    if len(query) < 2:
+        return JsonResponse({'results': []})
+
+    friend_ids = set(UserFriend.objects.filter(user=request.user).values_list('friend_id', flat=True))
+    users = (
+        User.objects.exclude(id=request.user.id)
+        .filter(
+            Q(username__icontains=query)
+            | Q(first_name__icontains=query)
+            | Q(last_name__icontains=query)
+        )
+        .order_by('username')[:12]
+    )
+
+    results = []
+    for user in users:
+        display_name = f"{(user.first_name or '').strip()} {(user.last_name or '').strip()}".strip() or user.username
+        results.append(
+            {
+                'id': user.id,
+                'username': user.username,
+                'display_name': display_name,
+                'is_friend': user.id in friend_ids,
+            }
+        )
+    return JsonResponse({'results': results})
+
+
+@login_required
+def messages_add_friend(request):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'method_not_allowed'}, status=405)
+
+    friend_id = (request.POST.get('friend_id') or '').strip()
+    friend = User.objects.filter(id=friend_id).exclude(id=request.user.id).first()
+    if not friend:
+        return JsonResponse({'ok': False, 'error': 'invalid_friend'}, status=400)
+
+    UserFriend.objects.get_or_create(user=request.user, friend=friend)
+    UserFriend.objects.get_or_create(user=friend, friend=request.user)
+    return JsonResponse({'ok': True})
+
+
+@login_required
+def messages_remove_friend(request):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'method_not_allowed'}, status=405)
+
+    friend_id = (request.POST.get('friend_id') or '').strip()
+    friend = User.objects.filter(id=friend_id).exclude(id=request.user.id).first()
+    if not friend:
+        return JsonResponse({'ok': False, 'error': 'invalid_friend'}, status=400)
+
+    UserFriend.objects.filter(user=request.user, friend=friend).delete()
+    UserFriend.objects.filter(user=friend, friend=request.user).delete()
+    return JsonResponse({'ok': True})
 
 def getMessagesAndCount(request):
     inbox_messages = Message.objects.filter(recipient=request.user).order_by('-created_at')

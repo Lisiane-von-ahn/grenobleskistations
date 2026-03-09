@@ -3,86 +3,345 @@
 {% block content %}
 <div class="container py-4">
     <section class="market-hero mb-4">
-        <h2 class="market-section-title mb-1">Messages / Inbox</h2>
-        <p class="market-subtle mb-0">Échanges vendeur-acheteur ou location/prêt. Unread: {{ unread_count }}</p>
+        <h2 class="market-section-title mb-1">Chat</h2>
+        <p class="market-subtle mb-0">Conversations en direct. Non lus: {{ unread_count }}</p>
     </section>
 
-    <div class="market-search-panel mb-4">
-        <h4 class="mb-3">Nouveau message / New message</h4>
-        {% if context_listing %}
-        <div class="alert alert-light border py-2 mb-3">
-            Contexte: annonce "{{ context_listing.title }}".
-        </div>
-        {% endif %}
-        <form method="post" class="row g-3">
-            {% csrf_token %}
-            <div class="col-md-4">
-                <label class="form-label">Destinataire / Recipient</label>
-                <select name="recipient_id" class="form-control" required>
-                    <option value="">Choisir...</option>
-                    {% for contact in contacts %}
-                    <option value="{{ contact.id }}" {% if selected_recipient and selected_recipient.id == contact.id %}selected{% endif %}>{{ contact.username }}</option>
+    <style>
+        .chat-shell {
+            border: 1px solid #d9e6eb;
+            border-radius: 16px;
+            overflow: hidden;
+            background: #fff;
+            min-height: 68vh;
+        }
+
+        .chat-sidebar {
+            border-right: 1px solid #e5eef2;
+            max-height: 68vh;
+            overflow: auto;
+        }
+
+        .chat-contact-item {
+            display: block;
+            padding: 0.85rem 0.95rem;
+            border-bottom: 1px solid #eef3f6;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .chat-contact-item.active {
+            background: #e9f6f9;
+        }
+
+        .chat-search-wrap {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background: #fff;
+            border-bottom: 1px solid #e9f0f4;
+            padding: 0.75rem;
+        }
+
+        .chat-search-popup {
+            position: absolute;
+            left: 0.75rem;
+            right: 0.75rem;
+            top: calc(100% - 0.2rem);
+            background: #fff;
+            border: 1px solid #dce9ef;
+            border-radius: 10px;
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+            display: none;
+            max-height: 300px;
+            overflow: auto;
+        }
+
+        .chat-search-popup.show {
+            display: block;
+        }
+
+        .chat-search-item {
+            padding: 0.65rem 0.75rem;
+            border-bottom: 1px solid #edf3f6;
+        }
+
+        .chat-search-item:last-child {
+            border-bottom: 0;
+        }
+
+        .chat-thread {
+            display: flex;
+            flex-direction: column;
+            min-height: 68vh;
+        }
+
+        .chat-thread-body {
+            flex: 1;
+            overflow: auto;
+            padding: 1rem;
+            background: #f6fafc;
+        }
+
+        .chat-bubble {
+            max-width: 78%;
+            border-radius: 12px;
+            padding: 0.55rem 0.75rem;
+            margin-bottom: 0.55rem;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+        }
+
+        .chat-bubble.mine {
+            margin-left: auto;
+            background: #2ca7b7;
+            color: #fff;
+        }
+
+        .chat-bubble.theirs {
+            margin-right: auto;
+            background: #fff;
+            color: #1f2d33;
+        }
+
+        .chat-composer {
+            border-top: 1px solid #e5eef2;
+            padding: 0.85rem;
+            background: #fff;
+        }
+
+        @media (max-width: 991.98px) {
+            .chat-sidebar {
+                max-height: 260px;
+                border-right: 0;
+                border-bottom: 1px solid #e5eef2;
+            }
+        }
+    </style>
+
+    <div class="chat-shell">
+        <div class="row g-0">
+            <div class="col-lg-4">
+                <div class="chat-sidebar">
+                    <div class="chat-search-wrap">
+                        <label class="form-label small text-muted mb-1">Chercher des gens</label>
+                        <input id="chat-user-search" type="text" class="form-control" placeholder="Nom, pseudo..." data-messages-url="{% url 'messages' %}">
+                        <div id="chat-search-popup" class="chat-search-popup"></div>
+                    </div>
+
+                    {% for item in contacts %}
+                    <a class="chat-contact-item {% if selected_recipient and selected_recipient.id == item.user.id %}active{% endif %}" href="{% url 'messages' %}?user={{ item.user.id }}">
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <strong>{{ item.user.username }}</strong>
+                                {% if item.is_friend %}<span class="badge bg-success">Ami</span>{% endif %}
+                            </div>
+                            <div class="d-flex align-items-center gap-1">
+                                {% if item.unread_count %}<span class="badge bg-primary">{{ item.unread_count }}</span>{% endif %}
+                            </div>
+                        </div>
+                        {% if item.last_message %}
+                        <div class="small text-muted mt-1">{{ item.last_message.body|truncatechars:60 }}</div>
+                        {% endif %}
+                    </a>
+                    {% empty %}
+                    <div class="p-3 text-muted">Aucune conversation pour le moment.</div>
                     {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-8">
-                <label class="form-label">Sujet / Subject</label>
-                <input name="subject" class="form-control" maxlength="255" value="{{ prefill_subject }}" required>
-            </div>
-            <div class="col-12">
-                <label class="form-label">Message</label>
-                <textarea name="body" class="form-control" rows="4" required>{{ prefill_body }}</textarea>
-            </div>
-            <div class="col-12 d-flex justify-content-end">
-                <button type="submit" class="btn btn-primary">Envoyer</button>
-            </div>
-        </form>
-    </div>
 
-    <div class="row g-4">
-        <div class="col-lg-6">
-            <div class="market-search-panel">
-                <h4 class="mb-3">Boîte de réception / Received</h4>
-                {% if inbox_messages %}
-                    <div class="list-group">
-                        {% for message in inbox_messages %}
-                        <div class="list-group-item {% if not message.is_read %}list-group-item-warning{% endif %}">
-                            <div class="d-flex justify-content-between">
-                                <strong>{{ message.subject }}</strong>
-                                <small>{{ message.created_at|date:"d/m/Y H:i" }}</small>
+                    {% if suggestions %}
+                    <div class="p-3 border-top bg-light">
+                        <div class="small text-muted mb-2">Suggestions</div>
+                        {% for item in suggestions %}
+                        <div class="chat-search-item bg-white rounded mb-2">
+                            <div class="d-flex justify-content-between align-items-center gap-2">
+                                <div>
+                                    <strong>{{ item.user.username }}</strong>
+                                    {% if item.is_friend %}<span class="badge bg-success">Ami</span>{% endif %}
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <a class="btn btn-sm btn-primary" href="{% url 'messages' %}?user={{ item.user.id }}">Chat</a>
+                                    {% if not item.is_friend %}
+                                    <button class="btn btn-sm btn-outline-secondary add-friend-btn" data-id="{{ item.user.id }}">Ajouter</button>
+                                    {% endif %}
+                                </div>
                             </div>
-                            <div class="market-subtle">De / From: {{ message.sender.username }}</div>
-                            <p class="mb-0 mt-2">{{ message.body }}</p>
                         </div>
                         {% endfor %}
                     </div>
-                {% else %}
-                    <p class="market-subtle">Aucun message reçu. / No received message.</p>
-                {% endif %}
+                    {% endif %}
+                </div>
             </div>
-        </div>
 
-        <div class="col-lg-6">
-            <div class="market-search-panel">
-                <h4 class="mb-3">Messages envoyés / Sent</h4>
-                {% if sent_messages %}
-                    <div class="list-group">
-                        {% for message in sent_messages %}
-                        <div class="list-group-item">
-                            <div class="d-flex justify-content-between">
-                                <strong>{{ message.subject }}</strong>
-                                <small>{{ message.created_at|date:"d/m/Y H:i" }}</small>
-                            </div>
-                            <div class="market-subtle">Pour / To: {{ message.recipient.username }}</div>
-                            <p class="mb-0 mt-2">{{ message.body }}</p>
+            <div class="col-lg-8">
+                <div class="chat-thread">
+                    <div class="p-3 border-bottom bg-white">
+                        {% if selected_recipient %}
+                        <div class="d-flex justify-content-between align-items-center gap-2">
+                            <h5 class="mb-0">Conversation avec {{ selected_recipient.username }}</h5>
+                            {% if selected_is_friend %}
+                            <button class="btn btn-sm btn-outline-danger" id="remove-friend-btn" data-id="{{ selected_recipient.id }}">Retirer ami</button>
+                            {% endif %}
                         </div>
-                        {% endfor %}
+                        {% else %}
+                        <h5 class="mb-0">Selectionnez une conversation</h5>
+                        {% endif %}
+                        {% if context_listing %}
+                        <small class="text-muted">Contexte annonce: {{ context_listing.title }}</small>
+                        {% endif %}
                     </div>
-                {% else %}
-                    <p class="market-subtle">Aucun message envoyé. / No sent message.</p>
-                {% endif %}
+
+                    <div class="chat-thread-body">
+                        {% if selected_recipient %}
+                            {% for message in conversation_messages %}
+                            <div class="chat-bubble {% if message.sender_id == user.id %}mine{% else %}theirs{% endif %}">
+                                <div>{{ message.body }}</div>
+                                <div class="small mt-1 {% if message.sender_id == user.id %}text-white-50{% else %}text-muted{% endif %}">{{ message.created_at|date:"d/m H:i" }}</div>
+                            </div>
+                            {% empty %}
+                            <div class="text-muted">Aucun message encore. Demarrez la conversation.</div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-muted">Aucun contact selectionne.</div>
+                        {% endif %}
+                    </div>
+
+                    {% if selected_recipient %}
+                    <div class="chat-composer">
+                        <form method="post" class="d-flex gap-2 align-items-end">
+                            {% csrf_token %}
+                            <input type="hidden" name="recipient_id" value="{{ selected_recipient.id }}">
+                            <input type="hidden" name="subject" value="{{ prefill_subject }}">
+                            <div class="flex-grow-1">
+                                <label class="form-label mb-1 small text-muted">Message</label>
+                                <textarea name="body" class="form-control" rows="2" required placeholder="Ecrivez un message...">{{ prefill_body }}</textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Envoyer</button>
+                        </form>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    (function () {
+        var input = document.getElementById('chat-user-search');
+        var popup = document.getElementById('chat-search-popup');
+        if (!input || !popup) return;
+
+        var timer = null;
+
+        function getCsrfToken() {
+            var name = 'csrftoken=';
+            var decoded = decodeURIComponent(document.cookie || '');
+            var parts = decoded.split(';');
+            for (var i = 0; i < parts.length; i += 1) {
+                var c = parts[i].trim();
+                if (c.indexOf(name) === 0) return c.substring(name.length, c.length);
+            }
+            return '';
+        }
+
+        function render(items) {
+            if (!items.length) {
+                popup.innerHTML = '<div class="chat-search-item text-muted small">Aucun resultat</div>';
+                popup.classList.add('show');
+                return;
+            }
+
+                var baseMessagesUrl = input.getAttribute('data-messages-url') || '/messages/';
+
+                popup.innerHTML = items.map(function (item) {
+                var friendTag = item.is_friend ? '<span class="badge bg-success">Ami</span>' : '';
+                var addBtn = item.is_friend ? '' : '<button class="btn btn-sm btn-outline-secondary add-friend-btn" data-id="' + item.id + '">Ajouter ami</button>';
+                return '' +
+                    '<div class="chat-search-item">' +
+                    '  <div class="d-flex justify-content-between align-items-start gap-2">' +
+                    '    <div><strong>' + item.username + '</strong><div class="small text-muted">' + item.display_name + '</div></div>' +
+                    '    <div class="d-flex gap-2 align-items-center">' + friendTag + '<a class="btn btn-sm btn-primary" href="' + baseMessagesUrl + '?user=' + item.id + '">Chat</a>' + addBtn + '</div>' +
+                    '  </div>' +
+                    '</div>';
+            }).join('');
+
+            popup.classList.add('show');
+        }
+
+        function search() {
+            var q = (input.value || '').trim();
+            if (q.length < 2) {
+                popup.classList.remove('show');
+                popup.innerHTML = '';
+                return;
+            }
+
+            fetch('{% url "messages_user_search" %}?q=' + encodeURIComponent(q), {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (data) { render(data.results || []); })
+                .catch(function () {
+                    popup.innerHTML = '<div class="chat-search-item text-danger small">Erreur de recherche</div>';
+                    popup.classList.add('show');
+                });
+        }
+
+        input.addEventListener('input', function () {
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(search, 180);
+        });
+
+        popup.addEventListener('click', function (event) {
+            var btn = event.target.closest('.add-friend-btn');
+            if (!btn) return;
+            event.preventDefault();
+
+            var formData = new FormData();
+            formData.append('friend_id', btn.getAttribute('data-id'));
+
+            fetch('{% url "messages_add_friend" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.ok) {
+                        btn.outerHTML = '<span class="badge bg-success">Ami</span>';
+                    }
+                });
+        });
+
+        document.addEventListener('click', function (event) {
+            var removeBtn = event.target.closest('#remove-friend-btn');
+            if (!removeBtn) return;
+
+            var formData = new FormData();
+            formData.append('friend_id', removeBtn.getAttribute('data-id'));
+            fetch('{% url "messages_remove_friend" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.ok) {
+                        window.location.reload();
+                    }
+                });
+        });
+
+        document.addEventListener('click', function (event) {
+            if (!popup.contains(event.target) && event.target !== input) {
+                popup.classList.remove('show');
+            }
+        });
+    })();
+</script>
 {% endblock %}

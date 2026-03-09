@@ -369,6 +369,21 @@ class UserProfile(models.Model):
 
     def has_profile_picture(self):
         return self.profile_picture is not None
+
+
+class UserFriend(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friend_links')
+    friend = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friend_of_links')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'friend'], name='uniq_user_friend_link'),
+        ]
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username} -> {self.friend.username}"
         
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):

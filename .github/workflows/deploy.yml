@@ -51,7 +51,25 @@ jobs:
 
             echo "✅ install.sh already applied and verified migrations"
             echo "✅ Re-checking no pending migrations remain"
-            docker compose -f docker-compose.yml run --rm --no-deps --entrypoint "" web python manage.py migrate --check --noinput
+            MIGRATE_CHECK_OK=false
+            for i in $(seq 1 5); do
+              if docker compose -f docker-compose.yml run --rm --no-deps --entrypoint "" web python manage.py migrate --check --noinput; then
+                MIGRATE_CHECK_OK=true
+                break
+              fi
+              echo "⚠️ migrate --check failed (attempt ${i}/5), retrying..."
+              sleep 4
+            done
+            if [ "${MIGRATE_CHECK_OK}" != "true" ]; then
+              echo "❌ Pending migrations or transient failure after retries"
+              docker compose -f docker-compose.yml logs --tail=200 web || true
+              exit 1
+            fi
+
+            APP_HOSTNAME=$(grep -E '^APP_HOSTNAME=' .env 2>/dev/null | tail -n1 | cut -d= -f2- || true)
+            if [ -z "${APP_HOSTNAME}" ]; then
+              APP_HOSTNAME="grenobleski.fr"
+            fi
 
             WEB_CID=""
             for i in $(seq 1 8); do
@@ -80,6 +98,7 @@ jobs:
             fi
 
             echo "⏳ Waiting for web container health"
+            HEALTH_OK=false
             for i in $(seq 1 60); do
               CURRENT_WEB_CID=$(docker compose -f docker-compose.yml ps -q web | head -n1)
               if [ -n "${CURRENT_WEB_CID}" ]; then
@@ -99,11 +118,19 @@ jobs:
               fi
 
               if [ "${CONTAINER_STATE}" = "running" ] && { [ "${HEALTH_STATE}" = "healthy" ] || [ "${HEALTH_STATE}" = "none" ]; }; then
+                HEALTH_OK=true
                 break
               fi
 
               sleep 5
             done
+
+            if [ "${HEALTH_OK}" != "true" ]; then
+              echo "❌ Web container did not reach healthy/running state in time"
+              docker compose -f docker-compose.yml ps || true
+              docker compose -f docker-compose.yml logs --tail=200 web || true
+              exit 1
+            fi
 
             echo "⏳ Verifying app response from inside web container (:8000)"
             INTERNAL_OK=false
@@ -113,7 +140,7 @@ jobs:
                 WEB_CID="${CURRENT_WEB_CID}"
               fi
 
-              if docker exec "${WEB_CID}" sh -lc "curl -fsS -H 'Host: grenobleski.fr' http://127.0.0.1:8000/ >/dev/null"; then
+              if docker exec "${WEB_CID}" sh -lc "curl -fsS http://127.0.0.1:8000/ >/dev/null || curl -fsS -H 'Host: ${APP_HOSTNAME}' http://127.0.0.1:8000/ >/dev/null"; then
                 INTERNAL_OK=true
                 echo "✅ App responds inside container"
                 break
@@ -131,7 +158,7 @@ jobs:
             echo "⏳ Waiting for app on http://127.0.0.1:8081"
             HOST_OK=false
             for i in $(seq 1 60); do
-              if curl -fsS "http://127.0.0.1:8081" >/dev/null || curl -fsS -H "Host: grenobleski.fr" "http://127.0.0.1:8081" >/dev/null; then
+              if curl -fsS "http://127.0.0.1:8081" >/dev/null || curl -fsS -H "Host: ${APP_HOSTNAME}" "http://127.0.0.1:8081" >/dev/null; then
                 HOST_OK=true
                 echo "✅ App is reachable on port 8081"
                 echo "🔄 Restarting Traefik"
