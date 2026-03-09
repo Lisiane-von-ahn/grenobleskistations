@@ -272,7 +272,7 @@ class MarketplaceUserRating(models.Model):
         return f"{self.rater.username} -> {self.rated_user.username} ({self.score})"
     
 class UserProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile_api")
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile", null=True)
     profile_picture = models.BinaryField(null=True, blank=True)
     force_password_reset = models.BooleanField(default=False)
 
