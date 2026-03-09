@@ -15,6 +15,70 @@
     .instructor-register-hero p {
         color: #eef6fb;
     }
+
+    .register-shell {
+        background:
+            radial-gradient(circle at 10% 10%, rgba(44, 167, 183, 0.08), transparent 45%),
+            radial-gradient(circle at 90% 90%, rgba(31, 143, 158, 0.12), transparent 40%),
+            #f5f7fa;
+    }
+
+    .register-panel {
+        border: 0;
+        border-radius: 16px;
+        box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+        overflow: hidden;
+    }
+
+    .register-header {
+        background: linear-gradient(135deg, #2ca7b7, #1f8f9e);
+        color: #fff;
+        padding: 1rem 1.25rem;
+    }
+
+    .profile-photo-wrap {
+        width: 160px;
+        height: 160px;
+        margin: 0 auto;
+        border-radius: 50%;
+        border: 4px solid #e8f4f6;
+        overflow: hidden;
+        background: #fff;
+    }
+
+    .profile-photo-wrap img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .form-grid {
+        display: grid;
+        gap: 0.95rem;
+    }
+
+    .field-label {
+        font-weight: 600;
+        margin-bottom: 0.35rem;
+        color: #1f3b45;
+    }
+
+    .hint-row {
+        border: 1px solid #d7ebef;
+        background: #f3fbfd;
+        color: #24505a;
+        border-radius: 10px;
+        padding: 0.65rem 0.75rem;
+        font-size: 0.92rem;
+    }
+
+    @media (min-width: 768px) {
+        .form-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.95rem;
+        }
+    }
 </style>
 <section class="py-5" style="background: linear-gradient(135deg, #2ca7b7, #1f8f9e);">
     <div class="container text-white instructor-register-hero">
@@ -23,66 +87,97 @@
     </div>
 </section>
 
-<section class="py-5" style="background: #f5f7fa;">
+<section class="py-5 register-shell">
     <div class="container">
+        {% if messages %}
+            <div class="row mb-3">
+                <div class="col-lg-12">
+                    {% for message in messages %}
+                        <div class="alert alert-info mb-2" role="alert">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>
+        {% endif %}
+
         <div class="row g-4">
             <div class="col-lg-4">
-                <div class="card border-0 shadow-sm h-100">
+                <div class="card register-panel h-100">
                     <div class="card-body text-center p-4">
-                        {% if profile.profile_photo %}
-                            <img src="data:image/png;base64,{{ profile.profile_photo|b64encode }}" alt="{% trans 'Photo moniteur' %}" class="rounded-circle mb-3" style="width:150px;height:150px;object-fit:cover;">
-                        {% else %}
-                            <img src="{% static 'images/default-profile.png' %}" alt="{% trans 'Photo moniteur' %}" class="rounded-circle mb-3" style="width:150px;height:150px;object-fit:cover;">
-                        {% endif %}
+                        <div class="profile-photo-wrap mb-3">
+                            {% if profile.profile_photo %}
+                                <img id="instructor-photo-preview" src="data:image/png;base64,{{ profile.profile_photo|b64encode }}" alt="{% trans 'Photo moniteur' %}">
+                            {% else %}
+                                <img id="instructor-photo-preview" src="{% static 'images/default-profile.png' %}" alt="{% trans 'Photo moniteur' %}">
+                            {% endif %}
+                        </div>
                         <h5 class="mb-1">{{ request.user.username }}</h5>
-                        <p class="text-muted mb-0">{% trans "Profil moniteur" %}</p>
+                        <p class="text-muted mb-2">{% trans "Profil moniteur" %}</p>
+                        <div class="hint-row text-start">
+                            {% trans "Conseil: un profil complet augmente vos chances d'être contacté." %}
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div class="col-lg-8">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-header border-0 text-white" style="background: linear-gradient(135deg, #2ca7b7, #1f8f9e);">
+                <div class="card register-panel">
+                    <div class="register-header">
                         <h4 class="mb-0">{% trans "Informations professionnelles" %}</h4>
                     </div>
                     <div class="card-body p-4">
                         <form method="post" enctype="multipart/form-data">
                             {% csrf_token %}
 
-                            <div class="form-group mb-3">
-                                <label for="id_bio">{% trans "Bio" %}</label>
+                            <div class="form-grid">
+                                <div>
+                                    <label class="field-label" for="id_bio">{% trans "Bio" %}</label>
                                 {{ form.bio }}
+                                    {% if form.bio.errors %}<div class="text-danger small mt-1">{{ form.bio.errors }}</div>{% endif %}
+                                </div>
                             </div>
 
-                            <div class="form-row">
-                                <div class="form-group col-md-4 mb-3">
-                                    <label for="id_years_experience">{% trans "Années d'expérience" %}</label>
+                            <div class="form-grid-2 mt-3">
+                                <div>
+                                    <label class="field-label" for="id_years_experience">{% trans "Années d'expérience" %}</label>
                                     {{ form.years_experience }}
+                                    {% if form.years_experience.errors %}<div class="text-danger small mt-1">{{ form.years_experience.errors }}</div>{% endif %}
                                 </div>
-                                <div class="form-group col-md-8 mb-3">
-                                    <label for="id_certifications">{% trans "Certifications" %}</label>
+                                <div>
+                                    <label class="field-label" for="id_certifications">{% trans "Certifications" %}</label>
                                     {{ form.certifications }}
+                                    {% if form.certifications.errors %}<div class="text-danger small mt-1">{{ form.certifications.errors }}</div>{% endif %}
                                 </div>
                             </div>
 
-                            <div class="form-row">
-                                <div class="form-group col-md-8 mb-3">
-                                    <label for="id_phone">{% trans "Téléphone" %}</label>
+                            <div class="form-grid-2 mt-3">
+                                <div>
+                                    <label class="field-label" for="id_phone">{% trans "Téléphone" %}</label>
                                     {{ form.phone }}
+                                    {% if form.phone.errors %}<div class="text-danger small mt-1">{{ form.phone.errors }}</div>{% endif %}
                                 </div>
-                                <div class="form-group col-md-4 mb-3">
-                                    <label for="id_is_active">{% trans "Profil actif" %}</label><br>
-                                    {{ form.is_active }}
+                                <div class="d-flex align-items-end pb-2">
+                                    <div class="form-check mt-4">
+                                        {{ form.is_active }}
+                                        <label class="form-check-label" for="id_is_active">{% trans "Profil actif" %}</label>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div class="form-group mb-4">
-                                <label for="id_image_file">{% trans "Photo professionnelle" %}</label>
+                            <div class="mt-3 mb-4">
+                                <label class="field-label" for="id_image_file">{% trans "Photo professionnelle" %}</label>
                                 {{ form.image_file }}
+                                {% if form.image_file.errors %}<div class="text-danger small mt-1">{{ form.image_file.errors }}</div>{% endif %}
                                 <small class="text-muted d-block mt-1">{% trans "Ajoutez une photo claire pour inspirer confiance aux skieurs." %}</small>
                             </div>
 
-                            <button type="submit" class="btn btn-primary btn-lg w-100">{% trans "Enregistrer mon profil" %}</button>
+                            <div class="d-flex gap-2 flex-column flex-md-row">
+                                <button type="submit" class="btn btn-primary btn-lg flex-fill">{% trans "Enregistrer mon profil" %}</button>
+                                <a href="{% url 'instructors' %}" class="btn btn-outline-secondary btn-lg">{% trans "Voir les moniteurs" %}</a>
+                            </div>
                         </form>
                     </div>
                 </div>
@@ -90,4 +185,25 @@
         </div>
     </div>
 </section>
+<script>
+    (function () {
+        var input = document.getElementById('id_image_file');
+        var preview = document.getElementById('instructor-photo-preview');
+        if (!input || !preview) {
+            return;
+        }
+
+        input.addEventListener('change', function () {
+            var file = input.files && input.files.length ? input.files[0] : null;
+            if (!file || !file.type || !file.type.startsWith('image/')) {
+                return;
+            }
+            var reader = new FileReader();
+            reader.onload = function (event) {
+                preview.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    })();
+</script>
 {% endblock %}

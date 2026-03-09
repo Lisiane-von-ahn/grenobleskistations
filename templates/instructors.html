@@ -20,6 +20,50 @@
         color: var(--bs-warning, #ffc107);
         letter-spacing: 1px;
     }
+
+    .instructors-shell {
+        background:
+            radial-gradient(circle at 12% 12%, rgba(44, 167, 183, 0.08), transparent 42%),
+            radial-gradient(circle at 88% 86%, rgba(31, 143, 158, 0.12), transparent 38%),
+            #f5f7fa;
+    }
+
+    .filters-panel {
+        border-radius: 14px;
+        border: 1px solid rgba(44, 167, 183, 0.18);
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    }
+
+    .instructor-card {
+        border-radius: 16px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        border: 1px solid #e6eef2;
+    }
+
+    .instructor-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 14px 28px rgba(15, 23, 42, 0.11) !important;
+    }
+
+    .metric-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        border-radius: 999px;
+        background: #eef7f9;
+        color: #24505a;
+        padding: 0.28rem 0.62rem;
+        font-size: 0.84rem;
+        border: 1px solid #d5eaef;
+    }
+
+    .empty-state {
+        border: 1px dashed #b9d5dc;
+        border-radius: 14px;
+        padding: 1.4rem;
+        background: #f8fcfd;
+        color: #43626b;
+    }
     .review-stars {
         direction: rtl;
         display: inline-flex;
@@ -87,9 +131,9 @@
     </div>
 </section>
 
-<section class="py-5" style="background: #f5f7fa;">
+<section class="py-5 instructors-shell">
 <div class="container">
-    <div class="card border-0 shadow-sm sticky-top mb-4" style="top: 12px; z-index: 20;">
+    <div class="card border-0 shadow-sm sticky-top mb-4 filters-panel" style="top: 12px; z-index: 20;">
         <div class="card-body">
             <form method="get" class="row g-3 align-items-end">
                 <div class="col-lg-5">
@@ -186,9 +230,9 @@
                     <p class="mb-2"><strong>{% trans "Certifications:" %}</strong> {{ instructor.certifications|default:'Non précisé' }}</p>
                     <p class="text-muted mb-3">{{ instructor.bio|default:'Pas de description pour le moment.' }}</p>
                     <div class="d-flex flex-wrap gap-2 mb-3">
-                        <span class="badge bg-light text-dark">{{ instructor.active_services_count }} offre(s) active(s)</span>
+                        <span class="metric-chip">{{ instructor.active_services_count }} offre(s) active(s)</span>
                         {% if instructor.min_amount %}
-                            <span class="badge bg-success">À partir de {{ instructor.min_amount|floatformat:0 }} €</span>
+                            <span class="metric-chip">À partir de {{ instructor.min_amount|floatformat:0 }} €</span>
                         {% endif %}
                     </div>
 
@@ -255,7 +299,10 @@
             </div>
         {% empty %}
             <div class="col-12">
-                <p class="text-muted">Aucun moniteur actif pour le moment.</p>
+                <div class="empty-state">
+                    <strong>Aucun moniteur actif pour le moment.</strong>
+                    <p class="mb-0 mt-1">Essayez d'ajuster vos filtres, ou revenez plus tard pour découvrir de nouvelles offres.</p>
+                </div>
             </div>
         {% endfor %}
     </div>

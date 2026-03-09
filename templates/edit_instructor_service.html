@@ -4,13 +4,91 @@
 {% block title %}{% trans "Modifier offre moniteur" %}{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    <h2 class="mb-4">{% trans "Modifier l'offre moniteur" %}</h2>
-    <form method="post" class="card p-4 shadow-sm">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit" class="btn btn-primary">{% trans "Enregistrer" %}</button>
-        <a href="{% url 'instructor_services' %}" class="btn btn-outline-secondary">{% trans "Annuler" %}</a>
-    </form>
+<style>
+    .edit-shell {
+        background:
+            radial-gradient(circle at 14% 14%, rgba(44, 167, 183, 0.08), transparent 42%),
+            radial-gradient(circle at 86% 84%, rgba(31, 143, 158, 0.11), transparent 38%),
+            #f5f7fa;
+    }
+
+    .edit-panel {
+        border: 1px solid #dbe9ee;
+        border-radius: 16px;
+        box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+        overflow: hidden;
+    }
+
+    .edit-header {
+        background: linear-gradient(135deg, #2ca7b7, #1f8f9e);
+        color: #fff;
+        padding: 1rem 1.2rem;
+    }
+
+    @media (max-width: 767.98px) {
+        .edit-actions .btn {
+            width: 100%;
+        }
+    }
+</style>
+
+<section class="py-5 edit-shell">
+<div class="container">
+    <div class="edit-panel">
+        <div class="edit-header">
+            <h2 class="h4 mb-0">{% trans "Modifier l'offre moniteur" %}</h2>
+        </div>
+
+        <form method="post" class="p-4">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <div class="row g-3">
+                <div class="col-md-7">
+                    <label class="form-label" for="id_title">{{ form.title.label }}</label>
+                    {{ form.title }}
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label" for="id_ski_station">{{ form.ski_station.label }}</label>
+                    {{ form.ski_station }}
+                </div>
+                <div class="col-12">
+                    <label class="form-label" for="id_description">{{ form.description.label }}</label>
+                    {{ form.description }}
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <label class="form-label" for="id_duration_minutes">{{ form.duration_minutes.label }}</label>
+                    {{ form.duration_minutes }}
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <label class="form-label" for="id_amount">{{ form.amount.label }}</label>
+                    {{ form.amount }}
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <label class="form-label" for="id_currency">{{ form.currency.label }}</label>
+                    {{ form.currency }}
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <label class="form-label" for="id_max_group_size">{{ form.max_group_size.label }}</label>
+                    {{ form.max_group_size }}
+                </div>
+                <div class="col-12">
+                    <div class="form-check">
+                        {{ form.is_active }}
+                        <label class="form-check-label" for="id_is_active">{{ form.is_active.label }}</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="edit-actions d-flex gap-2 flex-column flex-md-row mt-4">
+                <button type="submit" class="btn btn-primary btn-lg">{% trans "Enregistrer" %}</button>
+                <a href="{% url 'instructor_services' %}" class="btn btn-outline-secondary btn-lg">{% trans "Annuler" %}</a>
+            </div>
+        </form>
+    </div>
 </div>
+</section>
 {% endblock %}

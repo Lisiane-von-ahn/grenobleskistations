@@ -60,19 +60,19 @@
             <h5 class="mb-3">{% trans "Photos" %}</h5>
             <p class="market-subtle mb-3">{% trans "Glissez-deposez vos images ou cliquez pour selectionner." %}</p>
 
-            {{ form.image }}
+            {{ form.image_file }}
             {{ form.images }}
 
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label class="form-label fw-semibold">{{ form.image.label }}</label>
+                    <label class="form-label fw-semibold">{{ form.image_file.label }}</label>
                     <div class="upload-dropzone" data-input-id="main-image-input" data-preview-id="main-image-preview" data-multiple="false">
                         <div class="upload-dropzone-icon">+</div>
                         <div class="upload-dropzone-title">{% trans "Photo principale" %}</div>
                         <div class="upload-dropzone-subtitle">{% trans "Une image de couverture claire et nette" %}</div>
                     </div>
                     <div id="main-image-preview" class="upload-preview-grid"></div>
-                    {{ form.image.errors }}
+                    {{ form.image_file.errors }}
                 </div>
 
                 <div class="col-md-6">

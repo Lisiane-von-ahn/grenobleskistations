@@ -1,45 +1,346 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
-{% block title %}Mes Offres Moniteur{% endblock %}
+{% block title %}{% trans "Mes Offres Moniteur" %}{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    <h2 class="mb-4">Mes offres de services</h2>
+<style>
+    .services-shell {
+        background:
+            radial-gradient(circle at 12% 12%, rgba(44, 167, 183, 0.08), transparent 42%),
+            radial-gradient(circle at 88% 86%, rgba(31, 143, 158, 0.12), transparent 38%),
+            #f5f7fa;
+    }
 
-    <div class="card p-4 shadow-sm mb-5">
-        <h5 class="mb-3">Ajouter une nouvelle offre</h5>
-        <form method="post">
-            {% csrf_token %}
-            {{ form.as_p }}
-            <button type="submit" class="btn btn-primary">Publier l'offre</button>
-        </form>
+    .services-panel {
+        border: 1px solid #dbe9ee;
+        border-radius: 16px;
+        box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+        overflow: hidden;
+    }
+
+    .services-panel-header {
+        background: linear-gradient(135deg, #2ca7b7, #1f8f9e);
+        color: #fff;
+        padding: 1rem 1.25rem;
+    }
+
+    .service-card {
+        border: 1px solid #e3edf1;
+        border-radius: 14px;
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+    }
+
+    .service-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+    }
+
+    .service-pill {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 0.28rem 0.62rem;
+        font-size: 0.83rem;
+        background: #eef7f9;
+        border: 1px solid #d3e7ec;
+        color: #24505a;
+    }
+
+    .service-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .mobile-sticky-actions {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1040;
+        background: rgba(255, 255, 255, 0.98);
+        border-top: 1px solid #d8e5ea;
+        backdrop-filter: blur(4px);
+        padding: 0.6rem 0.8rem;
+    }
+
+    .mobile-sticky-actions .btn {
+        flex: 1;
+    }
+
+    .mobile-filter-toggle {
+        display: none;
+    }
+
+    .public-preview {
+        border: 1px dashed #c8dee5;
+        background: #f8fcfd;
+        border-radius: 12px;
+        padding: 0.8rem;
+    }
+
+    @media (max-width: 767.98px) {
+        .services-shell {
+            padding-bottom: 5rem;
+        }
+
+        .mobile-filter-toggle {
+            display: block;
+        }
+
+        #service-filters-panel.is-collapsed {
+            display: none;
+        }
+
+        .service-actions .btn,
+        .publish-row .btn {
+            width: 100%;
+        }
+
+        .service-meta {
+            gap: 0.38rem;
+        }
+    }
+
+    @media (min-width: 768px) {
+        .mobile-sticky-actions {
+            display: none !important;
+        }
+    }
+</style>
+
+<section class="py-5 services-shell">
+<div class="container">
+    {% if messages %}
+        <div class="row mb-3">
+            <div class="col-12">
+                {% for message in messages %}
+                    <div class="alert alert-info mb-2" role="alert">{{ message }}</div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="services-panel mb-4" id="new-offer-panel">
+        <div class="services-panel-header">
+            <h2 class="h4 mb-1">{% trans "Mes offres de services" %}</h2>
+            <p class="mb-0 opacity-75">{% trans "Publiez des cours clairs et attractifs pour vos futurs clients." %}</p>
+        </div>
+        <div class="p-4">
+            <h5 class="mb-3">{% trans "Ajouter une nouvelle offre" %}</h5>
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <form method="post" id="new-offer-form">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-7">
+                        <label class="form-label" for="id_title">{{ form.title.label }}</label>
+                        {{ form.title }}
+                        {% if form.title.errors %}<div class="text-danger small mt-1">{{ form.title.errors }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label" for="id_ski_station">{{ form.ski_station.label }}</label>
+                        {{ form.ski_station }}
+                        {% if form.ski_station.errors %}<div class="text-danger small mt-1">{{ form.ski_station.errors }}</div>{% endif %}
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="id_description">{{ form.description.label }}</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}<div class="text-danger small mt-1">{{ form.description.errors }}</div>{% endif %}
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <label class="form-label" for="id_duration_minutes">{{ form.duration_minutes.label }}</label>
+                        {{ form.duration_minutes }}
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <label class="form-label" for="id_amount">{{ form.amount.label }}</label>
+                        {{ form.amount }}
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <label class="form-label" for="id_currency">{{ form.currency.label }}</label>
+                        {{ form.currency }}
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <label class="form-label" for="id_max_group_size">{{ form.max_group_size.label }}</label>
+                        {{ form.max_group_size }}
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check mt-1">
+                            {{ form.is_active }}
+                            <label class="form-check-label" for="id_is_active">{{ form.is_active.label }}</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="publish-row mt-4 d-flex gap-2 flex-column flex-md-row">
+                    <button type="submit" class="btn btn-primary btn-lg">{% trans "Publier l'offre" %}</button>
+                    <a href="{% url 'instructors' %}" class="btn btn-outline-secondary btn-lg">{% trans "Voir le catalogue" %}</a>
+                </div>
+            </form>
+        </div>
     </div>
 
-    <h4 class="mb-3">Offres existantes</h4>
+    <div class="services-panel mb-4">
+        <div class="p-4">
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                <span class="service-pill">{% trans "Total" %}: {{ stats.total }}</span>
+                <span class="service-pill">{% trans "Actives" %}: {{ stats.active }}</span>
+                <span class="service-pill">{% trans "Inactives" %}: {{ stats.inactive }}</span>
+            </div>
+            <button
+                type="button"
+                id="service-filters-toggle"
+                class="btn btn-outline-primary mobile-filter-toggle w-100 mb-3"
+                aria-expanded="false"
+                aria-controls="service-filters-panel"
+            >
+                {% trans "Afficher les filtres" %}
+            </button>
+
+            <div id="service-filters-panel" class="is-collapsed">
+            <form method="get">
+                <div class="row g-3">
+                    <div class="col-lg-4">
+                        <label class="form-label" for="q">{% trans "Recherche" %}</label>
+                        <input id="q" type="text" name="q" class="form-control" value="{{ query_text }}" placeholder="{% trans 'Titre, description, station...' %}">
+                    </div>
+                    <div class="col-sm-6 col-lg-2">
+                        <label class="form-label" for="station">{% trans "Station" %}</label>
+                        <select id="station" name="station" class="form-select">
+                            <option value="">{% trans "Toutes" %}</option>
+                            {% for station in stations %}
+                                <option value="{{ station.id }}" {% if filter_station == station.id|stringformat:'s' %}selected{% endif %}>{{ station.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-sm-6 col-lg-2">
+                        <label class="form-label" for="status">{% trans "Statut" %}</label>
+                        <select id="status" name="status" class="form-select">
+                            <option value="">{% trans "Tous" %}</option>
+                            <option value="active" {% if filter_status == 'active' %}selected{% endif %}>{% trans "Actives" %}</option>
+                            <option value="inactive" {% if filter_status == 'inactive' %}selected{% endif %}>{% trans "Inactives" %}</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-6 col-lg-2">
+                        <label class="form-label" for="min_amount">{% trans "Prix min" %}</label>
+                        <input id="min_amount" type="number" min="0" step="0.01" name="min_amount" class="form-control" value="{{ filter_min_amount }}">
+                    </div>
+                    <div class="col-sm-6 col-lg-2">
+                        <label class="form-label" for="max_amount">{% trans "Prix max" %}</label>
+                        <input id="max_amount" type="number" min="0" step="0.01" name="max_amount" class="form-control" value="{{ filter_max_amount }}">
+                    </div>
+                    <div class="col-sm-8 col-lg-3">
+                        <label class="form-label" for="sort">{% trans "Tri" %}</label>
+                        <select id="sort" name="sort" class="form-select">
+                            <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>{% trans "Plus recentes" %}</option>
+                            <option value="oldest" {% if sort_by == 'oldest' %}selected{% endif %}>{% trans "Plus anciennes" %}</option>
+                            <option value="price_asc" {% if sort_by == 'price_asc' %}selected{% endif %}>{% trans "Prix croissant" %}</option>
+                            <option value="price_desc" {% if sort_by == 'price_desc' %}selected{% endif %}>{% trans "Prix decroissant" %}</option>
+                            <option value="duration_asc" {% if sort_by == 'duration_asc' %}selected{% endif %}>{% trans "Duree croissante" %}</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-4 col-lg-3 d-flex align-items-end gap-2">
+                        <button type="submit" class="btn btn-primary w-100">{% trans "Filtrer" %}</button>
+                        <a href="{% url 'instructor_services' %}" class="btn btn-outline-secondary">{% trans "Reset" %}</a>
+                    </div>
+                </div>
+            </form>
+            </div>
+        </div>
+    </div>
+
+    <h4 class="mb-3">{% trans "Offres existantes" %} ({{ services|length }})</h4>
     <div class="row g-3">
         {% for service in services %}
             <div class="col-lg-6">
-                <div class="card p-3 h-100">
-                    <h5>{{ service.title }}</h5>
-                    <p class="mb-1">Station: {{ service.ski_station.name }}</p>
-                    <p class="mb-1">Durée: {{ service.duration_minutes }} min</p>
-                    <p class="mb-1">Prix: {{ service.amount }} {{ service.currency }}</p>
-                    <p class="mb-1">Groupe max: {{ service.max_group_size }}</p>
+                <div class="card p-3 h-100 service-card">
+                    <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                        <h5 class="mb-0">{{ service.title }}</h5>
+                        {% if service.is_active %}
+                            <span class="badge bg-success">{% trans "Active" %}</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{% trans "Inactive" %}</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="service-meta mb-2">
+                        <span class="service-pill">{{ service.ski_station.name }}</span>
+                        <span class="service-pill">{{ service.duration_minutes }} min</span>
+                        <span class="service-pill">{{ service.amount }} {{ service.currency }}</span>
+                        <span class="service-pill">{% trans "Groupe max" %}: {{ service.max_group_size }}</span>
+                    </div>
+
                     <p class="text-muted mb-0">{{ service.description }}</p>
-                    <div class="mt-3">
-                        <a href="{% url 'edit_instructor_service' service_id=service.id %}" class="btn btn-outline-secondary btn-sm">Modifier</a>
-                        <form method="post" action="{% url 'delete_instructor_service' service_id=service.id %}" style="display:inline;">
+                    <div class="mt-3 service-actions">
+                        <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#public-preview-{{ service.id }}" aria-expanded="false" aria-controls="public-preview-{{ service.id }}">{% trans "Apercu public" %}</button>
+                        <a href="{% url 'edit_instructor_service' service_id=service.id %}" class="btn btn-outline-secondary btn-sm">{% trans "Modifier" %}</a>
+                        <form method="post" action="{% url 'delete_instructor_service' service_id=service.id %}" class="d-inline">
                             {% csrf_token %}
-                            <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Supprimer cette offre ?');">Supprimer</button>
+                            <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('{% trans "Supprimer cette offre ?" %}');">{% trans "Supprimer" %}</button>
                         </form>
+                    </div>
+                    <div class="collapse mt-3" id="public-preview-{{ service.id }}">
+                        <div class="public-preview">
+                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                <strong>{{ service.title }}</strong>
+                                <span class="badge bg-success">{{ service.amount }} {{ service.currency }}</span>
+                            </div>
+                            <div class="small text-muted mt-1">{{ service.ski_station.name }} - {{ service.duration_minutes }} min - {% trans "Groupe max" %}: {{ service.max_group_size }}</div>
+                            <p class="mb-2 mt-2">{{ service.description }}</p>
+                            <div class="small text-muted">{{ request.user.username }} - {{ profile.years_experience }} {% trans "ans d'experience" %}</div>
+                        </div>
                     </div>
                 </div>
             </div>
         {% empty %}
             <div class="col-12">
-                <p class="text-muted">Aucune offre publiée pour le moment.</p>
+                <div class="alert alert-light border" role="alert">
+                    {% trans "Aucune offre publiée pour le moment. Créez votre première offre pour apparaître dans la liste des moniteurs." %}
+                </div>
             </div>
         {% endfor %}
     </div>
 </div>
+</section>
+
+<div class="mobile-sticky-actions d-flex gap-2 d-md-none">
+    <a href="#new-offer-panel" class="btn btn-primary">{% trans "Nouvelle offre" %}</a>
+    <button type="button" id="service-filters-toggle-bottom" class="btn btn-outline-primary">{% trans "Filtres" %}</button>
+</div>
+
+<script>
+    (function () {
+        var panel = document.getElementById('service-filters-panel');
+        var topBtn = document.getElementById('service-filters-toggle');
+        var bottomBtn = document.getElementById('service-filters-toggle-bottom');
+
+        if (!panel || !topBtn || !bottomBtn) {
+            return;
+        }
+
+        function syncButtons() {
+            var expanded = !panel.classList.contains('is-collapsed');
+            var text = expanded ? "{% trans 'Masquer les filtres' %}" : "{% trans 'Afficher les filtres' %}";
+            topBtn.textContent = text;
+            topBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+            bottomBtn.textContent = expanded ? "{% trans 'Masquer' %}" : "{% trans 'Filtres' %}";
+        }
+
+        function togglePanel() {
+            panel.classList.toggle('is-collapsed');
+            syncButtons();
+            if (!panel.classList.contains('is-collapsed')) {
+                panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        topBtn.addEventListener('click', togglePanel);
+        bottomBtn.addEventListener('click', togglePanel);
+        syncButtons();
+    })();
+</script>
 {% endblock %}

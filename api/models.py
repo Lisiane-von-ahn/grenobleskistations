@@ -160,6 +160,57 @@ class CrowdStatusUpdate(models.Model):
         return f"Crowd update {self.ski_station.name} by {self.user.username}"
 
 
+class InstructorProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='instructor_profile')
+    bio = models.TextField(blank=True)
+    years_experience = models.PositiveIntegerField(default=0)
+    certifications = models.CharField(max_length=255, blank=True)
+    phone = models.CharField(max_length=30, blank=True)
+    is_active = models.BooleanField(default=True)
+    profile_photo = models.BinaryField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Instructor profile {self.user.username}"
+
+
+class InstructorService(models.Model):
+    instructor = models.ForeignKey(InstructorProfile, on_delete=models.CASCADE, related_name='services')
+    ski_station = models.ForeignKey(SkiStation, on_delete=models.CASCADE, related_name='instructor_services')
+    title = models.CharField(max_length=120)
+    description = models.TextField()
+    duration_minutes = models.PositiveIntegerField(default=60)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    currency = models.CharField(max_length=10, default='EUR')
+    max_group_size = models.PositiveIntegerField(default=1)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.title} ({self.instructor.user.username})"
+
+
+class InstructorReview(models.Model):
+    instructor = models.ForeignKey(InstructorProfile, on_delete=models.CASCADE, related_name='reviews')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='instructor_reviews')
+    rating = models.PositiveSmallIntegerField()
+    comment = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('instructor', 'user')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Review {self.user.username} -> {self.instructor.user.username}"
+
+
 class Message(models.Model):
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
     recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_messages')

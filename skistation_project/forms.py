@@ -7,6 +7,8 @@ from api.models import (
     SkiMaterialImage,
     PisteConditionReport,
     SnowConditionUpdate,
+    InstructorProfile,
+    InstructorService,
 )
 from io import BytesIO
 from PIL import Image
@@ -128,7 +130,10 @@ class UserRegistrationForm(forms.Form):
             raise forms.ValidationError("The passwords do not match.")
 
 class SkiMaterialListingForm(forms.ModelForm):
-    image_file = forms.ImageField(required=False)
+    image_file = forms.ImageField(
+        required=False,
+        widget=forms.ClearableFileInput(attrs={'class': 'visually-hidden', 'id': 'main-image-input', 'accept': 'image/*'})
+    )
     images = MultipleFileField(
         required=False,
         widget=MultipleFileInput(attrs={'class': 'visually-hidden', 'id': 'extra-images-input', 'accept': 'image/*'})
@@ -147,7 +152,6 @@ class SkiMaterialListingForm(forms.ModelForm):
             'condition',
             'brand',
             'size',
-            'image',
         ]
 
     def __init__(self, *args, **kwargs):
@@ -167,7 +171,6 @@ class SkiMaterialListingForm(forms.ModelForm):
         self.fields['condition'].widget.attrs.update({'class': 'form-select'})
         self.fields['brand'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Brand (optional)' if is_en else 'Marque (optionnel)'})
         self.fields['size'].widget.attrs.update({'class': 'form-control', 'placeholder': 'Size (optional)' if is_en else 'Taille (optionnel)'})
-        self.fields['image'].widget.attrs.update({'class': 'visually-hidden', 'id': 'main-image-input', 'accept': 'image/*'})
 
         self.fields['transaction_type'].choices = choices['transaction_type']
         self.fields['material_type'].choices = choices['material_type']
@@ -183,19 +186,12 @@ class SkiMaterialListingForm(forms.ModelForm):
         self.fields['condition'].label = _('Etat') if not is_en else _('Condition')
         self.fields['brand'].label = _('Marque') if not is_en else _('Brand')
         self.fields['size'].label = _('Taille') if not is_en else _('Size')
-        self.fields['image'].label = _('Photo principale') if not is_en else _('Main photo')
+        self.fields['image_file'].label = _('Photo principale') if not is_en else _('Main photo')
         self.fields['images'].label = _('Photos supplementaires') if not is_en else _('Extra photos')
     
     def save(self, commit=True):
         instance = super(SkiMaterialListingForm, self).save(commit=False)
-        main_image = self.cleaned_data.get('image')
         image_file = self.cleaned_data.get('image_file')
-
-        if main_image and hasattr(main_image, 'read'):
-            main_image.seek(0)
-            instance.image = main_image.read()
-        elif main_image:
-            instance.image = main_image
 
         if image_file:
             instance.image = image_file.read()  # Convert image to binary
@@ -295,3 +291,75 @@ class SnowConditionUpdateForm(forms.ModelForm):
         self.fields['note'].label = _('Commentaire')
         self.fields['snow_depth_cm'].label = _('Hauteur de neige (cm)')
         self.fields['image_file'].label = _('Photo')
+
+
+class InstructorProfileForm(forms.ModelForm):
+    image_file = forms.ImageField(required=False)
+
+    class Meta:
+        model = InstructorProfile
+        fields = ['bio', 'years_experience', 'certifications', 'phone', 'is_active']
+        widgets = {
+            'bio': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+            'years_experience': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
+            'certifications': forms.TextInput(attrs={'class': 'form-control'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['bio'].widget.attrs.update({'placeholder': _('Décrivez votre approche, spécialités et type de cours proposés.')})
+        self.fields['years_experience'].widget.attrs.update({'placeholder': '0'})
+        self.fields['certifications'].widget.attrs.update({'placeholder': _('ESF, diplôme d\'État, secourisme...')})
+        self.fields['phone'].widget.attrs.update({'placeholder': _('Ex: +33 6 12 34 56 78')})
+        self.fields['image_file'].widget.attrs.update({'class': 'form-control', 'accept': 'image/*'})
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        image_file = self.cleaned_data.get('image_file')
+        if image_file:
+            instance.profile_photo = image_file.read()
+        if commit:
+            instance.save()
+        return instance
+
+
+class InstructorServiceForm(forms.ModelForm):
+    class Meta:
+        model = InstructorService
+        fields = [
+            'title',
+            'description',
+            'ski_station',
+            'duration_minutes',
+            'amount',
+            'currency',
+            'max_group_size',
+            'is_active',
+        ]
+        widgets = {
+            'title': forms.TextInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+            'ski_station': forms.Select(attrs={'class': 'form-select'}),
+            'duration_minutes': forms.NumberInput(attrs={'class': 'form-control', 'min': '15', 'step': '5'}),
+            'amount': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'step': '0.01'}),
+            'currency': forms.TextInput(attrs={'class': 'form-control'}),
+            'max_group_size': forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'step': '1'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['title'].label = _('Titre de l\'offre')
+        self.fields['description'].label = _('Description')
+        self.fields['ski_station'].label = _('Station')
+        self.fields['duration_minutes'].label = _('Duree (minutes)')
+        self.fields['amount'].label = _('Prix')
+        self.fields['currency'].label = _('Devise')
+        self.fields['max_group_size'].label = _('Taille max du groupe')
+        self.fields['is_active'].label = _('Offre active')
+
+        self.fields['title'].widget.attrs.update({'placeholder': _('Cours prive debutant, session carving...')})
+        self.fields['description'].widget.attrs.update({'placeholder': _('Precisez niveau, contenu, equipement et point de rendez-vous.')})
+        self.fields['currency'].widget.attrs.update({'maxlength': '10', 'placeholder': 'EUR'})

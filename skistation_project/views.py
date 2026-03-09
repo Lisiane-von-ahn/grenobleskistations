@@ -18,11 +18,14 @@ from api.models import (
     SkiPartnerPost,
     SkiPartnerReport,
     UserProfile,
+    InstructorProfile,
+    InstructorService,
 )
 from django.db.models import Sum
 from django.db.models import Q
 from django.db.models import Avg
 from django.db.models import Count
+from django.db.models import Min
 from django.db.models import Value
 from django.db.models import IntegerField
 from django.urls import reverse
@@ -33,6 +36,8 @@ from .forms import (
     ProfileForm,
     PisteConditionReportForm,
     SnowConditionUpdateForm,
+    InstructorProfileForm,
+    InstructorServiceForm,
     get_marketplace_choices,
 )
 from allauth.socialaccount.providers.google.views import OAuth2LoginView
@@ -982,29 +987,265 @@ def service_detail(request, service_id):
 
 
 def instructors_list(request):
-    return render(request, 'instructors.html')
+    if request.method == 'POST' and request.user.is_authenticated:
+        form_type = request.POST.get('form_type', '').strip()
+        if form_type == 'instructor_review':
+            instructor_id = request.POST.get('instructor_id', '').strip()
+            try:
+                rating = int(request.POST.get('rating', '').strip())
+            except (TypeError, ValueError):
+                rating = 0
+            comment = request.POST.get('comment', '').strip()
+
+            instructor = InstructorProfile.objects.filter(id=instructor_id, is_active=True).first()
+            if not instructor:
+                messages.error(request, 'Moniteur introuvable.')
+                return redirect('instructors')
+
+            if instructor.user_id == request.user.id:
+                messages.error(request, 'Vous ne pouvez pas evaluer votre propre profil.')
+                return redirect('instructors')
+
+            if rating < 1 or rating > 5:
+                messages.error(request, 'Veuillez choisir une note entre 1 et 5.')
+                return redirect('instructors')
+
+            from api.models import InstructorReview
+
+            InstructorReview.objects.update_or_create(
+                instructor=instructor,
+                user=request.user,
+                defaults={'rating': rating, 'comment': comment},
+            )
+            messages.success(request, 'Votre avis a ete enregistre.')
+            return redirect('instructors')
+
+    search_query = request.GET.get('q', '').strip()
+    selected_station = request.GET.get('station', '').strip()
+    price_min = request.GET.get('price_min', '').strip()
+    price_max = request.GET.get('price_max', '').strip()
+    sort_by = request.GET.get('sort', 'relevance').strip() or 'relevance'
+    my_offers = request.GET.get('my_offers', '0') == '1'
+
+    instructors_qs = (
+        InstructorProfile.objects.select_related('user')
+        .filter(is_active=True)
+        .annotate(
+            active_services_count=Count('services', filter=Q(services__is_active=True), distinct=True),
+            min_amount=Min('services__amount', filter=Q(services__is_active=True)),
+            avg_rating=Avg('reviews__rating'),
+            review_count=Count('reviews', distinct=True),
+        )
+    )
+
+    if search_query:
+        instructors_qs = instructors_qs.filter(
+            Q(user__username__icontains=search_query)
+            | Q(user__first_name__icontains=search_query)
+            | Q(user__last_name__icontains=search_query)
+            | Q(bio__icontains=search_query)
+            | Q(certifications__icontains=search_query)
+            | Q(services__title__icontains=search_query)
+            | Q(services__description__icontains=search_query)
+            | Q(services__ski_station__name__icontains=search_query)
+        )
+
+    if selected_station:
+        instructors_qs = instructors_qs.filter(services__ski_station_id=selected_station, services__is_active=True)
+
+    if price_min:
+        try:
+            instructors_qs = instructors_qs.filter(min_amount__gte=float(price_min))
+        except ValueError:
+            price_min = ''
+
+    if price_max:
+        try:
+            instructors_qs = instructors_qs.filter(min_amount__lte=float(price_max))
+        except ValueError:
+            price_max = ''
+
+    if my_offers:
+        if request.user.is_authenticated:
+            instructors_qs = instructors_qs.filter(user=request.user)
+        else:
+            instructors_qs = instructors_qs.none()
+
+    sort_map = {
+        'relevance': ['-active_services_count', '-review_count', '-years_experience', '-created_at'],
+        'price_asc': ['min_amount', '-review_count', '-created_at'],
+        'price_desc': ['-min_amount', '-review_count', '-created_at'],
+        'experience_desc': ['-years_experience', '-review_count', '-created_at'],
+        'newest': ['-created_at'],
+    }
+    if sort_by not in sort_map:
+        sort_by = 'relevance'
+
+    instructors_qs = instructors_qs.distinct().order_by(*sort_map[sort_by])
+
+    current_reviews = {}
+    if request.user.is_authenticated and instructors_qs:
+        from api.models import InstructorReview
+
+        current_reviews = {
+            row.instructor_id: row
+            for row in InstructorReview.objects.filter(
+                user=request.user,
+                instructor_id__in=[item.id for item in instructors_qs],
+            )
+        }
+
+    instructors = list(instructors_qs)
+    for instructor in instructors:
+        avg_val = instructor.avg_rating or 0
+        instructor.avg_rating_rounded = int(round(avg_val)) if avg_val else 0
+        instructor.current_user_review = current_reviews.get(instructor.id)
+
+    stations = SkiStation.objects.order_by('name')
+
+    return render(
+        request,
+        'instructors.html',
+        {
+            'instructors': instructors,
+            'stations': stations,
+            'search_query': search_query,
+            'selected_station': selected_station,
+            'price_min': price_min,
+            'price_max': price_max,
+            'sort_by': sort_by,
+            'my_offers': my_offers,
+        },
+    )
 
 
 @login_required
 def become_instructor(request):
+    profile, _ = InstructorProfile.objects.get_or_create(user=request.user)
+
     if request.method == 'POST':
-        messages.success(request, 'Demande moniteur enregistree.')
-        return redirect('instructors')
-    return render(request, 'instructor_register.html')
+        form = InstructorProfileForm(request.POST, request.FILES, instance=profile)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Profil moniteur enregistre.')
+            return redirect('instructors')
+        messages.error(request, 'Veuillez verifier les champs du formulaire.')
+    else:
+        form = InstructorProfileForm(instance=profile)
+
+    return render(request, 'instructor_register.html', {'form': form, 'profile': profile})
 
 
 @login_required
 def instructor_services_view(request):
-    return render(request, 'instructor_services.html')
+    profile, _ = InstructorProfile.objects.get_or_create(user=request.user)
+
+    if request.method == 'POST':
+        form = InstructorServiceForm(request.POST)
+        if form.is_valid():
+            service = form.save(commit=False)
+            service.instructor = profile
+            service.save()
+            messages.success(request, 'Offre moniteur publiee.')
+            return redirect('instructor_services')
+        messages.error(request, 'Veuillez corriger le formulaire avant de publier.')
+    else:
+        form = InstructorServiceForm(initial={'currency': 'EUR', 'duration_minutes': 60, 'max_group_size': 1, 'is_active': True})
+
+    query_text = request.GET.get('q', '').strip()
+    filter_station = request.GET.get('station', '').strip()
+    filter_status = request.GET.get('status', '').strip()
+    filter_min_amount = request.GET.get('min_amount', '').strip()
+    filter_max_amount = request.GET.get('max_amount', '').strip()
+    sort_by = request.GET.get('sort', 'newest').strip() or 'newest'
+
+    services = InstructorService.objects.filter(instructor=profile).select_related('ski_station')
+
+    if query_text:
+        services = services.filter(
+            Q(title__icontains=query_text)
+            | Q(description__icontains=query_text)
+            | Q(ski_station__name__icontains=query_text)
+        )
+
+    if filter_station:
+        services = services.filter(ski_station_id=filter_station)
+
+    if filter_status == 'active':
+        services = services.filter(is_active=True)
+    elif filter_status == 'inactive':
+        services = services.filter(is_active=False)
+
+    if filter_min_amount:
+        try:
+            services = services.filter(amount__gte=float(filter_min_amount))
+        except ValueError:
+            filter_min_amount = ''
+
+    if filter_max_amount:
+        try:
+            services = services.filter(amount__lte=float(filter_max_amount))
+        except ValueError:
+            filter_max_amount = ''
+
+    sort_map = {
+        'newest': ['-created_at'],
+        'oldest': ['created_at'],
+        'price_asc': ['amount', '-created_at'],
+        'price_desc': ['-amount', '-created_at'],
+        'duration_asc': ['duration_minutes', '-created_at'],
+    }
+    if sort_by not in sort_map:
+        sort_by = 'newest'
+    services = services.order_by(*sort_map[sort_by])
+
+    stations = SkiStation.objects.order_by('name')
+    base_services_qs = InstructorService.objects.filter(instructor=profile)
+    stats = {
+        'total': base_services_qs.count(),
+        'active': base_services_qs.filter(is_active=True).count(),
+        'inactive': base_services_qs.filter(is_active=False).count(),
+    }
+
+    return render(
+        request,
+        'instructor_services.html',
+        {
+            'form': form,
+            'services': services,
+            'profile': profile,
+            'stations': stations,
+            'query_text': query_text,
+            'filter_station': filter_station,
+            'filter_status': filter_status,
+            'filter_min_amount': filter_min_amount,
+            'filter_max_amount': filter_max_amount,
+            'sort_by': sort_by,
+            'stats': stats,
+        },
+    )
 
 
 @login_required
 def edit_instructor_service(request, service_id):
-    messages.info(request, 'Edition service moniteur indisponible pour le moment.')
-    return redirect('instructor_services')
+    service = get_object_or_404(InstructorService, id=service_id, instructor__user=request.user)
+
+    if request.method == 'POST':
+        form = InstructorServiceForm(request.POST, instance=service)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Offre moniteur mise a jour.')
+            return redirect('instructor_services')
+        messages.error(request, 'Veuillez corriger les champs en erreur.')
+    else:
+        form = InstructorServiceForm(instance=service)
+
+    return render(request, 'edit_instructor_service.html', {'form': form, 'service': service})
 
 
 @login_required
 def delete_instructor_service(request, service_id):
-    messages.info(request, 'Suppression service moniteur indisponible pour le moment.')
+    service = get_object_or_404(InstructorService, id=service_id, instructor__user=request.user)
+    service.delete()
+    messages.success(request, 'Offre moniteur supprimee.')
     return redirect('instructor_services')
