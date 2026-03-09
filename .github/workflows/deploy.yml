@@ -53,15 +53,39 @@ jobs:
             echo "✅ Re-checking no pending migrations remain"
             docker compose -f docker-compose.yml run --rm --no-deps --entrypoint "" web python manage.py migrate --check --noinput
 
-            WEB_CID=$(docker compose -f docker-compose.yml ps -q web)
+            WEB_CID=""
+            for i in $(seq 1 8); do
+              WEB_CID=$(docker compose -f docker-compose.yml ps -q web | head -n1)
+              if [ -n "${WEB_CID}" ]; then
+                break
+              fi
+              echo "ℹ️ web container ID not available yet, ensuring service is up (attempt ${i}/8)"
+              docker compose -f docker-compose.yml up -d web || true
+              sleep 3
+            done
+
+            if [ -z "${WEB_CID}" ] && docker inspect grenobleski-web >/dev/null 2>&1; then
+              WEB_CID=$(docker inspect --format='{{.Id}}' grenobleski-web)
+            fi
+
+            if [ -z "${WEB_CID}" ]; then
+              WEB_CID=$(docker ps -aq --filter "label=com.docker.compose.service=web" | head -n1)
+            fi
+
             if [ -z "${WEB_CID}" ]; then
               echo "❌ Could not resolve web container ID from docker compose"
               docker compose -f docker-compose.yml ps || true
+              docker ps -a --format 'table {{.ID}}\t{{.Names}}\t{{.Status}}' || true
               exit 1
             fi
 
             echo "⏳ Waiting for web container health"
             for i in $(seq 1 60); do
+              CURRENT_WEB_CID=$(docker compose -f docker-compose.yml ps -q web | head -n1)
+              if [ -n "${CURRENT_WEB_CID}" ]; then
+                WEB_CID="${CURRENT_WEB_CID}"
+              fi
+
               HEALTH_STATE=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "${WEB_CID}" 2>/dev/null || echo "missing")
               CONTAINER_STATE=$(docker inspect --format='{{.State.Status}}' "${WEB_CID}" 2>/dev/null || echo "missing")
               RESTART_COUNT=$(docker inspect --format='{{.RestartCount}}' "${WEB_CID}" 2>/dev/null || echo "0")
@@ -84,6 +108,11 @@ jobs:
             echo "⏳ Verifying app response from inside web container (:8000)"
             INTERNAL_OK=false
             for i in $(seq 1 40); do
+              CURRENT_WEB_CID=$(docker compose -f docker-compose.yml ps -q web | head -n1)
+              if [ -n "${CURRENT_WEB_CID}" ]; then
+                WEB_CID="${CURRENT_WEB_CID}"
+              fi
+
               if docker exec "${WEB_CID}" sh -lc "curl -fsS -H 'Host: grenobleski.fr' http://127.0.0.1:8000/ >/dev/null"; then
                 INTERNAL_OK=true
                 echo "✅ App responds inside container"

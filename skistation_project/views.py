@@ -799,6 +799,14 @@ def ski_partners(request):
 
     if request.method == 'POST' and request.user.is_authenticated:
         form_type = request.POST.get('form_type', '').strip()
+        if form_type == 'delete':
+            post_id = request.POST.get('post_id', '').strip()
+            post = SkiPartnerPost.objects.filter(id=post_id, user=request.user).first()
+            if post:
+                post.delete()
+                messages.success(request, 'Annonce partenaire supprimee.')
+            return redirect('ski_partners')
+
         if form_type == 'report':
             post_id = request.POST.get('post_id', '').strip()
             reason = request.POST.get('reason', '').strip()
@@ -1343,6 +1351,23 @@ def instructor_services_view(request):
             'stats': stats,
         },
     )
+
+
+@login_required
+def cancel_instructor_profile(request):
+    if request.method != 'POST':
+        return redirect('instructor_services')
+
+    profile = InstructorProfile.objects.filter(user=request.user).first()
+    if not profile:
+        messages.info(request, 'Aucun profil moniteur actif trouve.')
+        return redirect('instructors')
+
+    profile.is_active = False
+    profile.save(update_fields=['is_active'])
+    InstructorService.objects.filter(instructor=profile).update(is_active=False)
+    messages.success(request, 'Votre profil moniteur a ete desactive.')
+    return redirect('instructors')
 
 
 @login_required
