@@ -91,21 +91,6 @@ class Migration(migrations.Migration):
             name='listing_type',
         ),
         migrations.AlterField(
-            model_name='busline',
-            name='bus_number',
-            field=models.CharField(max_length=50),
-        ),
-        migrations.AlterField(
-            model_name='busline',
-            name='frequency',
-            field=models.CharField(max_length=50, null=True),
-        ),
-        migrations.AlterField(
-            model_name='busline',
-            name='travel_time',
-            field=models.CharField(max_length=50, null=True),
-        ),
-        migrations.AlterField(
             model_name='crowdstatusupdate',
             name='crowd_level',
             field=models.CharField(choices=[('quiet', 'Peu de gens'), ('normal', 'Agreable'), ('busy', 'Bonde')], default='normal', max_length=10),
@@ -114,11 +99,6 @@ class Migration(migrations.Migration):
             model_name='pisteconditionreport',
             name='crowd_level',
             field=models.CharField(choices=[('quiet', 'Peu de gens'), ('normal', 'Agreable'), ('busy', 'Bonde')], default='normal', max_length=10),
-        ),
-        migrations.AlterField(
-            model_name='servicestore',
-            name='type',
-            field=models.CharField(max_length=50),
         ),
         migrations.DeleteModel(
             name='InstructorProfile',
