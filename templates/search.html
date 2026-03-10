@@ -8,6 +8,60 @@
 
 {% block content %}
 
+<style>
+    .search-page-wrap .search-form form {
+        border-radius: 18px;
+    }
+
+    .search-page-wrap .amazing-deals .card {
+        overflow: hidden;
+    }
+
+    .search-page-wrap .amazing-deals .card img {
+        height: 100%;
+        min-height: 210px;
+        object-fit: cover;
+    }
+
+    @media (max-width: 767.98px) {
+        .search-page-wrap .search-form {
+            padding-top: 0.75rem !important;
+        }
+
+        .search-page-wrap .search-form .form-label {
+            font-weight: 600;
+            margin-bottom: 0.35rem;
+        }
+
+        .search-page-wrap .search-form .form-control,
+        .search-page-wrap .search-form .btn {
+            min-height: 46px;
+        }
+
+        .search-page-wrap .amazing-deals .card .row > [class*='col-'] {
+            width: 100%;
+            max-width: 100%;
+            flex: 0 0 100%;
+        }
+
+        .search-page-wrap .amazing-deals .card img {
+            min-height: 180px;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .search-page-wrap .amazing-deals .card .card-body {
+            padding: 0.9rem;
+        }
+
+        .search-page-wrap .amazing-deals .card .btn {
+            width: 100%;
+            min-height: 44px;
+        }
+    }
+</style>
+
+<div class="search-page-wrap">
+
 <div class="page-heading text-center py-5 bg-light-blue">
     <div class="container">
         <h2 class="display-4 text-primary">{% trans "Trouvez la station de ski idéale" %}</h2>
@@ -82,6 +136,8 @@
             {% endif %}
         </div>
     </div>
+</div>
+
 </div>
 
 {% endblock %}

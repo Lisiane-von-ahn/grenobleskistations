@@ -25,13 +25,75 @@
     <link rel="stylesheet" href="{% static 'css/marketplace.css' %}">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-    <script src="{% static 'styler.js'%}"></script>
+    <script src="{% static 'js/styler.js' %}"></script>
 
     <!-- Custom CSS for the page -->
     <style>
+        :root {
+            --app-bg: linear-gradient(180deg, #f2fbff 0%, #f8fafc 52%, #ffffff 100%);
+            --app-text: #1f2937;
+            --app-mobile-nav: rgba(15, 34, 54, 0.96);
+            --app-mobile-nav-active: linear-gradient(135deg, #0ea5b8 0%, #0b7ea9 100%);
+            --app-surface: #ffffff;
+            --app-border: #dce6ee;
+            --app-soft-shadow: 0 12px 26px rgba(16, 57, 74, 0.09);
+        }
+
         h2, h5 {
             font-weight: 600;
             color: #333;
+        }
+
+        body {
+            background: var(--app-bg);
+            color: var(--app-text);
+        }
+
+        main {
+            background: transparent;
+        }
+
+        .page-heading.bg-light-blue,
+        .page-heading.py-5 {
+            background: linear-gradient(150deg, #e9f8ff 0%, #f2fbff 55%, #e8f7f2 100%);
+            border: 1px solid #d8ebf5;
+            border-radius: 22px;
+            margin-bottom: 14px;
+        }
+
+        .search-form,
+        .amazing-deals,
+        section.py-5.bg-light {
+            background: transparent !important;
+        }
+
+        section.py-5.bg-light .card,
+        .amazing-deals .card,
+        .search-form form,
+        #search-form,
+        .services-heading,
+        .table-responsive {
+            border-radius: 16px;
+        }
+
+        .search-form form,
+        #search-form {
+            background: var(--app-surface);
+            border: 1px solid var(--app-border);
+            box-shadow: var(--app-soft-shadow);
+            padding: 1rem;
+        }
+
+        @keyframes app-fade-rise {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .card {
@@ -175,6 +237,7 @@
 
         main > div {
             margin-top: 170px !important;
+            min-height: calc(100vh - 230px);
         }
 
         .floating-btn {
@@ -320,11 +383,96 @@
 
         @media (max-width: 991.98px) {
             .header-area {
-                min-height: 122px;
+                min-height: 96px;
+                background: linear-gradient(135deg, #23b6c8 0%, #1db0c2 100%);
+                box-shadow: 0 8px 20px rgba(10, 46, 66, 0.16);
             }
 
             .header-area .main-nav {
                 align-items: center;
+            }
+
+            .header-area .main-nav .logo img {
+                width: 116px;
+                margin-top: 6px;
+            }
+
+            .display-4 {
+                font-size: clamp(1.55rem, 4.9vw, 2rem);
+                line-height: 1.18;
+            }
+
+            h2 {
+                font-size: clamp(1.4rem, 4.2vw, 1.8rem);
+                line-height: 1.2;
+            }
+
+            h3 {
+                font-size: clamp(1.2rem, 3.7vw, 1.45rem);
+                line-height: 1.22;
+            }
+
+            .search-form,
+            .amazing-deals,
+            section.py-5.bg-light {
+                padding-top: 0.85rem !important;
+                padding-bottom: 1.05rem !important;
+            }
+
+            .card,
+            section.py-5.bg-light .card,
+            .amazing-deals .card {
+                border-radius: 14px;
+                border: 1px solid var(--app-border);
+                box-shadow: 0 10px 20px rgba(15, 44, 61, 0.08);
+            }
+
+            .card-body {
+                padding: 0.9rem;
+            }
+
+            .form-control,
+            .form-select,
+            .btn {
+                min-height: 46px;
+            }
+
+            .page-heading,
+            .search-form form,
+            section.py-5.bg-light .card,
+            .amazing-deals .card {
+                animation: app-fade-rise 0.42s ease-out both;
+            }
+
+            #section-1 {
+                min-height: 560px;
+                height: auto;
+                background: linear-gradient(165deg, #123445 0%, #1a5f77 48%, #23b6c8 100%);
+            }
+
+            #section-1 .content-slider nav {
+                bottom: 14px;
+            }
+
+            #section-1 .content-slider nav .controls {
+                width: 92%;
+            }
+
+            #section-1 .content-slider nav .controls label {
+                margin: 0 0.2rem;
+                width: 22%;
+                height: 2.6em;
+                padding-top: 0.55em;
+                text-align: center;
+            }
+
+            #section-1 .content-slider nav .controls label span.text {
+                font-size: 0.95rem;
+            }
+
+            .card-title {
+                font-size: 1.05rem;
+                line-height: 1.25;
             }
 
             .header-area .main-nav .nav {
@@ -348,7 +496,8 @@
             }
 
             main > div {
-                margin-top: 118px !important;
+                margin-top: 96px !important;
+                padding-top: 10px;
             }
 
             #cookie-banner {
@@ -363,12 +512,12 @@
             }
 
             .floating-btn {
-                right: 12px;
-                bottom: 74px;
+                display: none;
             }
 
             body {
-                padding-bottom: 76px;
+                padding-bottom: 82px;
+                background: var(--app-bg);
             }
 
             .mobile-bottom-nav {
@@ -379,35 +528,45 @@
                 z-index: 1090;
                 display: grid;
                 grid-template-columns: repeat(4, minmax(0, 1fr));
-                gap: 4px;
-                padding: 8px 8px max(8px, env(safe-area-inset-bottom));
-                background: rgba(10, 19, 30, 0.92);
+                gap: 3px;
+                padding: 6px 8px max(6px, env(safe-area-inset-bottom));
+                background: var(--app-mobile-nav);
                 border-top: 1px solid rgba(255, 255, 255, 0.12);
                 backdrop-filter: blur(4px);
+                box-shadow: 0 -8px 20px rgba(15, 34, 54, 0.2);
             }
 
             .mobile-bottom-nav a {
                 color: #e5e7eb;
                 text-align: center;
                 border-radius: 10px;
-                padding: 8px 4px;
+                padding: 6px 4px;
                 font-size: 11px;
                 line-height: 1.2;
-                min-height: 46px;
+                min-height: 44px;
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
-                gap: 4px;
+                gap: 3px;
                 font-weight: 600;
+                transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
             }
 
             .mobile-bottom-nav a i {
                 font-size: 13px;
             }
 
+            .mobile-bottom-nav a:hover,
+            .mobile-bottom-nav a:focus-visible {
+                color: #ffffff;
+                background: rgba(59, 130, 246, 0.22);
+                transform: translateY(-1px);
+            }
+
             .mobile-bottom-nav a.active {
                 color: #ffffff;
-                background: #0d6efd;
+                background: var(--app-mobile-nav-active);
+                box-shadow: 0 6px 14px rgba(11, 126, 169, 0.34);
             }
 
             .legal-hero,
@@ -427,8 +586,8 @@
 
         @media (max-width: 575.98px) {
             .container {
-                padding-left: 14px;
-                padding-right: 14px;
+                padding-left: 12px;
+                padding-right: 12px;
             }
 
             .card {
@@ -446,8 +605,22 @@
                 font-size: 15px;
             }
 
+            .page-heading.bg-light-blue,
+            .page-heading.py-5 {
+                border-radius: 16px;
+                padding-top: 1rem !important;
+                padding-bottom: 1rem !important;
+            }
+
+            .search-form form,
+            #search-form {
+                padding: 0.85rem;
+                border-radius: 14px;
+            }
+
             main > div {
-                margin-top: 110px !important;
+                margin-top: 90px !important;
+                padding-top: 9px;
             }
 
             .main-nav .nav li .offers-submenu {
@@ -485,6 +658,15 @@
 
             .mobile-label {
                 display: inline;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .page-heading,
+            .search-form form,
+            section.py-5.bg-light .card,
+            .amazing-deals .card {
+                animation: none !important;
             }
         }
 

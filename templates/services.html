@@ -60,6 +60,12 @@
         z-index: 3;
     }
 
+    .services-surface {
+        border-radius: 18px;
+        border: 1px solid #dce6ee;
+        box-shadow: 0 12px 24px rgba(17, 58, 74, 0.08);
+    }
+
     @media (max-width: 767.98px) {
         .services-heading h2 {
             font-size: 1.45rem;
@@ -78,6 +84,15 @@
 
         .service-card .card-body {
             padding: 0.9rem;
+        }
+
+        .service-card .card-title {
+            font-size: 1.02rem;
+            line-height: 1.25;
+        }
+
+        .service-card .btn {
+            min-height: 44px;
         }
 
         .sticky-top {
@@ -104,6 +119,21 @@
             width: 100%;
             text-align: center;
         }
+
+        .services-surface {
+            border-radius: 14px;
+        }
+
+        .table-responsive {
+            border: 1px solid #e5edf3;
+            border-radius: 12px;
+            background: #fff;
+            padding: 0.35rem;
+        }
+
+        .table-responsive table {
+            font-size: 0.86rem;
+        }
     }
 </style>
 
@@ -116,7 +146,7 @@
             </div>
         </div>
 
-        <div class="card border-0 shadow-sm sticky-top mb-4" style="top: 12px; z-index: 20;">
+        <div class="card border-0 shadow-sm sticky-top mb-4 services-surface" style="top: 12px; z-index: 20;">
             <div class="card-body">
                 <form method="get" action="{% url 'services' %}" class="row g-3 align-items-end">
                     <div class="col-lg-5">
@@ -176,7 +206,7 @@
             </div>
         {% endif %}
 
-        <div class="card border-0 shadow-sm mb-4">
+        <div class="card border-0 shadow-sm mb-4 services-surface">
             <div class="card-body">
                 <h5 class="mb-3">{% trans "Quantité de services par station" %}</h5>
                 <div class="table-responsive">

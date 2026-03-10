@@ -27,6 +27,12 @@
             border-radius: 14px;
             box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
         }
+
+        .station-cta-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
         .star-rating {
             direction: rtl;
             display: inline-flex;
@@ -99,8 +105,22 @@
                 font-size: 0.92rem;
             }
 
+            .station-cta-row .btn {
+                width: 100%;
+                min-height: 44px;
+            }
+
             .section-card {
                 border-radius: 12px;
+            }
+
+            .section-card {
+                padding: 0.95rem !important;
+            }
+
+            .section-card h4,
+            .section-card h5 {
+                line-height: 1.25;
             }
 
             #ski-map {
@@ -148,7 +168,7 @@
                             </div>
                         </div>
 
-                        <div class="mt-2">
+                        <div class="mt-2 station-cta-row">
                             <a href="{{ station_transit_url }}" class="btn btn-outline-primary btn-sm" target="_blank">{% trans "Venir en bus" %}</a>
                             <a href="{{ station_driving_url }}" class="btn btn-outline-success btn-sm" target="_blank">{% trans "Venir en voiture" %}</a>
                         </div>

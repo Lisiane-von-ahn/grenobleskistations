@@ -337,25 +337,114 @@
     text-overflow: ellipsis;
 }
 
+@keyframes mk-rise-in {
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 @media (max-width: 768px) {
     .market-hero {
-        padding: 1.25rem;
+        padding: 1.1rem;
+        border-radius: 16px;
+        box-shadow: 0 10px 22px rgba(19, 49, 61, 0.08);
+    }
+
+    .market-section-title {
+        font-size: 1.7rem;
+        line-height: 1.2;
+    }
+
+    .market-subtle {
+        font-size: 0.9rem;
+        line-height: 1.42;
+    }
+
+    .market-search-panel,
+    .listing-builder-panel {
+        border-radius: 14px;
+        padding: 0.95rem;
+        box-shadow: 0 14px 30px rgba(16, 57, 74, 0.1);
     }
 
     .market-image {
-        height: 180px;
+        height: 170px;
     }
 
     .builder-section {
-        padding: 0.85rem;
+        padding: 0.8rem;
+        border-radius: 12px;
+    }
+
+    .builder-section h5 {
+        font-size: 1.45rem;
+        line-height: 1.2;
+        margin-bottom: 0.75rem !important;
     }
 
     .upload-dropzone {
         min-height: 140px;
     }
 
+    .market-search-panel .form-control,
+    .market-search-panel .form-select,
+    .listing-builder-panel .form-control,
+    .listing-builder-panel .form-select {
+        min-height: 44px;
+        font-size: 15px;
+    }
+
+    #listing-builder-form .d-flex.gap-2.justify-content-end {
+        position: sticky;
+        bottom: 82px;
+        z-index: 40;
+        padding: 0.65rem;
+        border-radius: 12px;
+        background: rgba(245, 250, 253, 0.96);
+        border: 1px solid rgba(183, 207, 219, 0.72);
+        backdrop-filter: blur(6px);
+    }
+
+    #listing-builder-form .d-flex.gap-2.justify-content-end .btn {
+        flex: 1 1 0;
+        min-height: 44px;
+    }
+
     .saved-filters {
         grid-template-columns: 1fr;
+    }
+
+    .market-hero {
+        animation: mk-rise-in 0.45s ease-out both;
+    }
+
+    #listing-builder-form .builder-section {
+        animation: mk-rise-in 0.5s ease-out both;
+    }
+
+    #listing-builder-form .builder-section:nth-of-type(1) {
+        animation-delay: 0.06s;
+    }
+
+    #listing-builder-form .builder-section:nth-of-type(2) {
+        animation-delay: 0.14s;
+    }
+
+    #listing-builder-form .builder-section:nth-of-type(3) {
+        animation-delay: 0.22s;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .market-hero,
+    #listing-builder-form .builder-section {
+        animation: none !important;
     }
 }
 
