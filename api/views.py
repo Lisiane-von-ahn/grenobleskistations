@@ -500,3 +500,20 @@ def login_view(request):
         )
     return Response({"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
 
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def mobile_bridge_info_view(request):
+    return Response(
+        {
+            "status": "ok",
+            "endpoints": {
+                "api_mobile_auth_complete": "/api/mobile/auth/complete/",
+                "api_mobile_token_login": "/api/mobile/token-login/",
+                "mobile_auth_complete": "/mobile/auth/complete/",
+                "mobile_token_login": "/mobile/token-login/",
+            },
+        },
+        status=status.HTTP_200_OK,
+    )
+

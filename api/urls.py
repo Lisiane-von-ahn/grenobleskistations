@@ -23,7 +23,7 @@ from .views import (
     UserProfileViewSet,
     UserViewSet,
     auth_login_view, auth_logout_view, auth_me_view, auth_google_login_view,
-    auth_register_view, login_view,
+    auth_register_view, login_view, mobile_bridge_info_view,
 )
 router = DefaultRouter()
 router.register(r'skistations', SkiStationViewSet)
@@ -54,6 +54,7 @@ urlpatterns = [
     path('auth/me/', auth_me_view, name='auth-me'),
     path('auth/logout/', auth_logout_view, name='auth-logout'),
     path('login/', login_view, name='login'),  # Add the login endpoint manually
+    path('mobile/', mobile_bridge_info_view, name='api-mobile-bridge-info'),
     path(
         'mobile/auth/complete/',
         RedirectView.as_view(url='/mobile/auth/complete/', permanent=False, query_string=True),

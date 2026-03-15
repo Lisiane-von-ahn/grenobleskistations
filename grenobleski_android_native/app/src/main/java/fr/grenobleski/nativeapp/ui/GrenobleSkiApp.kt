@@ -1,5 +1,6 @@
 package fr.grenobleski.nativeapp.ui
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -35,6 +36,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,13 +55,30 @@ import fr.grenobleski.nativeapp.data.AuthRepository
 import fr.grenobleski.nativeapp.data.network.GrenobleSkiApiClient
 import fr.grenobleski.nativeapp.data.session.SessionStore
 import fr.grenobleski.nativeapp.ui.components.MetricCard
+import java.net.HttpURLConnection
+import java.net.URL
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+private val MOBILE_AUTH_COMPLETE_CANDIDATES = listOf(
+    "/api/mobile/auth/complete/",
+    "/mobile/auth/complete/",
+)
+
+private val MOBILE_TOKEN_LOGIN_CANDIDATES = listOf(
+    "/api/mobile/token-login/",
+    "/mobile/token-login/",
+)
 
 @Composable
 fun GrenobleSkiApp(
     pendingAuthUri: Uri? = null,
     onAuthUriConsumed: () -> Unit = {},
 ) {
-    val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    val localContext = androidx.compose.ui.platform.LocalContext.current
+    val appContext = localContext.applicationContext
+    val uiScope = rememberCoroutineScope()
     val repository = remember {
         AuthRepository(
             service = GrenobleSkiApiClient.createService(BuildConfig.API_BASE_URL),
@@ -100,7 +119,7 @@ fun GrenobleSkiApp(
             onRegister = viewModel::register,
             onSwitchAuthMode = viewModel::switchAuthMode,
             onForgotPassword = {
-                val ok = openExternalUrl(appContext, "$siteBase/password/reset/")
+                val ok = openExternalUrl(localContext, "$siteBase/password/reset/")
                 if (!ok) {
                     viewModel.setError(appContext.getString(R.string.browser_error))
                 } else {
@@ -108,27 +127,44 @@ fun GrenobleSkiApp(
                 }
             },
             onGoogle = {
-                val callbackUrl = "$siteBase/api/mobile/auth/complete/"
-                val googleUrl = "$siteBase/accounts/google/login/?process=login&next=${Uri.encode(callbackUrl)}"
-                val ok = openExternalUrl(appContext, googleUrl)
-                if (!ok) {
-                    viewModel.setError(appContext.getString(R.string.browser_error))
-                } else {
-                    viewModel.clearError()
+                uiScope.launch {
+                    val callbackUrl = resolveFirstReachableEndpoint(
+                        candidates = MOBILE_AUTH_COMPLETE_CANDIDATES.map { "$siteBase$it" },
+                        fallbackUrl = "$siteBase/",
+                    )
+                    val googleUrl = "$siteBase/accounts/google/login/?process=login&next=${Uri.encode(callbackUrl)}"
+                    val ok = openExternalUrl(localContext, googleUrl)
+                    if (!ok) {
+                        viewModel.setError(appContext.getString(R.string.browser_error))
+                    } else {
+                        viewModel.clearError()
+                    }
                 }
             },
         )
     } else {
         val session = requireNotNull(state.session)
         val openWebByPath: (String) -> Unit = { nextPath ->
-            val tokenEncoded = Uri.encode(session.token)
-            val nextEncoded = Uri.encode(nextPath)
-            val url = "$siteBase/api/mobile/token-login/?token=$tokenEncoded&next=$nextEncoded"
-            val ok = openExternalUrl(appContext, url)
-            if (!ok) {
-                viewModel.setError(appContext.getString(R.string.browser_error))
-            } else {
-                viewModel.clearError()
+            uiScope.launch {
+                val bridgeBase = resolveFirstReachableEndpoint(
+                    candidates = MOBILE_TOKEN_LOGIN_CANDIDATES.map { "$siteBase$it" },
+                    fallbackUrl = "",
+                )
+
+                val targetUrl = if (bridgeBase.isNotBlank()) {
+                    val tokenEncoded = Uri.encode(session.token)
+                    val nextEncoded = Uri.encode(nextPath)
+                    "$bridgeBase?token=$tokenEncoded&next=$nextEncoded"
+                } else {
+                    "$siteBase$nextPath"
+                }
+
+                val ok = openExternalUrl(localContext, targetUrl)
+                if (!ok) {
+                    viewModel.setError(appContext.getString(R.string.browser_error))
+                } else {
+                    viewModel.clearError()
+                }
             }
         }
 
@@ -424,15 +460,21 @@ private fun HomeScreen(
 }
 
 private fun openExternalUrl(context: Context, url: String): Boolean {
+    val uri = Uri.parse(url)
+
     return try {
-        CustomTabsIntent.Builder()
+        val customTabsIntent = CustomTabsIntent.Builder()
             .setShowTitle(true)
             .build()
-            .launchUrl(context, Uri.parse(url))
+
+        if (context !is Activity) {
+            customTabsIntent.intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        customTabsIntent.launchUrl(context, uri)
         true
     } catch (_: Exception) {
         try {
-            val fallbackIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+            val fallbackIntent = Intent(Intent.ACTION_VIEW, uri).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(fallbackIntent)
@@ -440,5 +482,36 @@ private fun openExternalUrl(context: Context, url: String): Boolean {
         } catch (_: Exception) {
             false
         }
+    }
+}
+
+private suspend fun resolveFirstReachableEndpoint(
+    candidates: List<String>,
+    fallbackUrl: String,
+): String {
+    return withContext(Dispatchers.IO) {
+        for (candidate in candidates) {
+            if (isEndpointReachable(candidate)) {
+                return@withContext candidate
+            }
+        }
+        fallbackUrl
+    }
+}
+
+private fun isEndpointReachable(url: String): Boolean {
+    return try {
+        val connection = (URL(url).openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"
+            instanceFollowRedirects = false
+            connectTimeout = 2500
+            readTimeout = 2500
+        }
+
+        val status = connection.responseCode
+        connection.disconnect()
+        status in 200..399
+    } catch (_: Exception) {
+        false
     }
 }

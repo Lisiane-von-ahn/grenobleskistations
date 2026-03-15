@@ -142,3 +142,22 @@ class ApiMessagesTests(TestCase):
 		msg = Message.objects.get(id=create_response.data['id'])
 		self.assertEqual(msg.sender, self.sender)
 		self.assertEqual(msg.recipient, self.recipient)
+
+
+class ApiMobileBridgeRoutesTests(TestCase):
+	def setUp(self):
+		self.client = APIClient()
+
+	def test_mobile_bridge_info_exists(self):
+		response = self.client.get('/api/mobile/')
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(response.data.get('status'), 'ok')
+		self.assertIn('api_mobile_auth_complete', response.data.get('endpoints', {}))
+
+	def test_api_mobile_auth_complete_route_is_published(self):
+		response = self.client.get('/api/mobile/auth/complete/')
+		self.assertNotEqual(response.status_code, 404)
+
+	def test_api_mobile_token_login_route_is_published(self):
+		response = self.client.get('/api/mobile/token-login/')
+		self.assertNotEqual(response.status_code, 404)
