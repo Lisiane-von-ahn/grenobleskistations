@@ -26,6 +26,7 @@
     <string name="marketplace">Marketplace</string>
     <string name="missing_credentials">Email et mot de passe requis.</string>
     <string name="mobile_auth_invalid">Le retour d authentification mobile est invalide.</string>
+    <string name="mobile_bridge_unavailable">Connexion Google mobile indisponible: le callback mobile n est pas deploye sur le serveur.</string>
     <string name="open_full_web">Ouvrir toutes les fonctionnalites du site</string>
     <string name="messages">Messages</string>
     <string name="profile">Profil</string>

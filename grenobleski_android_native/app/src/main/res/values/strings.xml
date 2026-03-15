@@ -26,6 +26,7 @@
     <string name="marketplace">Marketplace</string>
     <string name="missing_credentials">Email and password are required.</string>
     <string name="mobile_auth_invalid">Mobile authentication callback is invalid.</string>
+    <string name="mobile_bridge_unavailable">Google mobile login is unavailable: server mobile callback is not deployed yet.</string>
     <string name="open_full_web">Open full website features</string>
     <string name="messages">Messages</string>
     <string name="profile">Profile</string>

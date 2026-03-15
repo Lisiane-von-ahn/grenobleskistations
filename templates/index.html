@@ -111,15 +111,17 @@
 
   <!-- ***** Main Banner Area Start ***** -->
   <section id="section-1">
+    {% with hero_stations=ski_stations|slice:":4" %}
     <div class="content-slider">
+      {% for station in hero_stations %}
+      <input type="radio" id="banner{{ forloop.counter }}" class="sec-1-input" name="banner" {% if forloop.first %}checked{% endif %}>
+      {% empty %}
       <input type="radio" id="banner1" class="sec-1-input" name="banner" checked>
-      <input type="radio" id="banner2" class="sec-1-input" name="banner">
-      <input type="radio" id="banner3" class="sec-1-input" name="banner">
-      <input type="radio" id="banner4" class="sec-1-input" name="banner">
+      {% endfor %}
 
       <div class="slider">
-        {% for station in ski_stations %}
-        <div id="top-banner-{{ forloop.counter }}" class="banner">
+        {% for station in hero_stations %}
+        <div id="top-banner-{{ forloop.counter }}" class="banner" {% if station.image %}style="background-image: url('data:image/jpeg;base64,{{ station.image|b64encode }}'); background-size: cover; background-position: center center;"{% endif %}>
             <div class="banner-inner-wrapper header-text">
                 <div class="main-caption">
                     <h1>{{ station.name }}</h1>
@@ -151,18 +153,31 @@
                 </div>
             </div>
         </div>
+        {% empty %}
+        <div id="top-banner-1" class="banner">
+            <div class="banner-inner-wrapper header-text">
+                <div class="main-caption">
+                    <h1>{% trans "Stations Grenoble Ski" %}</h1>
+                    <div class="border-button">
+                        <a href="{% url 'ski_station_search' %}">{% trans "Voir les stations" %}</a>
+                    </div>
+                </div>
+            </div>
+        </div>
         {% endfor %}
       </div>
     
       <nav>
         <div class="controls">
+          {% for station in hero_stations %}
+          <label for="banner{{ forloop.counter }}"><span class="progressbar"><span class="progressbar-fill"></span></span><span class="text">{{ forloop.counter }}</span></label>
+          {% empty %}
           <label for="banner1"><span class="progressbar"><span class="progressbar-fill"></span></span><span class="text">1</span></label>
-          <label for="banner2"><span class="progressbar"><span class="progressbar-fill"></span></span><span class="text">2</span></label>
-          <label for="banner3"><span class="progressbar"><span class="progressbar-fill"></span></span><span class="text">3</span></label>
-          <label for="banner4"><span class="progressbar"><span class="progressbar-fill"></span></span><span class="text">4</span></label>
+          {% endfor %}
         </div>
       </nav>
     </div>
+    {% endwith %}
   </section>
   <!-- ***** Main Banner Area End ***** -->
   

@@ -8,6 +8,12 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import fr.grenobleski.nativeapp.data.AuthRepository
 import fr.grenobleski.nativeapp.data.model.DashboardCounts
+import fr.grenobleski.nativeapp.data.model.InstructorItem
+import fr.grenobleski.nativeapp.data.model.MarketplaceItem
+import fr.grenobleski.nativeapp.data.model.MessageItem
+import fr.grenobleski.nativeapp.data.model.NativeTab
+import fr.grenobleski.nativeapp.data.model.PisteItem
+import fr.grenobleski.nativeapp.data.model.ProfileInfo
 import fr.grenobleski.nativeapp.data.model.UserSession
 import fr.grenobleski.nativeapp.data.session.SessionStore
 import kotlinx.coroutines.launch
@@ -22,7 +28,14 @@ data class AppUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val session: UserSession? = null,
+    val selectedTab: NativeTab = NativeTab.HOME,
+    val isTabLoading: Boolean = false,
     val dashboardCounts: DashboardCounts = DashboardCounts(),
+    val marketplaceItems: List<MarketplaceItem> = emptyList(),
+    val instructorItems: List<InstructorItem> = emptyList(),
+    val pisteItems: List<PisteItem> = emptyList(),
+    val messageItems: List<MessageItem> = emptyList(),
+    val profileInfo: ProfileInfo? = null,
 )
 
 class AppViewModel(
@@ -36,7 +49,7 @@ class AppViewModel(
         val cachedSession = sessionStore.load()
         if (cachedSession != null) {
             state = state.copy(session = cachedSession)
-            refreshDashboard()
+            refreshAllNativeData()
         }
     }
 
@@ -79,13 +92,8 @@ class AppViewModel(
             val result = repository.login(state.email.trim(), state.password)
             if (result.isSuccess) {
                 val session = result.getOrNull()!!
-                sessionStore.save(session)
-                state = state.copy(
-                    isLoading = false,
-                    session = session,
-                    password = "",
-                )
-                refreshDashboard()
+                state = state.copy(isLoading = false, password = "")
+                establishSession(session)
             } else {
                 val message = result.exceptionOrNull()?.message ?: "Unable to login"
                 state = state.copy(isLoading = false, errorMessage = message)
@@ -103,14 +111,13 @@ class AppViewModel(
         val fallbackName = normalizedEmail.ifBlank { "Utilisateur" }
         val finalDisplayName = displayName.trim().ifBlank { fallbackName }
 
-        val session = UserSession(
+        establishSession(
+            UserSession(
             token = token,
             email = normalizedEmail,
             displayName = finalDisplayName,
+            )
         )
-        sessionStore.save(session)
-        state = state.copy(session = session, password = "", errorMessage = null)
-        refreshDashboard()
     }
 
     fun register() {
@@ -135,15 +142,13 @@ class AppViewModel(
 
             if (result.isSuccess) {
                 val session = result.getOrNull()!!
-                sessionStore.save(session)
                 state = state.copy(
                     isLoading = false,
-                    session = session,
                     password = "",
                     confirmPassword = "",
                     isRegisterMode = false,
                 )
-                refreshDashboard()
+                establishSession(session)
             } else {
                 val message = result.exceptionOrNull()?.message ?: "Unable to create account"
                 state = state.copy(isLoading = false, errorMessage = message)
@@ -151,22 +156,82 @@ class AppViewModel(
         }
     }
 
-    fun refreshDashboard() {
+    fun selectTab(tab: NativeTab) {
+        state = state.copy(selectedTab = tab, errorMessage = null)
+        if (!hasDataForTab(tab)) {
+            refreshCurrentTab()
+        }
+    }
+
+    fun refreshCurrentTab() {
         val session = state.session ?: return
+        val tab = state.selectedTab
 
         viewModelScope.launch {
-            state = state.copy(isLoading = true)
-            val result = repository.fetchDashboardCounts(session.token)
-            if (result.isSuccess) {
-                state = state.copy(
-                    isLoading = false,
-                    dashboardCounts = result.getOrNull()!!,
-                )
-            } else {
-                val message = result.exceptionOrNull()?.message ?: "Unable to refresh dashboard"
-                state = state.copy(isLoading = false, errorMessage = message)
+            state = state.copy(isTabLoading = true)
+
+            when (tab) {
+                NativeTab.HOME -> {
+                    val result = repository.fetchDashboardCounts(session.token)
+                    if (result.isSuccess) {
+                        state = state.copy(dashboardCounts = result.getOrNull()!!)
+                    } else {
+                        state = state.copy(errorMessage = result.exceptionOrNull()?.message ?: "Unable to refresh")
+                    }
+                }
+
+                NativeTab.MARKETPLACE -> {
+                    val result = repository.fetchMarketplaceItems(session.token)
+                    if (result.isSuccess) {
+                        state = state.copy(marketplaceItems = result.getOrNull()!!)
+                    } else {
+                        state = state.copy(errorMessage = result.exceptionOrNull()?.message ?: "Unable to load marketplace")
+                    }
+                }
+
+                NativeTab.INSTRUCTORS -> {
+                    val result = repository.fetchInstructorItems(session.token)
+                    if (result.isSuccess) {
+                        state = state.copy(instructorItems = result.getOrNull()!!)
+                    } else {
+                        state = state.copy(errorMessage = result.exceptionOrNull()?.message ?: "Unable to load instructors")
+                    }
+                }
+
+                NativeTab.PISTES -> {
+                    val result = repository.fetchPisteItems(session.token)
+                    if (result.isSuccess) {
+                        state = state.copy(pisteItems = result.getOrNull()!!)
+                    } else {
+                        state = state.copy(errorMessage = result.exceptionOrNull()?.message ?: "Unable to load piste status")
+                    }
+                }
+
+                NativeTab.MESSAGES -> {
+                    val result = repository.fetchMessageItems(session.token)
+                    if (result.isSuccess) {
+                        state = state.copy(messageItems = result.getOrNull()!!)
+                    } else {
+                        state = state.copy(errorMessage = result.exceptionOrNull()?.message ?: "Unable to load messages")
+                    }
+                }
+
+                NativeTab.PROFILE -> {
+                    val result = repository.fetchProfileInfo(session.token)
+                    if (result.isSuccess) {
+                        state = state.copy(profileInfo = result.getOrNull())
+                    } else {
+                        state = state.copy(errorMessage = result.exceptionOrNull()?.message ?: "Unable to load profile")
+                    }
+                }
             }
+
+            state = state.copy(isTabLoading = false)
         }
+    }
+
+    fun refreshDashboard() {
+        refreshCurrentTab()
     }
 
     fun logout() {
@@ -180,6 +245,75 @@ class AppViewModel(
 
     fun setError(message: String) {
         state = state.copy(errorMessage = message)
+    }
+
+    private fun establishSession(session: UserSession) {
+        sessionStore.save(session)
+        state = state.copy(session = session, errorMessage = null)
+        refreshAllNativeData()
+    }
+
+    private fun hasDataForTab(tab: NativeTab): Boolean {
+        return when (tab) {
+            NativeTab.HOME -> true
+            NativeTab.MARKETPLACE -> state.marketplaceItems.isNotEmpty()
+            NativeTab.INSTRUCTORS -> state.instructorItems.isNotEmpty()
+            NativeTab.PISTES -> state.pisteItems.isNotEmpty()
+            NativeTab.MESSAGES -> state.messageItems.isNotEmpty()
+            NativeTab.PROFILE -> state.profileInfo != null
+        }
+    }
+
+    private fun refreshAllNativeData() {
+        val session = state.session ?: return
+
+        viewModelScope.launch {
+            state = state.copy(isTabLoading = true)
+
+            val current = state
+            var firstError: String? = null
+
+            val dashboardCounts = repository.fetchDashboardCounts(session.token).getOrElse {
+                firstError = firstError ?: (it.message ?: "Unable to load dashboard")
+                current.dashboardCounts
+            }
+
+            val marketplaceItems = repository.fetchMarketplaceItems(session.token).getOrElse {
+                firstError = firstError ?: (it.message ?: "Unable to load marketplace")
+                current.marketplaceItems
+            }
+
+            val instructorItems = repository.fetchInstructorItems(session.token).getOrElse {
+                firstError = firstError ?: (it.message ?: "Unable to load instructors")
+                current.instructorItems
+            }
+
+            val pisteItems = repository.fetchPisteItems(session.token).getOrElse {
+                firstError = firstError ?: (it.message ?: "Unable to load piste state")
+                current.pisteItems
+            }
+
+            val messageItems = repository.fetchMessageItems(session.token).getOrElse {
+                firstError = firstError ?: (it.message ?: "Unable to load messages")
+                current.messageItems
+            }
+
+            val profileInfo = repository.fetchProfileInfo(session.token).getOrElse {
+                firstError = firstError ?: (it.message ?: "Unable to load profile")
+                current.profileInfo
+            }
+
+            state = state.copy(
+                isTabLoading = false,
+                dashboardCounts = dashboardCounts,
+                marketplaceItems = marketplaceItems,
+                instructorItems = instructorItems,
+                pisteItems = pisteItems,
+                messageItems = messageItems,
+                profileInfo = profileInfo,
+                errorMessage = firstError,
+            )
+        }
     }
 }
 

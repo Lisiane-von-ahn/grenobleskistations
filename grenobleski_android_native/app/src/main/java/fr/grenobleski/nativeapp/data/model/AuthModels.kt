@@ -39,3 +39,47 @@ data class DashboardCounts(
     val services: Int = 0,
     val marketplace: Int = 0,
 )
+
+enum class NativeTab {
+    HOME,
+    MARKETPLACE,
+    INSTRUCTORS,
+    PISTES,
+    MESSAGES,
+    PROFILE,
+}
+
+data class MarketplaceItem(
+    val id: Int,
+    val title: String,
+    val city: String,
+    val priceLabel: String,
+    val conditionLabel: String,
+)
+
+data class InstructorItem(
+    val id: Int,
+    val displayName: String,
+    val bio: String,
+)
+
+data class PisteItem(
+    val id: Int,
+    val stationName: String,
+    val rating: Int,
+    val crowdLabel: String,
+    val comment: String,
+)
+
+data class MessageItem(
+    val id: Int,
+    val fromLabel: String,
+    val body: String,
+    val createdAtLabel: String,
+)
+
+data class ProfileInfo(
+    val displayName: String,
+    val email: String,
+    val username: String,
+)

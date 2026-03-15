@@ -135,7 +135,7 @@
 	
 
 	// Menu Dropdown Toggle
-	if($('.menu-trigger').length){
+	if($('.menu-trigger').length && !window.__disableLegacyMenuTrigger){
 		$(".menu-trigger").on('click', function() {	
 			$(this).toggleClass('active');
 			$('.header-area .nav').slideToggle(200);
