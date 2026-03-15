@@ -6,7 +6,8 @@ Application BeeWare (Toga) moderne pour GrenobleSki avec:
 - Authentification Google via `id_token` (endpoint API dedie)
 - Interface FR/EN
 - Reutilisation du logo existant GrenobleSki
-- Modules principaux: stations, bus, services, marketplace, profil
+- Modules principaux: stations, bus, services, marketplace, stories, ski partners, instructeurs, messages, profil
+- Detection dynamique des endpoints via `https://www.grenobleski.fr/swagger/?format=openapi`
 
 ## Structure
 
@@ -38,6 +39,7 @@ briefcase dev
 ```
 
 Par defaut, l'app pointe vers `http://127.0.0.1:8000/api`.
+Par defaut, l'app pointe vers `https://www.grenobleski.fr/api`.
 
 Pour un serveur different:
 
@@ -45,6 +47,8 @@ Pour un serveur different:
 export GRENOBLESKI_API_URL="https://grenobleski.fr/api"
 briefcase dev
 ```
+
+L'app lit automatiquement la spec Swagger du domaine cible et active uniquement les sections disponibles.
 
 ## Build mobile/desktop
 

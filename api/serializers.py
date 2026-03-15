@@ -1,7 +1,29 @@
 import base64
-from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import SkiStation, BusLine, ServiceStore, SkiCircuit, SkiMaterialListing, SkiMaterialImage, Message, UserProfile
+from rest_framework import serializers
+
+from .models import (
+    BusLine,
+    InstructorProfile,
+    InstructorReview,
+    InstructorService,
+    MarketplaceDeal,
+    MarketplaceSavedFilter,
+    MarketplaceUserRating,
+    Message,
+    PisteConditionReport,
+    ServiceStore,
+    SkiCircuit,
+    SkiMaterialImage,
+    SkiMaterialListing,
+    SkiPartnerPost,
+    SkiPartnerReport,
+    SkiStation,
+    SkiStory,
+    SnowConditionUpdate,
+    UserFriend,
+    UserProfile,
+)
 
 class SkiStationSerializer(serializers.ModelSerializer):
     class Meta:
@@ -40,6 +62,7 @@ class MessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Message
         fields = '__all__'
+        read_only_fields = ['sender', 'created_at']
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -58,3 +81,77 @@ class UserProfileSerializer(serializers.ModelSerializer):
         if obj.profile_picture:
             return base64.b64encode(obj.profile_picture).decode('utf-8')
         return None
+
+
+class SnowConditionUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SnowConditionUpdate
+        fields = '__all__'
+
+
+class PisteConditionReportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PisteConditionReport
+        fields = '__all__'
+
+
+class InstructorProfileSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+
+    class Meta:
+        model = InstructorProfile
+        fields = '__all__'
+
+
+class InstructorServiceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InstructorService
+        fields = '__all__'
+
+
+class InstructorReviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InstructorReview
+        fields = '__all__'
+
+
+class SkiPartnerPostSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SkiPartnerPost
+        fields = '__all__'
+
+
+class SkiPartnerReportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SkiPartnerReport
+        fields = '__all__'
+
+
+class SkiStorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SkiStory
+        fields = '__all__'
+
+
+class MarketplaceSavedFilterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MarketplaceSavedFilter
+        fields = '__all__'
+
+
+class MarketplaceDealSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MarketplaceDeal
+        fields = '__all__'
+
+
+class MarketplaceUserRatingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MarketplaceUserRating
+        fields = '__all__'
+
+
+class UserFriendSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserFriend
+        fields = '__all__'

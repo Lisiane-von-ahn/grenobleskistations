@@ -112,3 +112,33 @@ class ApiAuthTests(TestCase):
 		self.assertTrue(response.data.get('token'))
 		self.assertEqual(response.data['user']['email'], 'googleuser@example.com')
 		self.assertTrue(User.objects.filter(email='googleuser@example.com').exists())
+
+
+class ApiMessagesTests(TestCase):
+	def setUp(self):
+		self.client = APIClient()
+		self.sender = User.objects.create_user(username='sender@example.com', email='sender@example.com', password='StrongPass123!')
+		self.recipient = User.objects.create_user(username='recipient@example.com', email='recipient@example.com', password='StrongPass123!')
+
+	def test_messages_requires_auth(self):
+		response = self.client.get('/api/messages/')
+		self.assertEqual(response.status_code, 401)
+
+	def test_messages_create_uses_authenticated_sender(self):
+		token = Token.objects.create(user=self.sender)
+		self.client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
+
+		create_response = self.client.post(
+			'/api/messages/',
+			{
+				'recipient': self.recipient.id,
+				'subject': 'Salut',
+				'body': 'On skie demain ?',
+			},
+			format='json',
+		)
+		self.assertEqual(create_response.status_code, 201)
+
+		msg = Message.objects.get(id=create_response.data['id'])
+		self.assertEqual(msg.sender, self.sender)
+		self.assertEqual(msg.recipient, self.recipient)

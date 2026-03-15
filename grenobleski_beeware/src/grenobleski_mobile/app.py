@@ -1,5 +1,6 @@
 import asyncio
 import os
+import webbrowser
 from pathlib import Path
 
 import toga
@@ -15,12 +16,19 @@ class GrenobleSkiMobile(toga.App):
     def startup(self):
         self.lang = "fr"
         self.user = None
+        self.capabilities = {}
+
         self.stations_data = []
         self.bus_data = []
         self.services_data = []
         self.market_data = []
+        self.circuits_data = []
+        self.messages_data = []
+        self.stories_data = []
+        self.partners_data = []
+        self.instructors_data = []
 
-        default_api = os.getenv("GRENOBLESKI_API_URL", "http://127.0.0.1:8000/api")
+        default_api = os.getenv("GRENOBLESKI_API_URL", "https://www.grenobleski.fr/api")
         self.api = GrenobleSkiApiClient(base_url=default_api, data_dir=self.paths.data)
 
         self.main_window = toga.MainWindow(title=self.t("app_title"))
@@ -105,10 +113,7 @@ class GrenobleSkiMobile(toga.App):
         if self.user:
             self._build_app_view()
             self._refresh_summary()
-            self._render_stations_list()
-            self._render_bus_list()
-            self._render_services_list()
-            self._render_market_list()
+            self._render_all_sections()
         else:
             self._build_auth_view()
 
@@ -126,7 +131,7 @@ class GrenobleSkiMobile(toga.App):
         self.last_name_input = toga.TextInput(placeholder=self.t("last_name"), style=Pack(padding_bottom=8))
         self.google_token_input = toga.MultilineTextInput(
             placeholder=self.t("google_token"),
-            style=Pack(height=110, padding_top=8),
+            style=Pack(height=90, padding_top=8),
         )
 
         login_button = toga.Button(
@@ -139,19 +144,18 @@ class GrenobleSkiMobile(toga.App):
             on_press=self.on_register,
             style=Pack(background_color=COLORS["header_bg"], color=COLORS["accent_text"], padding=10, flex=1),
         )
-        auth_buttons = toga.Box(
-            children=[login_button, register_button],
-            style=Pack(direction=ROW, padding_top=8, padding_bottom=8),
-        )
+        auth_buttons = toga.Box(children=[login_button, register_button], style=Pack(direction=ROW, padding_top=8, padding_bottom=8))
 
-        google_help = toga.Label(
-            self.t("google_help"),
-            style=Pack(color=COLORS["muted_text"], font_size=11, padding_top=4),
-        )
+        google_help = toga.Label(self.t("google_help"), style=Pack(color=COLORS["muted_text"], font_size=11, padding_top=4))
         google_button = toga.Button(
             self.t("google_login"),
             on_press=self.on_google_login,
-            style=Pack(background_color=COLORS["accent"], color=COLORS["accent_text"], padding=10, padding_top=10),
+            style=Pack(background_color=COLORS["accent"], color=COLORS["accent_text"], padding=10),
+        )
+        google_browser_button = toga.Button(
+            self.t("google_browser_login"),
+            on_press=self.on_google_browser_login,
+            style=Pack(background_color=COLORS["header_bg"], color=COLORS["accent_text"], padding=10, padding_top=8),
         )
 
         auth_card = toga.Box(
@@ -165,22 +169,35 @@ class GrenobleSkiMobile(toga.App):
                 self.google_token_input,
                 google_help,
                 google_button,
+                google_browser_button,
             ],
             style=Pack(direction=COLUMN, background_color=COLORS["card_bg"], padding=16),
         )
 
         self.content.add(auth_card)
 
+    def _compute_nav_keys(self):
+        keys = ["home", "stations", "bus", "services", "marketplace"]
+        if self.capabilities.get("has_stories"):
+            keys.append("stories")
+        if self.capabilities.get("has_partners"):
+            keys.append("partners")
+        if self.capabilities.get("has_instructors"):
+            keys.append("instructors")
+        if self.capabilities.get("has_messages"):
+            keys.append("messages")
+        keys.append("profile")
+        return keys
+
     def _build_app_view(self):
         self._clear_box(self.content)
 
         self.nav_buttons = {}
         nav_bar = toga.Box(style=Pack(direction=ROW, padding_bottom=10))
-        for key in ["home", "stations", "bus", "services", "marketplace", "profile"]:
+        for key in self._compute_nav_keys():
             button = toga.Button(
                 self.t(f"nav_{key}"),
                 on_press=self.on_nav_press,
-                id=key,
                 style=Pack(
                     background_color=COLORS["header_bg"],
                     color=COLORS["accent_text"],
@@ -190,6 +207,7 @@ class GrenobleSkiMobile(toga.App):
                     padding_bottom=8,
                 ),
             )
+            button.nav_key = key
             self.nav_buttons[key] = button
             nav_bar.add(button)
 
@@ -208,7 +226,7 @@ class GrenobleSkiMobile(toga.App):
                 self.home_summary,
                 toga.Label(self.t("home_intro"), style=Pack(color=COLORS["muted_text"], padding=8)),
                 self.home_counts,
-                toga.Button(self.t("refresh"), on_press=self.on_refresh_all, style=Pack(width=150, margin=8)),
+                toga.Button(self.t("refresh"), on_press=self.on_refresh_all, style=Pack(width=170, padding=8)),
             ],
             style=Pack(direction=COLUMN),
         )
@@ -243,6 +261,45 @@ class GrenobleSkiMobile(toga.App):
             style=Pack(direction=COLUMN, flex=1),
         )
 
+        stories_refresh = toga.Button(self.t("refresh"), on_press=self.on_refresh_stories, style=Pack(width=120))
+        self.stories_list_box = toga.Box(style=Pack(direction=COLUMN))
+        self.stories_section = toga.Box(
+            children=[stories_refresh, toga.ScrollContainer(content=self.stories_list_box, style=Pack(flex=1, padding_top=8))],
+            style=Pack(direction=COLUMN, flex=1),
+        )
+
+        partners_refresh = toga.Button(self.t("refresh"), on_press=self.on_refresh_partners, style=Pack(width=120))
+        self.partners_list_box = toga.Box(style=Pack(direction=COLUMN))
+        self.partners_section = toga.Box(
+            children=[partners_refresh, toga.ScrollContainer(content=self.partners_list_box, style=Pack(flex=1, padding_top=8))],
+            style=Pack(direction=COLUMN, flex=1),
+        )
+
+        instructors_refresh = toga.Button(self.t("refresh"), on_press=self.on_refresh_instructors, style=Pack(width=120))
+        self.instructors_list_box = toga.Box(style=Pack(direction=COLUMN))
+        self.instructors_section = toga.Box(
+            children=[instructors_refresh, toga.ScrollContainer(content=self.instructors_list_box, style=Pack(flex=1, padding_top=8))],
+            style=Pack(direction=COLUMN, flex=1),
+        )
+
+        self.msg_recipient_input = toga.TextInput(placeholder=self.t("recipient_id"), style=Pack(padding_bottom=6))
+        self.msg_subject_input = toga.TextInput(placeholder=self.t("subject"), style=Pack(padding_bottom=6))
+        self.msg_body_input = toga.MultilineTextInput(placeholder=self.t("message_body"), style=Pack(height=80, padding_bottom=6))
+        send_message_button = toga.Button(self.t("send_message"), on_press=self.on_send_message, style=Pack(width=130, padding_bottom=6))
+        messages_refresh = toga.Button(self.t("refresh"), on_press=self.on_refresh_messages, style=Pack(width=120))
+        messages_actions = toga.Box(children=[send_message_button, messages_refresh], style=Pack(direction=ROW, padding_bottom=6))
+        self.messages_list_box = toga.Box(style=Pack(direction=COLUMN))
+        self.messages_section = toga.Box(
+            children=[
+                self.msg_recipient_input,
+                self.msg_subject_input,
+                self.msg_body_input,
+                messages_actions,
+                toga.ScrollContainer(content=self.messages_list_box, style=Pack(flex=1, padding_top=8)),
+            ],
+            style=Pack(direction=COLUMN, flex=1),
+        )
+
         self.profile_name = toga.Label("", style=Pack(color=COLORS["title_text"], padding=8))
         self.profile_email = toga.Label("", style=Pack(color=COLORS["muted_text"], padding=8))
         self.profile_section = toga.Box(
@@ -252,7 +309,7 @@ class GrenobleSkiMobile(toga.App):
                 toga.Button(
                     self.t("logout"),
                     on_press=self.on_logout,
-                    style=Pack(width=170, background_color=COLORS["warning"], color=COLORS["accent_text"], margin=8),
+                    style=Pack(width=170, background_color=COLORS["warning"], color=COLORS["accent_text"], padding=8),
                 ),
             ],
             style=Pack(direction=COLUMN),
@@ -264,32 +321,53 @@ class GrenobleSkiMobile(toga.App):
             "bus": self.bus_section,
             "services": self.services_section,
             "marketplace": self.market_section,
+            "stories": self.stories_section,
+            "partners": self.partners_section,
+            "instructors": self.instructors_section,
+            "messages": self.messages_section,
             "profile": self.profile_section,
         }
 
     def _show_section(self, key):
         self.current_section = key
         self._clear_box(self.section_container)
-        self.section_container.add(self.sections[key])
+        section = self.sections.get(key)
+        if section is None:
+            section = toga.Box(children=[toga.Label(self.t("api_unavailable"), style=Pack(color=COLORS["muted_text"], padding=10))])
+        self.section_container.add(section)
 
     def _refresh_summary(self):
         full_name = f"{self.user.get('first_name', '')} {self.user.get('last_name', '')}".strip()
         name = full_name or self.user.get("email", "")
+
+        counters = [
+            self.t("stations_count", count=len(self.stations_data)),
+            self.t("bus_count", count=len(self.bus_data)),
+            self.t("services_count", count=len(self.services_data)),
+            self.t("market_count", count=len(self.market_data)),
+        ]
+        if self.capabilities.get("has_stories"):
+            counters.append(self.t("stories_count", count=len(self.stories_data)))
+        if self.capabilities.get("has_partners"):
+            counters.append(self.t("partners_count", count=len(self.partners_data)))
+        if self.capabilities.get("has_instructors"):
+            counters.append(self.t("instructors_count", count=len(self.instructors_data)))
+        if self.capabilities.get("has_messages"):
+            counters.append(self.t("messages_count", count=len(self.messages_data)))
+
         self.home_summary.text = self.t("welcome", name=name)
-        self.home_counts.text = " | ".join(
-            [
-                self.t("stations_count", count=len(self.stations_data)),
-                self.t("bus_count", count=len(self.bus_data)),
-                self.t("services_count", count=len(self.services_data)),
-                self.t("market_count", count=len(self.market_data)),
-            ]
-        )
+        self.home_counts.text = " | ".join(counters)
         self.profile_name.text = name
         self.profile_email.text = self.user.get("email", "")
 
     def _make_card(self, title, lines):
         card = toga.Box(style=Pack(direction=COLUMN, background_color=COLORS["card_bg"], padding=12, padding_bottom=14))
-        card.add(toga.Label(title, style=Pack(color=COLORS["title_text"], font_size=13, font_weight="bold", padding_bottom=4)))
+        card.add(
+            toga.Label(
+                title,
+                style=Pack(color=COLORS["title_text"], font_size=13, font_weight="bold", padding_bottom=4),
+            )
+        )
         for line in lines:
             card.add(toga.Label(line, style=Pack(color=COLORS["muted_text"], font_size=11, padding_bottom=2)))
         return card
@@ -308,7 +386,6 @@ class GrenobleSkiMobile(toga.App):
         for station in data:
             title = station.get("name") or "Station"
             lines = [
-                f"{self.t('city')}: Grenoble",
                 f"{self.t('station')}: {station.get('distanceFromGrenoble', '-')} km",
                 f"Altitude: {station.get('altitude', '-')}",
             ]
@@ -323,7 +400,7 @@ class GrenobleSkiMobile(toga.App):
         for line in self.bus_data:
             title = line.get("bus_number") or "Bus"
             lines = [
-                f"{line.get('departure_stop', '-') } -> {line.get('arrival_stop', '-')}",
+                f"{line.get('departure_stop', '-')} -> {line.get('arrival_stop', '-')}",
                 f"Freq: {line.get('frequency', '-')}",
                 f"Travel: {line.get('travel_time', '-')}",
             ]
@@ -358,10 +435,87 @@ class GrenobleSkiMobile(toga.App):
             ]
             self.market_list_box.add(self._make_card(title, lines))
 
+    def _render_stories_list(self):
+        self._clear_box(self.stories_list_box)
+        if not self.stories_data:
+            self.stories_list_box.add(toga.Label(self.t("empty"), style=Pack(color=COLORS["muted_text"], padding=8)))
+            return
+
+        for story in self.stories_data:
+            title = story.get("caption") or f"Story #{story.get('id', '-') }"
+            lines = [
+                f"{self.t('published')}: {story.get('created_at', '-')}",
+                f"{self.t('expires')}: {story.get('expires_at', '-')}",
+            ]
+            self.stories_list_box.add(self._make_card(title, lines))
+
+    def _render_partners_list(self):
+        self._clear_box(self.partners_list_box)
+        if not self.partners_data:
+            self.partners_list_box.add(toga.Label(self.t("empty"), style=Pack(color=COLORS["muted_text"], padding=8)))
+            return
+
+        for post in self.partners_data:
+            title = post.get("title") or "Partner"
+            lines = [
+                f"{self.t('city')}: {post.get('city', '-')}",
+                f"{self.t('station')}: {post.get('ski_station', '-')}",
+                f"Level: {post.get('skill_level', '-')}",
+            ]
+            self.partners_list_box.add(self._make_card(title, lines))
+
+    def _render_instructors_list(self):
+        self._clear_box(self.instructors_list_box)
+        if not self.instructors_data:
+            self.instructors_list_box.add(toga.Label(self.t("empty"), style=Pack(color=COLORS["muted_text"], padding=8)))
+            return
+
+        for item in self.instructors_data:
+            title = item.get("title") or "Instructor Service"
+            lines = [
+                f"Duration: {item.get('duration_minutes', '-')}",
+                f"Amount: {item.get('amount', '-')}",
+                f"Group: {item.get('max_group_size', '-')}",
+            ]
+            self.instructors_list_box.add(self._make_card(title, lines))
+
+    def _render_messages_list(self):
+        self._clear_box(self.messages_list_box)
+        if not self.messages_data:
+            self.messages_list_box.add(toga.Label(self.t("empty"), style=Pack(color=COLORS["muted_text"], padding=8)))
+            return
+
+        for msg in self.messages_data:
+            title = msg.get("subject") or "Message"
+            lines = [
+                f"From: {msg.get('sender', '-')}",
+                f"To: {msg.get('recipient', '-')}",
+                (msg.get("body") or "")[:80],
+            ]
+            self.messages_list_box.add(self._make_card(title, lines))
+
+    def _render_all_sections(self):
+        self._render_stations_list()
+        self._render_bus_list()
+        self._render_services_list()
+        self._render_market_list()
+        if self.capabilities.get("has_stories"):
+            self._render_stories_list()
+        if self.capabilities.get("has_partners"):
+            self._render_partners_list()
+        if self.capabilities.get("has_instructors"):
+            self._render_instructors_list()
+        if self.capabilities.get("has_messages"):
+            self._render_messages_list()
+
+    async def _load_capabilities(self):
+        self.capabilities = await self.api.get_capabilities()
+
     async def _resume_session(self):
         try:
             self._set_status("status_loading")
             self.user = await self.api.me()
+            await self._load_capabilities()
             self._build_app_view()
             await self._load_all_data()
             self._set_status("status_ready")
@@ -373,32 +527,43 @@ class GrenobleSkiMobile(toga.App):
 
     async def _load_all_data(self):
         self._set_status("status_loading")
-        try:
-            stations, bus, services, market = await asyncio.gather(
-                self.api.stations(),
-                self.api.bus_lines(),
-                self.api.services(),
-                self.api.marketplace(),
-            )
-            self.stations_data = stations
-            self.bus_data = bus
-            self.services_data = services
-            self.market_data = market
-            self._refresh_summary()
-            self._render_stations_list()
-            self._render_bus_list()
-            self._render_services_list()
-            self._render_market_list()
+
+        jobs = [
+            ("stations_data", self.api.stations),
+            ("bus_data", self.api.bus_lines),
+            ("services_data", self.api.services),
+            ("market_data", self.api.marketplace),
+            ("circuits_data", self.api.circuits),
+        ]
+        if self.capabilities.get("has_stories"):
+            jobs.append(("stories_data", self.api.stories))
+        if self.capabilities.get("has_partners"):
+            jobs.append(("partners_data", self.api.ski_partners))
+        if self.capabilities.get("has_instructors"):
+            jobs.append(("instructors_data", self.api.instructor_services))
+        if self.capabilities.get("has_messages"):
+            jobs.append(("messages_data", self.api.messages))
+
+        results = await asyncio.gather(*[job[1]() for job in jobs], return_exceptions=True)
+
+        errors = []
+        for (target, _call), result in zip(jobs, results):
+            if isinstance(result, Exception):
+                setattr(self, target, [])
+                errors.append(str(result))
+            else:
+                setattr(self, target, result)
+
+        self._refresh_summary()
+        self._render_all_sections()
+
+        if errors:
+            self._set_status("status_error", message=errors[0])
+        else:
             self._set_status("status_ready")
-        except ApiError as exc:
-            if exc.status_code == 401:
-                self.user = None
-                self.api.clear_session()
-                self._build_auth_view()
-            self._set_status("status_error", message=str(exc))
 
     def on_nav_press(self, widget):
-        self._show_section(widget.id)
+        self._show_section(widget.nav_key)
 
     def on_login(self, widget):
         asyncio.create_task(self._do_login())
@@ -413,6 +578,7 @@ class GrenobleSkiMobile(toga.App):
         self._set_status("status_loading")
         try:
             self.user = await self.api.login(email=email, password=password)
+            await self._load_capabilities()
             self._build_app_view()
             await self._load_all_data()
         except ApiError as exc:
@@ -439,6 +605,7 @@ class GrenobleSkiMobile(toga.App):
                 first_name=first_name,
                 last_name=last_name,
             )
+            await self._load_capabilities()
             self._build_app_view()
             await self._load_all_data()
         except ApiError as exc:
@@ -456,10 +623,16 @@ class GrenobleSkiMobile(toga.App):
         self._set_status("status_loading")
         try:
             self.user = await self.api.google_login(id_token=id_token)
+            await self._load_capabilities()
             self._build_app_view()
             await self._load_all_data()
         except ApiError as exc:
             self._set_status("status_error", message=str(exc))
+
+    def on_google_browser_login(self, widget):
+        parts = self.api.swagger_url.split("/swagger/")[0]
+        webbrowser.open(f"{parts}/accounts/google/login/?process=login")
+        self._set_status("status_ready")
 
     def on_refresh_all(self, widget):
         asyncio.create_task(self._load_all_data())
@@ -516,6 +689,85 @@ class GrenobleSkiMobile(toga.App):
         except ApiError as exc:
             self._set_status("status_error", message=str(exc))
 
+    def on_refresh_stories(self, widget):
+        asyncio.create_task(self._refresh_stories_only())
+
+    async def _refresh_stories_only(self):
+        self._set_status("status_loading")
+        try:
+            self.stories_data = await self.api.stories()
+            self._render_stories_list()
+            self._refresh_summary()
+            self._set_status("status_ready")
+        except ApiError as exc:
+            self._set_status("status_error", message=str(exc))
+
+    def on_refresh_partners(self, widget):
+        asyncio.create_task(self._refresh_partners_only())
+
+    async def _refresh_partners_only(self):
+        self._set_status("status_loading")
+        try:
+            self.partners_data = await self.api.ski_partners()
+            self._render_partners_list()
+            self._refresh_summary()
+            self._set_status("status_ready")
+        except ApiError as exc:
+            self._set_status("status_error", message=str(exc))
+
+    def on_refresh_instructors(self, widget):
+        asyncio.create_task(self._refresh_instructors_only())
+
+    async def _refresh_instructors_only(self):
+        self._set_status("status_loading")
+        try:
+            self.instructors_data = await self.api.instructor_services()
+            self._render_instructors_list()
+            self._refresh_summary()
+            self._set_status("status_ready")
+        except ApiError as exc:
+            self._set_status("status_error", message=str(exc))
+
+    def on_refresh_messages(self, widget):
+        asyncio.create_task(self._refresh_messages_only())
+
+    async def _refresh_messages_only(self):
+        self._set_status("status_loading")
+        try:
+            self.messages_data = await self.api.messages()
+            self._render_messages_list()
+            self._refresh_summary()
+            self._set_status("status_ready")
+        except ApiError as exc:
+            self._set_status("status_error", message=str(exc))
+
+    def on_send_message(self, widget):
+        asyncio.create_task(self._do_send_message())
+
+    async def _do_send_message(self):
+        recipient_raw = (self.msg_recipient_input.value or "").strip()
+        subject = (self.msg_subject_input.value or "").strip()
+        body = (self.msg_body_input.value or "").strip()
+
+        if not recipient_raw or not subject or not body:
+            self._set_status("status_error", message="Missing message fields")
+            return
+
+        try:
+            recipient = int(recipient_raw)
+        except ValueError:
+            self._set_status("status_error", message="Recipient ID must be numeric")
+            return
+
+        self._set_status("status_loading")
+        try:
+            await self.api.create_message(recipient=recipient, subject=subject, body=body)
+            self.msg_subject_input.value = ""
+            self.msg_body_input.value = ""
+            await self._refresh_messages_only()
+        except ApiError as exc:
+            self._set_status("status_error", message=str(exc))
+
     def on_logout(self, widget):
         asyncio.create_task(self._do_logout())
 
@@ -527,10 +779,16 @@ class GrenobleSkiMobile(toga.App):
             self.api.clear_session()
 
         self.user = None
+        self.capabilities = {}
         self.stations_data = []
         self.bus_data = []
         self.services_data = []
         self.market_data = []
+        self.circuits_data = []
+        self.messages_data = []
+        self.stories_data = []
+        self.partners_data = []
+        self.instructors_data = []
         self._build_auth_view()
         self._set_status("status_ready")
 

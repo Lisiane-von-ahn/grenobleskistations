@@ -184,6 +184,21 @@ Nouveaux endpoints sous `/api/auth/`:
 - `GET /api/auth/me/`
 - `POST /api/auth/logout/`
 
+Endpoints additionnels exposes pour l'app BeeWare:
+
+- `GET/POST /api/messages/`
+- `GET/POST /api/skistories/`
+- `GET/POST /api/skipartnerposts/`
+- `GET/POST /api/instructorprofiles/`
+- `GET/POST /api/instructorservices/`
+- `GET/POST /api/instructorreviews/`
+- `GET/POST /api/snowupdates/`
+- `GET/POST /api/pistereports/`
+- `GET/POST /api/marketplace-saved-filters/`
+- `GET/POST /api/marketplace-deals/`
+- `GET/POST /api/marketplace-ratings/`
+- `GET/POST /api/userfriends/`
+
 Configuration Google backend:
 
 - Ajouter `GOOGLE_OAUTH_CLIENT_IDS` (IDs OAuth autorises, separes par virgules)

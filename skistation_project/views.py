@@ -687,6 +687,10 @@ def listing_detail(request, id):
     if request.method == 'POST' and request.user.is_authenticated and request.user != listing.user:
         form_type = request.POST.get('form_type', '').strip()
 
+        # Backward compatibility: legacy templates/tests post only `body` without form_type.
+        if not form_type and (request.POST.get('body') or '').strip():
+            form_type = 'contact'
+
         if form_type == 'contact':
             body = request.POST.get('body', '').strip()
             if body:

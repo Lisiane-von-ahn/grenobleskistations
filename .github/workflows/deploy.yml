@@ -49,5 +49,47 @@ jobs:
               "${{ secrets.BOOTSTRAP_ADMIN_PASSWORD }}" \
               "${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}"
 
+            REQUIRED_PATHS='["/auth/login/","/auth/register/","/auth/google-login/","/auth/me/","/auth/logout/","/messages/","/skistories/","/skipartnerposts/","/instructorservices/"]'
+
+            check_openapi() {
+              local url="$1"
+              local label="$2"
+              local attempts="${3:-20}"
+              local delay="${4:-5}"
+              local payload=""
+
+              for i in $(seq 1 "$attempts"); do
+                if payload="$(curl -fsS "$url")"; then
+                  REQUIRED_PATHS="$REQUIRED_PATHS" OPENAPI_PAYLOAD="$payload" python3 - <<'PY'
+import json
+import os
+
+required = set(json.loads(os.environ["REQUIRED_PATHS"]))
+spec = json.loads(os.environ["OPENAPI_PAYLOAD"])
+paths = set(spec.get("paths", {}).keys())
+missing = sorted(required - paths)
+
+if missing:
+    print("Missing paths:")
+    for path in missing:
+        print(f" - {path}")
+    raise SystemExit(1)
+
+print("OpenAPI check OK")
+PY
+                  echo "✅ ${label} OpenAPI check passed"
+                  return 0
+                fi
+                echo "Waiting for ${label} OpenAPI (${i}/${attempts})..."
+                sleep "$delay"
+              done
+
+              echo "❌ ${label} OpenAPI check failed"
+              return 1
+            }
+
+            check_openapi "http://127.0.0.1:8081/swagger/?format=openapi" "local"
+            check_openapi "https://www.grenobleski.fr/swagger/?format=openapi" "public" 30 10
+
             echo "✅ Deployment completed (install.sh is the single source of truth)."
             docker compose -f docker-compose.yml ps || true

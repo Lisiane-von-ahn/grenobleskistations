@@ -5,6 +5,8 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db.models import Q
+from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.authentication import SessionAuthentication, TokenAuthentication
 from rest_framework.authtoken.models import Token
@@ -27,20 +29,44 @@ except Exception:
 
 from .models import (
     BusLine,
+    InstructorProfile,
+    InstructorReview,
+    InstructorService,
+    MarketplaceDeal,
+    MarketplaceSavedFilter,
+    MarketplaceUserRating,
     Message,
+    PisteConditionReport,
     ServiceStore,
     SkiCircuit,
     SkiMaterialListing,
+    SkiPartnerPost,
+    SkiPartnerReport,
     SkiStation,
+    SkiStory,
+    SnowConditionUpdate,
+    UserFriend,
     UserProfile,
 )
 from .serializers import (
     BusLineSerializer,
+    InstructorProfileSerializer,
+    InstructorReviewSerializer,
+    InstructorServiceSerializer,
+    MarketplaceDealSerializer,
+    MarketplaceSavedFilterSerializer,
+    MarketplaceUserRatingSerializer,
     MessageSerializer,
+    PisteConditionReportSerializer,
     ServiceStoreSerializer,
     SkiCircuitSerializer,
     SkiMaterialListingSerializer,
+    SkiPartnerPostSerializer,
+    SkiPartnerReportSerializer,
     SkiStationSerializer,
+    SkiStorySerializer,
+    SnowConditionUpdateSerializer,
+    UserFriendSerializer,
     UserProfileSerializer,
     UserSerializer,
 )
@@ -82,12 +108,19 @@ class SkiMaterialListingViewSet(viewsets.ModelViewSet):
         serializer.save(user=user)
         
 class MessageViewSet(viewsets.ModelViewSet):
-    queryset = Message.objects.all()
+    permission_classes = [IsAuthenticated]
     serializer_class = MessageSerializer
 
     def get_queryset(self):
         user = self.request.user
-        return Message.objects.filter(sender=user) | Message.objects.filter(recipient=user)
+        return Message.objects.filter(Q(sender=user) | Q(recipient=user)).order_by('-created_at')
+
+    def perform_create(self, serializer):
+        sender = self.request.user
+        recipient_id = self.request.data.get('recipient')
+        if not recipient_id:
+            raise ValidationError('recipient is required.')
+        serializer.save(sender=sender)
 
 class UserProfileViewSet(viewsets.ModelViewSet):
     queryset = UserProfile.objects.all()
@@ -123,6 +156,147 @@ class UserViewSet(viewsets.ModelViewSet):
             last_name=last_name,
         )
         return Response({'message': 'User created successfully.'}, status=status.HTTP_201_CREATED)
+
+
+class SnowConditionUpdateViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = SnowConditionUpdateSerializer
+
+    def get_queryset(self):
+        return SnowConditionUpdate.objects.select_related('ski_station', 'user').all()
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class PisteConditionReportViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = PisteConditionReportSerializer
+
+    def get_queryset(self):
+        return PisteConditionReport.objects.select_related('ski_station', 'user').all()
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class InstructorProfileViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = InstructorProfileSerializer
+
+    def get_queryset(self):
+        if self.action == 'list':
+            return InstructorProfile.objects.select_related('user').filter(is_active=True)
+        return InstructorProfile.objects.select_related('user').all()
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class InstructorServiceViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = InstructorServiceSerializer
+
+    def get_queryset(self):
+        qs = InstructorService.objects.select_related('instructor', 'instructor__user', 'ski_station')
+        if self.action == 'list':
+            return qs.filter(is_active=True)
+        return qs
+
+
+class InstructorReviewViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = InstructorReviewSerializer
+
+    def get_queryset(self):
+        return InstructorReview.objects.select_related('instructor', 'instructor__user', 'user').all()
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class SkiPartnerPostViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = SkiPartnerPostSerializer
+
+    def get_queryset(self):
+        qs = SkiPartnerPost.objects.select_related('user', 'ski_station').all()
+        if self.action == 'list':
+            return qs.filter(is_active=True)
+        return qs
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class SkiPartnerReportViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = SkiPartnerReportSerializer
+
+    def get_queryset(self):
+        return SkiPartnerReport.objects.select_related('post', 'reporter').filter(reporter=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(reporter=self.request.user)
+
+
+class SkiStoryViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = SkiStorySerializer
+
+    def get_queryset(self):
+        now = timezone.now()
+        return SkiStory.objects.select_related('user', 'ski_station').filter(expires_at__gt=now)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class MarketplaceSavedFilterViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = MarketplaceSavedFilterSerializer
+
+    def get_queryset(self):
+        return MarketplaceSavedFilter.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class MarketplaceDealViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = MarketplaceDealSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        return MarketplaceDeal.objects.select_related('listing', 'buyer', 'seller').filter(
+            Q(buyer=user) | Q(seller=user)
+        )
+
+
+class MarketplaceUserRatingViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = MarketplaceUserRatingSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        return MarketplaceUserRating.objects.select_related('listing', 'rater', 'rated_user').filter(
+            Q(rater=user) | Q(rated_user=user)
+        )
+
+    def perform_create(self, serializer):
+        serializer.save(rater=self.request.user)
+
+
+class UserFriendViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserFriendSerializer
+
+    def get_queryset(self):
+        return UserFriend.objects.select_related('user', 'friend').filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 
 def _serialize_user(user):
