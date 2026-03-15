@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GrenobleSki Native</string>
+    <string name="email">Email</string>
+    <string name="password">Mot de passe</string>
+    <string name="confirm_password">Confirmer le mot de passe</string>
+    <string name="first_name">Prenom</string>
+    <string name="last_name">Nom</string>
+    <string name="sign_in">Se connecter</string>
+    <string name="forgot_password">Mot de passe oublie ?</string>
+    <string name="continue_google">Continuer avec Google</string>
+    <string name="create_account">Creer un compte</string>
+    <string name="create_account_in_app">Creer le compte dans l appli</string>
+    <string name="back_to_login">Retour connexion</string>
+    <string name="opening_browser">Ouverture du navigateur...</string>
+    <string name="browser_error">Impossible d ouvrir le navigateur</string>
+    <string name="auth_title">Bienvenue sur GrenobleSki</string>
+    <string name="auth_subtitle">Une experience mobile plus propre et professionnelle.</string>
+    <string name="auth_hint">Utilisez email + mot de passe. Google et recuperation de compte sont disponibles en un clic.</string>
+    <string name="dashboard_title">Tableau de bord</string>
+    <string name="refresh">Rafraichir</string>
+    <string name="logout">Deconnexion</string>
+    <string name="stations">Stations</string>
+    <string name="bus_lines">Lignes de bus</string>
+    <string name="services">Services</string>
+    <string name="marketplace">Marketplace</string>
+    <string name="missing_credentials">Email et mot de passe requis.</string>
+    <string name="mobile_auth_invalid">Le retour d authentification mobile est invalide.</string>
+    <string name="open_full_web">Ouvrir toutes les fonctionnalites du site</string>
+    <string name="messages">Messages</string>
+    <string name="profile">Profil</string>
+    <string name="piste_status">Etat des pistes</string>
+    <string name="instructors">Moniteurs</string>
+</resources>

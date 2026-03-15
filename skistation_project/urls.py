@@ -41,6 +41,8 @@ urlpatterns = [
    path('register/', RedirectView.as_view(pattern_name='account_signup', permanent=False), name='register'),
    path('password/reset/', RedirectView.as_view(pattern_name='account_reset_password', permanent=False), name='password_reset'),
    path('password/reset/done/', RedirectView.as_view(pattern_name='account_reset_password_done', permanent=False), name='password_reset_done'),
+   path('mobile/auth/complete/', views.mobile_auth_complete, name='mobile_auth_complete'),
+   path('mobile/token-login/', views.mobile_token_login, name='mobile_token_login'),
     path('accounts/', include('allauth.urls')),
     path('ski-material-listings/', views.ski_material_listings, name='ski_material_listings'),
     path('listing/<int:id>/', views.listing_detail, name='listing_detail'),

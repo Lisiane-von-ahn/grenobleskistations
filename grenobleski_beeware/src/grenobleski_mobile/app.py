@@ -34,7 +34,7 @@ class GrenobleSkiMobile(toga.App):
         self.main_window = toga.MainWindow(title=self.t("app_title"))
         self.header_title = toga.Label(
             self.t("app_title"),
-            style=Pack(font_size=22, font_weight="bold", color=COLORS["header_text"]),
+            style=Pack(font_size=24, font_weight="bold", color=COLORS["header_text"]),
         )
         self.header_subtitle = toga.Label(
             self.t("tagline"),
@@ -44,7 +44,7 @@ class GrenobleSkiMobile(toga.App):
         logo_path = Path(__file__).resolve().parent / "resources" / "logo.png"
         self.logo_view = toga.ImageView(
             toga.Image(str(logo_path)),
-            style=Pack(width=56, height=56, padding_right=10),
+            style=Pack(width=62, height=62, padding_right=12),
         )
 
         title_box = toga.Box(
@@ -58,10 +58,10 @@ class GrenobleSkiMobile(toga.App):
             style=Pack(
                 color=COLORS["accent_text"],
                 background_color=COLORS["accent"],
-                padding_left=12,
-                padding_right=12,
-                padding_top=8,
-                padding_bottom=8,
+                padding_left=14,
+                padding_right=14,
+                padding_top=9,
+                padding_bottom=9,
             ),
         )
 
@@ -103,6 +103,85 @@ class GrenobleSkiMobile(toga.App):
         while box.children:
             box.remove(box.children[0])
 
+    def _open_external_url(self, url):
+        opened = False
+        last_error = None
+
+        try:
+            # Android reliability: open URL with a native intent when available.
+            if hasattr(self, "_impl") and hasattr(self._impl, "start_activity"):
+                from android.content import Intent  # type: ignore
+                from android.net import Uri  # type: ignore
+
+                intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                self._impl.start_activity(intent)
+                opened = True
+        except Exception as exc:
+            last_error = exc
+
+        if not opened:
+            try:
+                opened = bool(webbrowser.open(url, new=2))
+            except Exception as exc:
+                last_error = exc
+
+        if opened:
+            self._set_status("status_browser_opened")
+        else:
+            error_message = self.t("browser_open_failed")
+            if last_error is not None:
+                error_message = f"{error_message}: {last_error}"
+            self._set_status("status_error", message=error_message)
+
+        return opened
+
+    def _open_browser_path(self, path):
+        return self._open_external_url(self.api.website_url(path))
+
+    def _show_auth_web_page(self, path):
+        url = self.api.website_url(path)
+        self._clear_box(self.content)
+
+        title = toga.Label(
+            self.t("auth_web_title"),
+            style=Pack(font_size=14, font_weight="bold", color=COLORS["title_text"], padding_bottom=8),
+        )
+
+        back_button = toga.Button(
+            self.t("back_to_login"),
+            on_press=self.on_back_to_login,
+            style=Pack(background_color=COLORS["auth_secondary"], color=COLORS["title_text"], padding=8),
+        )
+        external_button = toga.Button(
+            self.t("open_external_browser"),
+            on_press=self.on_open_external_from_web,
+            style=Pack(background_color=COLORS["auth_secondary"], color=COLORS["title_text"], padding=8),
+        )
+
+        actions = toga.Box(
+            children=[back_button, external_button],
+            style=Pack(direction=ROW, padding_bottom=8),
+        )
+
+        self.auth_web_url = url
+        self.auth_webview = toga.WebView(url=url, style=Pack(flex=1))
+
+        web_shell = toga.Box(
+            children=[title, actions, self.auth_webview],
+            style=Pack(direction=COLUMN, flex=1, background_color=COLORS["card_bg"], padding=10),
+        )
+        self.content.add(web_shell)
+        self._set_status("status_loading")
+
+    def on_back_to_login(self, widget):
+        self._build_auth_view()
+        self._set_status("status_ready")
+
+    def on_open_external_from_web(self, widget):
+        url = getattr(self, "auth_web_url", None)
+        if url:
+            self._open_external_url(url)
+
     def on_toggle_language(self, widget):
         self.lang = "en" if self.lang == "fr" else "fr"
         self.main_window.title = self.t("app_title")
@@ -120,61 +199,104 @@ class GrenobleSkiMobile(toga.App):
     def _build_auth_view(self):
         self._clear_box(self.content)
 
-        title = toga.Label(
-            self.t("login_title"),
-            style=Pack(font_size=20, font_weight="bold", color=COLORS["title_text"], padding_bottom=10),
+        auth_logo = toga.ImageView(
+            toga.Image(str(Path(__file__).resolve().parent / "resources" / "logo.png")),
+            style=Pack(width=72, height=72, padding_bottom=10),
         )
 
-        self.email_input = toga.TextInput(placeholder=self.t("email"), style=Pack(padding_bottom=8))
-        self.password_input = toga.PasswordInput(placeholder=self.t("password"), style=Pack(padding_bottom=8))
-        self.first_name_input = toga.TextInput(placeholder=self.t("first_name"), style=Pack(padding_bottom=8))
-        self.last_name_input = toga.TextInput(placeholder=self.t("last_name"), style=Pack(padding_bottom=8))
-        self.google_token_input = toga.MultilineTextInput(
-            placeholder=self.t("google_token"),
-            style=Pack(height=90, padding_top=8),
+        kicker = toga.Label(
+            self.t("login_kicker"),
+            style=Pack(font_size=10, font_weight="bold", color=COLORS["muted_text"], padding_bottom=4),
         )
+
+        title = toga.Label(
+            self.t("login_title"),
+            style=Pack(font_size=24, font_weight="bold", color=COLORS["title_text"], padding_bottom=6),
+        )
+
+        intro = toga.Label(
+            self.t("auth_intro"),
+            style=Pack(font_size=11, color=COLORS["muted_text"], padding_bottom=14),
+        )
+
+        feature_line = toga.Label(
+            self.t("auth_feature_line"),
+            style=Pack(font_size=10, color=COLORS["muted_text"], padding_bottom=14),
+        )
+
+        email_label = toga.Label(self.t("email"), style=Pack(color=COLORS["title_text"], font_size=10, font_weight="bold", padding_bottom=4))
+        self.email_input = toga.TextInput(placeholder=self.t("email_placeholder"), style=Pack(padding_bottom=10, background_color=COLORS["surface_alt"]))
+
+        password_label = toga.Label(self.t("password"), style=Pack(color=COLORS["title_text"], font_size=10, font_weight="bold", padding_bottom=4))
+        self.password_input = toga.PasswordInput(placeholder=self.t("password_placeholder"), style=Pack(padding_bottom=14, background_color=COLORS["surface_alt"]))
 
         login_button = toga.Button(
             self.t("login"),
             on_press=self.on_login,
-            style=Pack(background_color=COLORS["accent"], color=COLORS["accent_text"], padding=10, flex=1),
+            style=Pack(background_color=COLORS["auth_primary"], color=COLORS["accent_text"], padding=11),
         )
-        register_button = toga.Button(
-            self.t("register"),
-            on_press=self.on_register,
-            style=Pack(background_color=COLORS["header_bg"], color=COLORS["accent_text"], padding=10, flex=1),
-        )
-        auth_buttons = toga.Box(children=[login_button, register_button], style=Pack(direction=ROW, padding_top=8, padding_bottom=8))
 
-        google_help = toga.Label(self.t("google_help"), style=Pack(color=COLORS["muted_text"], font_size=11, padding_top=4))
-        google_button = toga.Button(
-            self.t("google_login"),
-            on_press=self.on_google_login,
-            style=Pack(background_color=COLORS["accent"], color=COLORS["accent_text"], padding=10),
+        or_continue = toga.Label(
+            self.t("or_continue"),
+            style=Pack(font_size=10, color=COLORS["muted_text"], padding_top=10, padding_bottom=8),
         )
+
+        forgot_button = toga.Button(
+            self.t("forgot_password"),
+            on_press=self.on_forgot_password,
+            style=Pack(background_color=COLORS["auth_secondary"], color=COLORS["title_text"], padding=10),
+        )
+
         google_browser_button = toga.Button(
             self.t("google_browser_login"),
             on_press=self.on_google_browser_login,
-            style=Pack(background_color=COLORS["header_bg"], color=COLORS["accent_text"], padding=10, padding_top=8),
+            style=Pack(background_color=COLORS["auth_secondary"], color=COLORS["title_text"], padding=10),
         )
 
-        auth_card = toga.Box(
+        register_button = toga.Button(
+            self.t("web_signup"),
+            on_press=self.on_web_signup,
+            style=Pack(background_color=COLORS["auth_secondary"], color=COLORS["title_text"], padding=10),
+        )
+
+        browser_note = toga.Label(
+            self.t("auth_browser_note"),
+            style=Pack(color=COLORS["muted_text"], font_size=10, padding_top=10),
+        )
+
+        dots = toga.Label(
+            self.t("auth_dots"),
+            style=Pack(color=COLORS["muted_text"], font_size=13, padding_top=8),
+        )
+
+        form_card = toga.Box(
             children=[
+                auth_logo,
+                kicker,
                 title,
+                intro,
+                feature_line,
+                email_label,
                 self.email_input,
+                password_label,
                 self.password_input,
-                self.first_name_input,
-                self.last_name_input,
-                auth_buttons,
-                self.google_token_input,
-                google_help,
-                google_button,
+                login_button,
+                or_continue,
                 google_browser_button,
+                forgot_button,
+                register_button,
+                browser_note,
+                dots,
             ],
-            style=Pack(direction=COLUMN, background_color=COLORS["card_bg"], padding=16),
+            style=Pack(direction=COLUMN, background_color=COLORS["card_bg"], padding=20, padding_top=22),
         )
 
-        self.content.add(auth_card)
+        auth_wrap = toga.Box(
+            children=[form_card],
+            style=Pack(direction=COLUMN, alignment=CENTER, padding_top=16, padding_bottom=20),
+        )
+
+        self.content.add(toga.ScrollContainer(content=auth_wrap, style=Pack(flex=1)))
 
     def _compute_nav_keys(self):
         keys = ["home", "stations", "bus", "services", "marketplace"]
@@ -219,14 +341,20 @@ class GrenobleSkiMobile(toga.App):
         self._show_section("home")
 
     def _prepare_sections(self):
+        summary_card = toga.Box(
+            children=[
+                toga.Label(self.t("home_intro"), style=Pack(color=COLORS["muted_text"], padding_bottom=10)),
+            ],
+            style=Pack(direction=COLUMN, background_color=COLORS["card_bg"], padding=14, padding_bottom=16),
+        )
         self.home_summary = toga.Label("", style=Pack(color=COLORS["title_text"], padding=8))
-        self.home_counts = toga.Label("", style=Pack(color=COLORS["muted_text"], padding=8))
+        self.home_counts = toga.Label("", style=Pack(color=COLORS["muted_text"], padding=8, padding_top=0))
         self.home_section = toga.Box(
             children=[
                 self.home_summary,
-                toga.Label(self.t("home_intro"), style=Pack(color=COLORS["muted_text"], padding=8)),
+                summary_card,
                 self.home_counts,
-                toga.Button(self.t("refresh"), on_press=self.on_refresh_all, style=Pack(width=170, padding=8)),
+                toga.Button(self.t("refresh"), on_press=self.on_refresh_all, style=Pack(width=170, padding=10)),
             ],
             style=Pack(direction=COLUMN),
         )
@@ -361,15 +489,15 @@ class GrenobleSkiMobile(toga.App):
         self.profile_email.text = self.user.get("email", "")
 
     def _make_card(self, title, lines):
-        card = toga.Box(style=Pack(direction=COLUMN, background_color=COLORS["card_bg"], padding=12, padding_bottom=14))
+        card = toga.Box(style=Pack(direction=COLUMN, background_color=COLORS["card_bg"], padding=14, padding_bottom=16, padding_top=14))
         card.add(
             toga.Label(
                 title,
-                style=Pack(color=COLORS["title_text"], font_size=13, font_weight="bold", padding_bottom=4),
+                style=Pack(color=COLORS["title_text"], font_size=14, font_weight="bold", padding_bottom=6),
             )
         )
         for line in lines:
-            card.add(toga.Label(line, style=Pack(color=COLORS["muted_text"], font_size=11, padding_bottom=2)))
+            card.add(toga.Label(line, style=Pack(color=COLORS["muted_text"], font_size=11, padding_bottom=3)))
         return card
 
     def _render_stations_list(self):
@@ -572,7 +700,7 @@ class GrenobleSkiMobile(toga.App):
         email = (self.email_input.value or "").strip().lower()
         password = self.password_input.value or ""
         if not email or not password:
-            self._set_status("status_error", message="Missing email/password")
+            self._set_status("status_error", message=self.t("missing_email_password"))
             return
 
         self._set_status("status_loading")
@@ -584,55 +712,14 @@ class GrenobleSkiMobile(toga.App):
         except ApiError as exc:
             self._set_status("status_error", message=str(exc))
 
-    def on_register(self, widget):
-        asyncio.create_task(self._do_register())
+    def on_forgot_password(self, widget):
+        self._show_auth_web_page("/password/reset/")
 
-    async def _do_register(self):
-        email = (self.email_input.value or "").strip().lower()
-        password = self.password_input.value or ""
-        first_name = (self.first_name_input.value or "").strip()
-        last_name = (self.last_name_input.value or "").strip()
-
-        if not email or not password:
-            self._set_status("status_error", message="Missing email/password")
-            return
-
-        self._set_status("status_loading")
-        try:
-            self.user = await self.api.register(
-                email=email,
-                password=password,
-                first_name=first_name,
-                last_name=last_name,
-            )
-            await self._load_capabilities()
-            self._build_app_view()
-            await self._load_all_data()
-        except ApiError as exc:
-            self._set_status("status_error", message=str(exc))
-
-    def on_google_login(self, widget):
-        asyncio.create_task(self._do_google_login())
-
-    async def _do_google_login(self):
-        id_token = (self.google_token_input.value or "").strip()
-        if not id_token:
-            self._set_status("status_error", message="Missing Google ID token")
-            return
-
-        self._set_status("status_loading")
-        try:
-            self.user = await self.api.google_login(id_token=id_token)
-            await self._load_capabilities()
-            self._build_app_view()
-            await self._load_all_data()
-        except ApiError as exc:
-            self._set_status("status_error", message=str(exc))
+    def on_web_signup(self, widget):
+        self._show_auth_web_page("/accounts/signup/")
 
     def on_google_browser_login(self, widget):
-        parts = self.api.swagger_url.split("/swagger/")[0]
-        webbrowser.open(f"{parts}/accounts/google/login/?process=login")
-        self._set_status("status_ready")
+        self._show_auth_web_page("/accounts/google/login/?process=login")
 
     def on_refresh_all(self, widget):
         asyncio.create_task(self._load_all_data())
@@ -750,13 +837,13 @@ class GrenobleSkiMobile(toga.App):
         body = (self.msg_body_input.value or "").strip()
 
         if not recipient_raw or not subject or not body:
-            self._set_status("status_error", message="Missing message fields")
+            self._set_status("status_error", message=self.t("missing_message_fields"))
             return
 
         try:
             recipient = int(recipient_raw)
         except ValueError:
-            self._set_status("status_error", message="Recipient ID must be numeric")
+            self._set_status("status_error", message=self.t("recipient_numeric"))
             return
 
         self._set_status("status_loading")

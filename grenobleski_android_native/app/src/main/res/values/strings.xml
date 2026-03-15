@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GrenobleSki Native</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="confirm_password">Confirm password</string>
+    <string name="first_name">First name</string>
+    <string name="last_name">Last name</string>
+    <string name="sign_in">Sign in</string>
+    <string name="forgot_password">Forgot password?</string>
+    <string name="continue_google">Continue with Google</string>
+    <string name="create_account">Create account</string>
+    <string name="create_account_in_app">Create account in app</string>
+    <string name="back_to_login">Back to login</string>
+    <string name="opening_browser">Opening browser...</string>
+    <string name="browser_error">Could not open browser</string>
+    <string name="auth_title">Welcome to GrenobleSki</string>
+    <string name="auth_subtitle">A cleaner, professional mobile experience.</string>
+    <string name="auth_hint">Use email + password. Google and account recovery are available with one tap.</string>
+    <string name="dashboard_title">Dashboard</string>
+    <string name="refresh">Refresh</string>
+    <string name="logout">Log out</string>
+    <string name="stations">Stations</string>
+    <string name="bus_lines">Bus lines</string>
+    <string name="services">Services</string>
+    <string name="marketplace">Marketplace</string>
+    <string name="missing_credentials">Email and password are required.</string>
+    <string name="mobile_auth_invalid">Mobile authentication callback is invalid.</string>
+    <string name="open_full_web">Open full website features</string>
+    <string name="messages">Messages</string>
+    <string name="profile">Profile</string>
+    <string name="piste_status">Piste status</string>
+    <string name="instructors">Instructors</string>
+</resources>

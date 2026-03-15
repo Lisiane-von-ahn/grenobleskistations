@@ -15,6 +15,7 @@ class ApiError(Exception):
 class GrenobleSkiApiClient:
     def __init__(self, base_url, data_dir):
         self.base_url = base_url.rstrip("/")
+        self.site_url = self._derive_site_url(self.base_url)
         self.swagger_url = self._derive_swagger_url(self.base_url)
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -30,6 +31,15 @@ class GrenobleSkiApiClient:
     def _derive_swagger_url(base_url):
         parts = urlsplit(base_url)
         return f"{parts.scheme}://{parts.netloc}/swagger/?format=openapi"
+
+    @staticmethod
+    def _derive_site_url(base_url):
+        parts = urlsplit(base_url)
+        return f"{parts.scheme}://{parts.netloc}"
+
+    def website_url(self, path):
+        normalized_path = path if path.startswith("/") else f"/{path}"
+        return f"{self.site_url}{normalized_path}"
 
     def _load_session(self):
         if not self.session_file.exists():

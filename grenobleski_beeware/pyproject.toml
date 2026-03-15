@@ -9,7 +9,6 @@ description = "BeeWare mobile/desktop app for GrenobleSki API"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "toga>=0.4.8",
     "httpx>=0.27.0",
 ]
 
@@ -26,6 +25,11 @@ author_email = "contact@grenobleski.fr"
 formal_name = "GrenobleSki Mobile"
 description = "Modern BeeWare app for stations, transport, services and marketplace"
 long_description = "BeeWare client for GrenobleSki with multilingual UI and API login (email and Google token)."
+icon = "resources/app_icon"
+accent_color = "#1CA387"
+primary_color = "#0C2C42"
+primary_color_dark = "#091F2F"
+splash_background_color = "#EEF5F7"
 sources = [
     "src/grenobleski_mobile",
 ]
@@ -35,6 +39,16 @@ requires = [
 
 test_sources = [
     "tests",
+]
+
+[tool.briefcase.app.grenobleski_mobile.linux]
+requires = [
+    "toga-gtk~=0.5.3",
+]
+
+[tool.briefcase.app.grenobleski_mobile.android]
+requires = [
+    "toga-android~=0.5.3",
 ]
 
 [tool.setuptools]

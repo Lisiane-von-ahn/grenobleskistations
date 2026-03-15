@@ -2,6 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponseRedirect, JsonResponse
 from django.views.decorators.http import require_GET
 from django.conf import settings
+from django.contrib.auth import login
 from api.models import (
     SkiStation,
     BusLine,
@@ -33,6 +34,7 @@ from django.db.models import IntegerField
 from django.urls import reverse
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
+from rest_framework.authtoken.models import Token
 from django.core.paginator import Paginator
 from .forms import (
     SkiMaterialListingForm,
@@ -52,7 +54,7 @@ from django.contrib import messages
 import base64
 import json
 from datetime import timedelta, date
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlencode
 import re
 from django.utils.translation import check_for_language
 from django.utils import translation
@@ -442,6 +444,49 @@ def set_language_view(request):
         request.session[settings.LANGUAGE_COOKIE_NAME] = lang_code
         response.set_cookie(settings.LANGUAGE_COOKIE_NAME, lang_code)
     return response
+
+
+@login_required(login_url='account_login')
+def mobile_auth_complete(request):
+    token, _ = Token.objects.get_or_create(user=request.user)
+
+    display_name = f"{(request.user.first_name or '').strip()} {(request.user.last_name or '').strip()}".strip()
+    if not display_name:
+        display_name = (request.user.email or request.user.username or '').strip()
+
+    app_redirect_base = os.getenv('MOBILE_APP_AUTH_REDIRECT', 'grenobleski://auth').strip() or 'grenobleski://auth'
+    separator = '&' if '?' in app_redirect_base else '?'
+    payload = urlencode(
+        {
+            'token': token.key,
+            'email': request.user.email or '',
+            'name': display_name,
+        }
+    )
+    return redirect(f"{app_redirect_base}{separator}{payload}")
+
+
+@require_GET
+def mobile_token_login(request):
+    token_value = (request.GET.get('token') or '').strip()
+    next_url = (request.GET.get('next') or '/').strip() or '/'
+
+    if not url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ) and not next_url.startswith('/'):
+        next_url = '/'
+
+    if not token_value:
+        return redirect(f"{reverse('account_login')}?next={quote_plus(next_url)}")
+
+    token = Token.objects.select_related('user').filter(key=token_value).first()
+    if token is None:
+        return redirect(f"{reverse('account_login')}?next={quote_plus(next_url)}")
+
+    login(request, token.user, backend='skistation_project.backends.EmailOrUsernameModelBackend')
+    return redirect(next_url)
     
 @login_required(login_url='login')
 def ski_material_listings(request):

@@ -3,9 +3,11 @@
 Application BeeWare (Toga) moderne pour GrenobleSki avec:
 
 - Authentification email/mot de passe via API Django
-- Authentification Google via `id_token` (endpoint API dedie)
+- Connexion Google via page web officielle GrenobleSki
+- Creation de compte et mot de passe oublie via pages web GrenobleSki
 - Interface FR/EN
 - Reutilisation du logo existant GrenobleSki
+- Icône mobile derivee du logo GrenobleSki
 - Modules principaux: stations, bus, services, marketplace, stories, ski partners, instructeurs, messages, profil
 - Detection dynamique des endpoints via `https://www.grenobleski.fr/swagger/?format=openapi`
 
@@ -66,9 +68,9 @@ briefcase build ios
 briefcase run ios
 ```
 
-## Google login
+## Authentification
 
-L'app appelle `POST /api/auth/google-login/` avec un `id_token` Google.
-
-- En production mobile native, le `id_token` doit etre obtenu via le SDK Google Sign-In (Android/iOS) puis envoye a cet endpoint.
-- Cote backend, configure `GOOGLE_OAUTH_CLIENT_IDS` (liste separee par virgules) pour valider les audiences autorisees.
+- Connexion native dans l'app: email + mot de passe.
+- Google Sign-In: ouverture de la page web officielle `accounts/google/login/`.
+- Creation de compte: ouverture de `accounts/signup/`.
+- Mot de passe oublie: ouverture de `password/reset/`.
