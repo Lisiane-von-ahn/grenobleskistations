@@ -235,9 +235,14 @@
             border-radius: 16px;
         }
 
-        main > div {
+        .main-content-wrap {
             margin-top: 170px !important;
             min-height: calc(100vh - 230px);
+            padding-top: 0;
+        }
+
+        body.home-page .main-content-wrap {
+            margin-top: 0 !important;
         }
 
         .floating-btn {
@@ -376,13 +381,14 @@
                 margin-top: 34px;
             }
 
-            main > div {
+            .main-content-wrap {
                 margin-top: 160px !important;
             }
         }
 
         @media (max-width: 991.98px) {
             .header-area {
+                height: 96px !important;
                 min-height: 96px;
                 background: linear-gradient(135deg, #23b6c8 0%, #1db0c2 100%);
                 box-shadow: 0 8px 20px rgba(10, 46, 66, 0.16);
@@ -476,7 +482,7 @@
             }
 
             .header-area .main-nav .nav {
-                display: block;
+                display: none;
                 margin-top: 0;
                 gap: 0;
             }
@@ -495,9 +501,13 @@
                 font-size: 15px;
             }
 
-            main > div {
+            .main-content-wrap {
                 margin-top: 96px !important;
-                padding-top: 10px;
+                padding-top: 0;
+            }
+
+            body.home-page .main-content-wrap {
+                margin-top: 0 !important;
             }
 
             #cookie-banner {
@@ -618,9 +628,13 @@
                 border-radius: 14px;
             }
 
-            main > div {
-                margin-top: 90px !important;
-                padding-top: 9px;
+            .main-content-wrap {
+                margin-top: 96px !important;
+                padding-top: 0;
+            }
+
+            body.home-page .main-content-wrap {
+                margin-top: 0 !important;
             }
 
             .main-nav .nav li .offers-submenu {
@@ -695,7 +709,7 @@
     </style>        
 </head>
 
-<body>
+<body class="{% if request.resolver_match.url_name == 'my_template_view' %}home-page{% endif %}">
 
     <!-- ***** Header Area ***** -->
     <header class="header-area header-sticky">
@@ -776,7 +790,7 @@
 
     <!-- ***** Dynamic Content Section ***** -->
     <main>
-        <div style="margin-top: 170px">
+        <div class="main-content-wrap">
             {% block content %} 
             {% endblock %}
         </div>

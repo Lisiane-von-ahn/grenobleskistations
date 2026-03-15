@@ -1,4 +1,5 @@
 from django.urls import path, include
+from django.views.generic import RedirectView
 from rest_framework.routers import DefaultRouter
 from .views import (
     BusLineViewSet,
@@ -53,5 +54,15 @@ urlpatterns = [
     path('auth/me/', auth_me_view, name='auth-me'),
     path('auth/logout/', auth_logout_view, name='auth-logout'),
     path('login/', login_view, name='login'),  # Add the login endpoint manually
+    path(
+        'mobile/auth/complete/',
+        RedirectView.as_view(url='/mobile/auth/complete/', permanent=False, query_string=True),
+        name='api-mobile-auth-complete',
+    ),
+    path(
+        'mobile/token-login/',
+        RedirectView.as_view(url='/mobile/token-login/', permanent=False, query_string=True),
+        name='api-mobile-token-login',
+    ),
 ] + router.urls
 

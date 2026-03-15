@@ -108,7 +108,7 @@ fun GrenobleSkiApp(
                 }
             },
             onGoogle = {
-                val callbackUrl = "$siteBase/mobile/auth/complete/"
+                val callbackUrl = "$siteBase/api/mobile/auth/complete/"
                 val googleUrl = "$siteBase/accounts/google/login/?process=login&next=${Uri.encode(callbackUrl)}"
                 val ok = openExternalUrl(appContext, googleUrl)
                 if (!ok) {
@@ -123,7 +123,7 @@ fun GrenobleSkiApp(
         val openWebByPath: (String) -> Unit = { nextPath ->
             val tokenEncoded = Uri.encode(session.token)
             val nextEncoded = Uri.encode(nextPath)
-            val url = "$siteBase/mobile/token-login/?token=$tokenEncoded&next=$nextEncoded"
+            val url = "$siteBase/api/mobile/token-login/?token=$tokenEncoded&next=$nextEncoded"
             val ok = openExternalUrl(appContext, url)
             if (!ok) {
                 viewModel.setError(appContext.getString(R.string.browser_error))
