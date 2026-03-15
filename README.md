@@ -145,6 +145,50 @@ The architecture of the project follows the standard **Model-View-Controller (MV
 - **Authentication**: Token-based authentication for secure API access.
 - **PostgreSQL Integration**: Uses PostgreSQL as the default database for data persistence.
 
+## BeeWare App (Nouveau dossier)
+
+Un client BeeWare moderne est disponible dans `grenobleski_beeware/`.
+
+Fonctionnalites:
+
+- UI multilangue FR/EN
+- Reutilisation du logo existant GrenobleSki
+- Connexion API avec email/mot de passe
+- Connexion Google via `id_token`
+- Vues principales: stations, bus, services, marketplace, profil
+
+Lancement rapide:
+
+```bash
+cd grenobleski_beeware
+python -m venv .venv
+source .venv/bin/activate
+pip install -U pip briefcase
+pip install -e .
+briefcase dev
+```
+
+Variable optionnelle:
+
+```bash
+export GRENOBLESKI_API_URL="https://grenobleski.fr/api"
+```
+
+## API mobile auth ajoutee
+
+Nouveaux endpoints sous `/api/auth/`:
+
+- `POST /api/auth/register/`
+- `POST /api/auth/login/`
+- `POST /api/auth/google-login/`
+- `GET /api/auth/me/`
+- `POST /api/auth/logout/`
+
+Configuration Google backend:
+
+- Ajouter `GOOGLE_OAUTH_CLIENT_IDS` (IDs OAuth autorises, separes par virgules)
+- Le endpoint `google-login` verifie l'audience de l'`id_token` contre cette variable.
+
 
 
 

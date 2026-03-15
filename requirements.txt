@@ -17,3 +17,4 @@ coreapi
 openapi-codec
 coreschema
 cryptography
+google-auth
