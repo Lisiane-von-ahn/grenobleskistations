@@ -4,13 +4,21 @@
 {% block title %}{% trans "Fiche Service" %}{% endblock %}
 
 {% block content %}
-<section class="py-5 bg-light">
+<section class="py-4">
     <div class="container">
-        <div class="card border-0 shadow-sm">
+        <div class="premium-shell mb-4 p-3">
+            <div class="premium-hero">
+                <span class="premium-kicker">Service</span>
+                <h2 class="premium-title h3 mb-1">{{ service.name }}</h2>
+                <p class="premium-subtitle">{{ service.type }} • {{ service.ski_station.name }}</p>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm premium-panel">
             <div class="card-body p-4 p-lg-5">
                 <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                     <div>
-                        <h2 class="mb-1">{{ service.name }}</h2>
+                        <h2 class="mb-1 h4">{{ service.name }}</h2>
                         <p class="text-muted mb-0">{{ service.type }} • {{ service.ski_station.name }}</p>
                     </div>
                     <a href="{% url 'services' %}" class="btn btn-outline-secondary btn-sm">{% trans "Retour services" %}</a>

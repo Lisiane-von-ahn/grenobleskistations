@@ -5,9 +5,12 @@
 
 {% block content %}
 <div class="container py-4">
-    <section class="market-hero mb-4">
-        <h2 class="market-section-title mb-1">Trouver des partenaires de ski</h2>
-        <p class="market-subtle mb-0">Publiez votre sortie et trouvez des personnes avec le meme niveau.</p>
+    <section class="premium-shell mb-4 p-3">
+        <div class="premium-hero">
+            <span class="premium-kicker">Communaute</span>
+            <h2 class="premium-title h3 mb-1">Trouver des partenaires de ski</h2>
+            <p class="premium-subtitle">Publiez votre sortie et trouvez des personnes avec le meme niveau.</p>
+        </div>
         <div class="d-flex flex-wrap gap-2 mt-3">
             {% if user.is_authenticated %}
             <a class="btn btn-success" href="{% url 'ski_partner_publish' %}" target="_blank" rel="noopener">Publier une sortie</a>
@@ -16,7 +19,7 @@
         </div>
     </section>
 
-    <section class="market-search-panel mb-4">
+    <section class="market-search-panel mb-4 premium-panel">
         <form method="get" class="row g-3">
             <div class="col-lg-4">
                 <label class="form-label">Station</label>

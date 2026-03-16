@@ -283,9 +283,34 @@ class MessageViewSet(viewsets.ModelViewSet):
             raise ValidationError('recipient is required.')
         serializer.save(sender=sender)
 
+    @action(detail=False, methods=['post'], url_path='mark-read')
+    def mark_read(self, request):
+        other_user_id = request.data.get('user_id')
+        try:
+            other_user_id = int(other_user_id)
+        except (TypeError, ValueError):
+            return Response({'error': 'user_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if other_user_id <= 0:
+            return Response({'error': 'user_id is invalid.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        updated = Message.objects.filter(
+            sender_id=other_user_id,
+            recipient=request.user,
+            is_read=False,
+        ).update(is_read=True)
+        return Response({'updated': updated}, status=status.HTTP_200_OK)
+
 class UserProfileViewSet(viewsets.ModelViewSet):
-    queryset = UserProfile.objects.all()
+    permission_classes = [IsAuthenticated]
+    queryset = UserProfile.objects.select_related('user').all()
     serializer_class = UserProfileSerializer
+
+    def get_queryset(self):
+        user = _current_authenticated_user(self)
+        if user is None:
+            return UserProfile.objects.none()
+        return UserProfile.objects.select_related('user').filter(user=user)
 
     @action(detail=False, methods=['get'])
     def me(self, request):
@@ -294,8 +319,28 @@ class UserProfileViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 class UserViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
     queryset = User.objects.all()
     serializer_class = UserSerializer
+
+    def get_queryset(self):
+        qs = User.objects.all().order_by('-date_joined')
+        user = _current_authenticated_user(self)
+        if user is not None:
+            qs = qs.exclude(id=user.id)
+
+        if self.action == 'list':
+            query = (self.request.query_params.get('q') or '').strip()
+            if query:
+                qs = qs.filter(
+                    Q(first_name__icontains=query)
+                    | Q(last_name__icontains=query)
+                    | Q(username__icontains=query)
+                    | Q(email__icontains=query)
+                )
+            return qs
+
+        return qs
 
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def register(self, request):
@@ -470,7 +515,25 @@ class UserFriendViewSet(viewsets.ModelViewSet):
         return UserFriend.objects.select_related('user', 'friend').filter(user=user)
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        friend = serializer.validated_data.get('friend')
+        user = self.request.user
+        if friend is None:
+            raise ValidationError('friend is required.')
+        if friend.id == user.id:
+            raise ValidationError('Cannot add yourself as friend.')
+
+        UserFriend.objects.get_or_create(user=user, friend=friend)
+        UserFriend.objects.get_or_create(user=friend, friend=user)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.user_id != request.user.id:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+
+        friend_id = instance.friend_id
+        UserFriend.objects.filter(user=request.user, friend_id=friend_id).delete()
+        UserFriend.objects.filter(user_id=friend_id, friend=request.user).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 def _serialize_user(user):
@@ -654,6 +717,99 @@ def auth_google_login_view(request):
 @permission_classes([IsAuthenticated])
 def auth_me_view(request):
     return Response({"user": _serialize_user(request.user)}, status=status.HTTP_200_OK)
+
+
+@api_view(["PATCH", "POST"])
+@authentication_classes([TokenAuthentication, SessionAuthentication])
+@permission_classes([IsAuthenticated])
+def auth_profile_update_view(request):
+    user = request.user
+    email = (request.data.get('email') or user.email or '').strip().lower()
+    first_name = (request.data.get('first_name') or user.first_name or '').strip()
+    last_name = (request.data.get('last_name') or user.last_name or '').strip()
+
+    if not email:
+        return Response({"error": "Email is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    duplicate = User.objects.filter(email__iexact=email).exclude(id=user.id).exists()
+    if duplicate:
+        return Response({"error": "A user with this email already exists."}, status=status.HTTP_400_BAD_REQUEST)
+
+    updated_fields = []
+    if user.email != email:
+        user.email = email
+        user.username = email
+        updated_fields.extend(["email", "username"])
+    if user.first_name != first_name:
+        user.first_name = first_name
+        updated_fields.append("first_name")
+    if user.last_name != last_name:
+        user.last_name = last_name
+        updated_fields.append("last_name")
+    if updated_fields:
+        user.save(update_fields=updated_fields)
+
+    profile, _ = UserProfile.objects.get_or_create(user=user)
+    if 'clear_profile_picture' in request.data and request.data.get('clear_profile_picture'):
+        profile.profile_picture = None
+        profile.save(update_fields=['profile_picture'])
+    elif 'profile_picture' in request.data:
+        image_payload = request.data.get('profile_picture')
+        try:
+            decoded = _decode_base64_binary(image_payload)
+        except ValidationError as exc:
+            return Response({"error": str(exc.detail)}, status=status.HTTP_400_BAD_REQUEST)
+        if decoded is not None:
+            profile.profile_picture = decoded
+            profile.save(update_fields=['profile_picture'])
+
+    return Response(
+        {
+            "message": "Profile updated.",
+            "user": _serialize_user(user),
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(["POST"])
+@authentication_classes([TokenAuthentication, SessionAuthentication])
+@permission_classes([IsAuthenticated])
+def auth_password_change_view(request):
+    user = request.user
+    current_password = request.data.get('current_password') or ''
+    new_password = request.data.get('new_password') or ''
+    confirm_password = request.data.get('confirm_password') or ''
+
+    if not current_password or not new_password or not confirm_password:
+        return Response({"error": "All password fields are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if not user.check_password(current_password):
+        return Response({"error": "Current password is incorrect."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if new_password != confirm_password:
+        return Response({"error": "Passwords do not match."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        validate_password(new_password, user=user)
+    except DjangoValidationError as exc:
+        return Response({"error": exc.messages}, status=status.HTTP_400_BAD_REQUEST)
+
+    user.set_password(new_password)
+    user.save(update_fields=['password'])
+
+    Token.objects.filter(user=user).delete()
+    token = Token.objects.create(user=user)
+    login(request, user, backend=APP_AUTH_BACKEND)
+
+    return Response(
+        {
+            "message": "Password updated.",
+            "token": token.key,
+            "user": _serialize_user(user),
+        },
+        status=status.HTTP_200_OK,
+    )
 
 
 @api_view(["POST"])

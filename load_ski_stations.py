@@ -36,15 +36,15 @@ STATION_IMAGE_MAP = {
     'Villard-de-Lans / Corrençon': 'villard.jpg',
     'Autrans-Méaudre en Vercors': 'autrans.jpg',
     "Le Collet d'Allevard": 'belledonne.jpg',
-    'Les 2 Alpes': 'banner-03.jpg',
-    'La Grave - La Meije': 'banner-04.jpg',
-    'Oz 3300': 'offers-01.jpg',
-    'Vaujany': 'offers-02.jpg',
-    'Auris-en-Oisans': 'offers-03.jpg',
-    'Le Sappey-en-Chartreuse': 'banner-01.jpg',
-    'Saint-Pierre-de-Chartreuse': 'banner-02.jpg',
-    'Lans-en-Vercors': 'cities-01.jpg',
-    'Gresse-en-Vercors': 'cities-02.jpg',
+    'Les 2 Alpes': 'chamrousse2.jpg',
+    'La Grave - La Meije': 'belledonne.jpg',
+    'Oz 3300': 'alpehuez.jpg',
+    'Vaujany': 'villard.jpg',
+    'Auris-en-Oisans': 'chamrousse2.jpg',
+    'Le Sappey-en-Chartreuse': 'autrans.jpg',
+    'Saint-Pierre-de-Chartreuse': '7laux.jpg',
+    'Lans-en-Vercors': 'villard.jpg',
+    'Gresse-en-Vercors': 'autrans.jpg',
 }
 
 SERVICE_SEED_BY_STATION = {
@@ -441,6 +441,9 @@ def get_image_bytes(filename):
     image_path = Path(__file__).resolve().parent / 'static' / 'images' / filename
     if image_path.exists():
         return image_path.read_bytes()
+    fallback_path = Path(__file__).resolve().parent / 'static' / 'images' / 'ski.png'
+    if fallback_path.exists():
+        return fallback_path.read_bytes()
     return None
 
 
@@ -451,7 +454,7 @@ def seed_ski_stations():
 
     station_by_name = {}
     for station in STATIONS_DATA:
-        image_bytes = get_image_bytes(STATION_IMAGE_MAP.get(station['name'], 'default-profile.png'))
+        image_bytes = get_image_bytes(STATION_IMAGE_MAP.get(station['name'], 'ski.png'))
 
         station_obj, created = SkiStation.objects.update_or_create(
             name=station['name'],

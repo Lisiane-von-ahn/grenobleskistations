@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import fr.grenobleski.nativeapp.data.AuthRepository
 import fr.grenobleski.nativeapp.data.model.DashboardCounts
 import fr.grenobleski.nativeapp.data.model.ChatUserOption
+import fr.grenobleski.nativeapp.data.model.FriendLink
 import fr.grenobleski.nativeapp.data.model.InstructorItem
 import fr.grenobleski.nativeapp.data.model.MarketplaceItem
 import fr.grenobleski.nativeapp.data.model.MessageItem
@@ -37,6 +38,7 @@ data class AppUiState(
     val pisteItems: List<PisteItem> = emptyList(),
     val messageItems: List<MessageItem> = emptyList(),
     val chatUsers: List<ChatUserOption> = emptyList(),
+    val friendLinks: List<FriendLink> = emptyList(),
     val messageRecipientId: Int? = null,
     val messageDraftBody: String = "",
     val isSendingMessage: Boolean = false,
@@ -47,6 +49,15 @@ data class AppUiState(
     val publishImagesBase64: List<String> = emptyList(),
     val isPublishingArticle: Boolean = false,
     val profileInfo: ProfileInfo? = null,
+    val profileEditFirstName: String = "",
+    val profileEditLastName: String = "",
+    val profileEditEmail: String = "",
+    val currentPasswordInput: String = "",
+    val newPasswordInput: String = "",
+    val confirmNewPasswordInput: String = "",
+    val isSavingProfile: Boolean = false,
+    val isChangingPassword: Boolean = false,
+    val statusMessage: String? = null,
 )
 
 class AppViewModel(
@@ -82,6 +93,30 @@ class AppViewModel(
 
     fun updateConfirmPassword(value: String) {
         state = state.copy(confirmPassword = value, errorMessage = null)
+    }
+
+    fun updateProfileEditFirstName(value: String) {
+        state = state.copy(profileEditFirstName = value, errorMessage = null, statusMessage = null)
+    }
+
+    fun updateProfileEditLastName(value: String) {
+        state = state.copy(profileEditLastName = value, errorMessage = null, statusMessage = null)
+    }
+
+    fun updateProfileEditEmail(value: String) {
+        state = state.copy(profileEditEmail = value, errorMessage = null, statusMessage = null)
+    }
+
+    fun updateCurrentPasswordInput(value: String) {
+        state = state.copy(currentPasswordInput = value, errorMessage = null, statusMessage = null)
+    }
+
+    fun updateNewPasswordInput(value: String) {
+        state = state.copy(newPasswordInput = value, errorMessage = null, statusMessage = null)
+    }
+
+    fun updateConfirmNewPasswordInput(value: String) {
+        state = state.copy(confirmNewPasswordInput = value, errorMessage = null, statusMessage = null)
     }
 
     fun switchAuthMode(registerMode: Boolean) {
@@ -168,9 +203,135 @@ class AppViewModel(
     }
 
     fun selectTab(tab: NativeTab) {
-        state = state.copy(selectedTab = tab, errorMessage = null)
+        state = state.copy(selectedTab = tab, errorMessage = null, statusMessage = null)
         if (!hasDataForTab(tab)) {
             refreshCurrentTab()
+        }
+    }
+
+    fun saveProfileChanges() {
+        val session = state.session ?: return
+        val email = state.profileEditEmail.trim()
+        if (email.isBlank()) {
+            state = state.copy(errorMessage = "Email is required.")
+            return
+        }
+
+        viewModelScope.launch {
+            state = state.copy(isSavingProfile = true, errorMessage = null, statusMessage = null)
+
+            val result = repository.updateProfile(
+                token = session.token,
+                firstName = state.profileEditFirstName,
+                lastName = state.profileEditLastName,
+                email = email,
+            )
+
+            if (result.isSuccess) {
+                val updatedProfile = result.getOrNull()!!
+                val updatedSession = session.copy(
+                    email = updatedProfile.email,
+                    displayName = updatedProfile.displayName.ifBlank { session.displayName },
+                    userId = updatedProfile.userId.takeIf { it > 0 } ?: session.userId,
+                )
+                sessionStore.save(updatedSession)
+                state = state.copy(
+                    session = updatedSession,
+                    profileInfo = updatedProfile,
+                    isSavingProfile = false,
+                    statusMessage = "Profil mis a jour.",
+                )
+                applyProfileToEditor(updatedProfile)
+            } else {
+                val message = result.exceptionOrNull()?.message ?: "Unable to update profile"
+                state = state.copy(isSavingProfile = false, errorMessage = message)
+            }
+        }
+    }
+
+    fun changePassword() {
+        val session = state.session ?: return
+        val currentPassword = state.currentPasswordInput
+        val newPassword = state.newPasswordInput
+        val confirmPassword = state.confirmNewPasswordInput
+
+        if (currentPassword.isBlank() || newPassword.isBlank() || confirmPassword.isBlank()) {
+            state = state.copy(errorMessage = "All password fields are required.")
+            return
+        }
+
+        if (newPassword != confirmPassword) {
+            state = state.copy(errorMessage = "Passwords do not match.")
+            return
+        }
+
+        viewModelScope.launch {
+            state = state.copy(isChangingPassword = true, errorMessage = null, statusMessage = null)
+
+            val result = repository.changePassword(
+                token = session.token,
+                currentPassword = currentPassword,
+                newPassword = newPassword,
+                confirmPassword = confirmPassword,
+            )
+
+            if (result.isSuccess) {
+                val refreshedToken = result.getOrNull().orEmpty()
+                val updatedSession = session.copy(token = refreshedToken)
+                sessionStore.save(updatedSession)
+                state = state.copy(
+                    session = updatedSession,
+                    isChangingPassword = false,
+                    currentPasswordInput = "",
+                    newPasswordInput = "",
+                    confirmNewPasswordInput = "",
+                    statusMessage = "Mot de passe mis a jour.",
+                )
+            } else {
+                val message = result.exceptionOrNull()?.message ?: "Unable to update password"
+                state = state.copy(isChangingPassword = false, errorMessage = message)
+            }
+        }
+    }
+
+    fun addFriend(friendId: Int) {
+        val session = state.session ?: return
+        if (friendId <= 0) return
+
+        viewModelScope.launch {
+            state = state.copy(errorMessage = null, statusMessage = null)
+            val result = repository.addFriend(session.token, friendId)
+            if (result.isSuccess) {
+                refreshMessagesData(session, preserveSelection = friendId)
+                state = state.copy(statusMessage = "Contact ajoute a votre liste.")
+            } else {
+                val message = result.exceptionOrNull()?.message ?: "Unable to add friend"
+                state = state.copy(errorMessage = message)
+            }
+        }
+    }
+
+    fun removeFriend(friendId: Int) {
+        val session = state.session ?: return
+        if (friendId <= 0) return
+
+        val linkId = state.friendLinks.firstOrNull { it.friendId == friendId }?.id
+        if (linkId == null) {
+            state = state.copy(errorMessage = "Contact introuvable dans votre liste.")
+            return
+        }
+
+        viewModelScope.launch {
+            state = state.copy(errorMessage = null, statusMessage = null)
+            val result = repository.removeFriend(session.token, linkId)
+            if (result.isSuccess) {
+                val newRecipient = if (state.messageRecipientId == friendId) null else state.messageRecipientId
+                refreshMessagesData(session, preserveSelection = newRecipient)
+                state = state.copy(messageRecipientId = newRecipient, statusMessage = "Contact retire.")
+            } else {
+                val message = result.exceptionOrNull()?.message ?: "Unable to remove friend"
+                state = state.copy(errorMessage = message)
+            }
         }
     }
 
@@ -221,10 +382,12 @@ class AppViewModel(
                 NativeTab.MESSAGES -> {
                     val result = repository.fetchMessageItems(session.token)
                     val usersResult = repository.fetchChatUsers(session.token)
+                    val friendsResult = repository.fetchFriendLinks(session.token)
                     if (result.isSuccess) {
                         state = state.copy(
                             messageItems = result.getOrNull()!!,
                             chatUsers = usersResult.getOrDefault(state.chatUsers),
+                            friendLinks = friendsResult.getOrDefault(state.friendLinks),
                         )
                     } else {
                         state = state.copy(errorMessage = result.exceptionOrNull()?.message ?: "Unable to load messages")
@@ -234,7 +397,9 @@ class AppViewModel(
                 NativeTab.PROFILE -> {
                     val result = repository.fetchProfileInfo(session.token)
                     if (result.isSuccess) {
-                        state = state.copy(profileInfo = result.getOrNull())
+                        val profile = result.getOrNull()
+                        state = state.copy(profileInfo = profile)
+                        applyProfileToEditor(profile)
                     } else {
                         state = state.copy(errorMessage = result.exceptionOrNull()?.message ?: "Unable to load profile")
                     }
@@ -261,7 +426,13 @@ class AppViewModel(
 
     fun selectMessageRecipient(id: Int) {
         if (id <= 0) return
-        state = state.copy(messageRecipientId = id)
+        state = state.copy(messageRecipientId = id, errorMessage = null, statusMessage = null)
+
+        val session = state.session ?: return
+        viewModelScope.launch {
+            repository.markThreadAsRead(session.token, id)
+            refreshMessagesData(session, preserveSelection = id)
+        }
     }
 
     fun updateMessageDraftBody(value: String) {
@@ -280,8 +451,17 @@ class AppViewModel(
             messageRecipientId = recipientId,
             messageDraftBody = prefill,
             errorMessage = null,
+            statusMessage = null,
         )
         refreshCurrentTab()
+
+        val session = state.session
+        if (session != null) {
+            viewModelScope.launch {
+                repository.addFriend(session.token, recipientId)
+                refreshMessagesData(session, preserveSelection = recipientId)
+            }
+        }
     }
 
     fun sendMessageDraft() {
@@ -309,8 +489,9 @@ class AppViewModel(
             )
 
             if (result.isSuccess) {
-                state = state.copy(isSendingMessage = false, messageDraftBody = "")
-                refreshCurrentTab()
+                state = state.copy(isSendingMessage = false, messageDraftBody = "", statusMessage = null)
+                repository.addFriend(session.token, recipientId)
+                refreshMessagesData(session, preserveSelection = recipientId)
             } else {
                 val msg = result.exceptionOrNull()?.message ?: "Unable to send message"
                 state = state.copy(isSendingMessage = false, errorMessage = msg)
@@ -412,7 +593,7 @@ class AppViewModel(
     }
 
     fun setError(message: String) {
-        state = state.copy(errorMessage = message)
+        state = state.copy(errorMessage = message, statusMessage = null)
     }
 
     private fun establishSession(session: UserSession) {
@@ -427,7 +608,7 @@ class AppViewModel(
             NativeTab.MARKETPLACE -> state.marketplaceItems.isNotEmpty()
             NativeTab.INSTRUCTORS -> state.instructorItems.isNotEmpty()
             NativeTab.PISTES -> state.pisteItems.isNotEmpty()
-            NativeTab.MESSAGES -> state.messageItems.isNotEmpty() || state.chatUsers.isNotEmpty()
+            NativeTab.MESSAGES -> state.messageItems.isNotEmpty() || state.chatUsers.isNotEmpty() || state.friendLinks.isNotEmpty()
             NativeTab.PROFILE -> state.profileInfo != null
         }
     }
@@ -470,6 +651,10 @@ class AppViewModel(
                 current.chatUsers
             }
 
+            val friendLinks = repository.fetchFriendLinks(session.token).getOrElse {
+                current.friendLinks
+            }
+
             val profileInfo = repository.fetchProfileInfo(session.token).getOrElse {
                 firstError = firstError ?: (it.message ?: "Unable to load profile")
                 current.profileInfo
@@ -483,11 +668,42 @@ class AppViewModel(
                 pisteItems = pisteItems,
                 messageItems = messageItems,
                 chatUsers = chatUsers,
+                friendLinks = friendLinks,
                 profileInfo = profileInfo,
                 // Avoid noisy global errors at startup; errors are surfaced on explicit tab refresh/actions.
                 errorMessage = null,
             )
+
+            applyProfileToEditor(profileInfo)
         }
+    }
+
+    private suspend fun refreshMessagesData(session: UserSession, preserveSelection: Int?) {
+        val messages = repository.fetchMessageItems(session.token).getOrElse { state.messageItems }
+        val users = repository.fetchChatUsers(session.token).getOrElse { state.chatUsers }
+        val links = repository.fetchFriendLinks(session.token).getOrElse { state.friendLinks }
+
+        state = state.copy(
+            messageItems = messages,
+            chatUsers = users,
+            friendLinks = links,
+            messageRecipientId = preserveSelection,
+        )
+    }
+
+    private fun applyProfileToEditor(profile: ProfileInfo?) {
+        if (profile == null) return
+
+        val current = state
+        val firstName = if (current.profileEditFirstName.isBlank()) profile.firstName else current.profileEditFirstName
+        val lastName = if (current.profileEditLastName.isBlank()) profile.lastName else current.profileEditLastName
+        val email = if (current.profileEditEmail.isBlank()) profile.email else current.profileEditEmail
+
+        state = current.copy(
+            profileEditFirstName = firstName,
+            profileEditLastName = lastName,
+            profileEditEmail = email,
+        )
     }
 }
 

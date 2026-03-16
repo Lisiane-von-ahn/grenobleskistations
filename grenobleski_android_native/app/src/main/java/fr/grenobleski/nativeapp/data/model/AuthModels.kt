@@ -109,6 +109,8 @@ data class ProfileInfo(
     val displayName: String,
     val email: String,
     val username: String,
+    val firstName: String = "",
+    val lastName: String = "",
     val profilePictureBase64: String = "",
     val googleProfilePictureUrl: String = "",
 )
@@ -118,4 +120,9 @@ data class ChatUserOption(
     val label: String,
     val photoBase64: String,
     val photoUrl: String,
+)
+
+data class FriendLink(
+    val id: Int,
+    val friendId: Int,
 )

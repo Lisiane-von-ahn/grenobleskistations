@@ -23,6 +23,7 @@ from .views import (
     UserProfileViewSet,
     UserViewSet,
     auth_login_view, auth_logout_view, auth_me_view, auth_google_login_view,
+    auth_password_change_view, auth_profile_update_view,
     auth_register_view, login_view, mobile_bridge_info_view,
 )
 router = DefaultRouter()
@@ -52,6 +53,8 @@ urlpatterns = [
     path('auth/login/', auth_login_view, name='auth-login'),
     path('auth/google-login/', auth_google_login_view, name='auth-google-login'),
     path('auth/me/', auth_me_view, name='auth-me'),
+    path('auth/profile/update/', auth_profile_update_view, name='auth-profile-update'),
+    path('auth/password/change/', auth_password_change_view, name='auth-password-change'),
     path('auth/logout/', auth_logout_view, name='auth-logout'),
     path('login/', login_view, name='login'),  # Add the login endpoint manually
     path('mobile/', mobile_bridge_info_view, name='api-mobile-bridge-info'),

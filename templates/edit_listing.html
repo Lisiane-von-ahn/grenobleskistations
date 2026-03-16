@@ -3,13 +3,24 @@
 {% block title %}Modifier annonce{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    <h2 class="mb-4">Modifier l'annonce</h2>
-    <form method="post" enctype="multipart/form-data" class="card p-4 shadow-sm">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit" class="btn btn-primary">Enregistrer</button>
-        <a href="{% url 'listing_detail' id=listing.id %}" class="btn btn-outline-secondary">Annuler</a>
-    </form>
-</div>
+<section class="py-4">
+    <div class="container">
+        <div class="premium-shell mb-4 p-3">
+            <div class="premium-hero">
+                <span class="premium-kicker">Annonce</span>
+                <h2 class="premium-title h3 mb-1">Modifier l'annonce</h2>
+                <p class="premium-subtitle">Mettez a jour les informations pour conserver une fiche claire et premium.</p>
+            </div>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" class="card p-4 shadow-sm premium-panel">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <div class="d-flex gap-2 flex-column flex-md-row">
+                <button type="submit" class="btn btn-primary">Enregistrer</button>
+                <a href="{% url 'listing_detail' id=listing.id %}" class="btn btn-outline-secondary">Annuler</a>
+            </div>
+        </form>
+    </div>
+</section>
 {% endblock %}

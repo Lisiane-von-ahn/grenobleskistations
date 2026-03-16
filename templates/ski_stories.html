@@ -6,13 +6,16 @@
 
 {% block content %}
 <div class="container py-4">
-    <section class="market-hero mb-4">
-        <h2 class="market-section-title mb-1">Stories ski (24h)</h2>
-        <p class="market-subtle mb-0">Partagez rapidement les conditions, l'ambiance et vos spots du jour.</p>
+    <section class="premium-shell mb-4 p-3">
+        <div class="premium-hero">
+            <span class="premium-kicker">Stories</span>
+            <h2 class="premium-title h3 mb-1">Stories ski (24h)</h2>
+            <p class="premium-subtitle">Partagez rapidement les conditions, l'ambiance et vos spots du jour.</p>
+        </div>
     </section>
 
     {% if user.is_authenticated %}
-    <section class="market-search-panel mb-4">
+    <section class="market-search-panel mb-4 premium-panel">
         <h4 class="mb-3">Publier une story</h4>
         <form method="post" enctype="multipart/form-data" class="row g-3">
             {% csrf_token %}
@@ -43,7 +46,7 @@
         </form>
     </section>
     {% else %}
-    <section class="market-search-panel mb-4">
+    <section class="market-search-panel mb-4 premium-panel">
         <a href="{% url 'login' %}" class="btn btn-primary">Se connecter pour publier une story</a>
     </section>
     {% endif %}

@@ -7,20 +7,23 @@
 
 {% block content %}
 <div class="container py-4">
-    <section class="market-hero mb-4">
-        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3">
-            <div>
-                <h2 class="mb-2 market-section-title">{% trans "Marketplace Materiel de Ski" %}</h2>
-                <p class="market-subtle mb-0">{% trans "Vendre, louer ou preter facilement." %}</p>
+    <section class="premium-shell mb-4 p-3">
+        <div class="premium-hero">
+            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3">
+                <div>
+                    <span class="premium-kicker">Marketplace</span>
+                    <h2 class="mb-2 premium-title h3">{% trans "Marketplace Materiel de Ski" %}</h2>
+                    <p class="premium-subtitle">{% trans "Vendre, louer ou preter facilement." %}</p>
+                </div>
+                <a href="{% url 'ajouter_materiel' %}" class="btn btn-success btn-lg">{% trans "Ajouter un article" %}</a>
             </div>
-            <a href="{% url 'ajouter_materiel' %}" class="btn btn-success btn-lg">{% trans "Ajouter un article" %}</a>
-        </div>
-        <div class="d-flex flex-wrap gap-2 mt-3">
-            <a class="preset-chip {% if preset == 'weekend' %}active{% endif %}" href="{% url 'ski_material_listings' %}?preset=weekend&transaction_type=rent&max_price=120&sort=price_asc&my_listings={% if mine_only %}1{% else %}0{% endif %}">{% trans "Week-end malin" %}</a>
-            <a class="preset-chip {% if preset == 'budget' %}active{% endif %}" href="{% url 'ski_material_listings' %}?preset=budget&max_price=200&condition=good&sort=price_asc&my_listings={% if mine_only %}1{% else %}0{% endif %}">{% trans "Petit budget" %}</a>
-            <a class="preset-chip {% if preset == 'premium' %}active{% endif %}" href="{% url 'ski_material_listings' %}?preset=premium&condition=excellent&sort=price_desc&my_listings={% if mine_only %}1{% else %}0{% endif %}">{% trans "Premium" %}</a>
-            <a class="preset-chip {% if preset == 'safety' %}active{% endif %}" href="{% url 'ski_material_listings' %}?preset=safety&material_type=helmet&transaction_type=rent&my_listings={% if mine_only %}1{% else %}0{% endif %}">{% trans "Pack securite" %}</a>
-            <a class="preset-chip" href="{% url 'ski_material_listings' %}?my_listings={% if mine_only %}1{% else %}0{% endif %}">{% trans "Tout voir" %}</a>
+            <div class="d-flex flex-wrap gap-2 mt-3">
+                <a class="preset-chip {% if preset == 'weekend' %}active{% endif %}" href="{% url 'ski_material_listings' %}?preset=weekend&transaction_type=rent&max_price=120&sort=price_asc&my_listings={% if mine_only %}1{% else %}0{% endif %}">{% trans "Week-end malin" %}</a>
+                <a class="preset-chip {% if preset == 'budget' %}active{% endif %}" href="{% url 'ski_material_listings' %}?preset=budget&max_price=200&condition=good&sort=price_asc&my_listings={% if mine_only %}1{% else %}0{% endif %}">{% trans "Petit budget" %}</a>
+                <a class="preset-chip {% if preset == 'premium' %}active{% endif %}" href="{% url 'ski_material_listings' %}?preset=premium&condition=excellent&sort=price_desc&my_listings={% if mine_only %}1{% else %}0{% endif %}">{% trans "Premium" %}</a>
+                <a class="preset-chip {% if preset == 'safety' %}active{% endif %}" href="{% url 'ski_material_listings' %}?preset=safety&material_type=helmet&transaction_type=rent&my_listings={% if mine_only %}1{% else %}0{% endif %}">{% trans "Pack securite" %}</a>
+                <a class="preset-chip" href="{% url 'ski_material_listings' %}?my_listings={% if mine_only %}1{% else %}0{% endif %}">{% trans "Tout voir" %}</a>
+            </div>
         </div>
     </section>
 

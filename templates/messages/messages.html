@@ -2,9 +2,12 @@
 
 {% block content %}
 <div class="container py-4">
-    <section class="market-hero mb-4">
-        <h2 class="market-section-title mb-1">Chat</h2>
-        <p class="market-subtle mb-0">Conversations en direct. Non lus: {{ unread_count }}</p>
+    <section class="premium-shell mb-4 p-3">
+        <div class="premium-hero">
+            <span class="premium-kicker">Messagerie</span>
+            <h2 class="premium-title h3">Chat</h2>
+            <p class="premium-subtitle">Conversations en direct. Non lus: {{ unread_count }}</p>
+        </div>
     </section>
 
     <style>
@@ -30,8 +33,31 @@
             color: inherit;
         }
 
+        .chat-contact-item:hover {
+            background: #f2fafd;
+        }
+
         .chat-contact-item.active {
             background: #e9f6f9;
+        }
+
+        .chat-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 999px;
+            object-fit: cover;
+            border: 1px solid #d7e6ee;
+            background: #ffffff;
+            flex-shrink: 0;
+        }
+
+        .chat-avatar-fallback {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: #0f6078;
+            background: #e5f6fd;
         }
 
         .chat-search-wrap {
@@ -132,7 +158,17 @@
                     <a class="chat-contact-item {% if selected_recipient and selected_recipient.id == item.user.id %}active{% endif %}" href="{% url 'messages' %}?user={{ item.user.id }}">
                         <div class="d-flex justify-content-between align-items-start gap-2">
                             <div class="d-flex align-items-center gap-2">
-                                <strong>{{ item.user.username }}</strong>
+                                {% if item.avatar_base64 %}
+                                <img class="chat-avatar" src="data:image/png;base64,{{ item.avatar_base64 }}" alt="{{ item.display_name }}">
+                                {% elif item.avatar_url %}
+                                <img class="chat-avatar" src="{{ item.avatar_url }}" alt="{{ item.display_name }}">
+                                {% else %}
+                                <span class="chat-avatar chat-avatar-fallback">{{ item.display_name|slice:':1'|upper }}</span>
+                                {% endif %}
+                                <div>
+                                <strong>{{ item.display_name }}</strong>
+                                <div class="small text-muted">@{{ item.user.username }}</div>
+                                </div>
                                 {% if item.is_friend %}<span class="badge bg-success">Ami</span>{% endif %}
                             </div>
                             <div class="d-flex align-items-center gap-1">
@@ -153,8 +189,18 @@
                         {% for item in suggestions %}
                         <div class="chat-search-item bg-white rounded mb-2">
                             <div class="d-flex justify-content-between align-items-center gap-2">
-                                <div>
-                                    <strong>{{ item.user.username }}</strong>
+                                <div class="d-flex align-items-center gap-2">
+                                    {% if item.avatar_base64 %}
+                                    <img class="chat-avatar" src="data:image/png;base64,{{ item.avatar_base64 }}" alt="{{ item.display_name }}">
+                                    {% elif item.avatar_url %}
+                                    <img class="chat-avatar" src="{{ item.avatar_url }}" alt="{{ item.display_name }}">
+                                    {% else %}
+                                    <span class="chat-avatar chat-avatar-fallback">{{ item.display_name|slice:':1'|upper }}</span>
+                                    {% endif %}
+                                    <div>
+                                    <strong>{{ item.display_name }}</strong>
+                                    <div class="small text-muted">@{{ item.user.username }}</div>
+                                    </div>
                                     {% if item.is_friend %}<span class="badge bg-success">Ami</span>{% endif %}
                                 </div>
                                 <div class="d-flex gap-2">
@@ -176,7 +222,16 @@
                     <div class="p-3 border-bottom bg-white">
                         {% if selected_recipient %}
                         <div class="d-flex justify-content-between align-items-center gap-2">
-                            <h5 class="mb-0">Conversation avec {{ selected_recipient.username }}</h5>
+                            <div class="d-flex align-items-center gap-2">
+                                {% if selected_recipient_context.avatar_base64 %}
+                                <img class="chat-avatar" src="data:image/png;base64,{{ selected_recipient_context.avatar_base64 }}" alt="{{ selected_recipient_context.display_name }}">
+                                {% elif selected_recipient_context.avatar_url %}
+                                <img class="chat-avatar" src="{{ selected_recipient_context.avatar_url }}" alt="{{ selected_recipient_context.display_name }}">
+                                {% else %}
+                                <span class="chat-avatar chat-avatar-fallback">{{ selected_recipient_context.display_name|slice:':1'|upper }}</span>
+                                {% endif %}
+                                <h5 class="mb-0">Conversation avec {{ selected_recipient_context.display_name }}</h5>
+                            </div>
                             {% if selected_is_friend %}
                             <button class="btn btn-sm btn-outline-danger" id="remove-friend-btn" data-id="{{ selected_recipient.id }}">Retirer ami</button>
                             {% endif %}
@@ -255,10 +310,15 @@
                 popup.innerHTML = items.map(function (item) {
                 var friendTag = item.is_friend ? '<span class="badge bg-success">Ami</span>' : '';
                 var addBtn = item.is_friend ? '' : '<button class="btn btn-sm btn-outline-secondary add-friend-btn" data-id="' + item.id + '">Ajouter ami</button>';
+                var avatar = item.avatar_base64
+                    ? '<img class="chat-avatar" src="data:image/png;base64,' + item.avatar_base64 + '" alt="' + item.display_name + '">'
+                    : (item.avatar_url
+                        ? '<img class="chat-avatar" src="' + item.avatar_url + '" alt="' + item.display_name + '">'
+                        : '<span class="chat-avatar chat-avatar-fallback">' + (item.display_name || item.username || '?').slice(0, 1).toUpperCase() + '</span>');
                 return '' +
                     '<div class="chat-search-item">' +
                     '  <div class="d-flex justify-content-between align-items-start gap-2">' +
-                    '    <div><strong>' + item.username + '</strong><div class="small text-muted">' + item.display_name + '</div></div>' +
+                    '    <div class="d-flex align-items-center gap-2">' + avatar + '<div><strong>' + item.display_name + '</strong><div class="small text-muted">@' + item.username + '</div></div></div>' +
                     '    <div class="d-flex gap-2 align-items-center">' + friendTag + '<a class="btn btn-sm btn-primary" href="' + baseMessagesUrl + '?user=' + item.id + '">Chat</a>' + addBtn + '</div>' +
                     '  </div>' +
                     '</div>';

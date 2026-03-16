@@ -104,4 +104,18 @@
     <string name="years_experience_label">%1$d years of experience</string>
     <string name="phone">Phone</string>
     <string name="certifications">Certifications</string>
+    <string name="loading_more">Loading more while you scroll...</string>
+    <string name="contact_instructor">Contact instructor</string>
+    <string name="add_friend">Add friend</string>
+    <string name="remove_friend">Remove</string>
+    <string name="friends">Friends</string>
+    <string name="search_users_to_add">Search user to add</string>
+    <string name="type_min_two_chars">Type at least 2 characters to search.</string>
+    <string name="personal_information">Personal information</string>
+    <string name="save_profile">Save profile</string>
+    <string name="change_password">Change password</string>
+    <string name="current_password">Current password</string>
+    <string name="new_password">New password</string>
+    <string name="confirm_new_password">Confirm new password</string>
+    <string name="update_password">Update password</string>
 </resources>

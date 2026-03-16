@@ -4,6 +4,7 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import fr.grenobleski.nativeapp.data.model.DashboardCounts
 import fr.grenobleski.nativeapp.data.model.ChatUserOption
+import fr.grenobleski.nativeapp.data.model.FriendLink
 import fr.grenobleski.nativeapp.data.model.InstructorItem
 import fr.grenobleski.nativeapp.data.model.LoginRequest
 import fr.grenobleski.nativeapp.data.model.LoginResponse
@@ -301,6 +302,8 @@ class AuthRepository(
                 displayName = displayName.ifBlank { user.stringOrBlank("username", "email") },
                 email = user.stringOrBlank("email"),
                 username = user.stringOrBlank("username"),
+                firstName = firstName,
+                lastName = lastName,
                 profilePictureBase64 = user.stringOrBlank("profile_picture"),
                 googleProfilePictureUrl = user.stringOrBlank("google_profile_picture_url"),
             )
@@ -330,6 +333,162 @@ class AuthRepository(
             )
         }
         Result.success(users)
+    }
+
+    suspend fun fetchFriendLinks(token: String): Result<List<FriendLink>> = withContext(Dispatchers.IO) {
+        val authHeader = "Token $token"
+        val payload = fetchPayloadFromCandidates(listOf("/api/userfriends/", "/api/userfriends"), authHeader)
+            ?: return@withContext Result.success(emptyList())
+
+        val links = extractObjectList(payload).mapNotNull { obj ->
+            val id = obj.intOrZero("id")
+            val friendId = obj.intOrZero("friend", "friend_id")
+            if (id <= 0 || friendId <= 0) {
+                null
+            } else {
+                FriendLink(id = id, friendId = friendId)
+            }
+        }
+        Result.success(links)
+    }
+
+    suspend fun addFriend(token: String, friendId: Int): Result<Unit> = withContext(Dispatchers.IO) {
+        if (friendId <= 0) {
+            return@withContext Result.failure(IllegalStateException("Invalid friend id."))
+        }
+        val authHeader = "Token $token"
+        val response = runCatching {
+            service.postResource(
+                url = "$normalizedBaseUrl/api/userfriends/",
+                authHeader = authHeader,
+                payload = mapOf("friend" to friendId),
+            )
+        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to add friend."))
+
+        if (!response.isSuccessful) {
+            val bodyText = response.errorBody()?.string().orEmpty().ifBlank { "Unable to add friend." }
+            return@withContext Result.failure(IllegalStateException(bodyText))
+        }
+
+        Result.success(Unit)
+    }
+
+    suspend fun removeFriend(token: String, linkId: Int): Result<Unit> = withContext(Dispatchers.IO) {
+        if (linkId <= 0) {
+            return@withContext Result.failure(IllegalStateException("Invalid friend link."))
+        }
+        val authHeader = "Token $token"
+        val response = runCatching {
+            service.deleteResource(
+                url = "$normalizedBaseUrl/api/userfriends/$linkId/",
+                authHeader = authHeader,
+            )
+        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to remove friend."))
+
+        if (!response.isSuccessful) {
+            val bodyText = response.errorBody()?.string().orEmpty().ifBlank { "Unable to remove friend." }
+            return@withContext Result.failure(IllegalStateException(bodyText))
+        }
+
+        Result.success(Unit)
+    }
+
+    suspend fun markThreadAsRead(token: String, otherUserId: Int): Result<Unit> = withContext(Dispatchers.IO) {
+        if (otherUserId <= 0) {
+            return@withContext Result.success(Unit)
+        }
+
+        val authHeader = "Token $token"
+        val response = runCatching {
+            service.postResource(
+                url = "$normalizedBaseUrl/api/messages/mark-read/",
+                authHeader = authHeader,
+                payload = mapOf("user_id" to otherUserId),
+            )
+        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to mark messages as read."))
+
+        if (!response.isSuccessful) {
+            return@withContext Result.failure(
+                IllegalStateException(response.errorBody()?.string().orEmpty().ifBlank { "Unable to mark messages as read." })
+            )
+        }
+
+        Result.success(Unit)
+    }
+
+    suspend fun updateProfile(token: String, firstName: String, lastName: String, email: String): Result<ProfileInfo> = withContext(Dispatchers.IO) {
+        val authHeader = "Token $token"
+        val response = runCatching {
+            service.patchResource(
+                url = "$normalizedBaseUrl/api/auth/profile/update/",
+                authHeader = authHeader,
+                payload = mapOf(
+                    "first_name" to firstName.trim(),
+                    "last_name" to lastName.trim(),
+                    "email" to email.trim(),
+                ),
+            )
+        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to update profile."))
+
+        if (!response.isSuccessful) {
+            val bodyText = response.errorBody()?.string().orEmpty().ifBlank { "Unable to update profile." }
+            return@withContext Result.failure(IllegalStateException(bodyText))
+        }
+
+        val payload = response.body()?.takeIf { it.isJsonObject }?.asJsonObject
+            ?: return@withContext Result.failure(IllegalStateException("Invalid profile response."))
+        val user = payload.get("user")?.takeIf { it.isJsonObject }?.asJsonObject
+            ?: return@withContext Result.failure(IllegalStateException("Invalid profile user payload."))
+
+        val first = user.stringOrBlank("first_name")
+        val last = user.stringOrBlank("last_name")
+        val displayName = listOf(first, last).filter { it.isNotBlank() }.joinToString(" ")
+
+        Result.success(
+            ProfileInfo(
+                userId = user.intOrZero("id"),
+                displayName = displayName.ifBlank { user.stringOrBlank("username", "email") },
+                email = user.stringOrBlank("email"),
+                username = user.stringOrBlank("username"),
+                firstName = first,
+                lastName = last,
+                profilePictureBase64 = user.stringOrBlank("profile_picture"),
+                googleProfilePictureUrl = user.stringOrBlank("google_profile_picture_url"),
+            )
+        )
+    }
+
+    suspend fun changePassword(
+        token: String,
+        currentPassword: String,
+        newPassword: String,
+        confirmPassword: String,
+    ): Result<String> = withContext(Dispatchers.IO) {
+        val authHeader = "Token $token"
+        val response = runCatching {
+            service.postResource(
+                url = "$normalizedBaseUrl/api/auth/password/change/",
+                authHeader = authHeader,
+                payload = mapOf(
+                    "current_password" to currentPassword,
+                    "new_password" to newPassword,
+                    "confirm_password" to confirmPassword,
+                ),
+            )
+        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to update password."))
+
+        if (!response.isSuccessful) {
+            val bodyText = response.errorBody()?.string().orEmpty().ifBlank { "Unable to update password." }
+            return@withContext Result.failure(IllegalStateException(bodyText))
+        }
+
+        val payload = response.body()?.takeIf { it.isJsonObject }?.asJsonObject
+            ?: return@withContext Result.failure(IllegalStateException("Invalid password update response."))
+        val newToken = payload.stringOrBlank("token")
+        if (newToken.isBlank()) {
+            return@withContext Result.failure(IllegalStateException("Password changed but token is missing."))
+        }
+        Result.success(newToken)
     }
 
     suspend fun sendMessage(

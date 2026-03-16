@@ -6,9 +6,12 @@
 
 {% block content %}
 <div class="container py-4">
-    <section class="market-hero mb-4">
-        <h2 class="market-section-title mb-2">{% trans "Ajouter un materiel" %}</h2>
-        <p class="market-subtle mb-0">{% trans "Publiez rapidement une annonce complete." %}</p>
+    <section class="premium-shell mb-4 p-3">
+        <div class="premium-hero">
+            <span class="premium-kicker">Publication</span>
+            <h2 class="premium-title h3 mb-2">{% trans "Ajouter un materiel" %}</h2>
+            <p class="premium-subtitle">{% trans "Publiez rapidement une annonce complete." %}</p>
+        </div>
     </section>
 
     <form method="POST" enctype="multipart/form-data" class="market-search-panel listing-builder-panel" id="listing-builder-form">

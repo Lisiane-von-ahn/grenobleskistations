@@ -26,8 +26,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -73,6 +75,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -103,8 +106,12 @@ import java.net.URL
 import android.graphics.BitmapFactory
 import androidx.compose.ui.window.Dialog
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.max
+import kotlin.math.min
 
 private val MOBILE_AUTH_COMPLETE_CANDIDATES = listOf(
     "/api/mobile/auth/complete/",
@@ -252,8 +259,18 @@ fun GrenobleSkiApp(
             onLogout = viewModel::logout,
             onPrepareMessageToSeller = viewModel::prepareMessageToSeller,
             onSelectMessageRecipient = viewModel::selectMessageRecipient,
+            onAddFriend = viewModel::addFriend,
+            onRemoveFriend = viewModel::removeFriend,
             onMessageBodyChange = viewModel::updateMessageDraftBody,
             onSendMessage = viewModel::sendMessageDraft,
+            onProfileFirstNameChange = viewModel::updateProfileEditFirstName,
+            onProfileLastNameChange = viewModel::updateProfileEditLastName,
+            onProfileEmailChange = viewModel::updateProfileEditEmail,
+            onCurrentPasswordChange = viewModel::updateCurrentPasswordInput,
+            onNewPasswordChange = viewModel::updateNewPasswordInput,
+            onConfirmNewPasswordChange = viewModel::updateConfirmNewPasswordInput,
+            onSaveProfile = viewModel::saveProfileChanges,
+            onChangePassword = viewModel::changePassword,
             onUpdatePublishTitle = viewModel::updatePublishTitle,
             onUpdatePublishDescription = viewModel::updatePublishDescription,
             onUpdatePublishCity = viewModel::updatePublishCity,
@@ -475,8 +492,18 @@ private fun NativeShell(
     onLogout: () -> Unit,
     onPrepareMessageToSeller: (Int, String) -> Unit,
     onSelectMessageRecipient: (Int) -> Unit,
+    onAddFriend: (Int) -> Unit,
+    onRemoveFriend: (Int) -> Unit,
     onMessageBodyChange: (String) -> Unit,
     onSendMessage: () -> Unit,
+    onProfileFirstNameChange: (String) -> Unit,
+    onProfileLastNameChange: (String) -> Unit,
+    onProfileEmailChange: (String) -> Unit,
+    onCurrentPasswordChange: (String) -> Unit,
+    onNewPasswordChange: (String) -> Unit,
+    onConfirmNewPasswordChange: (String) -> Unit,
+    onSaveProfile: () -> Unit,
+    onChangePassword: () -> Unit,
     onUpdatePublishTitle: (String) -> Unit,
     onUpdatePublishDescription: (String) -> Unit,
     onUpdatePublishCity: (String) -> Unit,
@@ -607,15 +634,27 @@ private fun NativeShell(
             when (state.selectedTab) {
                 NativeTab.HOME -> HomeTab(state)
                 NativeTab.MARKETPLACE -> MarketplaceTab(state, onPrepareMessageToSeller)
-                NativeTab.INSTRUCTORS -> InstructorsTab(state)
+                NativeTab.INSTRUCTORS -> InstructorsTab(state, onPrepareMessageToSeller)
                 NativeTab.PISTES -> PistesTab(state)
                 NativeTab.MESSAGES -> MessagesTab(
                     state = state,
                     onSelectRecipient = onSelectMessageRecipient,
+                    onAddFriend = onAddFriend,
+                    onRemoveFriend = onRemoveFriend,
                     onBodyChange = onMessageBodyChange,
                     onSend = onSendMessage,
                 )
-                NativeTab.PROFILE -> ProfileTab(state)
+                NativeTab.PROFILE -> ProfileTab(
+                    state = state,
+                    onFirstNameChange = onProfileFirstNameChange,
+                    onLastNameChange = onProfileLastNameChange,
+                    onEmailChange = onProfileEmailChange,
+                    onCurrentPasswordChange = onCurrentPasswordChange,
+                    onNewPasswordChange = onNewPasswordChange,
+                    onConfirmNewPasswordChange = onConfirmNewPasswordChange,
+                    onSaveProfile = onSaveProfile,
+                    onChangePassword = onChangePassword,
+                )
             }
 
             if (!state.errorMessage.isNullOrBlank()) {
@@ -626,6 +665,17 @@ private fun NativeShell(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .padding(12.dp),
+                )
+            }
+
+            if (!state.statusMessage.isNullOrBlank()) {
+                Text(
+                    text = state.statusMessage,
+                    color = Color(0xFF126E3A),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(start = 12.dp, end = 12.dp, bottom = 34.dp),
                 )
             }
         }
@@ -998,6 +1048,14 @@ private fun MarketplaceTab(
             matchesQuery && matchesCity && matchesCondition
         }
     }
+    val listState = rememberLazyListState()
+    val visibleCount = rememberProgressiveItemCount(
+        totalCount = filteredItems.size,
+        batchSize = 12,
+        listState = listState,
+        firstDataIndex = 1,
+    )
+    val visibleItems = remember(filteredItems, visibleCount) { filteredItems.take(visibleCount) }
 
     if (state.marketplaceItems.isEmpty()) {
         EmptyTabMessage(text = stringResource(id = R.string.empty_marketplace))
@@ -1005,6 +1063,7 @@ private fun MarketplaceTab(
     }
 
     LazyColumn(
+        state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -1059,7 +1118,7 @@ private fun MarketplaceTab(
                 EmptyTabMessage(text = stringResource(id = R.string.no_results))
             }
         }
-        items(filteredItems) { item ->
+        items(visibleItems) { item ->
             val previewImage = remember(item.previewImageBase64) { decodeBase64Image(item.previewImageBase64) }
             Card(
                 modifier = Modifier
@@ -1094,6 +1153,16 @@ private fun MarketplaceTab(
                         }
                     }
                 }
+            }
+        }
+        if (visibleItems.size < filteredItems.size) {
+            item {
+                Text(
+                    text = stringResource(id = R.string.loading_more),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
             }
         }
     }
@@ -1144,7 +1213,10 @@ private fun MarketplaceTab(
 }
 
 @Composable
-private fun InstructorsTab(state: AppUiState) {
+private fun InstructorsTab(
+    state: AppUiState,
+    onContactInstructor: (Int, String) -> Unit,
+) {
     if (state.instructorItems.isEmpty()) {
         EmptyTabMessage(text = stringResource(id = R.string.empty_instructors))
         return
@@ -1157,8 +1229,17 @@ private fun InstructorsTab(state: AppUiState) {
             searchQuery.isBlank() || item.displayName.contains(searchQuery, ignoreCase = true) || item.bio.contains(searchQuery, ignoreCase = true)
         }
     }
+    val listState = rememberLazyListState()
+    val visibleCount = rememberProgressiveItemCount(
+        totalCount = filteredItems.size,
+        batchSize = 10,
+        listState = listState,
+        firstDataIndex = 1,
+    )
+    val visibleItems = remember(filteredItems, visibleCount) { filteredItems.take(visibleCount) }
 
     LazyColumn(
+        state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -1175,7 +1256,7 @@ private fun InstructorsTab(state: AppUiState) {
         if (filteredItems.isEmpty()) {
             item { EmptyTabMessage(text = stringResource(id = R.string.no_results)) }
         }
-        items(filteredItems) { item ->
+        items(visibleItems) { item ->
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                 Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1199,45 +1280,96 @@ private fun InstructorsTab(state: AppUiState) {
                         OutlinedButton(onClick = { selectedInstructor = item }) {
                             Text(stringResource(id = R.string.view_details))
                         }
+                        if (item.userId > 0) {
+                            Button(onClick = { onContactInstructor(item.userId, item.displayName) }) {
+                                Text(stringResource(id = R.string.contact_instructor))
+                            }
+                        }
                     }
                 }
+            }
+        }
+        if (visibleItems.size < filteredItems.size) {
+            item {
+                Text(
+                    text = stringResource(id = R.string.loading_more),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
             }
         }
     }
 
     val details = selectedInstructor
     if (details != null) {
-        AlertDialog(
-            onDismissRequest = { selectedInstructor = null },
-            title = { Text(details.displayName) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        UserAvatar(
-                            displayName = details.displayName,
-                            photoBase64 = details.profilePhotoBase64,
-                            photoUrl = "",
-                            size = 62.dp,
-                        )
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(stringResource(id = R.string.years_experience_label, details.yearsExperience))
-                            if (details.phone.isNotBlank()) {
-                                Text("${stringResource(id = R.string.phone)}: ${details.phone}")
+        Dialog(onDismissRequest = { selectedInstructor = null }) {
+            Card(
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.92f),
+                                        MaterialTheme.colorScheme.tertiary.copy(alpha = 0.86f),
+                                    )
+                                )
+                            )
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            UserAvatar(
+                                displayName = details.displayName,
+                                photoBase64 = details.profilePhotoBase64,
+                                photoUrl = "",
+                                size = 62.dp,
+                            )
+                            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text(details.displayName, color = Color.White, fontWeight = FontWeight.Bold)
+                                Text(
+                                    text = stringResource(id = R.string.years_experience_label, details.yearsExperience),
+                                    color = Color.White.copy(alpha = 0.9f),
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
                             }
                         }
                     }
-                    if (details.certifications.isNotBlank()) {
-                        Text("${stringResource(id = R.string.certifications)}: ${details.certifications}")
+
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        if (details.phone.isNotBlank()) {
+                            Text("${stringResource(id = R.string.phone)}: ${details.phone}")
+                        }
+                        if (details.certifications.isNotBlank()) {
+                            Text("${stringResource(id = R.string.certifications)}: ${details.certifications}")
+                        }
+                        Text(details.bio, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (details.userId > 0) {
+                                Button(onClick = {
+                                    selectedInstructor = null
+                                    onContactInstructor(details.userId, details.displayName)
+                                }) {
+                                    Text(stringResource(id = R.string.contact_instructor))
+                                }
+                            }
+                            OutlinedButton(onClick = { selectedInstructor = null }) {
+                                Text(stringResource(id = R.string.close))
+                            }
+                        }
                     }
-                    Text(details.bio)
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { selectedInstructor = null }) {
-                    Text(stringResource(id = R.string.close))
-                }
-            },
-        )
+            }
+        }
     }
 }
 
@@ -1254,8 +1386,17 @@ private fun PistesTab(state: AppUiState) {
             searchQuery.isBlank() || item.stationName.contains(searchQuery, ignoreCase = true) || item.weatherLabel.contains(searchQuery, ignoreCase = true)
         }
     }
+    val listState = rememberLazyListState()
+    val visibleCount = rememberProgressiveItemCount(
+        totalCount = filteredItems.size,
+        batchSize = 10,
+        listState = listState,
+        firstDataIndex = 1,
+    )
+    val visibleItems = remember(filteredItems, visibleCount) { filteredItems.take(visibleCount) }
 
     LazyColumn(
+        state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -1269,49 +1410,185 @@ private fun PistesTab(state: AppUiState) {
                 singleLine = true,
             )
         }
-        items(filteredItems) { item ->
+        items(visibleItems) { item ->
+            val crowdLower = item.crowdLabel.lowercase()
+            val crowdIcon = when {
+                crowdLower.contains("bon") || crowdLower.contains("busy") -> "🔴"
+                crowdLower.contains("peu") || crowdLower.contains("quiet") -> "🟢"
+                else -> "🟡"
+            }
+
+            val weatherIcon = when {
+                item.weatherLabel.contains("neige", ignoreCase = true) -> "❄"
+                item.weatherLabel.contains("pluie", ignoreCase = true) -> "🌧"
+                item.weatherLabel.contains("nuage", ignoreCase = true) -> "☁"
+                item.weatherLabel.contains("soleil", ignoreCase = true) || item.weatherLabel.contains("clair", ignoreCase = true) -> "☀"
+                else -> "🌤"
+            }
+
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(item.stationName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    Text(
-                        text = "${stringResource(id = R.string.weather)}: ${item.weatherLabel}  •  ${stringResource(id = R.string.temperature)}: ${item.temperatureLabel}°C",
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    Text(
-                        text = "${stringResource(id = R.string.snow_depth)}: ${item.snowDepthLabel} cm  •  ${stringResource(id = R.string.piste_rating)}: ${item.ratingLabel}",
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    Text(
-                        text = "${stringResource(id = R.string.altitude)}: ${item.altitudeLabel} m  •  ${stringResource(id = R.string.distance_from_grenoble)}: ${item.distanceLabel} km",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(item.crowdLabel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                    Text(item.comment, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (item.updatedAtLabel.isNotBlank()) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(item.stationName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        if (item.updatedAtLabel.isNotBlank()) {
+                            Text(
+                                text = "🕒 ${item.updatedAtLabel}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        PisteMetricPill(
+                            label = stringResource(id = R.string.weather),
+                            value = "${weatherIcon} ${item.weatherLabel}",
+                            modifier = Modifier.weight(1f),
+                        )
+                        PisteMetricPill(
+                            label = stringResource(id = R.string.temperature),
+                            value = "🌡 ${item.temperatureLabel}°C",
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        PisteMetricPill(
+                            label = stringResource(id = R.string.snow_depth),
+                            value = "❄ ${item.snowDepthLabel} cm",
+                            modifier = Modifier.weight(1f),
+                        )
+                        PisteMetricPill(
+                            label = stringResource(id = R.string.piste_rating),
+                            value = "⭐ ${item.ratingLabel}",
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        PisteMetricPill(
+                            label = stringResource(id = R.string.altitude),
+                            value = "⛰ ${item.altitudeLabel} m",
+                            modifier = Modifier.weight(1f),
+                        )
+                        PisteMetricPill(
+                            label = stringResource(id = R.string.distance_from_grenoble),
+                            value = "📍 ${item.distanceLabel} km",
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                RoundedCornerShape(10.dp),
+                            )
+                            .padding(horizontal = 10.dp, vertical = 7.dp),
+                    ) {
                         Text(
-                            text = "${stringResource(id = R.string.updated_at)}: ${item.updatedAtLabel}",
-                            style = MaterialTheme.typography.labelSmall,
+                            text = "$crowdIcon ${item.crowdLabel}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+
+                    if (item.comment.isNotBlank() && item.comment != "-") {
+                        Text(
+                            text = "📝 ${item.comment}",
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
             }
         }
+        if (visibleItems.size < filteredItems.size) {
+            item {
+                Text(
+                    text = stringResource(id = R.string.loading_more),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
+            }
+        }
     }
+}
+
+@Composable
+private fun PisteMetricPill(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f), RoundedCornerShape(10.dp))
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
+
+@Composable
+private fun rememberProgressiveItemCount(
+    totalCount: Int,
+    batchSize: Int,
+    listState: LazyListState,
+    firstDataIndex: Int,
+): Int {
+    var visibleCount by remember(totalCount) { mutableStateOf(min(batchSize, totalCount)) }
+
+    LaunchedEffect(totalCount) {
+        visibleCount = min(batchSize, totalCount)
+    }
+
+    LaunchedEffect(listState, totalCount, visibleCount, firstDataIndex) {
+        snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
+            .map { index -> index }
+            .distinctUntilChanged()
+            .collect { lastVisibleIndex ->
+                if (visibleCount >= totalCount) return@collect
+                val triggerIndex = max(firstDataIndex, firstDataIndex + visibleCount - 2)
+                if (lastVisibleIndex >= triggerIndex) {
+                    visibleCount = min(totalCount, visibleCount + batchSize)
+                }
+            }
+    }
+
+    return visibleCount
 }
 
 @Composable
 private fun MessagesTab(
     state: AppUiState,
     onSelectRecipient: (Int) -> Unit,
+    onAddFriend: (Int) -> Unit,
+    onRemoveFriend: (Int) -> Unit,
     onBodyChange: (String) -> Unit,
     onSend: () -> Unit,
 ) {
     val myUserId = state.profileInfo?.userId?.takeIf { it > 0 } ?: state.session?.userId ?: 0
     var chatSearch by remember { mutableStateOf("") }
-    var recipientDialogOpen by remember { mutableStateOf(false) }
-    var recipientSearch by remember { mutableStateOf("") }
+    var addFriendDialogOpen by remember { mutableStateOf(false) }
+    var addFriendSearch by remember { mutableStateOf("") }
+    val friendIds = remember(state.friendLinks) { state.friendLinks.map { it.friendId }.toSet() }
 
     val threadSummaries = remember(state.messageItems, state.chatUsers, myUserId) {
         val map = linkedMapOf<Int, ChatThreadSummary>()
@@ -1367,13 +1644,17 @@ private fun MessagesTab(
         map.values.toList()
     }
 
-    val filteredThreads = remember(threadSummaries, chatSearch) {
-        threadSummaries.filter {
+    val friendThreads = remember(threadSummaries, friendIds) {
+        threadSummaries.filter { friendIds.contains(it.userId) }
+    }
+
+    val filteredThreads = remember(friendThreads, chatSearch) {
+        friendThreads.filter {
             chatSearch.isBlank() || it.label.contains(chatSearch, ignoreCase = true) || it.lastMessage.contains(chatSearch, ignoreCase = true)
         }
     }
 
-    val selectedRecipientId = state.messageRecipientId ?: filteredThreads.firstOrNull()?.userId
+    val selectedRecipientId = state.messageRecipientId ?: filteredThreads.firstOrNull()?.userId ?: friendThreads.firstOrNull()?.userId
     val selectedThread = threadSummaries.firstOrNull { it.userId == selectedRecipientId }
         ?: state.chatUsers.firstOrNull { it.id == selectedRecipientId }?.let { user ->
             ChatThreadSummary(
@@ -1393,11 +1674,14 @@ private fun MessagesTab(
         }
     }
 
-    val recipientOptions = remember(state.chatUsers, recipientSearch, myUserId) {
+    val recipientOptions = remember(state.chatUsers, addFriendSearch, myUserId, friendIds) {
         state.chatUsers.filter { option ->
-            option.id != myUserId && (recipientSearch.isBlank() || option.label.contains(recipientSearch, ignoreCase = true))
+            option.id != myUserId &&
+                !friendIds.contains(option.id) &&
+                (addFriendSearch.length >= 2 && option.label.contains(addFriendSearch, ignoreCase = true))
         }
     }
+
     val orderedMessages = remember(state.messageItems, selectedRecipientId, myUserId) {
         state.messageItems.asReversed().filter { item ->
             selectedRecipientId != null && (
@@ -1423,9 +1707,15 @@ private fun MessagesTab(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                OutlinedButton(onClick = { recipientDialogOpen = true }, modifier = Modifier.fillMaxWidth()) {
-                    Text(selectedThread?.label ?: stringResource(id = R.string.choose_recipient))
+                Button(onClick = { addFriendDialogOpen = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(id = R.string.add_friend))
                 }
+
+                Text(
+                    text = stringResource(id = R.string.friends),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 if (filteredThreads.isEmpty()) {
                     Text(
                         text = stringResource(id = R.string.no_contacts_available),
@@ -1433,33 +1723,49 @@ private fun MessagesTab(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 } else {
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    LazyColumn(
+                        modifier = Modifier.height(220.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
                         items(filteredThreads) { thread ->
                             val selected = thread.userId == selectedRecipientId
                             OutlinedButton(
                                 onClick = { onSelectRecipient(thread.userId) },
                                 shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier.fillMaxWidth(),
                             ) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
                                     UserAvatar(
                                         displayName = thread.label,
                                         photoBase64 = thread.photoBase64,
                                         photoUrl = thread.photoUrl,
                                         size = 34.dp,
                                     )
-                                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                                        Text(thread.label, maxLines = 1)
+                                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                                        Text(
+                                            thread.label,
+                                            maxLines = 1,
+                                            fontWeight = if (thread.unreadCount > 0) FontWeight.Bold else FontWeight.SemiBold,
+                                        )
                                         if (thread.lastMessage.isNotBlank()) {
                                             Text(
                                                 text = thread.lastMessage,
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                fontWeight = if (thread.unreadCount > 0) FontWeight.Medium else FontWeight.Normal,
                                                 maxLines = 1,
                                             )
                                         }
                                     }
                                     if (thread.unreadCount > 0) {
                                         Badge { Text(thread.unreadCount.toString()) }
+                                    }
+                                    TextButton(onClick = { onRemoveFriend(thread.userId) }) {
+                                        Text(stringResource(id = R.string.remove_friend))
                                     }
                                     if (selected) {
                                         Icon(Icons.Filled.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
@@ -1537,9 +1843,11 @@ private fun MessagesTab(
             shape = RoundedCornerShape(16.dp),
         ) {
             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { recipientDialogOpen = true }, modifier = Modifier.fillMaxWidth()) {
-                    Text(selectedThread?.label ?: stringResource(id = R.string.choose_recipient))
-                }
+                Text(
+                    text = selectedThread?.label ?: stringResource(id = R.string.choose_contact_first),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 OutlinedTextField(
                     value = state.messageDraftBody,
                     onValueChange = onBodyChange,
@@ -1566,28 +1874,31 @@ private fun MessagesTab(
             }
         }
 
-        if (recipientDialogOpen) {
+        if (addFriendDialogOpen) {
             AlertDialog(
-                onDismissRequest = { recipientDialogOpen = false },
-                title = { Text(stringResource(id = R.string.choose_recipient)) },
+                onDismissRequest = { addFriendDialogOpen = false },
+                title = { Text(stringResource(id = R.string.add_friend)) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(
-                            value = recipientSearch,
-                            onValueChange = { recipientSearch = it },
-                            label = { Text(stringResource(id = R.string.recipient)) },
+                            value = addFriendSearch,
+                            onValueChange = { addFriendSearch = it },
+                            label = { Text(stringResource(id = R.string.search_users_to_add)) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                         )
-                        if (recipientOptions.isEmpty()) {
+                        if (addFriendSearch.length < 2) {
+                            Text(stringResource(id = R.string.type_min_two_chars))
+                        } else if (recipientOptions.isEmpty()) {
                             Text(stringResource(id = R.string.no_contacts_available))
                         } else {
                             LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.height(220.dp)) {
                                 items(recipientOptions) { option ->
                                     OutlinedButton(
                                         onClick = {
+                                            onAddFriend(option.id)
                                             onSelectRecipient(option.id)
-                                            recipientDialogOpen = false
+                                            addFriendDialogOpen = false
                                         },
                                         modifier = Modifier.fillMaxWidth(),
                                     ) {
@@ -1611,7 +1922,7 @@ private fun MessagesTab(
                     }
                 },
                 confirmButton = {
-                    TextButton(onClick = { recipientDialogOpen = false }) {
+                    TextButton(onClick = { addFriendDialogOpen = false }) {
                         Text(stringResource(id = R.string.close))
                     }
                 },
@@ -1621,28 +1932,139 @@ private fun MessagesTab(
 }
 
 @Composable
-private fun ProfileTab(state: AppUiState) {
+private fun ProfileTab(
+    state: AppUiState,
+    onFirstNameChange: (String) -> Unit,
+    onLastNameChange: (String) -> Unit,
+    onEmailChange: (String) -> Unit,
+    onCurrentPasswordChange: (String) -> Unit,
+    onNewPasswordChange: (String) -> Unit,
+    onConfirmNewPasswordChange: (String) -> Unit,
+    onSaveProfile: () -> Unit,
+    onChangePassword: () -> Unit,
+) {
     val profile = state.profileInfo
     if (profile == null) {
         EmptyTabMessage(text = stringResource(id = R.string.empty_profile))
         return
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-            Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                ProfileAvatar(profile = profile, displayName = profile.displayName)
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(profile.displayName, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Text(profile.email, style = MaterialTheme.typography.bodyMedium)
-                if (profile.username.isNotBlank()) {
-                    Text("@${profile.username}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        item {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    ProfileAvatar(profile = profile, displayName = profile.displayName)
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(profile.displayName, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                        Text(profile.email, style = MaterialTheme.typography.bodyMedium)
+                        if (profile.username.isNotBlank()) {
+                            Text("@${profile.username}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
                 }
+            }
+        }
+
+        item {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = stringResource(id = R.string.personal_information),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    OutlinedTextField(
+                        value = state.profileEditFirstName,
+                        onValueChange = onFirstNameChange,
+                        label = { Text(stringResource(id = R.string.first_name)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = state.profileEditLastName,
+                        onValueChange = onLastNameChange,
+                        label = { Text(stringResource(id = R.string.last_name)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = state.profileEditEmail,
+                        onValueChange = onEmailChange,
+                        label = { Text(stringResource(id = R.string.email)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Button(
+                        onClick = onSaveProfile,
+                        enabled = !state.isSavingProfile,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        if (state.isSavingProfile) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color = Color.White,
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        Text(stringResource(id = R.string.save_profile))
+                    }
+                }
+            }
+        }
+
+        item {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = stringResource(id = R.string.change_password),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    OutlinedTextField(
+                        value = state.currentPasswordInput,
+                        onValueChange = onCurrentPasswordChange,
+                        label = { Text(stringResource(id = R.string.current_password)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = state.newPasswordInput,
+                        onValueChange = onNewPasswordChange,
+                        label = { Text(stringResource(id = R.string.new_password)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = state.confirmNewPasswordInput,
+                        onValueChange = onConfirmNewPasswordChange,
+                        label = { Text(stringResource(id = R.string.confirm_new_password)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Button(
+                        onClick = onChangePassword,
+                        enabled = !state.isChangingPassword,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        if (state.isChangingPassword) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color = Color.White,
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        Text(stringResource(id = R.string.update_password))
+                    }
                 }
             }
         }

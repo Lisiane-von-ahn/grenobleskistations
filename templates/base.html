@@ -70,6 +70,73 @@
             background: transparent !important;
         }
 
+        .premium-shell {
+            padding: 14px 0 20px;
+            background:
+                radial-gradient(circle at 11% 6%, rgba(38, 184, 201, 0.12), transparent 36%),
+                radial-gradient(circle at 87% 12%, rgba(20, 127, 180, 0.1), transparent 32%),
+                linear-gradient(180deg, #eef6fb 0%, #f7fbfe 54%, #ffffff 100%);
+            border-radius: 22px;
+            border: 1px solid #dceaf3;
+        }
+
+        .premium-hero {
+            position: relative;
+            border-radius: 18px;
+            overflow: hidden;
+            padding: 1.45rem 1.35rem;
+            background: linear-gradient(133deg, #1397ad 0%, #147ea9 52%, #245ca3 100%);
+            box-shadow: 0 16px 34px rgba(14, 63, 90, 0.2);
+            color: #f7fcff;
+        }
+
+        .premium-hero::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 82% 18%, rgba(255, 255, 255, 0.22), transparent 40%),
+                radial-gradient(circle at 14% 82%, rgba(255, 255, 255, 0.12), transparent 44%);
+            pointer-events: none;
+        }
+
+        .premium-hero > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .premium-kicker {
+            display: inline-flex;
+            align-items: center;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 12px;
+            font-weight: 700;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            border-radius: 999px;
+            padding: 4px 10px;
+            margin-bottom: 8px;
+        }
+
+        .premium-title {
+            margin-bottom: 6px;
+            color: #ffffff;
+            font-weight: 700;
+        }
+
+        .premium-subtitle {
+            margin-bottom: 0;
+            color: rgba(243, 251, 255, 0.93);
+        }
+
+        .premium-panel {
+            background: #ffffff;
+            border-radius: 14px;
+            border: 1px solid #dce9f2;
+            box-shadow: 0 11px 24px rgba(12, 44, 66, 0.08);
+        }
+
         section.py-5.bg-light .card,
         .amazing-deals .card,
         .search-form form,
@@ -118,7 +185,7 @@
         /* Keep all menu items inside the header even when labels are long. */
         .header-area {
             height: auto;
-            min-height: 132px;
+            min-height: 116px;
         }
 
         .header-area .main-nav {
@@ -138,7 +205,7 @@
             flex-wrap: wrap;
             justify-content: flex-end;
             gap: 6px;
-            margin-top: 24px;
+            margin-top: 14px;
         }
 
         .header-area .main-nav .nav li {
@@ -260,12 +327,30 @@
             color: #1f2937;
         }
 
+        .auth-section {
+            background:
+                radial-gradient(circle at 10% 12%, rgba(44, 167, 183, 0.12), transparent 42%),
+                radial-gradient(circle at 90% 4%, rgba(255, 171, 109, 0.14), transparent 38%),
+                linear-gradient(160deg, #f4f9fc 0%, #fdf7ef 100%);
+        }
+
         .auth-card {
-            border-radius: 16px;
+            border-radius: 18px;
+            border: 1px solid #e3ecf1;
+            box-shadow: 0 16px 34px rgba(16, 43, 62, 0.1) !important;
+        }
+
+        .auth-card h2 {
+            color: #113948;
+            font-weight: 700;
+        }
+
+        .auth-card .text-muted {
+            color: #627b86 !important;
         }
 
         .main-content-wrap {
-            margin-top: 112px !important;
+            margin-top: 84px !important;
             min-height: calc(100vh - 230px);
             padding-top: 0;
         }
@@ -275,7 +360,7 @@
         }
 
         body.home-page .main-content-wrap {
-            margin-top: 112px !important;
+            margin-top: 84px !important;
         }
 
         .floating-btn {
@@ -402,7 +487,7 @@
 
         @media (max-width: 1199.98px) {
             .header-area {
-                min-height: 124px;
+                min-height: 108px;
             }
 
             .main-nav .nav li a {
@@ -411,11 +496,11 @@
             }
 
             .header-area .main-nav .nav {
-                margin-top: 20px;
+                margin-top: 12px;
             }
 
             .main-content-wrap {
-                margin-top: 106px !important;
+                margin-top: 80px !important;
             }
         }
 

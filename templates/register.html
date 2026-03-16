@@ -8,22 +8,19 @@
 
 {% block content %}
 
-<div class="page-heading text-center py-50 bg-light-blue">
+<section class="py-4">
     <div class="container">
-        <div class="row">
-            <div class="col-lg-12">
-                <h4 class="text-muted">{% trans "S'inscrire" %}</h4>
-                <h2 class="text-primary">{% trans "Créez votre compte" %}</h2>
+        <div class="premium-shell mb-4 p-3">
+            <div class="premium-hero text-center">
+                <span class="premium-kicker">Compte</span>
+                <h2 class="premium-title h2">{% trans "Créez votre compte" %}</h2>
+                <p class="premium-subtitle">{% trans "Inscrivez-vous pour publier, discuter et reserver plus vite." %}</p>
             </div>
         </div>
-    </div>
-</div>
 
-<div class="register-section py-5">
-    <div class="container">
         <div class="row justify-content-center">
             <div class="col-lg-6 col-md-8">
-                <div class="card p-5 shadow-lg">
+                <div class="card p-5 shadow-lg premium-panel">
                     <h3 class="text-primary text-center mb-4">{% trans "Inscription" %}</h3>
                     <form method="POST">
                         {% csrf_token %}
@@ -84,6 +81,6 @@
             </div>
         </div>
     </div>
-</div>
+</section>
 
 {% endblock %}

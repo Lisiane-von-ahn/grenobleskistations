@@ -104,4 +104,18 @@
     <string name="years_experience_label">%1$d ans d experience</string>
     <string name="phone">Telephone</string>
     <string name="certifications">Certifications</string>
+    <string name="loading_more">Chargement progressif pendant le defilement...</string>
+    <string name="contact_instructor">Contacter le moniteur</string>
+    <string name="add_friend">Ajouter un ami</string>
+    <string name="remove_friend">Retirer</string>
+    <string name="friends">Amis</string>
+    <string name="search_users_to_add">Rechercher un utilisateur a ajouter</string>
+    <string name="type_min_two_chars">Tapez au moins 2 caracteres pour rechercher.</string>
+    <string name="personal_information">Informations personnelles</string>
+    <string name="save_profile">Enregistrer le profil</string>
+    <string name="change_password">Changer le mot de passe</string>
+    <string name="current_password">Mot de passe actuel</string>
+    <string name="new_password">Nouveau mot de passe</string>
+    <string name="confirm_new_password">Confirmer le nouveau mot de passe</string>
+    <string name="update_password">Mettre a jour le mot de passe</string>
 </resources>

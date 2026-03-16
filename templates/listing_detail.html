@@ -7,6 +7,14 @@
 
 {% block content %}
 <div class="container py-4">
+    <section class="premium-shell mb-4 p-3">
+        <div class="premium-hero">
+            <span class="premium-kicker">Marketplace</span>
+            <h2 class="premium-title h3 mb-1">{{ listing.title }}</h2>
+            <p class="premium-subtitle">{% trans "Par" %} {{ listing.user.username }} - {{ listing.posted_at|date:'d/m/Y H:i' }}</p>
+        </div>
+    </section>
+
     <div class="row g-4">
         <div class="col-lg-8">
             <div class="market-search-panel">

@@ -1092,6 +1092,31 @@ def ajouter_materiel(request):
 
 @login_required
 def messages_view(request):
+    def _display_name(user_obj):
+        first = (user_obj.first_name or '').strip()
+        last = (user_obj.last_name or '').strip()
+        if first or last:
+            return f"{first} {last}".strip()
+        return user_obj.username
+
+    def _avatar_payload(user_obj):
+        avatar_base64 = None
+        avatar_url = None
+
+        profile = getattr(user_obj, 'profile', None)
+        if profile and getattr(profile, 'profile_picture', None):
+            avatar_base64 = base64.b64encode(profile.profile_picture).decode('utf-8')
+
+        social = SocialAccount.objects.filter(user=user_obj, provider='google').first()
+        if social:
+            avatar_url = (social.extra_data or {}).get('picture')
+
+        return {
+            'display_name': _display_name(user_obj),
+            'avatar_base64': avatar_base64,
+            'avatar_url': avatar_url,
+        }
+
     selected_user_id = request.GET.get('user', '').strip()
     listing_id = request.GET.get('listing', '').strip()
     prefill_subject = request.GET.get('subject', '').strip()
@@ -1174,6 +1199,7 @@ def messages_view(request):
             'last_message': last_message,
             'unread_count': unread_for_contact,
             'is_friend': user_id in friend_ids,
+            **_avatar_payload(contact),
         })
 
     contacts.sort(
@@ -1234,12 +1260,15 @@ def messages_view(request):
     for user_id in suggestion_ids:
         user = suggestions_map.get(user_id)
         if user:
-            suggestions.append({'user': user, 'is_friend': user_id in friend_ids})
+            suggestions.append({'user': user, 'is_friend': user_id in friend_ids, **_avatar_payload(user)})
+
+    selected_recipient_context = _avatar_payload(selected_recipient) if selected_recipient else None
 
     return render(request, 'messages/messages.html', {
         'unread_count': unread_count,
         'contacts': contacts,
         'selected_recipient': selected_recipient,
+        'selected_recipient_context': selected_recipient_context,
         'prefill_subject': prefill_subject,
         'prefill_body': prefill_body,
         'context_listing': listing,
@@ -1269,12 +1298,25 @@ def messages_user_search(request):
     results = []
     for user in users:
         display_name = f"{(user.first_name or '').strip()} {(user.last_name or '').strip()}".strip() or user.username
+        avatar_base64 = None
+        avatar_url = None
+
+        profile = getattr(user, 'profile', None)
+        if profile and getattr(profile, 'profile_picture', None):
+            avatar_base64 = base64.b64encode(profile.profile_picture).decode('utf-8')
+
+        social = SocialAccount.objects.filter(user=user, provider='google').first()
+        if social:
+            avatar_url = (social.extra_data or {}).get('picture')
+
         results.append(
             {
                 'id': user.id,
                 'username': user.username,
                 'display_name': display_name,
                 'is_friend': user.id in friend_ids,
+                'avatar_base64': avatar_base64,
+                'avatar_url': avatar_url,
             }
         )
     return JsonResponse({'results': results})
