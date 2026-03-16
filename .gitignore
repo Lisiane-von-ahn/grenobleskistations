@@ -142,8 +142,12 @@ venv.bak/
 # Local SSH private keys / exports
 *.pem
 *.key
+*.keystore
 id_rsa
 id_ed25519
+
+# Android local signing material
+grenobleski_android_native/signing/
 
 # Local one-shot deploy scripts (hardcoded secrets)
 deploy/local/
