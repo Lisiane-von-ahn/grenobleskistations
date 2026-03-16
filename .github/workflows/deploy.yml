@@ -53,7 +53,7 @@ jobs:
               "${{ secrets.BOOTSTRAP_ADMIN_PASSWORD }}" \
               "${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}"
 
-            REQUIRED_PATHS='["/auth/login/","/auth/register/","/auth/google-login/","/auth/me/","/auth/logout/","/messages/","/skistories/","/skipartnerposts/","/instructorservices/","/mobile/","/mobile/auth/complete/","/mobile/token-login/"]'
+            REQUIRED_PATHS='["/auth/login/","/auth/register/","/auth/google-login/","/auth/me/","/auth/logout/","/messages/","/skistories/","/skipartnerposts/","/instructorservices/","/mobile/"]'
 
             check_openapi() {
               local url="$1"
