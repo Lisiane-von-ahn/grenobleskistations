@@ -35,6 +35,10 @@ jobs:
             git checkout "${{ github.ref_name }}"
             git reset --hard "origin/${{ github.ref_name }}"
 
+            if [ -f docker-compose.yml ]; then
+              docker compose -f docker-compose.yml down --remove-orphans || true
+            fi
+
             chmod +x deploy/install.sh
             export USE_INTERNAL_TRAEFIK=false
             ./deploy/install.sh \
@@ -49,7 +53,7 @@ jobs:
               "${{ secrets.BOOTSTRAP_ADMIN_PASSWORD }}" \
               "${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}"
 
-            REQUIRED_PATHS='["/auth/login/","/auth/register/","/auth/google-login/","/auth/me/","/auth/logout/","/messages/","/skistories/","/skipartnerposts/","/instructorservices/"]'
+            REQUIRED_PATHS='["/auth/login/","/auth/register/","/auth/google-login/","/auth/me/","/auth/logout/","/messages/","/skistories/","/skipartnerposts/","/instructorservices/","/mobile/","/mobile/auth/complete/","/mobile/token-login/"]'
 
             check_openapi() {
               local url="$1"
@@ -60,23 +64,7 @@ jobs:
 
               for i in $(seq 1 "$attempts"); do
                 if payload="$(curl -fsS "$url")"; then
-                  REQUIRED_PATHS="$REQUIRED_PATHS" OPENAPI_PAYLOAD="$payload" python3 - <<'PY'
-import json
-import os
-
-required = set(json.loads(os.environ["REQUIRED_PATHS"]))
-spec = json.loads(os.environ["OPENAPI_PAYLOAD"])
-paths = set(spec.get("paths", {}).keys())
-missing = sorted(required - paths)
-
-if missing:
-    print("Missing paths:")
-    for path in missing:
-        print(f" - {path}")
-    raise SystemExit(1)
-
-print("OpenAPI check OK")
-PY
+                  REQUIRED_PATHS="$REQUIRED_PATHS" OPENAPI_PAYLOAD="$payload" python3 -c $'import json, os, sys\nrequired = set(json.loads(os.environ["REQUIRED_PATHS"]))\nspec = json.loads(os.environ["OPENAPI_PAYLOAD"])\npaths = set(spec.get("paths", {}).keys())\nmissing = sorted(required - paths)\nif missing:\n    print("Missing paths:")\n    for path in missing:\n        print(f" - {path}")\n    sys.exit(1)\nprint("OpenAPI check OK")'
                   echo "✅ ${label} OpenAPI check passed"
                   return 0
                 fi
@@ -90,6 +78,23 @@ PY
 
             check_openapi "http://127.0.0.1:8081/swagger/?format=openapi" "local"
             check_openapi "https://www.grenobleski.fr/swagger/?format=openapi" "public" 30 10
+
+            check_route() {
+              local path="$1"
+              local url="https://www.grenobleski.fr${path}"
+              local code
+              code="$(curl -L -s -o /dev/null -w "%{http_code}" "$url")"
+              if [ "$code" = "404" ]; then
+                echo "❌ Missing route: $url"
+                return 1
+              fi
+              echo "✅ Route available ($code): $url"
+            }
+
+            check_route "/mobile/auth/complete/"
+            check_route "/mobile/token-login/"
+            check_route "/api/mobile/"
+            check_route "/api/mobile/auth/complete/"
 
             echo "✅ Deployment completed (install.sh is the single source of truth)."
             docker compose -f docker-compose.yml ps || true

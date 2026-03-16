@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import fr.grenobleski.nativeapp.data.AuthRepository
 import fr.grenobleski.nativeapp.data.model.DashboardCounts
+import fr.grenobleski.nativeapp.data.model.ChatUserOption
 import fr.grenobleski.nativeapp.data.model.InstructorItem
 import fr.grenobleski.nativeapp.data.model.MarketplaceItem
 import fr.grenobleski.nativeapp.data.model.MessageItem
@@ -35,6 +36,7 @@ data class AppUiState(
     val instructorItems: List<InstructorItem> = emptyList(),
     val pisteItems: List<PisteItem> = emptyList(),
     val messageItems: List<MessageItem> = emptyList(),
+    val chatUsers: List<ChatUserOption> = emptyList(),
     val messageRecipientId: Int? = null,
     val messageDraftBody: String = "",
     val isSendingMessage: Boolean = false,
@@ -42,6 +44,7 @@ data class AppUiState(
     val publishDescription: String = "",
     val publishCity: String = "",
     val publishPrice: String = "",
+    val publishImageBase64: String = "",
     val isPublishingArticle: Boolean = false,
     val profileInfo: ProfileInfo? = null,
 )
@@ -217,8 +220,12 @@ class AppViewModel(
 
                 NativeTab.MESSAGES -> {
                     val result = repository.fetchMessageItems(session.token)
+                    val usersResult = repository.fetchChatUsers(session.token)
                     if (result.isSuccess) {
-                        state = state.copy(messageItems = result.getOrNull()!!)
+                        state = state.copy(
+                            messageItems = result.getOrNull()!!,
+                            chatUsers = usersResult.getOrDefault(state.chatUsers),
+                        )
                     } else {
                         state = state.copy(errorMessage = result.exceptionOrNull()?.message ?: "Unable to load messages")
                     }
@@ -250,6 +257,11 @@ class AppViewModel(
     fun updateMessageRecipientId(raw: String) {
         val parsed = raw.trim().toIntOrNull()
         state = state.copy(messageRecipientId = parsed)
+    }
+
+    fun selectMessageRecipient(id: Int) {
+        if (id <= 0) return
+        state = state.copy(messageRecipientId = id)
     }
 
     fun updateMessageDraftBody(value: String) {
@@ -322,6 +334,10 @@ class AppViewModel(
         state = state.copy(publishPrice = value)
     }
 
+    fun updatePublishImageBase64(value: String) {
+        state = state.copy(publishImageBase64 = value)
+    }
+
     fun publishArticle() {
         val session = state.session ?: return
         val title = state.publishTitle.trim()
@@ -348,6 +364,7 @@ class AppViewModel(
                 description = description,
                 city = city,
                 price = state.publishPrice.trim(),
+                imageBase64 = state.publishImageBase64,
             )
 
             if (result.isSuccess) {
@@ -357,6 +374,7 @@ class AppViewModel(
                     publishDescription = "",
                     publishCity = "",
                     publishPrice = "",
+                    publishImageBase64 = "",
                     selectedTab = NativeTab.MARKETPLACE,
                 )
                 refreshCurrentTab()
@@ -426,6 +444,10 @@ class AppViewModel(
                 current.messageItems
             }
 
+            val chatUsers = repository.fetchChatUsers(session.token).getOrElse {
+                current.chatUsers
+            }
+
             val profileInfo = repository.fetchProfileInfo(session.token).getOrElse {
                 firstError = firstError ?: (it.message ?: "Unable to load profile")
                 current.profileInfo
@@ -438,8 +460,10 @@ class AppViewModel(
                 instructorItems = instructorItems,
                 pisteItems = pisteItems,
                 messageItems = messageItems,
+                chatUsers = chatUsers,
                 profileInfo = profileInfo,
-                errorMessage = firstError,
+                // Avoid noisy global errors at startup; errors are surfaced on explicit tab refresh/actions.
+                errorMessage = null,
             )
         }
     }

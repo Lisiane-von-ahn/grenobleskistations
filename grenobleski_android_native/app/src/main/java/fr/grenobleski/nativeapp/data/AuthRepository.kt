@@ -3,6 +3,7 @@ package fr.grenobleski.nativeapp.data
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import fr.grenobleski.nativeapp.data.model.DashboardCounts
+import fr.grenobleski.nativeapp.data.model.ChatUserOption
 import fr.grenobleski.nativeapp.data.model.InstructorItem
 import fr.grenobleski.nativeapp.data.model.LoginRequest
 import fr.grenobleski.nativeapp.data.model.LoginResponse
@@ -102,11 +103,14 @@ class AuthRepository(
 
     suspend fun fetchMarketplaceItems(token: String): Result<List<MarketplaceItem>> = withContext(Dispatchers.IO) {
         val authHeader = "Token $token"
-        val payload = fetchPayload("/api/skimaterial/", authHeader)
-            ?: return@withContext Result.failure(IllegalStateException("Unable to load marketplace."))
+        val payload = fetchPayloadFromCandidates(listOf("/api/skimaterial/", "/api/skimaterial"), authHeader)
+            ?: return@withContext Result.success(emptyList())
 
         val items = extractObjectList(payload).map { obj ->
             val sellerId = obj.intOrZero("user", "user_id")
+            val previewImageBase64 = obj.stringOrBlank("image").ifBlank {
+                obj.firstArrayObjectString("images", "image")
+            }
             MarketplaceItem(
                 id = obj.intOrZero("id"),
                 title = obj.stringOrBlank("title", "material_type").ifBlank { "Annonce #${obj.intOrZero("id")}" },
@@ -117,6 +121,7 @@ class AuthRepository(
                 sellerId = sellerId,
                 sellerLabel = if (sellerId > 0) "Vendeur #$sellerId" else "Vendeur",
                 postedAtLabel = obj.stringOrBlank("posted_at", "created_at"),
+                previewImageBase64 = previewImageBase64,
             )
         }
         Result.success(items)
@@ -124,8 +129,8 @@ class AuthRepository(
 
     suspend fun fetchInstructorItems(token: String): Result<List<InstructorItem>> = withContext(Dispatchers.IO) {
         val authHeader = "Token $token"
-        val payload = fetchPayload("/api/instructorprofiles/", authHeader)
-            ?: return@withContext Result.failure(IllegalStateException("Unable to load instructors."))
+        val payload = fetchPayloadFromCandidates(listOf("/api/instructorprofiles/", "/api/instructorprofiles"), authHeader)
+            ?: return@withContext Result.success(emptyList())
 
         val items = extractObjectList(payload).map { obj ->
             val userObj = obj.get("user")?.takeIf { it.isJsonObject }?.asJsonObject
@@ -147,8 +152,8 @@ class AuthRepository(
 
     suspend fun fetchPisteItems(token: String): Result<List<PisteItem>> = withContext(Dispatchers.IO) {
         val authHeader = "Token $token"
-        val payload = fetchPayload("/api/pistereports/", authHeader)
-            ?: return@withContext Result.failure(IllegalStateException("Unable to load piste state."))
+        val payload = fetchPayloadFromCandidates(listOf("/api/pistereports/", "/api/pistereports"), authHeader)
+            ?: return@withContext Result.success(emptyList())
 
         val items = extractObjectList(payload).map { obj ->
             val stationObj = obj.get("ski_station")?.takeIf { it.isJsonObject }?.asJsonObject
@@ -209,8 +214,17 @@ class AuthRepository(
 
     suspend fun fetchProfileInfo(token: String): Result<ProfileInfo> = withContext(Dispatchers.IO) {
         val authHeader = "Token $token"
-        val payload = fetchPayload("/api/auth/me/", authHeader)
-            ?: return@withContext Result.failure(IllegalStateException("Unable to load profile."))
+        val payload = fetchPayloadFromCandidates(
+            listOf("/api/auth/me/", "/api/auth/me", "/api/userprofile/me/"),
+            authHeader,
+        ) ?: return@withContext Result.success(
+            ProfileInfo(
+                userId = 0,
+                displayName = "",
+                email = "",
+                username = "",
+            )
+        )
 
         val root = payload.takeIf { it.isJsonObject }?.asJsonObject
             ?: return@withContext Result.failure(IllegalStateException("Invalid profile payload."))
@@ -229,6 +243,26 @@ class AuthRepository(
                 username = user.stringOrBlank("username"),
             )
         )
+    }
+
+    suspend fun fetchChatUsers(token: String): Result<List<ChatUserOption>> = withContext(Dispatchers.IO) {
+        val authHeader = "Token $token"
+        val payload = fetchPayloadFromCandidates(listOf("/api/userview/", "/api/userview"), authHeader)
+            ?: return@withContext Result.success(emptyList())
+
+        val users = extractObjectList(payload).mapNotNull { obj ->
+            val id = obj.intOrZero("id")
+            if (id <= 0) return@mapNotNull null
+            val label = listOf(
+                obj.stringOrBlank("first_name"),
+                obj.stringOrBlank("last_name"),
+            ).filter { it.isNotBlank() }.joinToString(" ")
+                .ifBlank { obj.stringOrBlank("username", "email") }
+                .ifBlank { "Utilisateur #$id" }
+
+            ChatUserOption(id = id, label = label)
+        }
+        Result.success(users)
     }
 
     suspend fun sendMessage(
@@ -264,6 +298,7 @@ class AuthRepository(
         description: String,
         city: String,
         price: String,
+        imageBase64: String,
     ): Result<Unit> = withContext(Dispatchers.IO) {
         val authHeader = "Token $token"
         val payload = mutableMapOf<String, Any>(
@@ -277,6 +312,9 @@ class AuthRepository(
         )
         if (price.isNotBlank()) {
             payload["price"] = price
+        }
+        if (imageBase64.isNotBlank()) {
+            payload["image"] = imageBase64
         }
 
         val response = runCatching {
@@ -296,6 +334,16 @@ class AuthRepository(
 
     private suspend fun fetchCount(path: String, authHeader: String): Int {
         return parseCount(fetchPayload(path, authHeader))
+    }
+
+    private suspend fun fetchPayloadFromCandidates(paths: List<String>, authHeader: String): JsonElement? {
+        for (path in paths) {
+            val payload = fetchPayload(path, authHeader)
+            if (payload != null) {
+                return payload
+            }
+        }
+        return null
     }
 
     private suspend fun fetchPayload(path: String, authHeader: String): JsonElement? {
@@ -376,6 +424,18 @@ class AuthRepository(
             }
         }
         return false
+    }
+
+    private fun JsonObject.firstArrayObjectString(arrayKey: String, valueKey: String): String {
+        if (!has(arrayKey)) return ""
+        val arr = get(arrayKey)
+        if (!arr.isJsonArray) return ""
+        for (element in arr.asJsonArray) {
+            val obj = element.takeIf { it.isJsonObject }?.asJsonObject ?: continue
+            val value = obj.stringOrBlank(valueKey)
+            if (value.isNotBlank()) return value
+        }
+        return ""
     }
 
     private fun LoginResponse?.toSession(defaultEmail: String): UserSession? {

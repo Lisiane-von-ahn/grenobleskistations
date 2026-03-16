@@ -61,6 +61,7 @@ data class MarketplaceItem(
     val sellerId: Int,
     val sellerLabel: String,
     val postedAtLabel: String,
+    val previewImageBase64: String,
 )
 
 data class InstructorItem(
@@ -92,4 +93,9 @@ data class ProfileInfo(
     val displayName: String,
     val email: String,
     val username: String,
+)
+
+data class ChatUserOption(
+    val id: Int,
+    val label: String,
 )

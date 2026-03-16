@@ -4,6 +4,9 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.util.Base64
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -74,6 +77,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -92,6 +97,8 @@ import fr.grenobleski.nativeapp.data.session.SessionStore
 import fr.grenobleski.nativeapp.ui.components.MetricCard
 import java.net.HttpURLConnection
 import java.net.URL
+import android.graphics.BitmapFactory
+import androidx.compose.ui.window.Dialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -231,6 +238,7 @@ fun GrenobleSkiApp(
             onRefresh = viewModel::refreshCurrentTab,
             onLogout = viewModel::logout,
             onPrepareMessageToSeller = viewModel::prepareMessageToSeller,
+            onSelectMessageRecipient = viewModel::selectMessageRecipient,
             onMessageRecipientChange = viewModel::updateMessageRecipientId,
             onMessageBodyChange = viewModel::updateMessageDraftBody,
             onSendMessage = viewModel::sendMessageDraft,
@@ -238,6 +246,7 @@ fun GrenobleSkiApp(
             onUpdatePublishDescription = viewModel::updatePublishDescription,
             onUpdatePublishCity = viewModel::updatePublishCity,
             onUpdatePublishPrice = viewModel::updatePublishPrice,
+            onUpdatePublishImageBase64 = viewModel::updatePublishImageBase64,
             onPublishArticle = viewModel::publishArticle,
         )
     }
@@ -451,6 +460,7 @@ private fun NativeShell(
     onRefresh: () -> Unit,
     onLogout: () -> Unit,
     onPrepareMessageToSeller: (Int, String) -> Unit,
+    onSelectMessageRecipient: (Int) -> Unit,
     onMessageRecipientChange: (String) -> Unit,
     onMessageBodyChange: (String) -> Unit,
     onSendMessage: () -> Unit,
@@ -458,6 +468,7 @@ private fun NativeShell(
     onUpdatePublishDescription: (String) -> Unit,
     onUpdatePublishCity: (String) -> Unit,
     onUpdatePublishPrice: (String) -> Unit,
+    onUpdatePublishImageBase64: (String) -> Unit,
     onPublishArticle: () -> Unit,
 ) {
     val localContext = androidx.compose.ui.platform.LocalContext.current
