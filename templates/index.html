@@ -203,7 +203,7 @@
                                             {% if station.image %}
                                             <img src="data:image/jpeg;base64,{{ station.image|b64encode }}" alt="{{ station.name }}">
                                             {% else %}
-                                            <img src="{% static 'images/default.jpg' %}" alt="Default image">
+                                            <img src="{% static 'images/chamrousse.jpg' %}" alt="{% trans 'Image indisponible' %}">
                                             {% endif %}
                                         </div>
                                     </div>

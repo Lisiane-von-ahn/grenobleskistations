@@ -1027,7 +1027,6 @@ def ski_partners(request):
         post.organizer_display = _partner_organizer_display(post.user)
 
     # Statistiques top stations/services
-    from django.db.models import Count
     top_stations_services = (
         SkiStation.objects.annotate(count=Count('servicestore', distinct=True))
         .order_by('-count', 'name')[:5]
@@ -1669,7 +1668,6 @@ def instructors_list(request):
     stations = SkiStation.objects.order_by('name')
 
     # Statistiques top stations par nombre de moniteurs/services
-    from django.db.models import Count
     top_stations_instructors = (
         SkiStation.objects.annotate(count=Count('instructorprofile', distinct=True))
         .order_by('-count', 'name')[:5]
