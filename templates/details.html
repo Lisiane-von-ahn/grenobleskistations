@@ -33,6 +33,11 @@
             flex-wrap: wrap;
             gap: 0.5rem;
         }
+        .circuit-progress {
+            height: 0.55rem;
+            background: #edf1f4;
+            border-radius: 999px;
+        }
         .star-rating {
             direction: rtl;
             display: inline-flex;
@@ -175,6 +180,21 @@
                                 <div class="station-stat"><i class="fas fa-mountain"></i> {% trans "Altitude max:" %} <strong>{{ station.altitude }} m</strong></div>
                             </div>
                         </div>
+
+                        {% if circuit_breakdown %}
+                            <div class="mt-1 mb-2">
+                                <h6 class="mb-2">{% trans "Répartition des pistes" %}</h6>
+                                {% for circuit in circuit_breakdown %}
+                                    <div class="d-flex justify-content-between align-items-center small mb-1">
+                                        <span>{{ circuit.label }}</span>
+                                        <span><strong>{{ circuit.num_pistes }}</strong> ({{ circuit.share }}%)</span>
+                                    </div>
+                                    <div class="progress circuit-progress mb-2" role="progressbar" aria-label="{{ circuit.label }}" aria-valuenow="{{ circuit.share }}" aria-valuemin="0" aria-valuemax="100">
+                                        <div class="progress-bar {{ circuit.color_class }}" style="width: {{ circuit.share }}%;"></div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
 
                         <div class="mt-2 station-cta-row">
                             <a href="{{ station_transit_url }}" class="btn btn-outline-primary btn-sm" target="_blank">{% trans "Venir en bus" %}</a>

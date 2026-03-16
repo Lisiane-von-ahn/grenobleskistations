@@ -31,6 +31,9 @@ from django.db.models import Count
 from django.db.models import Min
 from django.db.models import Value
 from django.db.models import IntegerField
+from django.db.models import OuterRef
+from django.db.models import Subquery
+from django.db.models.functions import Coalesce
 from django.urls import reverse
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
@@ -87,20 +90,91 @@ def _partner_organizer_display(user):
     return user.username
 
 
+def _build_circuit_breakdown(circuits_by_difficulty, total_pistes):
+    difficulty_order = ['Débutant', 'Intermédiaire', 'Avancé']
+    difficulty_styles = {
+        'Débutant': 'bg-success',
+        'Intermédiaire': 'bg-warning',
+        'Avancé': 'bg-danger',
+    }
+
+    circuit_breakdown = []
+    for difficulty in difficulty_order:
+        count = int(circuits_by_difficulty.get(difficulty, 0) or 0)
+        share = round((count / total_pistes) * 100) if total_pistes else 0
+        circuit_breakdown.append({
+            'difficulty': difficulty,
+            'label': difficulty,
+            'num_pistes': count,
+            'share': share,
+            'color_class': difficulty_styles.get(difficulty, 'bg-secondary'),
+        })
+
+    for difficulty in sorted(circuits_by_difficulty.keys()):
+        if difficulty in difficulty_order:
+            continue
+        count = int(circuits_by_difficulty.get(difficulty, 0) or 0)
+        share = round((count / total_pistes) * 100) if total_pistes else 0
+        circuit_breakdown.append({
+            'difficulty': difficulty,
+            'label': difficulty,
+            'num_pistes': count,
+            'share': share,
+            'color_class': 'bg-secondary',
+        })
+
+    return circuit_breakdown
+
+
+def _build_circuit_breakdown_summary(circuit_breakdown):
+    visible_items = [item for item in circuit_breakdown if int(item.get('num_pistes', 0) or 0) > 0]
+    if not visible_items:
+        return ''
+    return ' | '.join(f"{item['label']}: {item['num_pistes']}" for item in visible_items)
+
+
 def home(request):
+    circuit_total_subquery = (
+        SkiCircuit.objects.filter(ski_station=OuterRef('pk'))
+        .values('ski_station')
+        .annotate(total=Coalesce(Sum('num_pistes'), Value(0)))
+        .values('total')[:1]
+    )
+
     queryset = SkiStation.objects.annotate(
-        num_circuits=Sum('skicircuit__num_pistes'),
+        num_circuits=Coalesce(Subquery(circuit_total_subquery, output_field=IntegerField()), Value(0)),
         service_count=Count('servicestore', distinct=True),
         instructor_service_count=Value(0, output_field=IntegerField()),
     )
 
-    print(queryset.query)  # This will print the SQL query in the console
-    for station in queryset:
-        print(f"{station.name}: {station.num_circuits} circuits")
+    random_ski_stations = list(queryset.order_by('?'))
+    nearest_stations = list(queryset.order_by('distanceFromGrenoble', 'name')[:5])
+    map_stations = list(queryset.order_by('distanceFromGrenoble', 'name'))
 
-    random_ski_stations = queryset.order_by('?')
-    nearest_stations = queryset.order_by('distanceFromGrenoble', 'name')[:5]
-    map_stations = queryset.order_by('distanceFromGrenoble', 'name')
+    station_ids = [station.id for station in map_stations]
+    circuits_by_station = {}
+    if station_ids:
+        for station_id, difficulty, num_pistes in SkiCircuit.objects.filter(
+            ski_station_id__in=station_ids
+        ).values_list('ski_station_id', 'difficulty', 'num_pistes'):
+            circuits_by_station.setdefault(station_id, {})[difficulty] = int(num_pistes or 0)
+
+    breakdown_by_station_id = {}
+    summary_by_station_id = {}
+    for station in map_stations:
+        total_pistes = int(station.num_circuits or 0)
+        station_breakdown = _build_circuit_breakdown(
+            circuits_by_station.get(station.id, {}),
+            total_pistes,
+        )
+        station.circuit_breakdown = station_breakdown
+        station.circuit_breakdown_summary = _build_circuit_breakdown_summary(station_breakdown)
+        breakdown_by_station_id[station.id] = station_breakdown
+        summary_by_station_id[station.id] = station.circuit_breakdown_summary
+
+    for station in random_ski_stations:
+        station.circuit_breakdown = breakdown_by_station_id.get(station.id, [])
+        station.circuit_breakdown_summary = summary_by_station_id.get(station.id, '')
 
     return render(
         request,
@@ -116,12 +190,19 @@ def home(request):
 
 def ski_station_detail(request, station_id):
     ski_station = get_object_or_404(
-        SkiStation.objects.annotate(num_circuits=Sum('skicircuit__num_pistes')),
+        SkiStation.objects.annotate(num_circuits=Coalesce(Sum('skicircuit__num_pistes'), Value(0))),
         id=station_id,
     )
     bus_lines = BusLine.objects.filter(ski_station=ski_station)
     service_stores = ServiceStore.objects.filter(ski_station=ski_station)
     ski_circuits = SkiCircuit.objects.filter(ski_station=ski_station)
+
+    circuits_by_difficulty = {
+        difficulty: num_pistes
+        for difficulty, num_pistes in ski_circuits.values_list('difficulty', 'num_pistes')
+    }
+    total_pistes = int(ski_station.num_circuits or 0)
+    circuit_breakdown = _build_circuit_breakdown(circuits_by_difficulty, total_pistes)
 
     trend = request.GET.get('trend', '24h')
     if trend not in ('3h', '24h'):
@@ -227,6 +308,7 @@ def ski_station_detail(request, station_id):
         'bus_lines': bus_lines,
         'service_stores': service_stores,
         'ski_circuits': ski_circuits,
+        'circuit_breakdown': circuit_breakdown,
         'station_transit_url': station_transit_url,
         'station_driving_url': station_driving_url,
         'piste_form': piste_form,

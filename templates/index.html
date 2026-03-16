@@ -43,6 +43,17 @@
       margin-bottom: 4px;
     }
 
+    .circuit-breakdown-inline {
+      margin-top: 8px;
+      display: grid;
+      row-gap: 2px;
+    }
+
+    .circuit-breakdown-inline small {
+      color: #5f6b77;
+      line-height: 1.35;
+    }
+
     @media (max-width: 991.98px) {
       .visit-country .items .item .row {
         row-gap: 14px;
@@ -219,6 +230,13 @@
                                               <li><i class="fa fa-user"></i> {% trans "Capacité" %} : {{ station.capacity }}</li>
                                               <li><i class="fa fa-user"></i> {% trans "Pistes" %} : {{ station.num_circuits }}</li>
                                             </ul>
+                                            {% if station.circuit_breakdown %}
+                                              <div class="circuit-breakdown-inline">
+                                                {% for circuit in station.circuit_breakdown %}
+                                                  <small>{{ circuit.label }}: {{ circuit.num_pistes }} ({{ circuit.share }}%)</small>
+                                                {% endfor %}
+                                              </div>
+                                            {% endif %}
                                             <div class="text-button">
                                               <a href="ski-station/{{ station.id }}">{% trans "Besoin d'indications ?" %} <i class="fa fa-arrow-right"></i></a>
                                             </div>
@@ -307,6 +325,7 @@
         altitude: {{ station.altitude|default:0 }},
         distance: {{ station.distanceFromGrenoble|default:0 }},
         circuits: {{ station.num_circuits|default:0 }},
+        circuitBreakdown: "{{ station.circuit_breakdown_summary|default:''|escapejs }}",
         services: {{ station.service_count|default:0 }},
         instructorServices: {{ station.instructor_service_count|default:0 }},
         detailUrl: "{% url 'ski_station_detail' station.id %}"
@@ -340,6 +359,7 @@
         Altitude: ${station.altitude} m<br>
         Capacity: ${station.capacity}<br>
         Pistes: ${station.circuits}<br>
+        ${station.circuitBreakdown ? `Répartition: ${station.circuitBreakdown}<br>` : ''}
         Services: ${station.services}<br>
         Moniteur: ${station.instructorServices} offre(s)<br>
         <span id="wx-${station.name.replace(/[^a-zA-Z0-9]/g, '')}">Météo: chargement...</span><br>

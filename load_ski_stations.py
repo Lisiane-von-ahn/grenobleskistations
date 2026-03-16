@@ -315,9 +315,21 @@ BUS_LINES_SEED = [
 ]
 
 SKI_CIRCUITS_SEED = {
-    'Chamrousse': [('Débutant', 14), ('Intermédiaire', 16), ('Avancé', 13)],
-    'Les 7 Laux': [('Débutant', 12), ('Intermédiaire', 18), ('Avancé', 16)],
-    "Alpe d'Huez": [('Débutant', 20), ('Intermédiaire', 35), ('Avancé', 26)],
+    'Chamrousse': [('Débutant', 11), ('Intermédiaire', 15), ('Avancé', 17)],
+    'Les 7 Laux': [('Débutant', 9), ('Intermédiaire', 19), ('Avancé', 23)],
+    "Alpe d'Huez": [('Débutant', 34), ('Intermédiaire', 42), ('Avancé', 35)],
+    'Villard-de-Lans / Corrençon': [('Débutant', 15), ('Intermédiaire', 23), ('Avancé', 15)],
+    'Autrans-Méaudre en Vercors': [('Débutant', 8), ('Intermédiaire', 8), ('Avancé', 4)],
+    "Le Collet d'Allevard": [('Débutant', 10), ('Intermédiaire', 14), ('Avancé', 11)],
+    'Les 2 Alpes': [('Débutant', 18), ('Intermédiaire', 36), ('Avancé', 34)],
+    'La Grave - La Meije': [('Débutant', 0), ('Intermédiaire', 3), ('Avancé', 12)],
+    'Oz 3300': [('Débutant', 9), ('Intermédiaire', 17), ('Avancé', 15)],
+    'Vaujany': [('Débutant', 8), ('Intermédiaire', 12), ('Avancé', 10)],
+    'Auris-en-Oisans': [('Débutant', 12), ('Intermédiaire', 18), ('Avancé', 15)],
+    'Le Sappey-en-Chartreuse': [('Débutant', 2), ('Intermédiaire', 2), ('Avancé', 1)],
+    'Saint-Pierre-de-Chartreuse': [('Débutant', 11), ('Intermédiaire', 14), ('Avancé', 10)],
+    'Lans-en-Vercors': [('Débutant', 8), ('Intermédiaire', 10), ('Avancé', 6)],
+    'Gresse-en-Vercors': [('Débutant', 9), ('Intermédiaire', 10), ('Avancé', 7)],
 }
 
 
@@ -407,6 +419,8 @@ def seed_ski_stations():
         station = station_by_name.get(station_name)
         if not station:
             continue
+        active_difficulties = {difficulty for difficulty, _ in circuits}
+        SkiCircuit.objects.filter(ski_station=station).exclude(difficulty__in=active_difficulties).delete()
         for difficulty, num_pistes in circuits:
             SkiCircuit.objects.update_or_create(
                 ski_station=station,
@@ -414,11 +428,14 @@ def seed_ski_stations():
                 defaults={'num_pistes': num_pistes},
             )
 
+    SkiCircuit.objects.exclude(ski_station__name__in=SKI_CIRCUITS_SEED.keys()).delete()
+
     print(f"Stations créées: {created_count}")
     print(f"Stations mises à jour: {updated_count}")
     print(f"Total stations en base: {SkiStation.objects.count()}")
     print(f"Total services en base: {ServiceStore.objects.count()}")
     print(f"Total lignes de bus en base: {BusLine.objects.count()}")
+    print(f"Total circuits en base: {SkiCircuit.objects.count()}")
 
 
 if __name__ == '__main__':
