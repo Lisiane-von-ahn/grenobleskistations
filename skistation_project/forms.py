@@ -1,3 +1,22 @@
+from django import forms
+from django.utils.translation import gettext_lazy as _
+from django.utils.translation import get_language
+from api.models import (
+    SkiMaterialListing,
+    UserProfile,
+    SkiMaterialImage,
+    PisteConditionReport,
+    SnowConditionUpdate,
+    InstructorProfile,
+    InstructorService,
+)
+from io import BytesIO
+from PIL import Image
+from django.contrib.auth import get_user_model
+from allauth.account.forms import LoginForm, SignupForm
+
+
+
 class SkiPartnerPostForm(forms.ModelForm):
     RHONE_ALPES_CITIES = [
         'Aix-les-Bains', 'Albertville', 'Annemasse', 'Annonay', 'Aubenas', 'Bourg-en-Bresse', 'Bourgoin-Jallieu',
@@ -21,24 +40,6 @@ class SkiPartnerPostForm(forms.ModelForm):
         if not valid:
             raise forms.ValidationError(_('Merci de choisir une ville de la liste Rhône-Alpes.'))
         return city
-from django import forms
-from django.utils.translation import gettext_lazy as _
-from django.utils.translation import get_language
-from api.models import (
-    SkiMaterialListing,
-    UserProfile,
-    SkiMaterialImage,
-    PisteConditionReport,
-    SnowConditionUpdate,
-    InstructorProfile,
-    InstructorService,
-)
-from io import BytesIO
-from PIL import Image
-from django.contrib.auth import get_user_model
-from allauth.account.forms import LoginForm, SignupForm
-
-
 MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024
 
 
@@ -163,28 +164,28 @@ class UserRegistrationForm(forms.Form):
             raise forms.ValidationError("The passwords do not match.")
 
 class SkiMaterialListingForm(forms.ModelForm):
-        RHONE_ALPES_CITIES = [
-            'Aix-les-Bains', 'Albertville', 'Annemasse', 'Annonay', 'Aubenas', 'Bourg-en-Bresse', 'Bourgoin-Jallieu',
-            'Bourg-Saint-Maurice', 'Bron', 'Chambéry', 'Chamonix-Mont-Blanc', 'Cluses', 'Décines-Charpieu',
-            'Échirolles', 'Écully', 'Firminy', 'Fontaine', 'Givors', 'Grenoble', 'Lyon', 'Meylan', 'Montélimar',
-            'Oyonnax', 'Romans-sur-Isère', 'Roanne', 'Roussillon', 'Saint-Chamond', 'Saint-Étienne', 'Saint-Genis-Laval',
-            'Saint-Martin-d’Hères', 'Saint-Priest', 'Sallanches', 'Sassenage', 'Seyssinet-Pariset', 'Seyssins',
-            'Thonon-les-Bains', 'Valence', 'Vénissieux', 'Vienne', 'Villefranche-sur-Saône', 'Villeurbanne',
-            'Villard-de-Lans', 'Autrans', 'Lans-en-Vercors', 'Huez', 'Alpe d’Huez', 'Les Deux Alpes',
-            'Chamrousse', 'Tignes', 'Val d’Isère', 'Morzine', 'Les Gets', 'Samoëns', 'Flaine', 'La Plagne',
-            'Courchevel', 'Méribel', 'Les Menuires', 'Val Thorens', 'La Clusaz', 'Megève', 'Pralognan-la-Vanoise',
-            'Vaujany', 'Oz-en-Oisans', 'Le Sappey-en-Chartreuse', 'Saint-Pierre-de-Chartreuse', 'Gresse-en-Vercors',
-            'Auris-en-Oisans', 'Le Collet d’Allevard', 'La Grave', 'La Grave - La Meije', 'Oz 3300'
-        ]
+    RHONE_ALPES_CITIES = [
+        'Aix-les-Bains', 'Albertville', 'Annemasse', 'Annonay', 'Aubenas', 'Bourg-en-Bresse', 'Bourgoin-Jallieu',
+        'Bourg-Saint-Maurice', 'Bron', 'Chambéry', 'Chamonix-Mont-Blanc', 'Cluses', 'Décines-Charpieu',
+        'Échirolles', 'Écully', 'Firminy', 'Fontaine', 'Givors', 'Grenoble', 'Lyon', 'Meylan', 'Montélimar',
+        'Oyonnax', 'Romans-sur-Isère', 'Roanne', 'Roussillon', 'Saint-Chamond', 'Saint-Étienne', 'Saint-Genis-Laval',
+        'Saint-Martin-d’Hères', 'Saint-Priest', 'Sallanches', 'Sassenage', 'Seyssinet-Pariset', 'Seyssins',
+        'Thonon-les-Bains', 'Valence', 'Vénissieux', 'Vienne', 'Villefranche-sur-Saône', 'Villeurbanne',
+        'Villard-de-Lans', 'Autrans', 'Lans-en-Vercors', 'Huez', 'Alpe d’Huez', 'Les Deux Alpes',
+        'Chamrousse', 'Tignes', 'Val d’Isère', 'Morzine', 'Les Gets', 'Samoëns', 'Flaine', 'La Plagne',
+        'Courchevel', 'Méribel', 'Les Menuires', 'Val Thorens', 'La Clusaz', 'Megève', 'Pralognan-la-Vanoise',
+        'Vaujany', 'Oz-en-Oisans', 'Le Sappey-en-Chartreuse', 'Saint-Pierre-de-Chartreuse', 'Gresse-en-Vercors',
+        'Auris-en-Oisans', 'Le Collet d’Allevard', 'La Grave', 'La Grave - La Meije', 'Oz 3300'
+    ]
 
-        def clean_city(self):
-            city = (self.cleaned_data.get('city') or '').strip()
-            if not city:
-                raise forms.ValidationError(_('Merci de choisir une ville de la liste Rhône-Alpes.'))
-            valid = any(city.lower() == c.lower() for c in self.RHONE_ALPES_CITIES)
-            if not valid:
-                raise forms.ValidationError(_('Merci de choisir une ville de la liste Rhône-Alpes.'))
-            return city
+    def clean_city(self):
+        city = (self.cleaned_data.get('city') or '').strip()
+        if not city:
+            raise forms.ValidationError(_('Merci de choisir une ville de la liste Rhône-Alpes.'))
+        valid = any(city.lower() == c.lower() for c in self.RHONE_ALPES_CITIES)
+        if not valid:
+            raise forms.ValidationError(_('Merci de choisir une ville de la liste Rhône-Alpes.'))
+        return city
     image_file = forms.ImageField(
         required=False,
         widget=forms.ClearableFileInput(attrs={'class': 'visually-hidden', 'id': 'main-image-input', 'accept': 'image/*'})
@@ -335,28 +336,28 @@ class ProfileForm(forms.ModelForm):
         return instance
         
 class MaterielForm(forms.ModelForm):
-        RHONE_ALPES_CITIES = [
-            'Aix-les-Bains', 'Albertville', 'Annemasse', 'Annonay', 'Aubenas', 'Bourg-en-Bresse', 'Bourgoin-Jallieu',
-            'Bourg-Saint-Maurice', 'Bron', 'Chambéry', 'Chamonix-Mont-Blanc', 'Cluses', 'Décines-Charpieu',
-            'Échirolles', 'Écully', 'Firminy', 'Fontaine', 'Givors', 'Grenoble', 'Lyon', 'Meylan', 'Montélimar',
-            'Oyonnax', 'Romans-sur-Isère', 'Roanne', 'Roussillon', 'Saint-Chamond', 'Saint-Étienne', 'Saint-Genis-Laval',
-            'Saint-Martin-d’Hères', 'Saint-Priest', 'Sallanches', 'Sassenage', 'Seyssinet-Pariset', 'Seyssins',
-            'Thonon-les-Bains', 'Valence', 'Vénissieux', 'Vienne', 'Villefranche-sur-Saône', 'Villeurbanne',
-            'Villard-de-Lans', 'Autrans', 'Lans-en-Vercors', 'Huez', 'Alpe d’Huez', 'Les Deux Alpes',
-            'Chamrousse', 'Tignes', 'Val d’Isère', 'Morzine', 'Les Gets', 'Samoëns', 'Flaine', 'La Plagne',
-            'Courchevel', 'Méribel', 'Les Menuires', 'Val Thorens', 'La Clusaz', 'Megève', 'Pralognan-la-Vanoise',
-            'Vaujany', 'Oz-en-Oisans', 'Le Sappey-en-Chartreuse', 'Saint-Pierre-de-Chartreuse', 'Gresse-en-Vercors',
-            'Auris-en-Oisans', 'Le Collet d’Allevard', 'La Grave', 'La Grave - La Meije', 'Oz 3300'
-        ]
+    RHONE_ALPES_CITIES = [
+        'Aix-les-Bains', 'Albertville', 'Annemasse', 'Annonay', 'Aubenas', 'Bourg-en-Bresse', 'Bourgoin-Jallieu',
+        'Bourg-Saint-Maurice', 'Bron', 'Chambéry', 'Chamonix-Mont-Blanc', 'Cluses', 'Décines-Charpieu',
+        'Échirolles', 'Écully', 'Firminy', 'Fontaine', 'Givors', 'Grenoble', 'Lyon', 'Meylan', 'Montélimar',
+        'Oyonnax', 'Romans-sur-Isère', 'Roanne', 'Roussillon', 'Saint-Chamond', 'Saint-Étienne', 'Saint-Genis-Laval',
+        'Saint-Martin-d’Hères', 'Saint-Priest', 'Sallanches', 'Sassenage', 'Seyssinet-Pariset', 'Seyssins',
+        'Thonon-les-Bains', 'Valence', 'Vénissieux', 'Vienne', 'Villefranche-sur-Saône', 'Villeurbanne',
+        'Villard-de-Lans', 'Autrans', 'Lans-en-Vercors', 'Huez', 'Alpe d’Huez', 'Les Deux Alpes',
+        'Chamrousse', 'Tignes', 'Val d’Isère', 'Morzine', 'Les Gets', 'Samoëns', 'Flaine', 'La Plagne',
+        'Courchevel', 'Méribel', 'Les Menuires', 'Val Thorens', 'La Clusaz', 'Megève', 'Pralognan-la-Vanoise',
+        'Vaujany', 'Oz-en-Oisans', 'Le Sappey-en-Chartreuse', 'Saint-Pierre-de-Chartreuse', 'Gresse-en-Vercors',
+        'Auris-en-Oisans', 'Le Collet d’Allevard', 'La Grave', 'La Grave - La Meije', 'Oz 3300'
+    ]
 
-        def clean_city(self):
-            city = (self.cleaned_data.get('city') or '').strip()
-            if not city:
-                raise forms.ValidationError(_('Merci de choisir une ville de la liste Rhône-Alpes.'))
-            valid = any(city.lower() == c.lower() for c in self.RHONE_ALPES_CITIES)
-            if not valid:
-                raise forms.ValidationError(_('Merci de choisir une ville de la liste Rhône-Alpes.'))
-            return city
+    def clean_city(self):
+        city = (self.cleaned_data.get('city') or '').strip()
+        if not city:
+            raise forms.ValidationError(_('Merci de choisir une ville de la liste Rhône-Alpes.'))
+        valid = any(city.lower() == c.lower() for c in self.RHONE_ALPES_CITIES)
+        if not valid:
+            raise forms.ValidationError(_('Merci de choisir une ville de la liste Rhône-Alpes.'))
+        return city
     class Meta:
         model = SkiMaterialListing
         fields = [
