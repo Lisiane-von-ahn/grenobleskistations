@@ -44,12 +44,22 @@ data class DashboardCounts(
 
 enum class NativeTab {
     HOME,
+    STATIONS,
     MARKETPLACE,
     INSTRUCTORS,
     PISTES,
     MESSAGES,
     PROFILE,
 }
+
+data class StationItem(
+    val id: Int,
+    val name: String,
+    val altitudeLabel: String,
+    val distanceLabel: String,
+    val capacityLabel: String,
+    val imageBase64: String,
+)
 
 data class MarketplaceItem(
     val id: Int,

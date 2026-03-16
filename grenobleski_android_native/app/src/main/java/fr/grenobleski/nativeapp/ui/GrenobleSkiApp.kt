@@ -571,6 +571,9 @@ private fun NativeShell(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 if (quickMenuOpen) {
+                    SmallFloatingActionButton(onClick = { onSelectTab(NativeTab.STATIONS) }) {
+                        Icon(Icons.Filled.Terrain, contentDescription = stringResource(id = R.string.stations))
+                    }
                     SmallFloatingActionButton(onClick = { onSelectTab(NativeTab.MARKETPLACE) }) {
                         Icon(Icons.Filled.LocalOffer, contentDescription = stringResource(id = R.string.marketplace))
                     }
@@ -633,6 +636,7 @@ private fun NativeShell(
         ) {
             when (state.selectedTab) {
                 NativeTab.HOME -> HomeTab(state)
+                NativeTab.STATIONS -> StationsTab(state)
                 NativeTab.MARKETPLACE -> MarketplaceTab(state, onPrepareMessageToSeller)
                 NativeTab.INSTRUCTORS -> InstructorsTab(state, onPrepareMessageToSeller)
                 NativeTab.PISTES -> PistesTab(state)
@@ -686,6 +690,12 @@ private fun NativeShell(
                 title = { Text(stringResource(id = R.string.nav_more)) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = {
+                            moreMenuOpen = false
+                            onSelectTab(NativeTab.STATIONS)
+                        }, modifier = Modifier.fillMaxWidth()) {
+                            Text(stringResource(id = R.string.stations))
+                        }
                         OutlinedButton(onClick = {
                             moreMenuOpen = false
                             onSelectTab(NativeTab.PROFILE)
@@ -1022,6 +1032,101 @@ private fun HomeTab(state: AppUiState) {
                     ActivityLine(stringResource(id = R.string.activity_instructors_ready, state.instructorItems.size))
                     ActivityLine(stringResource(id = R.string.activity_piste_reports, state.pisteItems.size))
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StationsTab(state: AppUiState) {
+    if (state.stationItems.isEmpty()) {
+        EmptyTabMessage(text = stringResource(id = R.string.empty_stations))
+        return
+    }
+
+    var searchQuery by remember { mutableStateOf("") }
+    val filteredItems = remember(state.stationItems, searchQuery) {
+        state.stationItems.filter { item ->
+            searchQuery.isBlank() || item.name.contains(searchQuery, ignoreCase = true)
+        }
+    }
+    val listState = rememberLazyListState()
+    val visibleCount = rememberProgressiveItemCount(
+        totalCount = filteredItems.size,
+        batchSize = 10,
+        listState = listState,
+        firstDataIndex = 1,
+    )
+    val visibleItems = remember(filteredItems, visibleCount) { filteredItems.take(visibleCount) }
+
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        item {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                label = { Text(stringResource(id = R.string.search_stations)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+            )
+        }
+        if (filteredItems.isEmpty()) {
+            item {
+                EmptyTabMessage(text = stringResource(id = R.string.no_results))
+            }
+        }
+        items(visibleItems) { item ->
+            val previewImage = remember(item.imageBase64) { decodeBase64Image(item.imageBase64) }
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (previewImage != null) {
+                        Image(
+                            bitmap = previewImage,
+                            contentDescription = item.name,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(180.dp),
+                            contentScale = ContentScale.Crop,
+                        )
+                    }
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Text(item.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            PisteMetricPill(
+                                label = stringResource(id = R.string.altitude),
+                                value = "⛰ ${item.altitudeLabel} m",
+                                modifier = Modifier.weight(1f),
+                            )
+                            PisteMetricPill(
+                                label = stringResource(id = R.string.distance_from_grenoble),
+                                value = "📍 ${item.distanceLabel} km",
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                        PisteMetricPill(
+                            label = stringResource(id = R.string.station_capacity),
+                            value = "🎿 ${item.capacityLabel}",
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
+            }
+        }
+        if (visibleItems.size < filteredItems.size) {
+            item {
+                Text(
+                    text = stringResource(id = R.string.loading_more),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
             }
         }
     }
@@ -2178,6 +2283,7 @@ private fun EmptyTabMessage(text: String) {
 private fun tabTitle(tab: NativeTab): String {
     return when (tab) {
         NativeTab.HOME -> stringResource(id = R.string.nav_home)
+        NativeTab.STATIONS -> stringResource(id = R.string.stations)
         NativeTab.MARKETPLACE -> stringResource(id = R.string.marketplace)
         NativeTab.INSTRUCTORS -> stringResource(id = R.string.instructors)
         NativeTab.PISTES -> stringResource(id = R.string.piste_status)

@@ -32,6 +32,9 @@ class BusLine(models.Model):
     arrival_stop = models.CharField(max_length=100)
     frequency = models.CharField(max_length=120, null=True)
     travel_time = models.CharField(max_length=120, null=True)
+    route_points = models.CharField(max_length=255, null=True, blank=True)
+    departure_latitude = models.DecimalField(max_digits=8, decimal_places=6, null=True, blank=True)
+    departure_longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
 
     def __str__(self):
         return self.bus_number
@@ -43,7 +46,11 @@ class ServiceStore(models.Model):
     latitude = models.DecimalField(max_digits=8, decimal_places=6)
     longitude = models.DecimalField(max_digits=9, decimal_places=6)
     type = models.CharField(max_length=100)
-    opening_hours = models.CharField(max_length=100, null=True)    
+    opening_hours = models.CharField(max_length=100, null=True)
+    address = models.CharField(max_length=255, null=True, blank=True)
+    website_url = models.URLField(null=True, blank=True)
+    phone = models.CharField(max_length=40, null=True, blank=True)
+    source_note = models.CharField(max_length=255, null=True, blank=True)
 
     def __str__(self):
         return self.name

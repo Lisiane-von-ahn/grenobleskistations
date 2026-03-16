@@ -13,6 +13,7 @@ import fr.grenobleski.nativeapp.data.model.MessageItem
 import fr.grenobleski.nativeapp.data.model.PisteItem
 import fr.grenobleski.nativeapp.data.model.ProfileInfo
 import fr.grenobleski.nativeapp.data.model.RegisterRequest
+import fr.grenobleski.nativeapp.data.model.StationItem
 import fr.grenobleski.nativeapp.data.model.UserSession
 import fr.grenobleski.nativeapp.data.network.GrenobleSkiApiService
 import kotlinx.coroutines.Dispatchers
@@ -107,6 +108,34 @@ class AuthRepository(
         )
 
         Result.success(counts)
+    }
+
+    suspend fun fetchStationItems(token: String): Result<List<StationItem>> = withContext(Dispatchers.IO) {
+        val authHeader = "Token $token"
+        val payload = fetchPayloadFromCandidates(listOf("/api/skistations/", "/api/skistations"), authHeader)
+            ?: return@withContext Result.success(emptyList())
+
+        val items = extractObjectList(payload).map { obj ->
+            val altitude = obj.stringOrBlank("altitude").ifBlank {
+                obj.intOrZero("altitude").takeIf { it > 0 }?.toString().orEmpty()
+            }
+            val distance = obj.stringOrBlank("distanceFromGrenoble", "distance_from_grenoble").ifBlank {
+                obj.intOrZero("distanceFromGrenoble", "distance_from_grenoble").takeIf { it > 0 }?.toString().orEmpty()
+            }
+            val capacity = obj.stringOrBlank("capacity").ifBlank {
+                obj.intOrZero("capacity").takeIf { it > 0 }?.toString().orEmpty()
+            }
+
+            StationItem(
+                id = obj.intOrZero("id"),
+                name = obj.stringOrBlank("name").ifBlank { "Station" },
+                altitudeLabel = altitude.ifBlank { "-" },
+                distanceLabel = distance.ifBlank { "-" },
+                capacityLabel = capacity.ifBlank { "-" },
+                imageBase64 = obj.stringOrBlank("image"),
+            )
+        }
+        Result.success(items)
     }
 
     suspend fun fetchMarketplaceItems(token: String): Result<List<MarketplaceItem>> = withContext(Dispatchers.IO) {

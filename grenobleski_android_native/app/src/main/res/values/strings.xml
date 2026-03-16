@@ -34,6 +34,7 @@
     <string name="instructors">Instructors</string>
     <string name="nav_home">Home</string>
     <string name="empty_marketplace">No marketplace listings yet.</string>
+    <string name="empty_stations">No stations available right now.</string>
     <string name="empty_instructors">No instructors available right now.</string>
     <string name="empty_pistes">No piste reports published yet.</string>
     <string name="empty_messages">No messages yet.</string>
@@ -78,6 +79,7 @@
     <string name="article_description">Article description</string>
     <string name="publish">Publish</string>
     <string name="search_marketplace">Search marketplace</string>
+    <string name="search_stations">Search stations</string>
     <string name="search_instructors">Search instructors</string>
     <string name="search_conditions">Search stations or weather</string>
     <string name="marketplace_filters">Marketplace filters</string>
@@ -91,6 +93,7 @@
     <string name="updated_at">Updated</string>
     <string name="altitude">Altitude</string>
     <string name="distance_from_grenoble">Distance Grenoble</string>
+    <string name="station_capacity">Capacity</string>
     <string name="choose_photo">Choose photo</string>
     <string name="choose_photos">Add photos</string>
     <string name="remove_photo">Remove photo</string>

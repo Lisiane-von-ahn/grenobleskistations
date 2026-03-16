@@ -35,16 +35,6 @@ STATION_IMAGE_MAP = {
     "Alpe d'Huez": 'alpehuez.jpg',
     'Villard-de-Lans / Corrençon': 'villard.jpg',
     'Autrans-Méaudre en Vercors': 'autrans.jpg',
-    "Le Collet d'Allevard": 'belledonne.jpg',
-    'Les 2 Alpes': 'chamrousse2.jpg',
-    'La Grave - La Meije': 'belledonne.jpg',
-    'Oz 3300': 'alpehuez.jpg',
-    'Vaujany': 'villard.jpg',
-    'Auris-en-Oisans': 'chamrousse2.jpg',
-    'Le Sappey-en-Chartreuse': 'autrans.jpg',
-    'Saint-Pierre-de-Chartreuse': '7laux.jpg',
-    'Lans-en-Vercors': 'villard.jpg',
-    'Gresse-en-Vercors': 'autrans.jpg',
 }
 
 SERVICE_SEED_BY_STATION = {
@@ -140,69 +130,18 @@ SERVICE_SEED_BY_STATION = {
     ],
 }
 
-DEFAULT_SERVICE_BLUEPRINTS = [
-    {
-        'name_tpl': 'Location Ski {station}',
-        'type': 'Location matériel',
-        'opening_hours': '08:00-19:00',
-        'address_tpl': 'Front de neige, {station}',
-    },
-    {
-        'name_tpl': 'Location Premium {station}',
-        'type': 'Magasin / Location',
-        'opening_hours': '08:30-19:00',
-        'address_tpl': 'Centre station, {station}',
-    },
-    {
-        'name_tpl': 'Atelier Ski {station}',
-        'type': 'Atelier / réparation',
-        'opening_hours': '08:30-18:30',
-        'address_tpl': 'Galerie commerçante, {station}',
-    },
-    {
-        'name_tpl': 'Bootfitting {station}',
-        'type': 'Atelier / réparation',
-        'opening_hours': '09:00-18:00',
-        'address_tpl': 'Zone piétonne, {station}',
-    },
-    {
-        'name_tpl': 'Restaurant des Pistes {station}',
-        'type': 'Restauration',
-        'opening_hours': '11:30-16:30',
-        'address_tpl': 'Pied des pistes, {station}',
-    },
-    {
-        'name_tpl': 'Snack Montagne {station}',
-        'type': 'Restauration',
-        'opening_hours': '10:00-17:00',
-        'address_tpl': 'Esplanade station, {station}',
-    },
-    {
-        'name_tpl': 'Point Info {station}',
-        'type': 'Information',
-        'opening_hours': '08:30-17:30',
-        'address_tpl': 'Office de tourisme, {station}',
-    },
-    {
-        'name_tpl': 'Secours Piste {station}',
-        'type': 'Secours',
-        'opening_hours': '08:00-17:00',
-        'address_tpl': 'Poste de secours, {station}',
-    },
-]
-
 STATION_OFFICIAL_CONTACTS = {
     'Chamrousse': {'website_url': 'https://www.chamrousse.com', 'phone': '+33 4 76 89 92 65'},
     'Les 7 Laux': {'website_url': 'https://www.les7laux.com', 'phone': '+33 4 76 08 17 86'},
     "Alpe d'Huez": {'website_url': 'https://www.alpedhuez.com', 'phone': '+33 4 76 11 44 44'},
     'Villard-de-Lans / Corrençon': {'website_url': 'https://www.villarddelans-correnconenvercors.com', 'phone': '+33 4 76 95 10 38'},
-    'Autrans-Méaudre en Vercors': {'website_url': 'https://www.autrans-meaudre.com', 'phone': '+33 4 76 95 30 70'},
-    "Le Collet d'Allevard": {'website_url': 'https://www.lecollet.com', 'phone': '+33 4 76 45 10 11'},
+    'Autrans-Méaudre en Vercors': {'website_url': 'https://www.autrans-meaudre.fr', 'phone': '+33 4 76 95 30 70'},
+    "Le Collet d'Allevard": {'website_url': 'https://www.lecollet.com', 'phone': '+33 4 76 45 01 88'},
     'Les 2 Alpes': {'website_url': 'https://www.les2alpes.com', 'phone': '+33 4 76 79 22 00'},
     'La Grave - La Meije': {'website_url': 'https://www.lagrave-lameije.com', 'phone': '+33 4 76 79 90 05'},
     'Oz 3300': {'website_url': 'https://www.oz3300.com', 'phone': '+33 4 76 80 78 01'},
     'Vaujany': {'website_url': 'https://www.vaujany.com', 'phone': '+33 4 76 80 72 37'},
-    'Auris-en-Oisans': {'website_url': 'https://www.auris-en-oisans.fr', 'phone': '+33 4 76 80 13 52'},
+    'Auris-en-Oisans': {'website_url': '', 'phone': '+33 4 76 80 13 52'},
     'Le Sappey-en-Chartreuse': {'website_url': 'https://www.chartreuse-tourisme.com', 'phone': '+33 4 76 88 84 05'},
     'Saint-Pierre-de-Chartreuse': {'website_url': 'https://www.coeur-de-chartreuse.com', 'phone': '+33 4 76 88 62 08'},
     'Lans-en-Vercors': {'website_url': 'https://www.lansenvercors.com', 'phone': '+33 4 76 95 42 62'},
@@ -240,35 +179,27 @@ def enrich_service_data(service, station_name):
 
 def get_services_for_station(station_name):
     specific_services = list(SERVICE_SEED_BY_STATION.get(station_name, []))
-    if specific_services:
-        return [enrich_service_data(service, station_name) for service in specific_services]
+    verified_services = []
+    for service in specific_services:
+        normalized_type = (service.get('type', '') or '').lower()
+        normalized_name = (service.get('name', '') or '').lower()
+        is_verified_information = (
+            'information' in normalized_type or
+            'office de tourisme' in normalized_name or
+            normalized_name.startswith('mairie / info')
+        )
+        if is_verified_information:
+            verified_services.append(enrich_service_data(service, station_name))
 
-    specific_names = {service.get('name', '') for service in specific_services}
-
-    generated_services = []
-    for blueprint in DEFAULT_SERVICE_BLUEPRINTS:
-        name = blueprint['name_tpl'].format(station=station_name)
-        if name in specific_names:
-            continue
-        generated_services.append({
-            'name': clip_text(name, 100),
-            'type': clip_text(blueprint['type'], 100),
-            'opening_hours': clip_text(blueprint['opening_hours'], 100),
-            'address': clip_text(blueprint['address_tpl'].format(station=station_name), 255),
-            'source_note': 'Service générique de démonstration (non vérifié localement).',
-        })
-
-    normalized_specific_services = [enrich_service_data(service, station_name) for service in specific_services]
-
-    return normalized_specific_services + [enrich_service_data(service, station_name) for service in generated_services]
+    return verified_services
 
 BUS_LINES_SEED = [
     {
         'station_name': 'Chamrousse',
-        'bus_number': 'T87',
+        'bus_number': 'N93',
         'departure_stop': 'Grenoble Gare Routière',
         'arrival_stop': 'Chamrousse - Roche Béranger',
-        'frequency': 'Toutes les 60 min (week-end)',
+        'frequency': 'Consulter l\'horaire officiel',
         'travel_time': '1h10',
         'route_points': 'Gare Routière → Grand\'Place → Uriage → Chamrousse',
         'departure_latitude': 45.191210,
@@ -276,10 +207,10 @@ BUS_LINES_SEED = [
     },
     {
         'station_name': 'Les 7 Laux',
-        'bus_number': 'T84',
+        'bus_number': 'N94',
         'departure_stop': 'Grenoble Gare Routière',
         'arrival_stop': 'Prapoutel - Les 7 Laux',
-        'frequency': 'Toutes les 90 min',
+        'frequency': 'Consulter l\'horaire officiel',
         'travel_time': '1h05',
         'route_points': 'Gare Routière → Crolles → Brignoud → Prapoutel',
         'departure_latitude': 45.191210,
@@ -287,10 +218,10 @@ BUS_LINES_SEED = [
     },
     {
         'station_name': "Alpe d'Huez",
-        'bus_number': 'Transaltitude 3000',
+        'bus_number': 'T76',
         'departure_stop': 'Grenoble Gare SNCF',
         'arrival_stop': 'Alpe d\'Huez Station',
-        'frequency': '4 à 6 départs / jour',
+        'frequency': 'Consulter l\'horaire officiel',
         'travel_time': '1h40',
         'route_points': 'Grenoble → Bourg-d\'Oisans → Alpe d\'Huez',
         'departure_latitude': 45.191887,
@@ -308,22 +239,11 @@ BUS_LINES_SEED = [
         'departure_longitude': 5.714260,
     },
     {
-        'station_name': 'Autrans-Méaudre en Vercors',
-        'bus_number': 'T66',
-        'departure_stop': 'Grenoble Gare Routière',
-        'arrival_stop': 'Autrans Centre',
-        'frequency': 'Semaine: 1 bus / 2h • Week-end: 1 bus / h',
-        'travel_time': '1h00',
-        'route_points': 'Grenoble → Engins → Lans-en-Vercors → Autrans',
-        'departure_latitude': 45.191210,
-        'departure_longitude': 5.714260,
-    },
-    {
         'station_name': "Le Collet d'Allevard",
-        'bus_number': 'Navette C1',
+        'bus_number': 'N97',
         'departure_stop': 'Brignoud Gare',
         'arrival_stop': 'Le Collet d\'Allevard Front de neige',
-        'frequency': 'Semaine: 3 départs / jour • Week-end: 5 départs / jour',
+        'frequency': 'Consulter l\'horaire officiel',
         'travel_time': '50 min',
         'route_points': 'Brignoud → Allevard → Le Collet',
         'departure_latitude': 45.259167,
@@ -331,76 +251,32 @@ BUS_LINES_SEED = [
     },
     {
         'station_name': 'Les 2 Alpes',
-        'bus_number': 'Transaltitude 3020',
+        'bus_number': 'T73',
         'departure_stop': 'Grenoble Gare SNCF',
         'arrival_stop': 'Les 2 Alpes Office de tourisme',
-        'frequency': 'Semaine: 4 départs / jour • Week-end: 6 départs / jour',
+        'frequency': 'Consulter l\'horaire officiel',
         'travel_time': '1h45',
         'route_points': 'Grenoble → Vizille → Bourg-d\'Oisans → Les 2 Alpes',
         'departure_latitude': 45.191887,
         'departure_longitude': 5.714684,
     },
     {
-        'station_name': 'La Grave - La Meije',
-        'bus_number': 'Navette M1',
-        'departure_stop': 'Bourg-d\'Oisans Gare routière',
-        'arrival_stop': 'La Grave Téléphérique',
-        'frequency': 'Semaine: 2 départs / jour • Week-end: 3 départs / jour',
-        'travel_time': '1h10',
-        'route_points': 'Bourg-d\'Oisans → Le Freney → La Grave',
-        'departure_latitude': 45.054722,
-        'departure_longitude': 6.032222,
-    },
-    {
-        'station_name': 'Oz 3300',
-        'bus_number': 'Navette O3',
-        'departure_stop': 'Grenoble Gare SNCF',
-        'arrival_stop': 'Oz Station',
-        'frequency': 'Semaine: 3 départs / jour • Week-end: 5 départs / jour',
-        'travel_time': '1h35',
-        'route_points': 'Grenoble → Allemond → Oz-en-Oisans',
-        'departure_latitude': 45.191887,
-        'departure_longitude': 5.714684,
-    },
-    {
         'station_name': 'Vaujany',
-        'bus_number': 'Navette V1',
+        'bus_number': 'T71',
         'departure_stop': 'Grenoble Gare SNCF',
         'arrival_stop': 'Vaujany Office de tourisme',
-        'frequency': 'Semaine: 3 départs / jour • Week-end: 4 départs / jour',
+        'frequency': 'Consulter l\'horaire officiel',
         'travel_time': '1h30',
         'route_points': 'Grenoble → Allemond → Vaujany',
         'departure_latitude': 45.191887,
         'departure_longitude': 5.714684,
     },
     {
-        'station_name': 'Auris-en-Oisans',
-        'bus_number': 'Navette A2',
-        'departure_stop': 'Grenoble Gare SNCF',
-        'arrival_stop': 'Auris Station',
-        'frequency': 'Semaine: 2 départs / jour • Week-end: 4 départs / jour',
-        'travel_time': '1h40',
-        'route_points': 'Grenoble → Bourg-d\'Oisans → Auris',
-        'departure_latitude': 45.191887,
-        'departure_longitude': 5.714684,
-    },
-    {
-        'station_name': 'Le Sappey-en-Chartreuse',
-        'bus_number': 'Proximo 62',
-        'departure_stop': 'Grenoble Victor Hugo',
-        'arrival_stop': 'Le Sappey-en-Chartreuse Mairie',
-        'frequency': 'Semaine: 1 bus / h • Week-end: 1 bus / 2h',
-        'travel_time': '40 min',
-        'route_points': 'Victor Hugo → La Tronche → Col de Porte → Le Sappey',
-        'departure_latitude': 45.189722,
-        'departure_longitude': 5.726111,
-    },
-    {
         'station_name': 'Saint-Pierre-de-Chartreuse',
         'bus_number': 'T40',
         'departure_stop': 'Grenoble Gare Routière',
         'arrival_stop': 'Saint-Pierre-de-Chartreuse Plan de Ville',
-        'frequency': 'Semaine: 5 départs / jour • Week-end: 6 départs / jour',
+        'frequency': 'Consulter l\'horaire officiel',
         'travel_time': '1h05',
         'route_points': 'Grenoble → Saint-Laurent-du-Pont → Saint-Pierre-de-Chartreuse',
         'departure_latitude': 45.191210,
@@ -411,20 +287,9 @@ BUS_LINES_SEED = [
         'bus_number': 'T65',
         'departure_stop': 'Grenoble Gare Routière',
         'arrival_stop': 'Lans-en-Vercors Centre',
-        'frequency': 'Semaine: 1 bus / h • Week-end: 1 bus / h',
+        'frequency': 'Consulter l\'horaire officiel',
         'travel_time': '45 min',
         'route_points': 'Grenoble → Seyssins → Lans-en-Vercors',
-        'departure_latitude': 45.191210,
-        'departure_longitude': 5.714260,
-    },
-    {
-        'station_name': 'Gresse-en-Vercors',
-        'bus_number': 'Transisère G1',
-        'departure_stop': 'Grenoble Gare Routière',
-        'arrival_stop': 'Gresse-en-Vercors Station',
-        'frequency': 'Semaine: 2 départs / jour • Week-end: 3 départs / jour',
-        'travel_time': '1h25',
-        'route_points': 'Grenoble → Vif → Monestier-de-Clermont → Gresse-en-Vercors',
         'departure_latitude': 45.191210,
         'departure_longitude': 5.714260,
     },
@@ -475,6 +340,8 @@ def seed_ski_stations():
 
     for station_name, station in station_by_name.items():
         services = get_services_for_station(station_name)
+        service_names = {service['name'] for service in services}
+        ServiceStore.objects.filter(ski_station=station).exclude(name__in=service_names).delete()
         for index, service in enumerate(services):
             lat_offset = (index + 1) * 0.0025
             lng_offset = (index + 1) * 0.0025
@@ -493,10 +360,12 @@ def seed_ski_stations():
                 }
             )
 
+    active_bus_numbers_by_station = {}
     for item in BUS_LINES_SEED:
         station = station_by_name.get(item['station_name'])
         if not station:
             continue
+        active_bus_numbers_by_station.setdefault(station.id, set()).add(item['bus_number'])
         BusLine.objects.update_or_create(
             ski_station=station,
             bus_number=item['bus_number'],
@@ -510,6 +379,10 @@ def seed_ski_stations():
                 'departure_longitude': item['departure_longitude'],
             }
         )
+
+    for station in station_by_name.values():
+        active_bus_numbers = active_bus_numbers_by_station.get(station.id, set())
+        BusLine.objects.filter(ski_station=station).exclude(bus_number__in=active_bus_numbers).delete()
 
     for station_name, circuits in SKI_CIRCUITS_SEED.items():
         station = station_by_name.get(station_name)

@@ -16,6 +16,7 @@ import fr.grenobleski.nativeapp.data.model.MessageItem
 import fr.grenobleski.nativeapp.data.model.NativeTab
 import fr.grenobleski.nativeapp.data.model.PisteItem
 import fr.grenobleski.nativeapp.data.model.ProfileInfo
+import fr.grenobleski.nativeapp.data.model.StationItem
 import fr.grenobleski.nativeapp.data.model.UserSession
 import fr.grenobleski.nativeapp.data.session.SessionStore
 import kotlinx.coroutines.launch
@@ -33,6 +34,7 @@ data class AppUiState(
     val selectedTab: NativeTab = NativeTab.HOME,
     val isTabLoading: Boolean = false,
     val dashboardCounts: DashboardCounts = DashboardCounts(),
+    val stationItems: List<StationItem> = emptyList(),
     val marketplaceItems: List<MarketplaceItem> = emptyList(),
     val instructorItems: List<InstructorItem> = emptyList(),
     val pisteItems: List<PisteItem> = emptyList(),
@@ -352,6 +354,15 @@ class AppViewModel(
                     }
                 }
 
+                NativeTab.STATIONS -> {
+                    val result = repository.fetchStationItems(session.token)
+                    if (result.isSuccess) {
+                        state = state.copy(stationItems = result.getOrNull()!!)
+                    } else {
+                        state = state.copy(errorMessage = result.exceptionOrNull()?.message ?: "Unable to load stations")
+                    }
+                }
+
                 NativeTab.MARKETPLACE -> {
                     val result = repository.fetchMarketplaceItems(session.token)
                     if (result.isSuccess) {
@@ -605,6 +616,7 @@ class AppViewModel(
     private fun hasDataForTab(tab: NativeTab): Boolean {
         return when (tab) {
             NativeTab.HOME -> true
+            NativeTab.STATIONS -> state.stationItems.isNotEmpty()
             NativeTab.MARKETPLACE -> state.marketplaceItems.isNotEmpty()
             NativeTab.INSTRUCTORS -> state.instructorItems.isNotEmpty()
             NativeTab.PISTES -> state.pisteItems.isNotEmpty()
@@ -625,6 +637,11 @@ class AppViewModel(
             val dashboardCounts = repository.fetchDashboardCounts(session.token).getOrElse {
                 firstError = firstError ?: (it.message ?: "Unable to load dashboard")
                 current.dashboardCounts
+            }
+
+            val stationItems = repository.fetchStationItems(session.token).getOrElse {
+                firstError = firstError ?: (it.message ?: "Unable to load stations")
+                current.stationItems
             }
 
             val marketplaceItems = repository.fetchMarketplaceItems(session.token).getOrElse {
@@ -663,6 +680,7 @@ class AppViewModel(
             state = state.copy(
                 isTabLoading = false,
                 dashboardCounts = dashboardCounts,
+                stationItems = stationItems,
                 marketplaceItems = marketplaceItems,
                 instructorItems = instructorItems,
                 pisteItems = pisteItems,

@@ -34,6 +34,7 @@
     <string name="instructors">Moniteurs</string>
     <string name="nav_home">Accueil</string>
     <string name="empty_marketplace">Aucune annonce marketplace pour le moment.</string>
+    <string name="empty_stations">Aucune station disponible pour le moment.</string>
     <string name="empty_instructors">Aucun moniteur disponible pour le moment.</string>
     <string name="empty_pistes">Aucun rapport de piste publie pour le moment.</string>
     <string name="empty_messages">Aucun message pour le moment.</string>
@@ -78,6 +79,7 @@
     <string name="article_description">Description article</string>
     <string name="publish">Publier</string>
     <string name="search_marketplace">Rechercher dans le marketplace</string>
+    <string name="search_stations">Rechercher une station</string>
     <string name="search_instructors">Rechercher un moniteur</string>
     <string name="search_conditions">Rechercher une station ou une meteo</string>
     <string name="marketplace_filters">Filtres marketplace</string>
@@ -91,6 +93,7 @@
     <string name="updated_at">Mis a jour</string>
     <string name="altitude">Altitude</string>
     <string name="distance_from_grenoble">Distance Grenoble</string>
+    <string name="station_capacity">Capacite</string>
     <string name="choose_photo">Choisir une photo</string>
     <string name="choose_photos">Ajouter des photos</string>
     <string name="remove_photo">Retirer la photo</string>
