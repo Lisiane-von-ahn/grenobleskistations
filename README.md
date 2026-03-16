@@ -203,6 +203,10 @@ Configuration Google backend:
 
 - Ajouter `GOOGLE_OAUTH_CLIENT_IDS` (IDs OAuth autorises, separes par virgules)
 - Le endpoint `google-login` verifie l'audience de l'`id_token` contre cette variable.
+- Pour le login web allauth, configurer aussi `GOOGLE_WEB_CLIENT_ID` et `GOOGLE_WEB_CLIENT_SECRET` dans l'environnement de deploiement.
+- URI de redirection Google autorisee: `https://www.grenobleski.fr/accounts/google/login/callback/`
+- Si vous utilisez aussi le domaine nu, ajouter egalement `https://grenobleski.fr/accounts/google/login/callback/`
+
 
 
 

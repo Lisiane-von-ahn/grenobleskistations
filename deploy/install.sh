@@ -39,6 +39,9 @@ fi
 APP_HOSTNAME="${DOMAIN}"
 APP_HOSTNAME_WWW="${WWW_DOMAIN}"
 USE_INTERNAL_TRAEFIK="${USE_INTERNAL_TRAEFIK:-false}"
+GOOGLE_WEB_CLIENT_ID="${GOOGLE_WEB_CLIENT_ID:-}"
+GOOGLE_WEB_CLIENT_SECRET="${GOOGLE_WEB_CLIENT_SECRET:-}"
+GOOGLE_WEB_CLIENT_KEY="${GOOGLE_WEB_CLIENT_KEY:-}"
 
 need_cmd() { command -v "$1" >/dev/null 2>&1; }
 
@@ -144,6 +147,10 @@ ensure_env_file() {
 APP_HOSTNAME=${APP_HOSTNAME}
 APP_HOSTNAME_WWW=${APP_HOSTNAME_WWW}
 LETSENCRYPT_EMAIL=${EMAIL}
+DJANGO_SITE_DOMAIN=${APP_HOSTNAME_WWW}
+DJANGO_SITE_NAME=GrenobleSki
+SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URL=https://${APP_HOSTNAME_WWW}/accounts/google/login/callback/
+MOBILE_APP_AUTH_REDIRECT=grenobleski://auth
 
 DEBUG=False
 ALLOWED_HOSTS=${APP_HOSTNAME},${APP_HOSTNAME_WWW},localhost,127.0.0.1,[::1]
@@ -156,6 +163,9 @@ DATABASE_URL=${database_url_effective}
 BOOTSTRAP_ADMIN_USERNAME=${BOOTSTRAP_ADMIN_USERNAME_ARG}
 BOOTSTRAP_ADMIN_PASSWORD=${BOOTSTRAP_ADMIN_PASSWORD_ARG}
 BOOTSTRAP_ADMIN_EMAIL=${BOOTSTRAP_ADMIN_EMAIL_ARG}
+GOOGLE_WEB_CLIENT_ID=${GOOGLE_WEB_CLIENT_ID}
+GOOGLE_WEB_CLIENT_SECRET=${GOOGLE_WEB_CLIENT_SECRET}
+GOOGLE_WEB_CLIENT_KEY=${GOOGLE_WEB_CLIENT_KEY}
 
 POSTGRES_DB=${DB_NAME_ARG}
 POSTGRES_USER=${DB_USER_ARG}
@@ -206,7 +216,8 @@ run_compose() {
     fi
 
     if [[ "${migrate_step_ok}" == "true" ]] && \
-       docker compose "${compose_files[@]}" run --rm --no-deps --entrypoint "" web python manage.py ensure_bootstrap_admin; then
+       docker compose "${compose_files[@]}" run --rm --no-deps --entrypoint "" web python manage.py ensure_bootstrap_admin && \
+       docker compose "${compose_files[@]}" run --rm --no-deps --entrypoint "" web python manage.py ensure_google_social_app; then
       migrate_ok=true
       break
     fi

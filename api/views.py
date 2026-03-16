@@ -75,6 +75,17 @@ logger = logging.getLogger("skistation.auth")
 APP_AUTH_BACKEND = "skistation_project.backends.EmailOrUsernameModelBackend"
 
 
+def _current_authenticated_user(view):
+    if getattr(view, "swagger_fake_view", False):
+        return None
+
+    request = getattr(view, "request", None)
+    user = getattr(request, "user", None)
+    if user is None or not getattr(user, "is_authenticated", False):
+        return None
+    return user
+
+
 class SkiStationViewSet(viewsets.ModelViewSet):
     queryset = SkiStation.objects.all()
     serializer_class = SkiStationSerializer
@@ -112,7 +123,9 @@ class MessageViewSet(viewsets.ModelViewSet):
     serializer_class = MessageSerializer
 
     def get_queryset(self):
-        user = self.request.user
+        user = _current_authenticated_user(self)
+        if user is None:
+            return Message.objects.none()
         return Message.objects.filter(Q(sender=user) | Q(recipient=user)).order_by('-created_at')
 
     def perform_create(self, serializer):
@@ -234,7 +247,10 @@ class SkiPartnerReportViewSet(viewsets.ModelViewSet):
     serializer_class = SkiPartnerReportSerializer
 
     def get_queryset(self):
-        return SkiPartnerReport.objects.select_related('post', 'reporter').filter(reporter=self.request.user)
+        user = _current_authenticated_user(self)
+        if user is None:
+            return SkiPartnerReport.objects.none()
+        return SkiPartnerReport.objects.select_related('post', 'reporter').filter(reporter=user)
 
     def perform_create(self, serializer):
         serializer.save(reporter=self.request.user)
@@ -257,7 +273,10 @@ class MarketplaceSavedFilterViewSet(viewsets.ModelViewSet):
     serializer_class = MarketplaceSavedFilterSerializer
 
     def get_queryset(self):
-        return MarketplaceSavedFilter.objects.filter(user=self.request.user)
+        user = _current_authenticated_user(self)
+        if user is None:
+            return MarketplaceSavedFilter.objects.none()
+        return MarketplaceSavedFilter.objects.filter(user=user)
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -268,7 +287,9 @@ class MarketplaceDealViewSet(viewsets.ModelViewSet):
     serializer_class = MarketplaceDealSerializer
 
     def get_queryset(self):
-        user = self.request.user
+        user = _current_authenticated_user(self)
+        if user is None:
+            return MarketplaceDeal.objects.none()
         return MarketplaceDeal.objects.select_related('listing', 'buyer', 'seller').filter(
             Q(buyer=user) | Q(seller=user)
         )
@@ -279,7 +300,9 @@ class MarketplaceUserRatingViewSet(viewsets.ModelViewSet):
     serializer_class = MarketplaceUserRatingSerializer
 
     def get_queryset(self):
-        user = self.request.user
+        user = _current_authenticated_user(self)
+        if user is None:
+            return MarketplaceUserRating.objects.none()
         return MarketplaceUserRating.objects.select_related('listing', 'rater', 'rated_user').filter(
             Q(rater=user) | Q(rated_user=user)
         )
@@ -293,7 +316,10 @@ class UserFriendViewSet(viewsets.ModelViewSet):
     serializer_class = UserFriendSerializer
 
     def get_queryset(self):
-        return UserFriend.objects.select_related('user', 'friend').filter(user=self.request.user)
+        user = _current_authenticated_user(self)
+        if user is None:
+            return UserFriend.objects.none()
+        return UserFriend.objects.select_related('user', 'friend').filter(user=user)
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)

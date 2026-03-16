@@ -232,7 +232,10 @@ else:
 
 
 SOCIALACCOUNT_LOGIN_REDIRECT_URL = '/'
-SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URL = "http://127.0.0.1:8000/accounts/google/login/callback/"
+SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URL = os.getenv(
+    'SOCIAL_AUTH_GOOGLE_OAUTH2_REDIRECT_URL',
+    f"https://{(os.getenv('DJANGO_SITE_DOMAIN', 'www.grenobleski.fr') or 'www.grenobleski.fr').strip()}/accounts/google/login/callback/",
+)
 
 # settings.py
 LOGOUT_REDIRECT_URL = '/'

@@ -39,6 +39,10 @@ jobs:
               docker compose -f docker-compose.yml down --remove-orphans || true
             fi
 
+            export GOOGLE_WEB_CLIENT_ID="${{ secrets.GOOGLE_WEB_CLIENT_ID }}"
+            export GOOGLE_WEB_CLIENT_SECRET="${{ secrets.GOOGLE_WEB_CLIENT_SECRET }}"
+            export GOOGLE_WEB_CLIENT_KEY="${{ secrets.GOOGLE_WEB_CLIENT_KEY }}"
+
             chmod +x deploy/install.sh
             export USE_INTERNAL_TRAEFIK=false
             ./deploy/install.sh \
