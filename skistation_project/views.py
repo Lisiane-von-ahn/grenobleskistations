@@ -52,6 +52,7 @@ from allauth.account.adapter import DefaultAccountAdapter
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 import base64
+from html import escape
 import json
 import os
 from datetime import timedelta, date
@@ -464,9 +465,44 @@ def mobile_auth_complete(request):
             'name': display_name,
         }
     )
-    response = HttpResponse(status=302)
-    response['Location'] = f"{app_redirect_base}{separator}{payload}"
-    return response
+    deep_link_url = f"{app_redirect_base}{separator}{payload}"
+
+    if app_redirect_base.startswith(('http://', 'https://')):
+        response = HttpResponse(status=302)
+        response['Location'] = deep_link_url
+        return response
+
+    escaped_url = escape(deep_link_url, quote=True)
+    return HttpResponse(
+        f"""<!doctype html>
+<html lang=\"en\">
+    <head>
+        <meta charset=\"utf-8\">
+        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">
+        <meta http-equiv=\"refresh\" content=\"0;url={escaped_url}\">
+        <title>Open GrenobleSki</title>
+        <style>
+            body {{ font-family: Arial, sans-serif; background: #f5f7fb; color: #172033; margin: 0; }}
+            main {{ max-width: 32rem; margin: 10vh auto; background: #fff; padding: 2rem; border-radius: 1rem; box-shadow: 0 20px 40px rgba(23, 32, 51, 0.12); }}
+            a {{ display: inline-block; margin-top: 1rem; padding: 0.9rem 1.2rem; background: #0f766e; color: #fff; text-decoration: none; border-radius: 0.75rem; font-weight: 600; }}
+            p {{ line-height: 1.5; }}
+        </style>
+    </head>
+    <body>
+        <main>
+            <h1>Open GrenobleSki</h1>
+            <p>If the app does not open automatically, tap the button below.</p>
+            <a href=\"{escaped_url}\">Open the app</a>
+        </main>
+        <script>
+            const target = {deep_link_url!r};
+            window.location.replace(target);
+            setTimeout(() => window.location.href = target, 700);
+        </script>
+    </body>
+</html>""",
+        content_type='text/html; charset=utf-8',
+    )
 
 
 @require_GET

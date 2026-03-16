@@ -200,8 +200,9 @@ class ApiMobileBridgeRoutesTests(TestCase):
 		with patch.dict(os.environ, {'MOBILE_APP_AUTH_REDIRECT': 'grenobleski://auth'}, clear=False):
 			response = self.client.get('/mobile/auth/complete/')
 
-		self.assertEqual(response.status_code, 302)
-		self.assertIn('Location', response)
-		self.assertTrue(response['Location'].startswith('grenobleski://auth?'))
-		self.assertIn('email=mobile%40example.com', response['Location'])
-		self.assertIn('name=Mobile+User', response['Location'])
+		self.assertEqual(response.status_code, 200)
+		content = response.content.decode('utf-8')
+		self.assertIn('grenobleski://auth?', content)
+		self.assertIn('email=mobile%40example.com', content)
+		self.assertIn('name=Mobile+User', content)
+		self.assertIn('Open the app', content)
