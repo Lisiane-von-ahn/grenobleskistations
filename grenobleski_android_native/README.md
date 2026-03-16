@@ -24,6 +24,21 @@ Configured in:
 
 - `app/build.gradle.kts` -> `BuildConfig.API_BASE_URL`
 
+## Ads configuration (RGPD + AppLovin)
+
+Main place to set ad IDs:
+
+- `grenobleski_android_native/gradle.properties`
+
+Keys:
+
+- `ENABLE_MOBILE_ADS=true`
+- `APPLOVIN_SDK_KEY=YOUR_APPLOVIN_SDK_KEY`
+- `APPLOVIN_BANNER_AD_UNIT_ID=YOUR_APPLOVIN_BANNER_AD_UNIT_ID`
+
+The app requests user ad consent before AppLovin initialization.
+The "Ad preferences" entry in the in-app menu opens consent/privacy options when required.
+
 ## Open in Android Studio
 
 1. Open Android Studio.

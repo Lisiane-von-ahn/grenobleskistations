@@ -20,6 +20,7 @@ schema_view = get_schema_view(
 urlpatterns = [
    path('i18n/', include('django.conf.urls.i18n')),
    path('set-language/', views.set_language_view, name='set_language_safe'),
+   path('ads.txt', views.ads_txt, name='ads_txt'),
     path('admin/', admin.site.urls, name='admin2'),
     path('api/', include('api.urls')),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),

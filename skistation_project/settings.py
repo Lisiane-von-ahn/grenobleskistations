@@ -21,6 +21,13 @@ WHITENOISE_SKIP_MISSING_FILES = True# Build paths inside the project like this: 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+def env_bool(name, default=False):
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in ('1', 'true', 'yes', 'on')
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
@@ -28,7 +35,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-xhlkfv0em#28h(+*zfl^p2*a$pbzp0ff_fp^sbj6*=g$1hw-^q')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'True').lower() in ('1', 'true', 'yes', 'on')
+DEBUG = env_bool('DEBUG', True)
 
 ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', '*').split(',') if h.strip()]
 
@@ -48,6 +55,17 @@ CSRF_COOKIE_SECURE = not DEBUG
 SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 
 WEATHER_API_KEY = os.getenv('WEATHER_API_KEY', 'qssdsdsd')
+
+# Ads configuration (web)
+ENABLE_WEB_ADS = env_bool('ENABLE_WEB_ADS', False)
+WEB_ADS_PROVIDER = os.getenv('WEB_ADS_PROVIDER', 'none').strip().lower()
+ADSENSE_CLIENT_ID = os.getenv('ADSENSE_CLIENT_ID', '').strip()
+ADSENSE_SLOT_FOOTER = os.getenv('ADSENSE_SLOT_FOOTER', '').strip()
+PROPELLERADS_SCRIPT_SRC = os.getenv('PROPELLERADS_SCRIPT_SRC', '').strip()
+PROPELLERADS_CONTAINER_ID = os.getenv('PROPELLERADS_CONTAINER_ID', '').strip()
+WEB_ADS_SCRIPT_SRC = os.getenv('WEB_ADS_SCRIPT_SRC', '').strip() or PROPELLERADS_SCRIPT_SRC
+WEB_ADS_CONTAINER_ID = os.getenv('WEB_ADS_CONTAINER_ID', '').strip() or PROPELLERADS_CONTAINER_ID
+ADS_TXT_CONTENT = os.getenv('ADS_TXT_CONTENT', '').replace('\\n', '\n').strip()
 
 # Application definition
 
@@ -278,7 +296,7 @@ EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
-EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('1', 'true', 'yes', 'on')
+EMAIL_USE_TLS = env_bool('EMAIL_USE_TLS', True)
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER or 'no-reply@grenobleski.fr')
 
 LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()

@@ -42,6 +42,15 @@ jobs:
             export GOOGLE_WEB_CLIENT_ID="${{ secrets.GOOGLE_WEB_CLIENT_ID }}"
             export GOOGLE_WEB_CLIENT_SECRET="${{ secrets.GOOGLE_WEB_CLIENT_SECRET }}"
             export GOOGLE_WEB_CLIENT_KEY="${{ secrets.GOOGLE_WEB_CLIENT_KEY }}"
+            export ENABLE_WEB_ADS="${{ secrets.ENABLE_WEB_ADS }}"
+            export WEB_ADS_PROVIDER="${{ secrets.WEB_ADS_PROVIDER }}"
+            export ADSENSE_CLIENT_ID="${{ secrets.ADSENSE_CLIENT_ID }}"
+            export ADSENSE_SLOT_FOOTER="${{ secrets.ADSENSE_SLOT_FOOTER }}"
+            export PROPELLERADS_SCRIPT_SRC="${{ secrets.PROPELLERADS_SCRIPT_SRC }}"
+            export PROPELLERADS_CONTAINER_ID="${{ secrets.PROPELLERADS_CONTAINER_ID }}"
+            export WEB_ADS_SCRIPT_SRC="${{ secrets.WEB_ADS_SCRIPT_SRC }}"
+            export WEB_ADS_CONTAINER_ID="${{ secrets.WEB_ADS_CONTAINER_ID }}"
+            export ADS_TXT_CONTENT="${{ secrets.ADS_TXT_CONTENT }}"
 
             chmod +x deploy/install.sh
             export USE_INTERNAL_TRAEFIK=false

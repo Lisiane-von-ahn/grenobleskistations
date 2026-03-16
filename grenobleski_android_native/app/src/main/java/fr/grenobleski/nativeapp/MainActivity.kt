@@ -11,19 +11,30 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.material3.Surface
 import androidx.core.os.LocaleListCompat
+import com.applovin.sdk.AppLovinSdk
+import fr.grenobleski.nativeapp.ads.AdsConsentManager
 import fr.grenobleski.nativeapp.data.session.LanguageStore
 import fr.grenobleski.nativeapp.ui.GrenobleSkiApp
 import fr.grenobleski.nativeapp.ui.theme.GrenobleSkiNativeTheme
 
 class MainActivity : ComponentActivity() {
     private var pendingAuthUri by mutableStateOf<Uri?>(null)
+    private var mobileAdsEnabled by mutableStateOf(false)
+    private var showAdsConsentPrompt by mutableStateOf(false)
     private lateinit var languageStore: LanguageStore
+    private lateinit var adsConsentManager: AdsConsentManager
+    private var appLovinInitialized = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         languageStore = LanguageStore(this)
+        adsConsentManager = AdsConsentManager(this)
         applySavedLanguage(languageStore.loadLanguage())
         pendingAuthUri = extractAuthUri(intent)
+
+        adsConsentManager.syncPrivacyStateWithSdk()
+        showAdsConsentPrompt = BuildConfig.ENABLE_MOBILE_ADS && adsConsentManager.shouldPromptConsent()
+        refreshMobileAdsState()
 
         setContent {
             GrenobleSkiNativeTheme {
@@ -31,6 +42,21 @@ class MainActivity : ComponentActivity() {
                     GrenobleSkiApp(
                         pendingAuthUri = pendingAuthUri,
                         onAuthUriConsumed = { pendingAuthUri = null },
+                        adsEnabled = mobileAdsEnabled,
+                        showAdsConsentPrompt = showAdsConsentPrompt,
+                        onAcceptAdsConsent = {
+                            adsConsentManager.setConsentAccepted()
+                            showAdsConsentPrompt = false
+                            refreshMobileAdsState()
+                        },
+                        onRejectAdsConsent = {
+                            adsConsentManager.setConsentRejected()
+                            showAdsConsentPrompt = false
+                            refreshMobileAdsState()
+                        },
+                        onOpenAdsPreferences = {
+                            showAdsConsentPrompt = true
+                        },
                     )
                 }
             }
@@ -66,5 +92,21 @@ class MainActivity : ComponentActivity() {
             else -> LocaleListCompat.getEmptyLocaleList()
         }
         AppCompatDelegate.setApplicationLocales(locales)
+    }
+
+    private fun refreshMobileAdsState() {
+        val canEnableAds =
+            BuildConfig.ENABLE_MOBILE_ADS &&
+            adsConsentManager.canRequestAds() &&
+            BuildConfig.APPLOVIN_SDK_KEY.isNotBlank() &&
+            BuildConfig.APPLOVIN_BANNER_AD_UNIT_ID.isNotBlank()
+
+        mobileAdsEnabled = canEnableAds
+        if (canEnableAds && !appLovinInitialized) {
+            val sdk = AppLovinSdk.getInstance(this)
+            sdk.mediationProvider = "max"
+            sdk.initializeSdk {}
+            appLovinInitialized = true
+        }
     }
 }

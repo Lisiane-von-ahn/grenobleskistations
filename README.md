@@ -63,6 +63,14 @@ Le projet inclut un déploiement prêt pour serveur Linux avec:
 - `BOOTSTRAP_ADMIN_USERNAME` (optionnel, défaut: `admin`)
 - `BOOTSTRAP_ADMIN_PASSWORD` (optionnel, défaut: `admin`)
 - `BOOTSTRAP_ADMIN_EMAIL` (optionnel, défaut: `admin@grenobleski.local`)
+- `ENABLE_WEB_ADS` (`true`/`false`)
+- `WEB_ADS_PROVIDER` (`external_script` ou `adsense`)
+- `ADSENSE_CLIENT_ID` (ex: `ca-pub-xxxxxxxx`)
+- `ADSENSE_SLOT_FOOTER` (slot banner affiché sur le web)
+- `WEB_ADS_SCRIPT_SRC` (URL script du reseau pub web)
+- `WEB_ADS_CONTAINER_ID` (id du conteneur HTML cible)
+- `PROPELLERADS_SCRIPT_SRC` / `PROPELLERADS_CONTAINER_ID` (compatibilite ancienne config)
+- `ADS_TXT_CONTENT` (contenu ads.txt, `\\n` pour retour ligne)
 
 ### Set automatique des secrets GitHub
 
@@ -87,6 +95,30 @@ chmod +x deploy/set-github-secrets.sh
 chmod +x deploy/install.sh
 ./deploy/install.sh HOST USER PASSWORD WEATHER_API_KEY DB_NAME DB_PORT DATABASE_URL BOOTSTRAP_ADMIN_USERNAME BOOTSTRAP_ADMIN_PASSWORD BOOTSTRAP_ADMIN_EMAIL
 ```
+
+### Checklist production Ads + RGPD
+
+Web (Django + reseau script simple):
+
+- `ENABLE_WEB_ADS=true`
+- `WEB_ADS_PROVIDER=external_script`
+- `WEB_ADS_SCRIPT_SRC=https://.../invoke.js`
+- `WEB_ADS_CONTAINER_ID=container-xxxxxxxxxxxxxxxx` (optionnel selon le reseau)
+- `ADS_TXT_CONTENT=` (si votre partenaire ads.txt fournit une ligne specifique)
+
+Mobile (Android + AppLovin):
+
+- Ouvrir `grenobleski_android_native/gradle.properties`
+- Renseigner:
+  - `ENABLE_MOBILE_ADS=true`
+  - `APPLOVIN_SDK_KEY=YOUR_APPLOVIN_SDK_KEY`
+  - `APPLOVIN_BANNER_AD_UNIT_ID=YOUR_APPLOVIN_BANNER_AD_UNIT_ID`
+
+RGPD attendu:
+
+- Web: la pub est chargee uniquement si l'utilisateur accepte les cookies optionnels.
+- Mobile: l'utilisateur choisit accepter/refuser la pub personnalisee au premier lancement.
+- Mobile: l'utilisateur peut rouvrir les preferences via "Ad preferences" dans le menu.
 
 Un superuser bootstrap est créé une seule fois si absent. Il est marqué pour forcer le changement de mot de passe au premier login.
 

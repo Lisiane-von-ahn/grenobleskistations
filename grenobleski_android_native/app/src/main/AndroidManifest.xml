@@ -9,6 +9,10 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.GrenobleSkiNative">
+        <meta-data
+            android:name="applovin.sdk.key"
+            android:value="${appLovinSdkKey}" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true">

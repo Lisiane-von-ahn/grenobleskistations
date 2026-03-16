@@ -72,6 +72,11 @@
     <string name="send_message">Envoyer message</string>
     <string name="terms">Conditions</string>
     <string name="privacy">Confidentialite</string>
+    <string name="ad_preferences">Preferences pub</string>
+    <string name="ads_consent_title">Consentement pub</string>
+    <string name="ads_consent_body">Nous utilisons la publicite pour garder GrenobleSki gratuit. Acceptez-vous les publicites personnalisees ? Vous pouvez modifier ce choix a tout moment dans Preferences pub.</string>
+    <string name="ads_consent_accept">Accepter</string>
+    <string name="ads_consent_reject">Refuser</string>
     <string name="nav_market_short">Market</string>
     <string name="nav_chat_short">Chat</string>
     <string name="nav_more">Plus</string>

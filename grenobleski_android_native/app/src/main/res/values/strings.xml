@@ -72,6 +72,11 @@
     <string name="send_message">Send message</string>
     <string name="terms">Terms</string>
     <string name="privacy">Privacy</string>
+    <string name="ad_preferences">Ad preferences</string>
+    <string name="ads_consent_title">Ads consent</string>
+    <string name="ads_consent_body">We use ads to keep GrenobleSki free. Do you accept personalized ads? You can change this anytime in Ad preferences.</string>
+    <string name="ads_consent_accept">Accept</string>
+    <string name="ads_consent_reject">Reject</string>
     <string name="nav_market_short">Market</string>
     <string name="nav_chat_short">Chat</string>
     <string name="nav_more">More</string>

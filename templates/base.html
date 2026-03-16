@@ -846,6 +846,20 @@
         #cookie-banner .btn {
             margin-left: 10px;
         }
+
+        .ad-slot-shell {
+            margin: 16px auto 8px;
+            max-width: 760px;
+            text-align: center;
+        }
+
+        .ad-slot-label {
+            font-size: 12px;
+            color: #64748b;
+            margin-bottom: 6px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
     </style>        
 </head>
 
@@ -941,6 +955,51 @@
             {% block content %} 
             {% endblock %}
         </div>
+
+        {% if ENABLE_WEB_ADS and WEB_ADS_PROVIDER == 'external_script' and WEB_ADS_SCRIPT_SRC %}
+        <div
+            id="web-ad-slot"
+            class="ad-slot-shell container"
+            data-ad-provider="external_script"
+            data-external-script-src="{{ WEB_ADS_SCRIPT_SRC }}"
+            hidden
+        >
+            <p class="ad-slot-label">{% trans "Publicite" %}</p>
+            {% if WEB_ADS_CONTAINER_ID %}
+            <div id="{{ WEB_ADS_CONTAINER_ID }}"></div>
+            {% endif %}
+        </div>
+        {% elif ENABLE_WEB_ADS and WEB_ADS_PROVIDER == 'propellerads' and PROPELLERADS_SCRIPT_SRC and PROPELLERADS_CONTAINER_ID %}
+        <div
+            id="web-ad-slot"
+            class="ad-slot-shell container"
+            data-ad-provider="external_script"
+            data-external-script-src="{{ PROPELLERADS_SCRIPT_SRC }}"
+            hidden
+        >
+            <p class="ad-slot-label">{% trans "Publicite" %}</p>
+            <div id="{{ PROPELLERADS_CONTAINER_ID }}"></div>
+        </div>
+        {% elif ENABLE_WEB_ADS and WEB_ADS_PROVIDER == 'adsense' and ADSENSE_CLIENT_ID and ADSENSE_SLOT_FOOTER %}
+        <div
+            id="web-ad-slot"
+            class="ad-slot-shell container"
+            data-ad-provider="adsense"
+            data-ad-client="{{ ADSENSE_CLIENT_ID }}"
+            data-ad-slot="{{ ADSENSE_SLOT_FOOTER }}"
+            hidden
+        >
+            <p class="ad-slot-label">{% trans "Publicite" %}</p>
+            <ins
+                class="adsbygoogle"
+                style="display:block"
+                data-ad-client="{{ ADSENSE_CLIENT_ID }}"
+                data-ad-slot="{{ ADSENSE_SLOT_FOOTER }}"
+                data-ad-format="auto"
+                data-full-width-responsive="true"
+            ></ins>
+        </div>
+        {% endif %}
     
         <footer class="site-footer">
             <div class="container">
@@ -1029,6 +1088,7 @@
             const rejectBtn = document.getElementById('reject-cookies');
             const manageBtn = document.getElementById('manage-cookies');
             const openSettingsLink = document.getElementById('open-cookie-settings');
+            const adSlot = document.getElementById('web-ad-slot');
             if (!cookieBanner || !acceptBtn || !rejectBtn || !manageBtn) return;
 
             const cookieConsent = getCookie('cookie_consent');
@@ -1037,14 +1097,18 @@
                 cookieBanner.style.display = 'block';
             }
 
+            applyAdsPreference(cookieConsent);
+
             acceptBtn.addEventListener('click', function() {
                 setCookie('cookie_consent', 'accepted', 365);
                 cookieBanner.style.display = 'none';
+                applyAdsPreference('accepted');
             });
 
             rejectBtn.addEventListener('click', function() {
                 setCookie('cookie_consent', 'rejected', 365);
                 cookieBanner.style.display = 'none';
+                applyAdsPreference('rejected');
             });
 
             manageBtn.addEventListener('click', function() {
@@ -1062,7 +1126,8 @@
                 const date = new Date();
                 date.setTime(date.getTime() + (days*24*60*60*1000));
                 const expires = "expires=" + date.toUTCString();
-                document.cookie = name + "=" + value + ";" + expires + ";path=/";
+                const secure = window.location.protocol === 'https:' ? ';Secure' : '';
+                document.cookie = name + "=" + value + ";" + expires + ";path=/;SameSite=Lax" + secure;
             }
 
             function getCookie(name) {
@@ -1075,6 +1140,73 @@
                     }
                 }
                 return '';
+            }
+
+            function applyAdsPreference(consentValue) {
+                if (!adSlot) return;
+                if (consentValue !== 'accepted') {
+                    adSlot.hidden = true;
+                    return;
+                }
+
+                const provider = (adSlot.dataset.adProvider || '').toLowerCase();
+                if (provider === 'adsense') {
+                    const adClient = adSlot.dataset.adClient || '';
+                    if (!adClient) return;
+
+                    loadExternalScript(
+                        'adsense-loader',
+                        'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + encodeURIComponent(adClient),
+                        function() {
+                            adSlot.hidden = false;
+                            const adElement = adSlot.querySelector('ins.adsbygoogle');
+                            if (!adElement || adElement.dataset.adsInitialized === '1') {
+                                return;
+                            }
+
+                            try {
+                                (window.adsbygoogle = window.adsbygoogle || []).push({});
+                                adElement.dataset.adsInitialized = '1';
+                            } catch (err) {
+                                console.warn('AdSense init failed', err);
+                            }
+                        }
+                    );
+                    return;
+                }
+
+                if (provider === 'external_script') {
+                    const scriptSrc = adSlot.dataset.externalScriptSrc || '';
+                    if (!scriptSrc) return;
+                    loadExternalScript('web-external-loader', scriptSrc, function() {
+                        adSlot.hidden = false;
+                    });
+                }
+            }
+
+            function loadExternalScript(loaderKey, scriptSrc, onReady) {
+                const selector = 'script[data-loader-key="' + loaderKey + '"]';
+                const existingScript = document.querySelector(selector);
+                if (existingScript) {
+                    const readyKey = '__loaderReady_' + loaderKey;
+                    if (window[readyKey]) {
+                        onReady();
+                    } else {
+                        existingScript.addEventListener('load', onReady, { once: true });
+                    }
+                    return;
+                }
+
+                const script = document.createElement('script');
+                script.async = true;
+                script.crossOrigin = 'anonymous';
+                script.src = scriptSrc;
+                script.setAttribute('data-loader-key', loaderKey);
+                script.addEventListener('load', function() {
+                    window['__loaderReady_' + loaderKey] = true;
+                    onReady();
+                }, { once: true });
+                document.head.appendChild(script);
             }
         });
     </script>

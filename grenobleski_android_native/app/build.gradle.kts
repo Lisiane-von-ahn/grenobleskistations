@@ -3,6 +3,20 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+val appLovinSdkKey = (project.findProperty("APPLOVIN_SDK_KEY") as String?)
+    ?.trim()
+    ?.takeIf { it.isNotEmpty() }
+    ?: ""
+
+val appLovinBannerUnitId = (project.findProperty("APPLOVIN_BANNER_AD_UNIT_ID") as String?)
+    ?.trim()
+    ?.takeIf { it.isNotEmpty() }
+    ?: ""
+
+val enableMobileAds = ((project.findProperty("ENABLE_MOBILE_ADS") as String?)
+    ?.trim()
+    ?.lowercase()) in listOf("1", "true", "yes", "on")
+
 android {
     namespace = "fr.grenobleski.nativeapp"
     compileSdk = 34
@@ -16,6 +30,10 @@ android {
         versionName = System.getenv("VERSION_NAME") ?: "1.0.0"
 
         buildConfigField("String", "API_BASE_URL", "\"https://www.grenobleski.fr\"")
+        buildConfigField("boolean", "ENABLE_MOBILE_ADS", enableMobileAds.toString())
+        buildConfigField("String", "APPLOVIN_SDK_KEY", "\"$appLovinSdkKey\"")
+        buildConfigField("String", "APPLOVIN_BANNER_AD_UNIT_ID", "\"$appLovinBannerUnitId\"")
+        manifestPlaceholders["appLovinSdkKey"] = appLovinSdkKey
     }
 
     signingConfigs {
@@ -87,6 +105,7 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     implementation("androidx.browser:browser:1.8.0")
+    implementation("com.applovin:applovin-sdk:13.0.1")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

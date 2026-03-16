@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.util.Base64
+import android.widget.FrameLayout
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.browser.customtabs.CustomTabsIntent
@@ -92,7 +93,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.applovin.mediation.MaxAdFormat
+import com.applovin.mediation.ads.MaxAdView
 import fr.grenobleski.nativeapp.AppUiState
 import fr.grenobleski.nativeapp.AppViewModel
 import fr.grenobleski.nativeapp.AppViewModelFactory
@@ -188,6 +192,11 @@ private data class ChatThreadSummary(
 fun GrenobleSkiApp(
     pendingAuthUri: Uri? = null,
     onAuthUriConsumed: () -> Unit = {},
+    adsEnabled: Boolean = false,
+    showAdsConsentPrompt: Boolean = false,
+    onAcceptAdsConsent: (() -> Unit)? = null,
+    onRejectAdsConsent: (() -> Unit)? = null,
+    onOpenAdsPreferences: (() -> Unit)? = null,
 ) {
     val localContext = androidx.compose.ui.platform.LocalContext.current
     val appContext = localContext.applicationContext
@@ -283,6 +292,9 @@ fun GrenobleSkiApp(
         NativeShell(
             state = state,
             siteBase = siteBase,
+            showMobileAds = adsEnabled,
+            adBannerUnitId = BuildConfig.APPLOVIN_BANNER_AD_UNIT_ID,
+            onOpenAdsPreferences = onOpenAdsPreferences,
             onSelectTab = viewModel::selectTab,
             onRefresh = viewModel::refreshCurrentTab,
             onLogout = viewModel::logout,
@@ -308,6 +320,24 @@ fun GrenobleSkiApp(
             onRemovePublishImageAt = viewModel::removePublishImageAt,
             onClearPublishImages = viewModel::clearPublishImages,
             onPublishArticle = viewModel::publishArticle,
+        )
+    }
+
+    if (showAdsConsentPrompt && onAcceptAdsConsent != null && onRejectAdsConsent != null) {
+        AlertDialog(
+            onDismissRequest = onRejectAdsConsent,
+            title = { Text(stringResource(id = R.string.ads_consent_title)) },
+            text = { Text(stringResource(id = R.string.ads_consent_body)) },
+            confirmButton = {
+                TextButton(onClick = onAcceptAdsConsent) {
+                    Text(stringResource(id = R.string.ads_consent_accept))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onRejectAdsConsent) {
+                    Text(stringResource(id = R.string.ads_consent_reject))
+                }
+            },
         )
     }
 }
@@ -516,6 +546,9 @@ private fun LoginScreen(
 private fun NativeShell(
     state: AppUiState,
     siteBase: String,
+    showMobileAds: Boolean,
+    adBannerUnitId: String,
+    onOpenAdsPreferences: (() -> Unit)?,
     onSelectTab: (NativeTab) -> Unit,
     onRefresh: () -> Unit,
     onLogout: () -> Unit,
@@ -626,36 +659,42 @@ private fun NativeShell(
             }
         },
         bottomBar = {
-            NavigationBar {
-                bottomNavItems.forEach { item ->
-                    val selected = when (item.action) {
-                        BottomNavAction.HOME -> state.selectedTab == NativeTab.HOME
-                        BottomNavAction.MARKETPLACE -> state.selectedTab == NativeTab.MARKETPLACE
-                        BottomNavAction.MESSAGES -> state.selectedTab == NativeTab.MESSAGES
-                        BottomNavAction.MORE -> false
-                    }
-                    NavigationBarItem(
-                        selected = selected,
-                        alwaysShowLabel = false,
-                        onClick = {
-                            when (item.action) {
-                                BottomNavAction.HOME -> onSelectTab(NativeTab.HOME)
-                                BottomNavAction.MARKETPLACE -> onSelectTab(NativeTab.MARKETPLACE)
-                                BottomNavAction.MESSAGES -> onSelectTab(NativeTab.MESSAGES)
-                                BottomNavAction.MORE -> moreMenuOpen = true
-                            }
-                        },
-                        icon = {
-                            if (item.action == BottomNavAction.MESSAGES && unreadMessages > 0) {
-                                BadgedBox(badge = { Badge { Text(unreadMessages.toString()) } }) {
+            Column {
+                if (showMobileAds && adBannerUnitId.isNotBlank()) {
+                    MobileBannerAd(adUnitId = adBannerUnitId)
+                }
+
+                NavigationBar {
+                    bottomNavItems.forEach { item ->
+                        val selected = when (item.action) {
+                            BottomNavAction.HOME -> state.selectedTab == NativeTab.HOME
+                            BottomNavAction.MARKETPLACE -> state.selectedTab == NativeTab.MARKETPLACE
+                            BottomNavAction.MESSAGES -> state.selectedTab == NativeTab.MESSAGES
+                            BottomNavAction.MORE -> false
+                        }
+                        NavigationBarItem(
+                            selected = selected,
+                            alwaysShowLabel = false,
+                            onClick = {
+                                when (item.action) {
+                                    BottomNavAction.HOME -> onSelectTab(NativeTab.HOME)
+                                    BottomNavAction.MARKETPLACE -> onSelectTab(NativeTab.MARKETPLACE)
+                                    BottomNavAction.MESSAGES -> onSelectTab(NativeTab.MESSAGES)
+                                    BottomNavAction.MORE -> moreMenuOpen = true
+                                }
+                            },
+                            icon = {
+                                if (item.action == BottomNavAction.MESSAGES && unreadMessages > 0) {
+                                    BadgedBox(badge = { Badge { Text(unreadMessages.toString()) } }) {
+                                        Icon(imageVector = item.icon, contentDescription = stringResource(id = item.labelRes))
+                                    }
+                                } else {
                                     Icon(imageVector = item.icon, contentDescription = stringResource(id = item.labelRes))
                                 }
-                            } else {
-                                Icon(imageVector = item.icon, contentDescription = stringResource(id = item.labelRes))
-                            }
-                        },
-                        label = { Text(stringResource(id = item.labelRes)) },
-                    )
+                            },
+                            label = { Text(stringResource(id = item.labelRes)) },
+                        )
+                    }
                 }
             }
         },
@@ -785,6 +824,14 @@ private fun NativeShell(
                             openExternalUrl(localContext, "$siteBase/privacy/")
                         }, modifier = Modifier.fillMaxWidth()) {
                             Text(stringResource(id = R.string.privacy))
+                        }
+                        if (onOpenAdsPreferences != null) {
+                            OutlinedButton(onClick = {
+                                moreMenuOpen = false
+                                onOpenAdsPreferences.invoke()
+                            }, modifier = Modifier.fillMaxWidth()) {
+                                Text(stringResource(id = R.string.ad_preferences))
+                            }
                         }
                     }
                 },
@@ -974,6 +1021,29 @@ private fun NativeShell(
             }
         }
     }
+}
+
+@Composable
+private fun MobileBannerAd(adUnitId: String) {
+    AndroidView(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(50.dp),
+        factory = { context ->
+            val activity = context as? Activity
+            if (activity == null) {
+                FrameLayout(context)
+            } else {
+                MaxAdView(adUnitId, MaxAdFormat.BANNER, activity).apply {
+                    layoutParams = FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        FrameLayout.LayoutParams.WRAP_CONTENT,
+                    )
+                    loadAd()
+                }
+            }
+        },
+    )
 }
 
 @Composable

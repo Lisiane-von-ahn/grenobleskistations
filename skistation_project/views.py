@@ -481,6 +481,17 @@ def terms_and_conditions(request):
 def privacy_policy(request):
     return render(request, 'privacy.html')
 
+
+@require_GET
+def ads_txt(request):
+    content = (settings.ADS_TXT_CONTENT or '').strip()
+    if not content:
+        # Keep endpoint present even before publisher data is configured.
+        content = '# ADS_TXT_CONTENT not configured'
+    lines = [line.rstrip() for line in content.splitlines() if line.strip()]
+    body = '\n'.join(lines) + '\n'
+    return HttpResponse(body, content_type='text/plain; charset=utf-8')
+
 def register(request):
     if request.method == 'POST':
         form = UserCreationForm(request.POST, request.FILES)
