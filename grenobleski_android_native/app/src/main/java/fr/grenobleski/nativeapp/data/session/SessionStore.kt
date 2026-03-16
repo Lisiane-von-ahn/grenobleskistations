@@ -11,6 +11,7 @@ class SessionStore(context: Context) {
             .putString(KEY_TOKEN, session.token)
             .putString(KEY_EMAIL, session.email)
             .putString(KEY_DISPLAY_NAME, session.displayName)
+            .putInt(KEY_USER_ID, session.userId)
             .apply()
     }
 
@@ -18,7 +19,8 @@ class SessionStore(context: Context) {
         val token = prefs.getString(KEY_TOKEN, null) ?: return null
         val email = prefs.getString(KEY_EMAIL, null).orEmpty()
         val displayName = prefs.getString(KEY_DISPLAY_NAME, null).orEmpty()
-        return UserSession(token = token, email = email, displayName = displayName)
+        val userId = prefs.getInt(KEY_USER_ID, 0)
+        return UserSession(token = token, email = email, displayName = displayName, userId = userId)
     }
 
     fun clear() {
@@ -29,5 +31,6 @@ class SessionStore(context: Context) {
         const val KEY_TOKEN = "token"
         const val KEY_EMAIL = "email"
         const val KEY_DISPLAY_NAME = "display_name"
+        const val KEY_USER_ID = "user_id"
     }
 }

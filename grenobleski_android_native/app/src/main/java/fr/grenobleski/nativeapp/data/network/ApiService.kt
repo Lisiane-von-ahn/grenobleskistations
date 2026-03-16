@@ -29,4 +29,11 @@ interface GrenobleSkiApiService {
         @Url url: String,
         @Header("Authorization") authHeader: String,
     ): Response<JsonElement>
+
+    @POST
+    suspend fun postResource(
+        @Url url: String,
+        @Header("Authorization") authHeader: String,
+        @Body payload: Map<String, @JvmSuppressWildcards Any>,
+    ): Response<JsonElement>
 }

@@ -35,6 +35,14 @@ data class AppUiState(
     val instructorItems: List<InstructorItem> = emptyList(),
     val pisteItems: List<PisteItem> = emptyList(),
     val messageItems: List<MessageItem> = emptyList(),
+    val messageRecipientId: Int? = null,
+    val messageDraftBody: String = "",
+    val isSendingMessage: Boolean = false,
+    val publishTitle: String = "",
+    val publishDescription: String = "",
+    val publishCity: String = "",
+    val publishPrice: String = "",
+    val isPublishingArticle: Boolean = false,
     val profileInfo: ProfileInfo? = null,
 )
 
@@ -237,6 +245,126 @@ class AppViewModel(
     fun logout() {
         sessionStore.clear()
         state = AppUiState()
+    }
+
+    fun updateMessageRecipientId(raw: String) {
+        val parsed = raw.trim().toIntOrNull()
+        state = state.copy(messageRecipientId = parsed)
+    }
+
+    fun updateMessageDraftBody(value: String) {
+        state = state.copy(messageDraftBody = value)
+    }
+
+    fun prepareMessageToSeller(recipientId: Int, listingTitle: String) {
+        if (recipientId <= 0) {
+            state = state.copy(errorMessage = "Seller contact is unavailable for this listing.")
+            return
+        }
+
+        val prefill = "Bonjour, votre annonce '$listingTitle' est-elle toujours disponible ?"
+        state = state.copy(
+            selectedTab = NativeTab.MESSAGES,
+            messageRecipientId = recipientId,
+            messageDraftBody = prefill,
+            errorMessage = null,
+        )
+        refreshCurrentTab()
+    }
+
+    fun sendMessageDraft() {
+        val session = state.session ?: return
+        val recipientId = state.messageRecipientId
+        val body = state.messageDraftBody.trim()
+
+        if (recipientId == null || recipientId <= 0) {
+            state = state.copy(errorMessage = "Recipient is required.")
+            return
+        }
+        if (body.isBlank()) {
+            state = state.copy(errorMessage = "Message cannot be empty.")
+            return
+        }
+
+        viewModelScope.launch {
+            state = state.copy(isSendingMessage = true, errorMessage = null)
+
+            val result = repository.sendMessage(
+                token = session.token,
+                recipientId = recipientId,
+                subject = "Message chat",
+                body = body,
+            )
+
+            if (result.isSuccess) {
+                state = state.copy(isSendingMessage = false, messageDraftBody = "")
+                refreshCurrentTab()
+            } else {
+                val msg = result.exceptionOrNull()?.message ?: "Unable to send message"
+                state = state.copy(isSendingMessage = false, errorMessage = msg)
+            }
+        }
+    }
+
+    fun updatePublishTitle(value: String) {
+        state = state.copy(publishTitle = value)
+    }
+
+    fun updatePublishDescription(value: String) {
+        state = state.copy(publishDescription = value)
+    }
+
+    fun updatePublishCity(value: String) {
+        state = state.copy(publishCity = value)
+    }
+
+    fun updatePublishPrice(value: String) {
+        state = state.copy(publishPrice = value)
+    }
+
+    fun publishArticle() {
+        val session = state.session ?: return
+        val title = state.publishTitle.trim()
+        val description = state.publishDescription.trim()
+        val city = state.publishCity.trim()
+
+        if (title.isBlank() || description.isBlank() || city.isBlank()) {
+            state = state.copy(errorMessage = "Title, description and city are required.")
+            return
+        }
+
+        val userId = state.profileInfo?.userId?.takeIf { it > 0 } ?: session.userId
+        if (userId <= 0) {
+            state = state.copy(errorMessage = "Unable to detect current user for publishing.")
+            return
+        }
+
+        viewModelScope.launch {
+            state = state.copy(isPublishingArticle = true, errorMessage = null)
+            val result = repository.publishMarketplaceListing(
+                token = session.token,
+                userId = userId,
+                title = title,
+                description = description,
+                city = city,
+                price = state.publishPrice.trim(),
+            )
+
+            if (result.isSuccess) {
+                state = state.copy(
+                    isPublishingArticle = false,
+                    publishTitle = "",
+                    publishDescription = "",
+                    publishCity = "",
+                    publishPrice = "",
+                    selectedTab = NativeTab.MARKETPLACE,
+                )
+                refreshCurrentTab()
+            } else {
+                val message = result.exceptionOrNull()?.message ?: "Unable to publish article"
+                state = state.copy(isPublishingArticle = false, errorMessage = message)
+            }
+        }
     }
 
     fun clearError() {

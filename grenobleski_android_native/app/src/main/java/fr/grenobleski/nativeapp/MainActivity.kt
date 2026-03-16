@@ -45,7 +45,9 @@ class MainActivity : ComponentActivity() {
         if (sourceIntent.action != Intent.ACTION_VIEW) {
             return null
         }
-        if (uri.scheme != "grenobleski" || uri.host != "auth") {
+        val isSupportedScheme = uri.scheme == "grenobleski"
+        val isSupportedHost = uri.host == "auth"
+        if (!isSupportedScheme || !isSupportedHost) {
             return null
         }
         return uri

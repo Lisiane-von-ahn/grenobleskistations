@@ -61,9 +61,19 @@ urlpatterns = [
         name='api-mobile-auth-complete',
     ),
     path(
+        'mobile/auth/complete',
+        RedirectView.as_view(url='/mobile/auth/complete/', permanent=False, query_string=True),
+        name='api-mobile-auth-complete-noslash',
+    ),
+    path(
         'mobile/token-login/',
         RedirectView.as_view(url='/mobile/token-login/', permanent=False, query_string=True),
         name='api-mobile-token-login',
+    ),
+    path(
+        'mobile/token-login',
+        RedirectView.as_view(url='/mobile/token-login/', permanent=False, query_string=True),
+        name='api-mobile-token-login-noslash',
     ),
 ] + router.urls
 

@@ -172,6 +172,32 @@
             color: #fff;
         }
 
+        .nav-unread-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 6px;
+            min-width: 18px;
+            height: 18px;
+            padding: 0 5px;
+            border-radius: 9px;
+            font-size: 11px;
+            font-weight: 700;
+            background: #dc3545;
+            color: #fff;
+            line-height: 1;
+        }
+
+        .mobile-bottom-nav .nav-unread-badge {
+            position: absolute;
+            top: 6px;
+            right: 18px;
+            margin-left: 0;
+            min-width: 16px;
+            height: 16px;
+            font-size: 10px;
+        }
+
         .main-nav .nav li.offers-dropdown {
             position: relative;
         }
@@ -754,7 +780,14 @@
                             <li><a href="{% url 'instructors' %}" class="{% if current == 'instructors' or current == 'become_instructor' or current == 'instructor_services' %}active{% endif %}">{% trans "Moniteurs" %}</a></li>
                             <li><a href="{% url 'bus' %}" class="{% if current == 'bus' %}active{% endif %}">{% trans "Lignes de Bus" %}</a></li>
                             <li><a href="{% url 'ski_partners' %}" class="{% if current == 'ski_partners' %}active{% endif %}">{% trans "Partenaires" %}</a></li>
-                            <li><a href="{% url 'messages' %}" class="{% if current == 'messages' %}active{% endif %}">Chat</a></li>
+                            <li>
+                                <a href="{% url 'messages' %}" class="{% if current == 'messages' %}active{% endif %}">
+                                    Chat
+                                    {% if unread_count > 0 %}
+                                        <span class="nav-unread-badge">{{ unread_count }}</span>
+                                    {% endif %}
+                                </a>
+                            </li>
                             <li><a href="{% url 'terms' %}" class="{% if current == 'terms' %}active{% endif %}">{% trans "Conditions" %}</a></li>
                             <li><a href="{% url 'privacy' %}" class="{% if current == 'privacy' %}active{% endif %}">{% trans "Confidentialité" %}</a></li>
                             <li class="mobile-hide"><a href="{% url 'schema-swagger-ui' %}">API</a></li>
@@ -981,6 +1014,9 @@
         <a href="{% url 'messages' %}" class="{% if current == 'messages' %}active{% endif %}">
             <i class="fas fa-comment-dots" aria-hidden="true"></i>
             <span>{% trans "Messages" %}</span>
+            {% if unread_count > 0 %}
+                <span class="nav-unread-badge">{{ unread_count }}</span>
+            {% endif %}
         </a>
     </nav>
     {% endwith %}

@@ -106,12 +106,17 @@ class AuthRepository(
             ?: return@withContext Result.failure(IllegalStateException("Unable to load marketplace."))
 
         val items = extractObjectList(payload).map { obj ->
+            val sellerId = obj.intOrZero("user", "user_id")
             MarketplaceItem(
                 id = obj.intOrZero("id"),
                 title = obj.stringOrBlank("title", "material_type").ifBlank { "Annonce #${obj.intOrZero("id")}" },
+                description = obj.stringOrBlank("description").ifBlank { "Aucune description." },
                 city = obj.stringOrBlank("city").ifBlank { "-" },
                 priceLabel = obj.stringOrBlank("price").ifBlank { "-" },
                 conditionLabel = obj.stringOrBlank("condition").ifBlank { "-" },
+                sellerId = sellerId,
+                sellerLabel = if (sellerId > 0) "Vendeur #$sellerId" else "Vendeur",
+                postedAtLabel = obj.stringOrBlank("posted_at", "created_at"),
             )
         }
         Result.success(items)
@@ -162,22 +167,44 @@ class AuthRepository(
 
     suspend fun fetchMessageItems(token: String): Result<List<MessageItem>> = withContext(Dispatchers.IO) {
         val authHeader = "Token $token"
-        val payload = fetchPayload("/api/messages/", authHeader)
-            ?: return@withContext Result.failure(IllegalStateException("Unable to load messages."))
+        val candidates = listOf("/api/messages/", "/api/messages")
 
-        val items = extractObjectList(payload).map { obj ->
-            val senderObj = obj.get("sender")?.takeIf { it.isJsonObject }?.asJsonObject
-            val senderName = senderObj?.stringOrBlank("username", "email").orEmpty()
-            MessageItem(
-                id = obj.intOrZero("id"),
-                fromLabel = senderName.ifBlank {
-                    obj.stringOrBlank("sender_username", "sender_name").ifBlank { "Utilisateur" }
-                },
-                body = obj.stringOrBlank("body", "message", "content").ifBlank { "-" },
-                createdAtLabel = obj.stringOrBlank("created_at", "timestamp").ifBlank { "" },
-            )
+        for (path in candidates) {
+            val response = runCatching {
+                service.listResource("$normalizedBaseUrl$path", authHeader)
+            }.getOrNull() ?: continue
+
+            if (!response.isSuccessful) {
+                if (response.code() in listOf(404, 405)) {
+                    continue
+                }
+                // Non-fatal for now: keep native UI usable even if this endpoint is flaky in some deployments.
+                return@withContext Result.success(emptyList())
+            }
+
+            val payload = response.body()
+            val items = extractObjectList(payload).map { obj ->
+                val senderObj = obj.get("sender")?.takeIf { it.isJsonObject }?.asJsonObject
+                val senderName = senderObj?.stringOrBlank("username", "email").orEmpty()
+                val senderId = if (senderObj != null) senderObj.intOrZero("id") else obj.intOrZero("sender", "sender_id")
+                val recipientId = obj.intOrZero("recipient", "recipient_id")
+                MessageItem(
+                    id = obj.intOrZero("id"),
+                    senderId = senderId,
+                    recipientId = recipientId,
+                    fromLabel = senderName.ifBlank {
+                        obj.stringOrBlank("sender_username", "sender_name").ifBlank { "Utilisateur" }
+                    },
+                    body = obj.stringOrBlank("body", "message", "content").ifBlank { "-" },
+                    createdAtLabel = obj.stringOrBlank("created_at", "timestamp").ifBlank { "" },
+                    isRead = obj.boolOrFalse("is_read"),
+                )
+            }
+            return@withContext Result.success(items)
         }
-        Result.success(items)
+
+        // Endpoint unavailable in this deployment; do not break the whole native experience.
+        Result.success(emptyList())
     }
 
     suspend fun fetchProfileInfo(token: String): Result<ProfileInfo> = withContext(Dispatchers.IO) {
@@ -196,11 +223,75 @@ class AuthRepository(
 
         Result.success(
             ProfileInfo(
+                userId = user.intOrZero("id"),
                 displayName = displayName.ifBlank { user.stringOrBlank("username", "email") },
                 email = user.stringOrBlank("email"),
                 username = user.stringOrBlank("username"),
             )
         )
+    }
+
+    suspend fun sendMessage(
+        token: String,
+        recipientId: Int,
+        subject: String,
+        body: String,
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        val authHeader = "Token $token"
+        val response = runCatching {
+            service.postResource(
+                url = "$normalizedBaseUrl/api/messages/",
+                authHeader = authHeader,
+                payload = mapOf(
+                    "recipient" to recipientId,
+                    "subject" to subject,
+                    "body" to body,
+                ),
+            )
+        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to send message."))
+
+        if (!response.isSuccessful) {
+            return@withContext Result.failure(IllegalStateException("Unable to send message."))
+        }
+
+        Result.success(Unit)
+    }
+
+    suspend fun publishMarketplaceListing(
+        token: String,
+        userId: Int,
+        title: String,
+        description: String,
+        city: String,
+        price: String,
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        val authHeader = "Token $token"
+        val payload = mutableMapOf<String, Any>(
+            "user" to userId,
+            "title" to title,
+            "description" to description,
+            "city" to city,
+            "material_type" to "ski",
+            "transaction_type" to "sale",
+            "condition" to "good",
+        )
+        if (price.isNotBlank()) {
+            payload["price"] = price
+        }
+
+        val response = runCatching {
+            service.postResource(
+                url = "$normalizedBaseUrl/api/skimaterial/",
+                authHeader = authHeader,
+                payload = payload,
+            )
+        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to publish article."))
+
+        if (!response.isSuccessful) {
+            return@withContext Result.failure(IllegalStateException("Unable to publish article."))
+        }
+
+        Result.success(Unit)
     }
 
     private suspend fun fetchCount(path: String, authHeader: String): Int {
@@ -276,6 +367,17 @@ class AuthRepository(
         return 0
     }
 
+    private fun JsonObject.boolOrFalse(vararg keys: String): Boolean {
+        for (key in keys) {
+            if (!has(key)) continue
+            val value = get(key)
+            if (value.isJsonPrimitive) {
+                runCatching { return value.asBoolean }.getOrNull()
+            }
+        }
+        return false
+    }
+
     private fun LoginResponse?.toSession(defaultEmail: String): UserSession? {
         val payload = this ?: return null
         val token = payload.token.orEmpty()
@@ -288,7 +390,8 @@ class AuthRepository(
         val last = payload.user?.lastName.orEmpty()
         val display = listOf(first, last).filter { it.isNotBlank() }.joinToString(" ")
         val label = if (display.isBlank()) resolvedEmail else display
+        val userId = payload.user?.id ?: 0
 
-        return UserSession(token = token, email = resolvedEmail, displayName = label)
+        return UserSession(token = token, email = resolvedEmail, displayName = label, userId = userId)
     }
 }

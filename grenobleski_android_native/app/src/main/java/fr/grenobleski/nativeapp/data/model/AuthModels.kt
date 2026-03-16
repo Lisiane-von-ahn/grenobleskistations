@@ -15,6 +15,7 @@ data class RegisterRequest(
 )
 
 data class UserDto(
+    val id: Int?,
     val email: String?,
     @SerializedName("first_name") val firstName: String?,
     @SerializedName("last_name") val lastName: String?,
@@ -31,6 +32,7 @@ data class UserSession(
     val token: String,
     val email: String,
     val displayName: String,
+    val userId: Int = 0,
 )
 
 data class DashboardCounts(
@@ -52,9 +54,13 @@ enum class NativeTab {
 data class MarketplaceItem(
     val id: Int,
     val title: String,
+    val description: String,
     val city: String,
     val priceLabel: String,
     val conditionLabel: String,
+    val sellerId: Int,
+    val sellerLabel: String,
+    val postedAtLabel: String,
 )
 
 data class InstructorItem(
@@ -73,12 +79,16 @@ data class PisteItem(
 
 data class MessageItem(
     val id: Int,
+    val senderId: Int,
+    val recipientId: Int,
     val fromLabel: String,
     val body: String,
     val createdAtLabel: String,
+    val isRead: Boolean,
 )
 
 data class ProfileInfo(
+    val userId: Int,
     val displayName: String,
     val email: String,
     val username: String,
