@@ -44,6 +44,8 @@ USE_X_FORWARDED_HOST = True
 
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
+# Allow third-party map tile providers to receive a minimal Referer (origin only).
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 
 WEATHER_API_KEY = os.getenv('WEATHER_API_KEY', 'qssdsdsd')
 

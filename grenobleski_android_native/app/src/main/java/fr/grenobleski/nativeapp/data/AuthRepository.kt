@@ -3,6 +3,7 @@ package fr.grenobleski.nativeapp.data
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import fr.grenobleski.nativeapp.data.model.DashboardCounts
+import fr.grenobleski.nativeapp.data.model.BusLineItem
 import fr.grenobleski.nativeapp.data.model.ChatUserOption
 import fr.grenobleski.nativeapp.data.model.FriendLink
 import fr.grenobleski.nativeapp.data.model.InstructorItem
@@ -13,6 +14,7 @@ import fr.grenobleski.nativeapp.data.model.MessageItem
 import fr.grenobleski.nativeapp.data.model.PisteItem
 import fr.grenobleski.nativeapp.data.model.ProfileInfo
 import fr.grenobleski.nativeapp.data.model.RegisterRequest
+import fr.grenobleski.nativeapp.data.model.ServiceStoreItem
 import fr.grenobleski.nativeapp.data.model.StationItem
 import fr.grenobleski.nativeapp.data.model.UserSession
 import fr.grenobleski.nativeapp.data.network.GrenobleSkiApiService
@@ -138,6 +140,49 @@ class AuthRepository(
         Result.success(items)
     }
 
+    suspend fun fetchBusLineItems(token: String): Result<List<BusLineItem>> = withContext(Dispatchers.IO) {
+        val authHeader = "Token $token"
+        val payload = fetchPayloadFromCandidates(listOf("/api/buslines/", "/api/buslines"), authHeader)
+            ?: return@withContext Result.success(emptyList())
+
+        val items = extractObjectList(payload).map { obj ->
+            BusLineItem(
+                id = obj.intOrZero("id"),
+                stationId = obj.intOrZero("ski_station", "ski_station_id"),
+                stationName = obj.stringOrBlank("station_name", "ski_station_name"),
+                busNumber = obj.stringOrBlank("bus_number").ifBlank { "-" },
+                departureStop = obj.stringOrBlank("departure_stop").ifBlank { "-" },
+                arrivalStop = obj.stringOrBlank("arrival_stop").ifBlank { "-" },
+                frequency = obj.stringOrBlank("frequency").ifBlank { "-" },
+                travelTime = obj.stringOrBlank("travel_time").ifBlank { "-" },
+                routePoints = obj.stringOrBlank("route_points").ifBlank { "-" },
+            )
+        }
+        Result.success(items)
+    }
+
+    suspend fun fetchServiceStoreItems(token: String): Result<List<ServiceStoreItem>> = withContext(Dispatchers.IO) {
+        val authHeader = "Token $token"
+        val payload = fetchPayloadFromCandidates(listOf("/api/servicestores/", "/api/servicestores"), authHeader)
+            ?: return@withContext Result.success(emptyList())
+
+        val items = extractObjectList(payload).map { obj ->
+            ServiceStoreItem(
+                id = obj.intOrZero("id"),
+                stationId = obj.intOrZero("ski_station", "ski_station_id"),
+                stationName = obj.stringOrBlank("station_name", "ski_station_name"),
+                name = obj.stringOrBlank("name").ifBlank { "Service" },
+                type = obj.stringOrBlank("type").ifBlank { "-" },
+                openingHours = obj.stringOrBlank("opening_hours").ifBlank { "-" },
+                address = obj.stringOrBlank("address").ifBlank { "-" },
+                phone = obj.stringOrBlank("phone"),
+                websiteUrl = obj.stringOrBlank("website_url"),
+                sourceNote = obj.stringOrBlank("source_note"),
+            )
+        }
+        Result.success(items)
+    }
+
     suspend fun fetchMarketplaceItems(token: String): Result<List<MarketplaceItem>> = withContext(Dispatchers.IO) {
         val authHeader = "Token $token"
         val payload = fetchPayloadFromCandidates(listOf("/api/skimaterial/", "/api/skimaterial"), authHeader)
@@ -145,9 +190,12 @@ class AuthRepository(
 
         val items = extractObjectList(payload).map { obj ->
             val sellerId = obj.intOrZero("user", "user_id")
-            val previewImageBase64 = obj.stringOrBlank("image").ifBlank {
-                obj.firstArrayObjectString("images", "image")
-            }
+            val imageGalleryBase64 = buildList {
+                val coverImage = obj.stringOrBlank("image")
+                if (coverImage.isNotBlank()) add(coverImage)
+                addAll(obj.arrayObjectStrings("images", "image"))
+            }.distinct()
+            val previewImageBase64 = imageGalleryBase64.firstOrNull().orEmpty()
             MarketplaceItem(
                 id = obj.intOrZero("id"),
                 title = obj.stringOrBlank("title", "material_type").ifBlank { "Annonce #${obj.intOrZero("id")}" },
@@ -159,6 +207,7 @@ class AuthRepository(
                 sellerLabel = if (sellerId > 0) "Vendeur #$sellerId" else "Vendeur",
                 postedAtLabel = formatServerDateTime(obj.stringOrBlank("posted_at", "created_at")),
                 previewImageBase64 = previewImageBase64,
+                imageGalleryBase64 = imageGalleryBase64,
             )
         }
         Result.success(items)
@@ -695,6 +744,17 @@ class AuthRepository(
             if (value.isNotBlank()) return value
         }
         return ""
+    }
+
+    private fun JsonObject.arrayObjectStrings(arrayKey: String, valueKey: String): List<String> {
+        if (!has(arrayKey)) return emptyList()
+        val arr = get(arrayKey)
+        if (!arr.isJsonArray) return emptyList()
+
+        return arr.asJsonArray.mapNotNull { element ->
+            val obj = element.takeIf { it.isJsonObject }?.asJsonObject ?: return@mapNotNull null
+            obj.stringOrBlank(valueKey).takeIf { it.isNotBlank() }
+        }
     }
 
     private fun formatServerDateTime(raw: String): String {

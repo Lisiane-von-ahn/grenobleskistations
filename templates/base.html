@@ -1115,22 +1115,23 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+
             const datalist = document.getElementById('city-autocomplete-list');
             if (!datalist) return;
 
-            const frenchCities = [
-                'Paris', 'Marseille', 'Lyon', 'Toulouse', 'Nice', 'Nantes', 'Montpellier', 'Strasbourg',
-                'Bordeaux', 'Lille', 'Rennes', 'Reims', 'Le Havre', 'Saint-Etienne', 'Toulon', 'Grenoble',
-                'Dijon', 'Angers', 'Nimes', 'Villeurbanne', 'Le Mans', 'Aix-en-Provence', 'Brest', 'Tours',
-                'Amiens', 'Limoges', 'Annecy', 'Perpignan', 'Metz', 'Besancon', 'Orleans', 'Rouen',
-                'Mulhouse', 'Caen', 'Nancy', 'Saint-Denis', 'Argenteuil', 'Montreuil', 'Roubaix', 'Avignon',
-                'Poitiers', 'Nanterre', 'Versailles', 'Courbevoie', 'Pau', 'La Rochelle', 'Calais', 'Bourges',
-                'Valence', 'Colmar', 'Antibes', 'Cannes', 'Chambery', 'Chamonix-Mont-Blanc', 'Albertville',
-                'Gap', 'Briancon', 'Uriage-les-Bains', 'Meylan', 'Seyssins', 'Saint-Martin-d-Heres',
-                'Villard-de-Lans', 'Autrans', 'Lans-en-Vercors', 'Huez', 'Alpe d\'Huez', 'Les Deux Alpes',
-                'Chamrousse', 'Les Menuires', 'Val Thorens', 'Courchevel', 'Meribel', 'La Plagne',
-                'Tignes', 'Val d\'Isere', 'Morzine', 'Les Gets', 'Samoens', 'Flaine', 'Cluses',
-                'Bourg-Saint-Maurice', 'Auron', 'Isola', 'Vars', 'Risoul', 'Serre-Chevalier'
+            // Liste exhaustive des villes Rhône-Alpes (extrait, à compléter si besoin)
+            const rhoneAlpesCities = [
+                'Aix-les-Bains', 'Albertville', 'Annemasse', 'Annonay', 'Aubenas', 'Bourg-en-Bresse', 'Bourgoin-Jallieu',
+                'Bourg-Saint-Maurice', 'Bron', 'Chambéry', 'Chamonix-Mont-Blanc', 'Cluses', 'Décines-Charpieu',
+                'Échirolles', 'Écully', 'Firminy', 'Fontaine', 'Givors', 'Grenoble', 'Lyon', 'Meylan', 'Montélimar',
+                'Oyonnax', 'Romans-sur-Isère', 'Roanne', 'Roussillon', 'Saint-Chamond', 'Saint-Étienne', 'Saint-Genis-Laval',
+                'Saint-Martin-d’Hères', 'Saint-Priest', 'Sallanches', 'Sassenage', 'Seyssinet-Pariset', 'Seyssins',
+                'Thonon-les-Bains', 'Valence', 'Vénissieux', 'Vienne', 'Villefranche-sur-Saône', 'Villeurbanne',
+                'Villard-de-Lans', 'Autrans', 'Lans-en-Vercors', 'Huez', 'Alpe d’Huez', 'Les Deux Alpes',
+                'Chamrousse', 'Tignes', 'Val d’Isère', 'Morzine', 'Les Gets', 'Samoëns', 'Flaine', 'La Plagne',
+                'Courchevel', 'Méribel', 'Les Menuires', 'Val Thorens', 'La Clusaz', 'Megève', 'Pralognan-la-Vanoise',
+                'Vaujany', 'Oz-en-Oisans', 'Le Sappey-en-Chartreuse', 'Saint-Pierre-de-Chartreuse', 'Gresse-en-Vercors',
+                'Auris-en-Oisans', 'Le Collet d’Allevard', 'La Grave', 'La Grave - La Meije', 'Oz 3300'
             ];
 
             const seen = new Set();
@@ -1145,19 +1146,10 @@
                 datalist.appendChild(option);
             }
 
-            frenchCities.forEach(appendOption);
+            rhoneAlpesCities.forEach(appendOption);
 
-            const dynamicCityNode = document.getElementById('city-autocomplete-json');
-            if (dynamicCityNode) {
-                try {
-                    const dynamicCities = JSON.parse(dynamicCityNode.textContent || '[]');
-                    if (Array.isArray(dynamicCities)) {
-                        dynamicCities.forEach(appendOption);
-                    }
-                } catch (error) {
-                    console.warn('City autocomplete JSON parsing failed', error);
-                }
-            }
+
+            // On n'ajoute plus les villes dynamiques pour éviter les doublons ou fautes
 
             const cityInputs = document.querySelectorAll('input[name="city"], input[data-city-autocomplete="true"]');
             cityInputs.forEach(function (input) {
@@ -1167,6 +1159,16 @@
                 if (!input.getAttribute('autocomplete')) {
                     input.setAttribute('autocomplete', 'address-level2');
                 }
+                // Validation : empêcher la saisie d'une ville non listée
+                input.addEventListener('change', function () {
+                    const val = (input.value || '').trim();
+                    if (val && !rhoneAlpesCities.some(c => c.toLowerCase() === val.toLowerCase())) {
+                        input.setCustomValidity('Merci de choisir une ville de la liste Rhône-Alpes.');
+                        input.reportValidity();
+                    } else {
+                        input.setCustomValidity('');
+                    }
+                });
             });
         });
     </script>

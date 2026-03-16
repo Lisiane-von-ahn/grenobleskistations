@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import fr.grenobleski.nativeapp.data.AuthRepository
 import fr.grenobleski.nativeapp.data.model.DashboardCounts
+import fr.grenobleski.nativeapp.data.model.BusLineItem
 import fr.grenobleski.nativeapp.data.model.ChatUserOption
 import fr.grenobleski.nativeapp.data.model.FriendLink
 import fr.grenobleski.nativeapp.data.model.InstructorItem
@@ -16,6 +17,7 @@ import fr.grenobleski.nativeapp.data.model.MessageItem
 import fr.grenobleski.nativeapp.data.model.NativeTab
 import fr.grenobleski.nativeapp.data.model.PisteItem
 import fr.grenobleski.nativeapp.data.model.ProfileInfo
+import fr.grenobleski.nativeapp.data.model.ServiceStoreItem
 import fr.grenobleski.nativeapp.data.model.StationItem
 import fr.grenobleski.nativeapp.data.model.UserSession
 import fr.grenobleski.nativeapp.data.session.SessionStore
@@ -35,6 +37,10 @@ data class AppUiState(
     val isTabLoading: Boolean = false,
     val dashboardCounts: DashboardCounts = DashboardCounts(),
     val stationItems: List<StationItem> = emptyList(),
+    val busLineItems: List<BusLineItem> = emptyList(),
+    val serviceStoreItems: List<ServiceStoreItem> = emptyList(),
+    val favoriteBusLineIds: Set<Int> = emptySet(),
+    val favoriteServiceIds: Set<Int> = emptySet(),
     val marketplaceItems: List<MarketplaceItem> = emptyList(),
     val instructorItems: List<InstructorItem> = emptyList(),
     val pisteItems: List<PisteItem> = emptyList(),
@@ -337,6 +343,22 @@ class AppViewModel(
         }
     }
 
+    fun toggleBusLineFavorite(lineId: Int) {
+        if (lineId <= 0) return
+        val updated = state.favoriteBusLineIds.toMutableSet().apply {
+            if (contains(lineId)) remove(lineId) else add(lineId)
+        }
+        state = state.copy(favoriteBusLineIds = updated)
+    }
+
+    fun toggleServiceFavorite(serviceId: Int) {
+        if (serviceId <= 0) return
+        val updated = state.favoriteServiceIds.toMutableSet().apply {
+            if (contains(serviceId)) remove(serviceId) else add(serviceId)
+        }
+        state = state.copy(favoriteServiceIds = updated)
+    }
+
     fun refreshCurrentTab() {
         val session = state.session ?: return
         val tab = state.selectedTab
@@ -360,6 +382,24 @@ class AppViewModel(
                         state = state.copy(stationItems = result.getOrNull()!!)
                     } else {
                         state = state.copy(errorMessage = result.exceptionOrNull()?.message ?: "Unable to load stations")
+                    }
+                }
+
+                NativeTab.BUS_LINES -> {
+                    val result = repository.fetchBusLineItems(session.token)
+                    if (result.isSuccess) {
+                        state = state.copy(busLineItems = result.getOrNull()!!)
+                    } else {
+                        state = state.copy(errorMessage = result.exceptionOrNull()?.message ?: "Unable to load bus lines")
+                    }
+                }
+
+                NativeTab.SERVICES -> {
+                    val result = repository.fetchServiceStoreItems(session.token)
+                    if (result.isSuccess) {
+                        state = state.copy(serviceStoreItems = result.getOrNull()!!)
+                    } else {
+                        state = state.copy(errorMessage = result.exceptionOrNull()?.message ?: "Unable to load services")
                     }
                 }
 
@@ -617,6 +657,8 @@ class AppViewModel(
         return when (tab) {
             NativeTab.HOME -> true
             NativeTab.STATIONS -> state.stationItems.isNotEmpty()
+            NativeTab.BUS_LINES -> state.busLineItems.isNotEmpty()
+            NativeTab.SERVICES -> state.serviceStoreItems.isNotEmpty()
             NativeTab.MARKETPLACE -> state.marketplaceItems.isNotEmpty()
             NativeTab.INSTRUCTORS -> state.instructorItems.isNotEmpty()
             NativeTab.PISTES -> state.pisteItems.isNotEmpty()
@@ -642,6 +684,16 @@ class AppViewModel(
             val stationItems = repository.fetchStationItems(session.token).getOrElse {
                 firstError = firstError ?: (it.message ?: "Unable to load stations")
                 current.stationItems
+            }
+
+            val busLineItems = repository.fetchBusLineItems(session.token).getOrElse {
+                firstError = firstError ?: (it.message ?: "Unable to load bus lines")
+                current.busLineItems
+            }
+
+            val serviceStoreItems = repository.fetchServiceStoreItems(session.token).getOrElse {
+                firstError = firstError ?: (it.message ?: "Unable to load services")
+                current.serviceStoreItems
             }
 
             val marketplaceItems = repository.fetchMarketplaceItems(session.token).getOrElse {
@@ -681,6 +733,8 @@ class AppViewModel(
                 isTabLoading = false,
                 dashboardCounts = dashboardCounts,
                 stationItems = stationItems,
+                busLineItems = busLineItems,
+                serviceStoreItems = serviceStoreItems,
                 marketplaceItems = marketplaceItems,
                 instructorItems = instructorItems,
                 pisteItems = pisteItems,

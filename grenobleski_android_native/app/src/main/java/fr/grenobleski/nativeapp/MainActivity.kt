@@ -5,18 +5,24 @@ import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.material3.Surface
+import androidx.core.os.LocaleListCompat
+import fr.grenobleski.nativeapp.data.session.LanguageStore
 import fr.grenobleski.nativeapp.ui.GrenobleSkiApp
 import fr.grenobleski.nativeapp.ui.theme.GrenobleSkiNativeTheme
 
 class MainActivity : ComponentActivity() {
     private var pendingAuthUri by mutableStateOf<Uri?>(null)
+    private lateinit var languageStore: LanguageStore
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        languageStore = LanguageStore(this)
+        applySavedLanguage(languageStore.loadLanguage())
         pendingAuthUri = extractAuthUri(intent)
 
         setContent {
@@ -51,5 +57,14 @@ class MainActivity : ComponentActivity() {
             return null
         }
         return uri
+    }
+
+    private fun applySavedLanguage(language: String) {
+        val locales = when (language.lowercase()) {
+            "en" -> LocaleListCompat.forLanguageTags("en")
+            "fr" -> LocaleListCompat.forLanguageTags("fr")
+            else -> LocaleListCompat.getEmptyLocaleList()
+        }
+        AppCompatDelegate.setApplicationLocales(locales)
     }
 }

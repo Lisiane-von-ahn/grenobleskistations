@@ -3,6 +3,7 @@
 
 {% block title %}Ski Partners{% endblock %}
 
+
 {% block content %}
 <div class="container py-4">
     <section class="premium-shell mb-4 p-3">
@@ -16,6 +17,24 @@
             <a class="btn btn-success" href="{% url 'ski_partner_publish' %}" target="_blank" rel="noopener">Publier une sortie</a>
             {% endif %}
             <a class="btn btn-outline-primary" href="{% url 'ski_stories' %}">Stories ski</a>
+        </div>
+    </section>
+
+    <!-- Bandeau stats top stations/services -->
+    <section class="mb-4">
+        <div class="card border-0 shadow-sm p-3 bg-gradient" style="background: linear-gradient(90deg,#e9f8ff 0,#f2fbff 55%,#e8f7f2 100%);">
+            <div class="d-flex flex-wrap align-items-center gap-3 justify-content-between">
+                <div>
+                    <span class="fw-semibold">Top stations avec le plus de services :</span>
+                    {% for stat in top_stations_services %}
+                        <span class="badge bg-info text-dark me-1">{{ stat.name }} ({{ stat.count }})</span>
+                    {% endfor %}
+                </div>
+                <div>
+                    <span class="fw-semibold">Total partenaires actifs :</span>
+                    <span class="badge bg-success">{{ total_partners }}</span>
+                </div>
+            </div>
         </div>
     </section>
 
@@ -51,17 +70,22 @@
     </section>
 
     <section>
-        <div class="row g-3">
+        <div class="row g-4">
             {% for post in partner_posts %}
             <div class="col-lg-6">
-                <article class="market-card p-3">
-                    <h5 class="mb-1">{{ post.title }}</h5>
-                    <div class="market-subtle mb-2">Par {{ post.user.username }} - {{ post.created_at|date:'d/m/Y H:i' }}</div>
-                    <div class="mb-2">
-                        <span class="badge-soft">{{ post.get_skill_level_display }}</span>
-                        {% if post.preferred_date %}<span class="badge-soft">{{ post.preferred_date|date:'d/m/Y' }}</span>{% endif %}
-                        {% if post.ski_station %}<span class="badge-soft">{{ post.ski_station.name }}</span>{% endif %}
-                        {% if post.city %}<span class="badge-soft">{{ post.city }}</span>{% endif %}
+                <article class="card border-0 shadow-sm p-4 h-100 market-card" style="border-radius: 18px;">
+                    <div class="d-flex align-items-center mb-2">
+                        <img src="{% if post.user.profile.profile_photo %}data:image/png;base64,{{ post.user.profile.profile_photo|b64encode }}{% else %}{% static 'images/default-profile.png' %}{% endif %}" alt="{{ post.user.username }}" class="rounded-circle me-3" style="width:56px;height:56px;object-fit:cover;">
+                        <div>
+                            <h5 class="mb-1">{{ post.title }}</h5>
+                            <small class="text-muted">Par {{ post.user.username }} - {{ post.created_at|date:'d/m/Y H:i' }}</small>
+                        </div>
+                    </div>
+                    <div class="mb-2 d-flex flex-wrap gap-2">
+                        <span class="badge bg-primary">{{ post.get_skill_level_display }}</span>
+                        {% if post.preferred_date %}<span class="badge bg-info text-dark">{{ post.preferred_date|date:'d/m/Y' }}</span>{% endif %}
+                        {% if post.ski_station %}<span class="badge bg-secondary">{{ post.ski_station.name }}</span>{% endif %}
+                        {% if post.city %}<span class="badge bg-light text-dark">{{ post.city }}</span>{% endif %}
                     </div>
                     <p class="mb-3">{{ post.message }}</p>
                     {% if user.is_authenticated and user != post.user %}

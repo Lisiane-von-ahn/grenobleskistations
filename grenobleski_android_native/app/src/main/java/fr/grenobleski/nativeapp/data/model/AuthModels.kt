@@ -45,6 +45,8 @@ data class DashboardCounts(
 enum class NativeTab {
     HOME,
     STATIONS,
+    BUS_LINES,
+    SERVICES,
     MARKETPLACE,
     INSTRUCTORS,
     PISTES,
@@ -61,6 +63,31 @@ data class StationItem(
     val imageBase64: String,
 )
 
+data class BusLineItem(
+    val id: Int,
+    val stationId: Int,
+    val stationName: String,
+    val busNumber: String,
+    val departureStop: String,
+    val arrivalStop: String,
+    val frequency: String,
+    val travelTime: String,
+    val routePoints: String,
+)
+
+data class ServiceStoreItem(
+    val id: Int,
+    val stationId: Int,
+    val stationName: String,
+    val name: String,
+    val type: String,
+    val openingHours: String,
+    val address: String,
+    val phone: String,
+    val websiteUrl: String,
+    val sourceNote: String,
+)
+
 data class MarketplaceItem(
     val id: Int,
     val title: String,
@@ -72,6 +99,7 @@ data class MarketplaceItem(
     val sellerLabel: String,
     val postedAtLabel: String,
     val previewImageBase64: String,
+    val imageGalleryBase64: List<String> = emptyList(),
 )
 
 data class InstructorItem(

@@ -272,29 +272,106 @@ def ski_station_search(request):
 
 
 def service_search(request):
-    # Récupérer toutes les stations de ski
-    ski_stations = SkiStation.objects.all()
+    ski_stations = SkiStation.objects.order_by('name')
 
-    # Récupérer tous les types distincts de services
-    service_types = ServiceStore.objects.values_list('type', flat=True).distinct()
+    search_query = request.GET.get('q', '').strip()
+    service_type = request.GET.get('type', '').strip()
+    selected_service_category = request.GET.get('service_category', '').strip()
+    ski_station_id = request.GET.get('ski_station', '').strip()
+    my_instructor_offers = request.GET.get('my_instructor_offers', '').strip()
 
-    # Filtrer les services en fonction des critères de recherche
-    services = ServiceStore.objects.all()
-    name = request.GET.get('name', '')
-    service_type = request.GET.get('type', '')
-    ski_station_id = request.GET.get('ski_station', '')
+    service_types = list(ServiceStore.objects.values_list('type', flat=True).distinct().order_by('type'))
+    # Fixed category display order
+    SERVICE_CATEGORIES_ORDER = ['Information', 'École de ski', 'Magasin / Location', 'Restaurant', 'Secours']
+    stored_categories = set(service_types)
+    service_categories = [c for c in SERVICE_CATEGORIES_ORDER if c in stored_categories]
+    # append any extra categories not in the fixed list
+    for c in sorted(stored_categories):
+        if c not in service_categories:
+            service_categories.append(c)
 
-    if name:
-        services = services.filter(name__icontains=name)
+    services_qs = ServiceStore.objects.select_related('ski_station').order_by('ski_station__name', 'type', 'name')
+
+    if search_query:
+        services_qs = services_qs.filter(
+            Q(name__icontains=search_query)
+            | Q(type__icontains=search_query)
+            | Q(address__icontains=search_query)
+            | Q(ski_station__name__icontains=search_query)
+        )
     if service_type:
-        services = services.filter(type=service_type)
+        services_qs = services_qs.filter(type=service_type)
+    if selected_service_category:
+        services_qs = services_qs.filter(type=selected_service_category)
     if ski_station_id:
-        services = services.filter(ski_station_id=ski_station_id)
+        services_qs = services_qs.filter(ski_station_id=ski_station_id)
+
+    selected_station = None
+    if ski_station_id:
+        selected_station = SkiStation.objects.filter(id=ski_station_id).first()
+
+    # Annotate each service with computed display attributes
+    services_list = list(services_qs)
+    for svc in services_list:
+        address = (svc.address or '').strip()
+        svc.address_display = address or 'Adresse non renseignée'
+        if svc.website_url:
+            svc.preferred_url = svc.website_url
+        else:
+            addr_query = quote_plus(f"{svc.name} {address}")
+            svc.preferred_url = f"https://www.google.com/search?q={addr_query}"
+        lat = float(svc.latitude)
+        lng = float(svc.longitude)
+        svc.google_maps_url = f"https://www.google.com/maps/search/?api=1&query={lat},{lng}"
+        svc.search_url = f"https://www.google.com/search?q={quote_plus(svc.name + ' ' + (svc.ski_station.name if svc.ski_station else ''))}"
+        svc.category_label = svc.type or 'Service'
+
+    # Station service stats table
+    all_stations_qs = SkiStation.objects.order_by('name')
+    station_service_stats = []
+    for station in all_stations_qs:
+        counts_by_cat = {
+            row['type']: row['cnt']
+            for row in ServiceStore.objects.filter(ski_station=station).values('type').annotate(cnt=Count('id'))
+        }
+        total = sum(counts_by_cat.values())
+        if total == 0:
+            continue
+        ordered_counts = [counts_by_cat.get(cat, 0) for cat in service_categories]
+        station_service_stats.append({
+            'station': station,
+            'ordered_counts': ordered_counts,
+            'total': total,
+        })
+    station_service_stats.sort(key=lambda r: r['total'], reverse=True)
+
+    # Instructor services
+    instructor_services_qs = (
+        InstructorService.objects.select_related('instructor', 'instructor__user', 'ski_station')
+        .filter(is_active=True)
+    )
+    if search_query:
+        instructor_services_qs = instructor_services_qs.filter(
+            Q(title__icontains=search_query)
+            | Q(description__icontains=search_query)
+            | Q(ski_station__name__icontains=search_query)
+            | Q(instructor__user__username__icontains=search_query)
+        )
+    if ski_station_id:
+        instructor_services_qs = instructor_services_qs.filter(ski_station_id=ski_station_id)
+    if my_instructor_offers and request.user.is_authenticated:
+        instructor_services_qs = instructor_services_qs.filter(instructor__user=request.user)
 
     context = {
-        'services': services,
+        'services': services_list,
         'service_types': service_types,
+        'service_categories': service_categories,
         'ski_stations': ski_stations,
+        'search_query': search_query,
+        'selected_service_category': selected_service_category,
+        'selected_station': selected_station,
+        'station_service_stats': station_service_stats,
+        'instructor_services': list(instructor_services_qs[:60]),
     }
 
     return render(request, 'services.html', context)
@@ -938,6 +1015,15 @@ def ski_partners(request):
     for post in post_list:
         post.organizer_display = _partner_organizer_display(post.user)
 
+    # Statistiques top stations/services
+    from django.db.models import Count
+    top_stations_services = (
+        SkiStation.objects.annotate(count=Count('servicestore', distinct=True))
+        .order_by('-count', 'name')[:5]
+        .values('name', 'count')
+    )
+    total_partners = SkiPartnerPost.objects.filter(is_active=True).count()
+
     return render(
         request,
         'ski_partners.html',
@@ -948,6 +1034,8 @@ def ski_partners(request):
             'selected_level': level,
             'selected_city': city,
             'level_choices': SkiPartnerPost.LEVEL_CHOICES,
+            'top_stations_services': top_stations_services,
+            'total_partners': total_partners,
         },
     )
 
@@ -1569,6 +1657,15 @@ def instructors_list(request):
 
     stations = SkiStation.objects.order_by('name')
 
+    # Statistiques top stations par nombre de moniteurs/services
+    from django.db.models import Count
+    top_stations_instructors = (
+        SkiStation.objects.annotate(count=Count('instructorprofile', distinct=True))
+        .order_by('-count', 'name')[:5]
+        .values('name', 'count')
+    )
+    total_instructors = InstructorProfile.objects.filter(is_active=True).count()
+
     return render(
         request,
         'instructors.html',
@@ -1581,6 +1678,8 @@ def instructors_list(request):
             'price_max': price_max,
             'sort_by': sort_by,
             'my_offers': my_offers,
+            'top_stations_instructors': top_stations_instructors,
+            'total_instructors': total_instructors,
         },
     )
 

@@ -40,93 +40,124 @@ STATION_IMAGE_MAP = {
 SERVICE_SEED_BY_STATION = {
     'Chamrousse': [
         {'name': 'Office de Tourisme de Chamrousse', 'type': 'Information', 'opening_hours': '09:00-12:30 / 14:00-18:00', 'address': 'Avenue Henry Duhamel, 38410 Chamrousse'},
-        {'name': 'ESF Chamrousse 1750', 'type': 'École de ski', 'opening_hours': '08:45-17:30', 'address': 'Recoin, 38410 Chamrousse'},
-        {'name': 'Intersport Chamrousse 1750', 'type': 'Magasin / Location', 'opening_hours': '08:30-19:00', 'address': 'Recoin, 38410 Chamrousse'},
+        {'name': 'ESF Chamrousse 1750', 'type': 'École de ski', 'opening_hours': '08:45-17:30', 'address': 'Recoin, 38410 Chamrousse', 'website_url': 'https://www.esfchamrousse.com'},
+        {'name': 'Intersport Chamrousse 1750', 'type': 'Magasin / Location', 'opening_hours': '08:30-19:00', 'address': 'Recoin, 38410 Chamrousse', 'website_url': 'https://www.intersport-rent.fr'},
         {'name': 'Secours des pistes Chamrousse', 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': 'Poste de secours, 38410 Chamrousse'},
+        {'name': 'Brasserie La Recombaz', 'type': 'Restaurant', 'opening_hours': '09:00-17:30', 'address': 'Recoin, 38410 Chamrousse', 'source_note': 'Restaurant de montagne face aux pistes (à vérifier avant déplacement).'},
+        {'name': 'Restaurant Le 1650', 'type': 'Restaurant', 'opening_hours': '09:00-17:00', 'address': 'Roche Béranger, 38410 Chamrousse', 'source_note': 'Restauration rapide et plats chauds en station (à vérifier avant déplacement).'},
     ],
     'Les 7 Laux': [
         {'name': 'Office de Tourisme Les 7 Laux', 'type': 'Information', 'opening_hours': '09:00-12:30 / 14:00-18:00', 'address': 'Prapoutel, 38190 Les Adrets'},
-        {'name': 'ESF Les 7 Laux', 'type': 'École de ski', 'opening_hours': '08:45-17:30', 'address': 'Prapoutel, 38190 Les Adrets'},
-        {'name': 'Skimium Les 7 Laux', 'type': 'Magasin / Location', 'opening_hours': '08:30-19:00', 'address': 'Prapoutel centre, 38190 Les Adrets'},
+        {'name': 'ESF Les 7 Laux', 'type': 'École de ski', 'opening_hours': '08:45-17:30', 'address': 'Prapoutel, 38190 Les Adrets', 'website_url': 'https://www.esf-les7laux.com'},
+        {'name': 'Skimium Les 7 Laux', 'type': 'Magasin / Location', 'opening_hours': '08:30-19:00', 'address': 'Prapoutel centre, 38190 Les Adrets', 'website_url': 'https://www.skimium.fr'},
         {'name': 'Secours des pistes Les 7 Laux', 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': 'Prapoutel, 38190 Les Adrets'},
+        {'name': 'Restaurant Le Cairn', 'type': 'Restaurant', 'opening_hours': '09:00-17:00', 'address': 'Prapoutel, 38190 Les Adrets', 'source_note': 'Brasserie traditionnelle en pied de piste (à vérifier avant déplacement).'},
+        {'name': 'Auberge du Pré Bayard', 'type': 'Restaurant', 'opening_hours': '12:00-14:30', 'address': 'Prapoutel, 38190 Les Adrets', 'source_note': 'Cuisine savoyarde authentique (à vérifier avant déplacement).'},
     ],
     "Alpe d'Huez": [
-        {'name': 'Office de Tourisme Alpe d\'Huez', 'type': 'Information', 'opening_hours': '09:00-12:30 / 14:00-18:30', 'address': 'Place Paganon, 38750 Huez'},
-        {'name': 'ESF Alpe d\'Huez', 'type': 'École de ski', 'opening_hours': '08:45-18:00', 'address': 'Avenue des Jeux, 38750 Huez'},
-        {'name': 'Sport 2000 Alpe d\'Huez', 'type': 'Magasin / Location', 'opening_hours': '08:30-19:30', 'address': 'Avenue des Jeux, 38750 Huez'},
-        {'name': 'Secours des pistes Alpe d\'Huez', 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': 'Poste de secours, 38750 Huez'},
+        {'name': "Office de Tourisme Alpe d'Huez", 'type': 'Information', 'opening_hours': '09:00-12:30 / 14:00-18:30', 'address': 'Place Paganon, 38750 Huez'},
+        {'name': "ESF Alpe d'Huez", 'type': 'École de ski', 'opening_hours': '08:45-18:00', 'address': 'Avenue des Jeux, 38750 Huez', 'website_url': 'https://www.esf-alpedhuez.com'},
+        {'name': "Sport 2000 Alpe d'Huez", 'type': 'Magasin / Location', 'opening_hours': '08:30-19:30', 'address': 'Avenue des Jeux, 38750 Huez', 'website_url': 'https://www.sport2000.fr'},
+        {'name': "Secours des pistes Alpe d'Huez", 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': 'Poste de secours, 38750 Huez'},
+        {'name': "La Folie Douce Alpe d'Huez", 'type': 'Restaurant', 'opening_hours': '11:00-17:00', 'address': 'Piste du Signal, 38750 Huez', 'website_url': 'https://www.lafoliedouce.com', 'source_note': 'Bar-restaurant mythique en altitude, ambiance festive (à vérifier avant déplacement).'},
+        {'name': 'Brasserie Le Perce-Neige', 'type': 'Restaurant', 'opening_hours': '12:00-22:00', 'address': 'Avenue des Jeux, 38750 Huez', 'source_note': 'Cuisine montagnarde et pizzas en station (à vérifier avant déplacement).'},
+        {'name': 'Restaurant Au Chamois d\'Or', 'type': 'Restaurant', 'opening_hours': '12:00-14:30 / 19:00-21:30', 'address': 'Rond-Point des Pistes, 38750 Huez', 'source_note': 'Restaurant gastronomique vue panoramique sur les pistes (à vérifier avant déplacement).'},
     ],
     'Villard-de-Lans / Corrençon': [
         {'name': 'Office de Tourisme Villard-de-Lans', 'type': 'Information', 'opening_hours': '09:00-12:30 / 14:00-18:00', 'address': 'Place Mure Ravaud, 38250 Villard-de-Lans'},
-        {'name': 'ESF Villard-de-Lans / Corrençon', 'type': 'École de ski', 'opening_hours': '08:45-17:30', 'address': 'Côte 2000, 38250 Villard-de-Lans'},
-        {'name': 'Skimium Villard-Côte 2000', 'type': 'Magasin / Location', 'opening_hours': '08:30-18:30', 'address': 'Côte 2000, 38250 Villard-de-Lans'},
+        {'name': 'ESF Villard-de-Lans / Corrençon', 'type': 'École de ski', 'opening_hours': '08:45-17:30', 'address': 'Côte 2000, 38250 Villard-de-Lans', 'website_url': 'https://www.esf-villarddelans.com'},
+        {'name': 'Skimium Villard-Côte 2000', 'type': 'Magasin / Location', 'opening_hours': '08:30-18:30', 'address': 'Côte 2000, 38250 Villard-de-Lans', 'website_url': 'https://www.skimium.fr'},
         {'name': 'Secours des pistes Villard-Corrençon', 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': 'Côte 2000, 38250 Villard-de-Lans'},
+        {'name': 'Le Balcon de Villard', 'type': 'Restaurant', 'opening_hours': '09:00-17:00', 'address': 'Côte 2000, 38250 Villard-de-Lans', 'source_note': 'Restaurant d\'altitude avec vue sur le Vercors (à vérifier avant déplacement).'},
+        {'name': 'Restaurant La Marmite', 'type': 'Restaurant', 'opening_hours': '12:00-14:30', 'address': 'Centre village, 38250 Villard-de-Lans', 'source_note': 'Spécialités fromagères et fondues savoyardes (à vérifier avant déplacement).'},
     ],
     'Autrans-Méaudre en Vercors': [
         {'name': 'Office de Tourisme Autrans-Méaudre', 'type': 'Information', 'opening_hours': '09:00-12:30 / 14:00-18:00', 'address': 'Le Village, 38880 Autrans-Méaudre en Vercors'},
-        {'name': 'ESF Autrans', 'type': 'École de ski', 'opening_hours': '09:00-17:00', 'address': 'Autrans Centre Nordique, 38880 Autrans-Méaudre en Vercors'},
-        {'name': 'Sport 2000 Autrans', 'type': 'Magasin / Location', 'opening_hours': '08:30-18:30', 'address': 'Centre village, 38880 Autrans-Méaudre en Vercors'},
+        {'name': 'ESF Autrans', 'type': 'École de ski', 'opening_hours': '09:00-17:00', 'address': 'Autrans Centre Nordique, 38880 Autrans-Méaudre en Vercors', 'website_url': 'https://www.esf-autrans.com'},
+        {'name': 'Sport 2000 Autrans', 'type': 'Magasin / Location', 'opening_hours': '08:30-18:30', 'address': 'Centre village, 38880 Autrans-Méaudre en Vercors', 'website_url': 'https://www.sport2000.fr'},
         {'name': 'Secours des pistes Autrans-Méaudre', 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': 'Autrans / Méaudre, 38880 Autrans-Méaudre en Vercors'},
+        {'name': "La Ferme d'Autrans", 'type': 'Restaurant', 'opening_hours': '12:00-14:30', 'address': 'Route du Col de la Croix Perrin, 38880 Autrans-Méaudre en Vercors', 'source_note': 'Cuisine du terroir dans une ferme rénovée (à vérifier avant déplacement).'},
+        {'name': 'Restaurant Les Alpins', 'type': 'Restaurant', 'opening_hours': '09:00-17:00', 'address': 'Front de neige, 38880 Autrans-Méaudre en Vercors', 'source_note': 'Restauration en pied de piste, plats chauds et crêpes (à vérifier avant déplacement).'},
     ],
     "Le Collet d'Allevard": [
         {'name': 'Office de Tourisme Allevard-les-Bains', 'type': 'Information', 'opening_hours': '09:00-12:30 / 14:00-17:30', 'address': '3 Place de la Résistance, 38580 Allevard'},
-        {'name': 'ESF Le Collet d\'Allevard', 'type': 'École de ski', 'opening_hours': '09:00-17:00', 'address': 'Front de neige, 38580 Le Collet d\'Allevard'},
-        {'name': 'Skimium Le Collet', 'type': 'Magasin / Location', 'opening_hours': '08:30-18:30', 'address': 'Front de neige, 38580 Le Collet d\'Allevard'},
-        {'name': 'Secours des pistes Le Collet', 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': 'Poste de secours, 38580 Le Collet d\'Allevard'},
+        {'name': "ESF Le Collet d'Allevard", 'type': 'École de ski', 'opening_hours': '09:00-17:00', 'address': "Front de neige, 38580 Le Collet d'Allevard"},
+        {'name': 'Skimium Le Collet', 'type': 'Magasin / Location', 'opening_hours': '08:30-18:30', 'address': "Front de neige, 38580 Le Collet d'Allevard", 'website_url': 'https://www.skimium.fr'},
+        {'name': 'Secours des pistes Le Collet', 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': "Poste de secours, 38580 Le Collet d'Allevard"},
+        {'name': 'Restaurant Les Alpages du Collet', 'type': 'Restaurant', 'opening_hours': '09:00-17:00', 'address': "Front de neige, 38580 Le Collet d'Allevard", 'source_note': 'Brasserie en station, raclette et plats montagnards (à vérifier avant déplacement).'},
+        {'name': 'Buvette du Collet', 'type': 'Restaurant', 'opening_hours': '09:30-15:30', 'address': "Sommet du domaine, 38580 Le Collet d'Allevard", 'source_note': 'Buvette avec vue panoramique sur Belledonne (à vérifier avant déplacement).'},
     ],
     'Les 2 Alpes': [
         {'name': 'Office de Tourisme Les 2 Alpes', 'type': 'Information', 'opening_hours': '09:00-12:30 / 14:00-18:30', 'address': 'Place des 2 Alpes, 38860 Les Deux Alpes'},
-        {'name': 'ESF Les 2 Alpes', 'type': 'École de ski', 'opening_hours': '08:30-18:00', 'address': 'Centre station, 38860 Les Deux Alpes'},
-        {'name': 'Intersport Les 2 Alpes', 'type': 'Magasin / Location', 'opening_hours': '08:30-19:30', 'address': 'Avenue de la Muzelle, 38860 Les Deux Alpes'},
+        {'name': 'ESF Les 2 Alpes', 'type': 'École de ski', 'opening_hours': '08:30-18:00', 'address': 'Centre station, 38860 Les Deux Alpes', 'website_url': 'https://www.esf-les2alpes.com'},
+        {'name': 'Intersport Les 2 Alpes', 'type': 'Magasin / Location', 'opening_hours': '08:30-19:30', 'address': 'Avenue de la Muzelle, 38860 Les Deux Alpes', 'website_url': 'https://www.intersport-rent.fr'},
         {'name': 'Secours des pistes Les 2 Alpes', 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': 'Poste de secours, 38860 Les Deux Alpes'},
+        {'name': 'La Spaghetteria', 'type': 'Restaurant', 'opening_hours': '12:00-14:30 / 19:00-22:00', 'address': 'Avenue de la Muzelle, 38860 Les Deux Alpes', 'source_note': 'Restaurant italien incontournable des 2 Alpes (à vérifier avant déplacement).'},
+        {'name': 'Restaurant La Patate', 'type': 'Restaurant', 'opening_hours': '09:00-17:00', 'address': 'Piste de la Fée, 38860 Les Deux Alpes', 'source_note': 'Restaurant d\'altitude au cœur du domaine, vue sur glacier (à vérifier avant déplacement).'},
+        {'name': 'Le Panoramic 3200', 'type': 'Restaurant', 'opening_hours': '10:00-16:00', 'address': 'Glacier des 2 Alpes, 38860 Les Deux Alpes', 'source_note': 'Restaurant à 3200m d\'altitude sur le glacier, buffets et plats chauds (à vérifier avant déplacement).'},
     ],
     'La Grave - La Meije': [
         {'name': 'Office de Tourisme La Grave', 'type': 'Information', 'opening_hours': '09:00-12:00 / 14:00-17:30', 'address': 'Le Bourg, 05320 La Grave'},
-        {'name': 'École de Ski Oxygène La Grave', 'type': 'École de ski', 'opening_hours': '09:00-17:00', 'address': 'Téléphérique, 05320 La Grave'},
+        {'name': 'École de Ski Oxygène La Grave', 'type': 'École de ski', 'opening_hours': '09:00-17:00', 'address': 'Téléphérique, 05320 La Grave', 'website_url': 'https://www.oxygene-ski.com'},
         {'name': 'Location Ski La Grave', 'type': 'Magasin / Location', 'opening_hours': '08:30-18:00', 'address': 'Le Village, 05320 La Grave'},
         {'name': 'Secours des pistes La Meije', 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': 'Téléphérique, 05320 La Grave'},
+        {'name': 'Restaurant Les Glaciers de La Meije', 'type': 'Restaurant', 'opening_hours': '12:00-14:30', 'address': 'Le Bourg, 05320 La Grave', 'source_note': 'Cuisine traditionnelle hautes-alpes face à La Meije (à vérifier avant déplacement).'},
+        {'name': "Cafétéria du Téléphérique de La Grave", 'type': 'Restaurant', 'opening_hours': '10:00-15:30', 'address': 'Téléphérique, 05320 La Grave', 'source_note': 'Restauration rapide au pied du téléphérique (à vérifier avant déplacement).'},
     ],
     'Oz 3300': [
         {'name': 'Office de Tourisme Oz 3300', 'type': 'Information', 'opening_hours': '09:00-12:30 / 14:00-18:00', 'address': 'Station Oz 3300, 38114 Oz-en-Oisans'},
         {'name': 'ESF Oz 3300', 'type': 'École de ski', 'opening_hours': '09:00-17:30', 'address': 'Front de neige, 38114 Oz-en-Oisans'},
-        {'name': 'Skiset Oz 3300', 'type': 'Magasin / Location', 'opening_hours': '08:30-18:30', 'address': 'Galerie commerçante, 38114 Oz-en-Oisans'},
+        {'name': 'Skiset Oz 3300', 'type': 'Magasin / Location', 'opening_hours': '08:30-18:30', 'address': 'Galerie commerçante, 38114 Oz-en-Oisans', 'website_url': 'https://www.skiset.com'},
         {'name': 'Secours des pistes Oz', 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': 'Poste de secours, 38114 Oz-en-Oisans'},
+        {'name': 'Restaurant Le Belvédère Oz 3300', 'type': 'Restaurant', 'opening_hours': '09:00-16:30', 'address': 'Front de neige, 38114 Oz-en-Oisans', 'source_note': 'Restaurant panoramique avec vue sur les Grandes Rousses (à vérifier avant déplacement).'},
+        {'name': "L'Igloo Oz en Oisans", 'type': 'Restaurant', 'opening_hours': '09:30-17:00', 'address': 'Galerie commerçante, 38114 Oz-en-Oisans', 'source_note': 'Brasserie familiale au cœur de la station (à vérifier avant déplacement).'},
     ],
     'Vaujany': [
         {'name': 'Office de Tourisme de Vaujany', 'type': 'Information', 'opening_hours': '09:00-12:30 / 14:00-18:00', 'address': 'Maison de Vaujany, 38114 Vaujany'},
         {'name': 'ESF Vaujany', 'type': 'École de ski', 'opening_hours': '09:00-17:30', 'address': 'Place de la Fare, 38114 Vaujany'},
-        {'name': 'Skimium Vaujany', 'type': 'Magasin / Location', 'opening_hours': '08:30-18:30', 'address': 'Centre station, 38114 Vaujany'},
+        {'name': 'Skimium Vaujany', 'type': 'Magasin / Location', 'opening_hours': '08:30-18:30', 'address': 'Centre station, 38114 Vaujany', 'website_url': 'https://www.skimium.fr'},
         {'name': 'Secours des pistes Vaujany', 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': 'Poste de secours, 38114 Vaujany'},
+        {'name': 'Restaurant La Fare', 'type': 'Restaurant', 'opening_hours': '12:00-14:30 / 19:00-21:00', 'address': 'Place de la Fare, 38114 Vaujany', 'source_note': 'Restaurant du village, spécialités locales et raclette (à vérifier avant déplacement).'},
+        {'name': 'Café-Restaurant du Centre Vaujany', 'type': 'Restaurant', 'opening_hours': '09:00-18:00', 'address': 'Centre village, 38114 Vaujany', 'source_note': 'Brasserie conviviale en station (à vérifier avant déplacement).'},
     ],
     'Auris-en-Oisans': [
         {'name': 'Office de Tourisme Auris-en-Oisans', 'type': 'Information', 'opening_hours': '09:00-12:30 / 14:00-18:00', 'address': 'Auris Station, 38142 Auris'},
         {'name': 'ESF Auris-en-Oisans', 'type': 'École de ski', 'opening_hours': '09:00-17:00', 'address': 'Front de neige, 38142 Auris'},
-        {'name': 'Skiset Auris', 'type': 'Magasin / Location', 'opening_hours': '08:30-18:30', 'address': 'Centre station, 38142 Auris'},
+        {'name': 'Skiset Auris', 'type': 'Magasin / Location', 'opening_hours': '08:30-18:30', 'address': 'Centre station, 38142 Auris', 'website_url': 'https://www.skiset.com'},
         {'name': 'Secours des pistes Auris', 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': 'Poste de secours, 38142 Auris'},
+        {'name': 'Restaurant L\'Avalanche Auris', 'type': 'Restaurant', 'opening_hours': '09:00-16:30', 'address': 'Front de neige, 38142 Auris', 'source_note': 'Restauration ski-in ski-out face aux pistes (à vérifier avant déplacement).'},
+        {'name': 'Le Soleil Auris-en-Oisans', 'type': 'Restaurant', 'opening_hours': '12:00-14:30', 'address': 'Route de la station, 38142 Auris', 'source_note': 'Cave à fondue et tartiflettes savoyardes (à vérifier avant déplacement).'},
     ],
     'Le Sappey-en-Chartreuse': [
         {'name': 'Mairie / Info Le Sappey-en-Chartreuse', 'type': 'Information', 'opening_hours': '09:00-12:00 / 14:00-17:00', 'address': 'Le Bourg, 38700 Le Sappey-en-Chartreuse'},
         {'name': 'ESF Le Sappey', 'type': 'École de ski', 'opening_hours': '09:00-16:30', 'address': 'Domaine du Sappey, 38700 Le Sappey-en-Chartreuse'},
         {'name': 'Location Le Sappey Ski', 'type': 'Magasin / Location', 'opening_hours': '08:30-17:30', 'address': 'Centre village, 38700 Le Sappey-en-Chartreuse'},
         {'name': 'Secours des pistes Le Sappey', 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': 'Domaine du Sappey, 38700 Le Sappey-en-Chartreuse'},
+        {'name': 'Auberge Le Sappey-en-Chartreuse', 'type': 'Restaurant', 'opening_hours': '12:00-14:00 / 19:00-21:00', 'address': 'Le Bourg, 38700 Le Sappey-en-Chartreuse', 'source_note': 'Auberge avec cuisine du terroir chartreusain (à vérifier avant déplacement).'},
     ],
     'Saint-Pierre-de-Chartreuse': [
         {'name': 'Office de Tourisme Coeur de Chartreuse', 'type': 'Information', 'opening_hours': '09:00-12:30 / 14:00-17:30', 'address': 'Place de la Mairie, 38380 Saint-Pierre-de-Chartreuse'},
         {'name': 'ESF Saint-Pierre-de-Chartreuse', 'type': 'École de ski', 'opening_hours': '09:00-17:00', 'address': 'Le Planolet, 38380 Saint-Pierre-de-Chartreuse'},
-        {'name': 'Sport 2000 Saint-Pierre', 'type': 'Magasin / Location', 'opening_hours': '08:30-18:00', 'address': 'Plan de Ville, 38380 Saint-Pierre-de-Chartreuse'},
+        {'name': 'Sport 2000 Saint-Pierre', 'type': 'Magasin / Location', 'opening_hours': '08:30-18:00', 'address': 'Plan de Ville, 38380 Saint-Pierre-de-Chartreuse', 'website_url': 'https://www.sport2000.fr'},
         {'name': 'Secours des pistes Saint-Pierre', 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': 'Le Planolet, 38380 Saint-Pierre-de-Chartreuse'},
+        {'name': 'Restaurant La Chaumière Saint-Pierre', 'type': 'Restaurant', 'opening_hours': '12:00-14:30 / 19:00-21:30', 'address': 'Le Bourg, 38380 Saint-Pierre-de-Chartreuse', 'source_note': 'Cuisine régionale et grenobloise (à vérifier avant déplacement).'},
+        {'name': 'Le Planolet Brasserie', 'type': 'Restaurant', 'opening_hours': '09:00-17:00', 'address': 'Le Planolet, 38380 Saint-Pierre-de-Chartreuse', 'source_note': 'Brasserie en pied de piste, sandwichs et plats du jour (à vérifier avant déplacement).'},
     ],
     'Lans-en-Vercors': [
         {'name': 'Office de Tourisme de Lans-en-Vercors', 'type': 'Information', 'opening_hours': '09:00-12:30 / 14:00-17:30', 'address': 'Place de la Mairie, 38250 Lans-en-Vercors'},
-        {'name': 'ESF Lans-en-Vercors', 'type': 'École de ski', 'opening_hours': '09:00-17:00', 'address': 'Domaine de l\'Aigle, 38250 Lans-en-Vercors'},
+        {'name': 'ESF Lans-en-Vercors', 'type': 'École de ski', 'opening_hours': '09:00-17:00', 'address': "Domaine de l'Aigle, 38250 Lans-en-Vercors"},
         {'name': 'Location Ski Lans', 'type': 'Magasin / Location', 'opening_hours': '08:30-17:30', 'address': 'Centre village, 38250 Lans-en-Vercors'},
-        {'name': 'Secours des pistes Lans-en-Vercors', 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': 'Domaine de l\'Aigle, 38250 Lans-en-Vercors'},
+        {'name': 'Secours des pistes Lans-en-Vercors', 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': "Domaine de l'Aigle, 38250 Lans-en-Vercors"},
+        {'name': 'Restaurant du Grand Veymont', 'type': 'Restaurant', 'opening_hours': '09:00-17:00', 'address': 'Domaine de l\'Aigle, 38250 Lans-en-Vercors', 'source_note': 'Restaurant en altitude face au Grand Veymont (à vérifier avant déplacement).'},
+        {'name': 'Crêperie Vercors Lans', 'type': 'Restaurant', 'opening_hours': '11:30-15:00', 'address': 'Centre village, 38250 Lans-en-Vercors', 'source_note': 'Crêperies et galettes locales (à vérifier avant déplacement).'},
     ],
     'Gresse-en-Vercors': [
         {'name': 'Office de Tourisme de Gresse-en-Vercors', 'type': 'Information', 'opening_hours': '09:00-12:30 / 14:00-17:30', 'address': 'Place de la Mairie, 38650 Gresse-en-Vercors'},
         {'name': 'ESF Gresse-en-Vercors', 'type': 'École de ski', 'opening_hours': '09:00-17:00', 'address': 'La Station, 38650 Gresse-en-Vercors'},
-        {'name': 'Skimium Gresse', 'type': 'Magasin / Location', 'opening_hours': '08:30-18:00', 'address': 'Front de neige, 38650 Gresse-en-Vercors'},
+        {'name': 'Skimium Gresse', 'type': 'Magasin / Location', 'opening_hours': '08:30-18:00', 'address': 'Front de neige, 38650 Gresse-en-Vercors', 'website_url': 'https://www.skimium.fr'},
         {'name': 'Secours des pistes Gresse-en-Vercors', 'type': 'Secours', 'opening_hours': 'Pendant ouverture du domaine', 'address': 'Poste de secours, 38650 Gresse-en-Vercors'},
+        {'name': 'Restaurant Les Pistes Gresse', 'type': 'Restaurant', 'opening_hours': '09:00-17:00', 'address': 'Front de neige, 38650 Gresse-en-Vercors', 'source_note': 'Self-service et plats chauds en pied de piste (à vérifier avant déplacement).'},
+        {'name': 'Auberge du Vercors Gresse', 'type': 'Restaurant', 'opening_hours': '12:00-14:00 / 19:00-21:00', 'address': 'Le Village, 38650 Gresse-en-Vercors', 'source_note': 'Cuisine du Vercors, fondues et diots (à vérifier avant déplacement).'},
     ],
 }
 
@@ -179,19 +210,7 @@ def enrich_service_data(service, station_name):
 
 def get_services_for_station(station_name):
     specific_services = list(SERVICE_SEED_BY_STATION.get(station_name, []))
-    verified_services = []
-    for service in specific_services:
-        normalized_type = (service.get('type', '') or '').lower()
-        normalized_name = (service.get('name', '') or '').lower()
-        is_verified_information = (
-            'information' in normalized_type or
-            'office de tourisme' in normalized_name or
-            normalized_name.startswith('mairie / info')
-        )
-        if is_verified_information:
-            verified_services.append(enrich_service_data(service, station_name))
-
-    return verified_services
+    return [enrich_service_data(service, station_name) for service in specific_services]
 
 BUS_LINES_SEED = [
     {

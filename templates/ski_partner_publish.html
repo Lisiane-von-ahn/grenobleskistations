@@ -43,7 +43,7 @@
             </div>
             <div class="col-lg-6">
                 <label class="form-label">Ville de depart</label>
-                <input type="text" name="city" maxlength="80" class="form-control" placeholder="Grenoble" list="city-autocomplete-list" data-city-autocomplete="true" autocomplete="address-level2">
+                            <input type="text" name="city" maxlength="80" class="form-control" placeholder="Grenoble" list="city-autocomplete-list" data-city-autocomplete="true" autocomplete="address-level2">
             </div>
             <div class="col-12">
                 <label class="form-label">Description</label>
@@ -56,4 +56,37 @@
         </form>
     </section>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Même logique que base.html
+    const rhoneAlpesCities = [
+        'Aix-les-Bains', 'Albertville', 'Annemasse', 'Annonay', 'Aubenas', 'Bourg-en-Bresse', 'Bourgoin-Jallieu',
+        'Bourg-Saint-Maurice', 'Bron', 'Chambéry', 'Chamonix-Mont-Blanc', 'Cluses', 'Décines-Charpieu',
+        'Échirolles', 'Écully', 'Firminy', 'Fontaine', 'Givors', 'Grenoble', 'Lyon', 'Meylan', 'Montélimar',
+        'Oyonnax', 'Romans-sur-Isère', 'Roanne', 'Roussillon', 'Saint-Chamond', 'Saint-Étienne', 'Saint-Genis-Laval',
+        'Saint-Martin-d’Hères', 'Saint-Priest', 'Sallanches', 'Sassenage', 'Seyssinet-Pariset', 'Seyssins',
+        'Thonon-les-Bains', 'Valence', 'Vénissieux', 'Vienne', 'Villefranche-sur-Saône', 'Villeurbanne',
+        'Villard-de-Lans', 'Autrans', 'Lans-en-Vercors', 'Huez', 'Alpe d’Huez', 'Les Deux Alpes',
+        'Chamrousse', 'Tignes', 'Val d’Isère', 'Morzine', 'Les Gets', 'Samoëns', 'Flaine', 'La Plagne',
+        'Courchevel', 'Méribel', 'Les Menuires', 'Val Thorens', 'La Clusaz', 'Megève', 'Pralognan-la-Vanoise',
+        'Vaujany', 'Oz-en-Oisans', 'Le Sappey-en-Chartreuse', 'Saint-Pierre-de-Chartreuse', 'Gresse-en-Vercors',
+        'Auris-en-Oisans', 'Le Collet d’Allevard', 'La Grave', 'La Grave - La Meije', 'Oz 3300'
+    ];
+    const cityInput = document.querySelector('input[name="city"]');
+    if (cityInput) {
+        cityInput.addEventListener('change', function () {
+            const val = (cityInput.value || '').trim();
+            if (val && !rhoneAlpesCities.some(c => c.toLowerCase() === val.toLowerCase())) {
+                cityInput.setCustomValidity('Merci de choisir une ville de la liste Rhône-Alpes.');
+                cityInput.reportValidity();
+            } else {
+                cityInput.setCustomValidity('');
+            }
+        });
+    }
+});
+</script>
 {% endblock %}
