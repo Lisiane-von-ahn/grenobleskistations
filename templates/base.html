@@ -118,11 +118,11 @@
         /* Keep all menu items inside the header even when labels are long. */
         .header-area {
             height: auto;
-            min-height: 162px;
+            min-height: 132px;
         }
 
         .header-area .main-nav {
-            align-items: flex-start;
+            align-items: center;
             gap: 10px;
         }
 
@@ -138,7 +138,7 @@
             flex-wrap: wrap;
             justify-content: flex-end;
             gap: 6px;
-            margin-top: 38px;
+            margin-top: 24px;
         }
 
         .header-area .main-nav .nav li {
@@ -265,13 +265,17 @@
         }
 
         .main-content-wrap {
-            margin-top: 170px !important;
+            margin-top: 112px !important;
             min-height: calc(100vh - 230px);
             padding-top: 0;
         }
 
+        .main-content-wrap > *:first-child {
+            margin-top: 0 !important;
+        }
+
         body.home-page .main-content-wrap {
-            margin-top: 170px !important;
+            margin-top: 112px !important;
         }
 
         .floating-btn {
@@ -398,7 +402,7 @@
 
         @media (max-width: 1199.98px) {
             .header-area {
-                min-height: 152px;
+                min-height: 124px;
             }
 
             .main-nav .nav li a {
@@ -407,11 +411,11 @@
             }
 
             .header-area .main-nav .nav {
-                margin-top: 34px;
+                margin-top: 20px;
             }
 
             .main-content-wrap {
-                margin-top: 160px !important;
+                margin-top: 106px !important;
             }
         }
 

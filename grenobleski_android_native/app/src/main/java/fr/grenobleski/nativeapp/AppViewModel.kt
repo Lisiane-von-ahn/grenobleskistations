@@ -44,7 +44,7 @@ data class AppUiState(
     val publishDescription: String = "",
     val publishCity: String = "",
     val publishPrice: String = "",
-    val publishImageBase64: String = "",
+    val publishImagesBase64: List<String> = emptyList(),
     val isPublishingArticle: Boolean = false,
     val profileInfo: ProfileInfo? = null,
 )
@@ -335,7 +335,29 @@ class AppViewModel(
     }
 
     fun updatePublishImageBase64(value: String) {
-        state = state.copy(publishImageBase64 = value)
+        state = if (value.isBlank()) {
+            state.copy(publishImagesBase64 = emptyList())
+        } else {
+            state.copy(publishImagesBase64 = listOf(value))
+        }
+    }
+
+    fun appendPublishImagesBase64(values: List<String>) {
+        if (values.isEmpty()) return
+        val cleaned = values.filter { it.isNotBlank() }
+        if (cleaned.isEmpty()) return
+        val merged = (state.publishImagesBase64 + cleaned).distinct().take(8)
+        state = state.copy(publishImagesBase64 = merged)
+    }
+
+    fun removePublishImageAt(index: Int) {
+        if (index !in state.publishImagesBase64.indices) return
+        val updated = state.publishImagesBase64.toMutableList().also { it.removeAt(index) }
+        state = state.copy(publishImagesBase64 = updated)
+    }
+
+    fun clearPublishImages() {
+        state = state.copy(publishImagesBase64 = emptyList())
     }
 
     fun publishArticle() {
@@ -364,7 +386,7 @@ class AppViewModel(
                 description = description,
                 city = city,
                 price = state.publishPrice.trim(),
-                imageBase64 = state.publishImageBase64,
+                imagesBase64 = state.publishImagesBase64,
             )
 
             if (result.isSuccess) {
@@ -374,7 +396,7 @@ class AppViewModel(
                     publishDescription = "",
                     publishCity = "",
                     publishPrice = "",
-                    publishImageBase64 = "",
+                    publishImagesBase64 = emptyList(),
                     selectedTab = NativeTab.MARKETPLACE,
                 )
                 refreshCurrentTab()
@@ -405,7 +427,7 @@ class AppViewModel(
             NativeTab.MARKETPLACE -> state.marketplaceItems.isNotEmpty()
             NativeTab.INSTRUCTORS -> state.instructorItems.isNotEmpty()
             NativeTab.PISTES -> state.pisteItems.isNotEmpty()
-            NativeTab.MESSAGES -> state.messageItems.isNotEmpty()
+            NativeTab.MESSAGES -> state.messageItems.isNotEmpty() || state.chatUsers.isNotEmpty()
             NativeTab.PROFILE -> state.profileInfo != null
         }
     }

@@ -1,11 +1,17 @@
 import logging
 import os
+import base64
+import binascii
+import json
+from urllib.parse import urlencode
+from urllib.request import urlopen
 
+from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.db.models import Q
+from django.db.models import Avg, Q
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.authentication import SessionAuthentication, TokenAuthentication
@@ -27,8 +33,14 @@ except Exception:
     google_requests = None
     google_id_token = None
 
+try:
+    from allauth.socialaccount.models import SocialAccount
+except Exception:
+    SocialAccount = None
+
 from .models import (
     BusLine,
+    CrowdStatusUpdate,
     InstructorProfile,
     InstructorReview,
     InstructorService,
@@ -40,6 +52,7 @@ from .models import (
     ServiceStore,
     SkiCircuit,
     SkiMaterialListing,
+    SkiMaterialImage,
     SkiPartnerPost,
     SkiPartnerReport,
     SkiStation,
@@ -86,9 +99,115 @@ def _current_authenticated_user(view):
     return user
 
 
+def _encode_binary_field(value):
+    if not value:
+        return None
+    return base64.b64encode(value).decode("utf-8")
+
+
+def _decode_base64_binary(value):
+    if value in (None, ""):
+        return None
+    if isinstance(value, bytes):
+        return value
+    if not isinstance(value, str):
+        raise ValidationError("Invalid image payload.")
+
+    raw = value.strip()
+    if raw.startswith("data:") and "," in raw:
+        raw = raw.split(",", 1)[1]
+    if not raw:
+        return None
+
+    try:
+        return base64.b64decode(raw, validate=True)
+    except (ValueError, binascii.Error):
+        raise ValidationError("Invalid base64 image payload.")
+
+
+def _fetch_weather_summary(latitude, longitude):
+    api_key = (getattr(settings, "WEATHER_API_KEY", "") or "").strip()
+    if not api_key or api_key == "qssdsdsd":
+        return {}
+
+    query = urlencode(
+        {
+            "lat": str(latitude),
+            "lon": str(longitude),
+            "appid": api_key,
+            "units": "metric",
+            "lang": "fr",
+        }
+    )
+    url = f"https://api.openweathermap.org/data/2.5/weather?{query}"
+
+    try:
+        with urlopen(url, timeout=4) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except Exception:
+        logger.warning("Weather fetch failed for lat=%s lon=%s", latitude, longitude, exc_info=True)
+        return {}
+
+    weather = payload.get("weather") or []
+    main = payload.get("main") or {}
+    snow = payload.get("snow") or {}
+
+    return {
+        "weather_description": ((weather[0] or {}).get("description") if weather else "") or "",
+        "temperature_c": main.get("temp"),
+        "feels_like_c": main.get("feels_like"),
+        "snow_cm": snow.get("1h") or snow.get("3h"),
+    }
+
+
 class SkiStationViewSet(viewsets.ModelViewSet):
     queryset = SkiStation.objects.all()
     serializer_class = SkiStationSerializer
+
+    @action(detail=False, methods=["get"], permission_classes=[AllowAny])
+    def conditions(self, request):
+        crowd_labels = {
+            PisteConditionReport.CROWD_QUIET: "Peu",
+            PisteConditionReport.CROWD_NORMAL: "Agreable",
+            PisteConditionReport.CROWD_BUSY: "Bonde",
+        }
+        stations = SkiStation.objects.order_by("distanceFromGrenoble", "name")[:18]
+        results = []
+
+        for station in stations:
+            latest_report = PisteConditionReport.objects.filter(ski_station=station).order_by("-created_at").first()
+            latest_snow = SnowConditionUpdate.objects.filter(ski_station=station).order_by("-created_at").first()
+            latest_crowd = CrowdStatusUpdate.objects.filter(ski_station=station).order_by("-created_at").first()
+            avg_rating = PisteConditionReport.objects.filter(ski_station=station).aggregate(avg=Avg("piste_rating")).get("avg")
+            weather = _fetch_weather_summary(station.latitude, station.longitude)
+
+            updated_candidates = [
+                value for value in [
+                    getattr(latest_report, "created_at", None),
+                    getattr(latest_snow, "created_at", None),
+                    getattr(latest_crowd, "created_at", None),
+                ] if value is not None
+            ]
+            updated_at = max(updated_candidates) if updated_candidates else None
+
+            results.append(
+                {
+                    "id": station.id,
+                    "station_name": station.name,
+                    "altitude": station.altitude,
+                    "distance_from_grenoble": station.distanceFromGrenoble,
+                    "weather_description": weather.get("weather_description") or "indisponible",
+                    "temperature_c": weather.get("temperature_c"),
+                    "feels_like_c": weather.get("feels_like_c"),
+                    "snow_depth_cm": getattr(latest_snow, "snow_depth_cm", None) or weather.get("snow_cm"),
+                    "crowd_label": crowd_labels.get(getattr(latest_crowd, "crowd_level", ""), "normal"),
+                    "rating_avg": round(avg_rating, 1) if avg_rating is not None else None,
+                    "latest_comment": getattr(latest_report, "comment", "") or "",
+                    "updated_at": updated_at.isoformat() if updated_at is not None else "",
+                }
+            )
+
+        return Response(results, status=status.HTTP_200_OK)
 
 class BusLineViewSet(viewsets.ModelViewSet):
     queryset = BusLine.objects.all()
@@ -107,16 +226,45 @@ class SkiMaterialListingViewSet(viewsets.ModelViewSet):
     serializer_class = SkiMaterialListingSerializer
 
     def perform_create(self, serializer):
-        user_id = self.request.data.get('user')  # <- Prend l'id du POST envoyé
-        if not user_id:
+        user_id = self.request.data.get('user')
+        user = None
+        if user_id:
+            try:
+                user = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                raise ValidationError("Invalid user ID.")
+        elif self.request.user and self.request.user.is_authenticated:
+            user = self.request.user
+
+        if user is None:
             raise ValidationError("User ID is required.")
 
-        try:
-            user = User.objects.get(id=user_id)
-        except User.DoesNotExist:
-            raise ValidationError("Invalid user ID.")
+        listing = serializer.save(user=user)
 
-        serializer.save(user=user)
+        images_payload = self.request.data.get('images', None)
+        if images_payload is None and hasattr(self.request.data, 'getlist'):
+            images_payload = self.request.data.getlist('images')
+
+        if isinstance(images_payload, str):
+            images_payload = images_payload.strip()
+            if images_payload.startswith('['):
+                try:
+                    images_payload = json.loads(images_payload)
+                except json.JSONDecodeError:
+                    images_payload = []
+            elif images_payload:
+                images_payload = [images_payload]
+            else:
+                images_payload = []
+
+        if not isinstance(images_payload, list):
+            images_payload = []
+
+        for raw_image in images_payload:
+            image_bytes = _decode_base64_binary(raw_image)
+            if image_bytes is None:
+                continue
+            SkiMaterialImage.objects.create(listing=listing, image=image_bytes)
         
 class MessageViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
@@ -327,6 +475,12 @@ class UserFriendViewSet(viewsets.ModelViewSet):
 
 def _serialize_user(user):
     profile = getattr(user, "profile", None)
+    google_profile_picture_url = None
+    if SocialAccount is not None:
+        social = SocialAccount.objects.filter(user=user, provider="google").first()
+        if social is not None:
+            google_profile_picture_url = (social.extra_data or {}).get("picture")
+
     return {
         "id": user.id,
         "email": user.email,
@@ -334,6 +488,8 @@ def _serialize_user(user):
         "first_name": user.first_name,
         "last_name": user.last_name,
         "has_profile_picture": bool(profile and profile.profile_picture),
+        "profile_picture": _encode_binary_field(getattr(profile, "profile_picture", None)),
+        "google_profile_picture_url": google_profile_picture_url,
     }
 
 

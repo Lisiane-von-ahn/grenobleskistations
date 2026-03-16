@@ -66,23 +66,39 @@ data class MarketplaceItem(
 
 data class InstructorItem(
     val id: Int,
+    val userId: Int,
     val displayName: String,
     val bio: String,
+    val yearsExperience: Int,
+    val certifications: String,
+    val phone: String,
+    val profilePhotoBase64: String,
 )
 
 data class PisteItem(
     val id: Int,
     val stationName: String,
-    val rating: Int,
+    val altitudeLabel: String,
+    val distanceLabel: String,
+    val ratingLabel: String,
     val crowdLabel: String,
+    val weatherLabel: String,
+    val temperatureLabel: String,
+    val snowDepthLabel: String,
     val comment: String,
+    val updatedAtLabel: String,
 )
 
 data class MessageItem(
     val id: Int,
     val senderId: Int,
     val recipientId: Int,
-    val fromLabel: String,
+    val senderLabel: String,
+    val recipientLabel: String,
+    val senderPhotoBase64: String,
+    val senderPhotoUrl: String,
+    val recipientPhotoBase64: String,
+    val recipientPhotoUrl: String,
     val body: String,
     val createdAtLabel: String,
     val isRead: Boolean,
@@ -93,9 +109,13 @@ data class ProfileInfo(
     val displayName: String,
     val email: String,
     val username: String,
+    val profilePictureBase64: String = "",
+    val googleProfilePictureUrl: String = "",
 )
 
 data class ChatUserOption(
     val id: Int,
     val label: String,
+    val photoBase64: String,
+    val photoUrl: String,
 )

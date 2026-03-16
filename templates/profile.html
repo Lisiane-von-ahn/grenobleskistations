@@ -6,12 +6,77 @@
 
 {% block content %}
 <style>
+  .profile-shell {
+    background:
+      radial-gradient(circle at 8% 10%, rgba(39, 171, 188, 0.16), transparent 36%),
+      radial-gradient(circle at 90% 0%, rgba(11, 126, 169, 0.12), transparent 34%),
+      #eef3f8;
+    min-height: 65vh;
+  }
+
+  .profile-hero-wrap {
+    position: relative;
+    padding: 2.25rem 0 1.2rem;
+  }
+
+  .profile-hero-wrap::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(130deg, rgba(36, 180, 194, 0.85), rgba(24, 108, 160, 0.9));
+    border-radius: 20px;
+    box-shadow: 0 20px 45px rgba(8, 44, 74, 0.2);
+    z-index: 0;
+  }
+
   .profile-hero {
+    position: relative;
+    z-index: 1;
     color: #f8fbff;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+    padding: 2rem 2.1rem;
+  }
+
+  .profile-hero-kicker {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.28rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    background: rgba(255, 255, 255, 0.18);
+    margin-bottom: 0.8rem;
+  }
+
+  .profile-hero h2 {
+    font-size: clamp(1.8rem, 3vw, 2.5rem);
+    margin-bottom: 0.4rem;
+  }
+
+  .profile-hero p {
+    margin-bottom: 0;
+    color: rgba(242, 250, 255, 0.93);
+    max-width: 640px;
+  }
+
+  .profile-info-card,
+  .profile-edit-card {
+    border-radius: 16px;
+    border: 1px solid #e2ebf2;
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08) !important;
   }
 
   @media (max-width: 767.98px) {
+    .profile-hero-wrap {
+      padding-top: 1rem;
+    }
+
+    .profile-hero {
+      padding: 1.25rem 1.1rem;
+    }
+
     .profile-hero h2 {
       font-size: 1.65rem;
     }
@@ -41,14 +106,15 @@
     }
   }
 </style>
-<section class="py-5" style="background: linear-gradient(135deg, #2ca7b7, #1f8f9e);">
-  <div class="container text-center text-white profile-hero">
-    <h2 class="display-4 mb-2">{% trans "Profil utilisateur" %}</h2>
-    <p class="mb-0">{% trans "Gérez vos informations personnelles et votre photo de profil." %}</p>
+<section class="profile-hero-wrap">
+  <div class="container profile-hero">
+    <span class="profile-hero-kicker">{% trans "Espace Membre" %}</span>
+    <h2>{% trans "Profil utilisateur" %}</h2>
+    <p>{% trans "Mettez a jour votre identite, votre photo et les informations visibles dans l'application mobile." %}</p>
   </div>
 </section>
 
-<section class="py-5" style="background-color: #f5f7fa; min-height: 65vh;">
+<section class="py-5 profile-shell">
   <div class="container">
     {% if messages %}
       <div class="row mb-3">

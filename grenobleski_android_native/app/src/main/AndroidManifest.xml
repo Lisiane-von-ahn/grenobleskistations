@@ -25,10 +25,6 @@
                 <data
                     android:scheme="grenobleski"
                     android:host="auth" />
-                <data
-                    android:scheme="grenobleski"
-                    android:host="auth"
-                    android:pathPrefix="/" />
             </intent-filter>
         </activity>
     </application>

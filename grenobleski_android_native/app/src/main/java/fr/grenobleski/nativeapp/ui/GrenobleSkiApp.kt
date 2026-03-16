@@ -80,9 +80,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import fr.grenobleski.nativeapp.AppUiState
@@ -133,6 +136,16 @@ private data class BottomNavItem(
     val action: BottomNavAction,
     val labelRes: Int,
     val icon: ImageVector,
+)
+
+private data class ChatThreadSummary(
+    val userId: Int,
+    val label: String,
+    val photoBase64: String,
+    val photoUrl: String,
+    val lastMessage: String,
+    val lastDateLabel: String,
+    val unreadCount: Int,
 )
 
 @Composable
@@ -239,14 +252,15 @@ fun GrenobleSkiApp(
             onLogout = viewModel::logout,
             onPrepareMessageToSeller = viewModel::prepareMessageToSeller,
             onSelectMessageRecipient = viewModel::selectMessageRecipient,
-            onMessageRecipientChange = viewModel::updateMessageRecipientId,
             onMessageBodyChange = viewModel::updateMessageDraftBody,
             onSendMessage = viewModel::sendMessageDraft,
             onUpdatePublishTitle = viewModel::updatePublishTitle,
             onUpdatePublishDescription = viewModel::updatePublishDescription,
             onUpdatePublishCity = viewModel::updatePublishCity,
             onUpdatePublishPrice = viewModel::updatePublishPrice,
-            onUpdatePublishImageBase64 = viewModel::updatePublishImageBase64,
+            onAppendPublishImages = viewModel::appendPublishImagesBase64,
+            onRemovePublishImageAt = viewModel::removePublishImageAt,
+            onClearPublishImages = viewModel::clearPublishImages,
             onPublishArticle = viewModel::publishArticle,
         )
     }
@@ -461,22 +475,46 @@ private fun NativeShell(
     onLogout: () -> Unit,
     onPrepareMessageToSeller: (Int, String) -> Unit,
     onSelectMessageRecipient: (Int) -> Unit,
-    onMessageRecipientChange: (String) -> Unit,
     onMessageBodyChange: (String) -> Unit,
     onSendMessage: () -> Unit,
     onUpdatePublishTitle: (String) -> Unit,
     onUpdatePublishDescription: (String) -> Unit,
     onUpdatePublishCity: (String) -> Unit,
     onUpdatePublishPrice: (String) -> Unit,
-    onUpdatePublishImageBase64: (String) -> Unit,
+    onAppendPublishImages: (List<String>) -> Unit,
+    onRemovePublishImageAt: (Int) -> Unit,
+    onClearPublishImages: () -> Unit,
     onPublishArticle: () -> Unit,
 ) {
     val localContext = androidx.compose.ui.platform.LocalContext.current
     var quickMenuOpen by remember { mutableStateOf(false) }
     var moreMenuOpen by remember { mutableStateOf(false) }
     var publishDialogOpen by remember { mutableStateOf(false) }
+    val publishPhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
+        val encoded = uris.mapNotNull { uri -> uriToBase64(localContext, uri) }
+        onAppendPublishImages(encoded)
+    }
     val currentUserId = state.profileInfo?.userId?.takeIf { it > 0 } ?: state.session?.userId ?: 0
     val unreadMessages = state.messageItems.count { !it.isRead && it.recipientId == currentUserId }
+
+    LaunchedEffect(
+        state.isPublishingArticle,
+        state.publishTitle,
+        state.publishDescription,
+        state.publishCity,
+        state.selectedTab,
+    ) {
+        if (
+            publishDialogOpen &&
+            !state.isPublishingArticle &&
+            state.selectedTab == NativeTab.MARKETPLACE &&
+            state.publishTitle.isBlank() &&
+            state.publishDescription.isBlank() &&
+            state.publishCity.isBlank()
+        ) {
+            publishDialogOpen = false
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -573,7 +611,7 @@ private fun NativeShell(
                 NativeTab.PISTES -> PistesTab(state)
                 NativeTab.MESSAGES -> MessagesTab(
                     state = state,
-                    onRecipientChange = onMessageRecipientChange,
+                    onSelectRecipient = onSelectMessageRecipient,
                     onBodyChange = onMessageBodyChange,
                     onSend = onSendMessage,
                 )
@@ -645,63 +683,154 @@ private fun NativeShell(
         }
 
         if (publishDialogOpen) {
-            AlertDialog(
-                onDismissRequest = { publishDialogOpen = false },
-                title = { Text(stringResource(id = R.string.publish_article)) },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = state.publishTitle,
-                            onValueChange = onUpdatePublishTitle,
-                            label = { Text(stringResource(id = R.string.article_title)) },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        OutlinedTextField(
-                            value = state.publishDescription,
-                            onValueChange = onUpdatePublishDescription,
-                            label = { Text(stringResource(id = R.string.article_description)) },
-                            modifier = Modifier.fillMaxWidth(),
-                            minLines = 2,
-                            maxLines = 4,
-                        )
-                        OutlinedTextField(
-                            value = state.publishCity,
-                            onValueChange = onUpdatePublishCity,
-                            label = { Text(stringResource(id = R.string.city)) },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        OutlinedTextField(
-                            value = state.publishPrice,
-                            onValueChange = onUpdatePublishPrice,
-                            label = { Text(stringResource(id = R.string.price)) },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            onPublishArticle()
-                        },
-                        enabled = !state.isPublishingArticle,
-                    ) {
-                        if (state.isPublishingArticle) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp,
-                                color = Color.White,
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
+            Dialog(onDismissRequest = { publishDialogOpen = false }) {
+                val previews = remember(state.publishImagesBase64) {
+                    state.publishImagesBase64.map { decodeBase64Image(it) }
+                }
+                Card(
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    Brush.horizontalGradient(
+                                        listOf(
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.92f),
+                                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.9f),
+                                        )
+                                    )
+                                )
+                                .padding(horizontal = 18.dp, vertical = 16.dp),
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(
+                                    text = stringResource(id = R.string.publish_article),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                                Text(
+                                    text = stringResource(id = R.string.publish_premium_subtitle),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.White.copy(alpha = 0.86f),
+                                )
+                            }
                         }
-                        Text(stringResource(id = R.string.publish))
+
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            OutlinedTextField(
+                                value = state.publishTitle,
+                                onValueChange = onUpdatePublishTitle,
+                                label = { Text(stringResource(id = R.string.article_title)) },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            OutlinedTextField(
+                                value = state.publishDescription,
+                                onValueChange = onUpdatePublishDescription,
+                                label = { Text(stringResource(id = R.string.article_description)) },
+                                modifier = Modifier.fillMaxWidth(),
+                                minLines = 2,
+                                maxLines = 4,
+                            )
+                            OutlinedTextField(
+                                value = state.publishCity,
+                                onValueChange = onUpdatePublishCity,
+                                label = { Text(stringResource(id = R.string.city)) },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            OutlinedTextField(
+                                value = state.publishPrice,
+                                onValueChange = onUpdatePublishPrice,
+                                label = { Text(stringResource(id = R.string.price)) },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedButton(onClick = { publishPhotoPicker.launch("image/*") }) {
+                                    Text(stringResource(id = R.string.choose_photos))
+                                }
+                                if (state.publishImagesBase64.isNotEmpty()) {
+                                    TextButton(onClick = onClearPublishImages) {
+                                        Text(stringResource(id = R.string.clear_photos))
+                                    }
+                                }
+                            }
+
+                            if (previews.isEmpty()) {
+                                Text(
+                                    text = stringResource(id = R.string.photo_upload_hint),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            } else {
+                                Text(
+                                    text = stringResource(id = R.string.photo_count, previews.size),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    items(previews.size) { index ->
+                                        val bitmap = previews[index]
+                                        Box {
+                                            if (bitmap != null) {
+                                                Image(
+                                                    bitmap = bitmap,
+                                                    contentDescription = stringResource(id = R.string.choose_photos),
+                                                    modifier = Modifier
+                                                        .width(104.dp)
+                                                        .height(104.dp)
+                                                        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f), RoundedCornerShape(14.dp)),
+                                                    contentScale = ContentScale.Crop,
+                                                )
+                                            }
+                                            IconButton(
+                                                onClick = { onRemovePublishImageAt(index) },
+                                                modifier = Modifier.align(Alignment.TopEnd),
+                                            ) {
+                                                Icon(Icons.Filled.Close, contentDescription = stringResource(id = R.string.remove_photo))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            ) {
+                                OutlinedButton(
+                                    onClick = { publishDialogOpen = false },
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    Text(stringResource(id = R.string.close))
+                                }
+                                Button(
+                                    onClick = onPublishArticle,
+                                    enabled = !state.isPublishingArticle,
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    if (state.isPublishingArticle) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(16.dp),
+                                            strokeWidth = 2.dp,
+                                            color = Color.White,
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                    }
+                                    Text(stringResource(id = R.string.publish))
+                                }
+                            }
+                        }
                     }
-                },
-                dismissButton = {
-                    TextButton(onClick = { publishDialogOpen = false }) {
-                        Text(stringResource(id = R.string.close))
-                    }
-                },
-            )
+                }
+            }
         }
     }
 }
@@ -854,6 +983,21 @@ private fun MarketplaceTab(
     onPrepareMessageToSeller: (Int, String) -> Unit,
 ) {
     var selectedItem by remember { mutableStateOf<fr.grenobleski.nativeapp.data.model.MarketplaceItem?>(null) }
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedCity by remember { mutableStateOf("") }
+    var selectedCondition by remember { mutableStateOf("") }
+    val availableCities = remember(state.marketplaceItems) { state.marketplaceItems.map { it.city }.filter { it.isNotBlank() && it != "-" }.distinct().sorted() }
+    val availableConditions = remember(state.marketplaceItems) { state.marketplaceItems.map { it.conditionLabel }.filter { it.isNotBlank() && it != "-" }.distinct().sorted() }
+    val filteredItems = remember(state.marketplaceItems, searchQuery, selectedCity, selectedCondition) {
+        state.marketplaceItems.filter { item ->
+            val matchesQuery = searchQuery.isBlank() || listOf(item.title, item.description, item.city).any {
+                it.contains(searchQuery, ignoreCase = true)
+            }
+            val matchesCity = selectedCity.isBlank() || item.city == selectedCity
+            val matchesCondition = selectedCondition.isBlank() || item.conditionLabel == selectedCondition
+            matchesQuery && matchesCity && matchesCondition
+        }
+    }
 
     if (state.marketplaceItems.isEmpty()) {
         EmptyTabMessage(text = stringResource(id = R.string.empty_marketplace))
@@ -865,7 +1009,58 @@ private fun MarketplaceTab(
         contentPadding = PaddingValues(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        items(state.marketplaceItems) { item ->
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    label = { Text(stringResource(id = R.string.search_marketplace)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                )
+                Text(
+                    text = stringResource(id = R.string.marketplace_filters),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    item {
+                        FilterChipButton(
+                            label = stringResource(id = R.string.all_cities),
+                            selected = selectedCity.isBlank(),
+                            onClick = { selectedCity = "" },
+                        )
+                    }
+                    items(availableCities) { city ->
+                        FilterChipButton(label = city, selected = selectedCity == city, onClick = { selectedCity = city })
+                    }
+                }
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    item {
+                        FilterChipButton(
+                            label = stringResource(id = R.string.all_conditions),
+                            selected = selectedCondition.isBlank(),
+                            onClick = { selectedCondition = "" },
+                        )
+                    }
+                    items(availableConditions) { condition ->
+                        FilterChipButton(label = condition, selected = selectedCondition == condition, onClick = { selectedCondition = condition })
+                    }
+                }
+                Text(
+                    text = stringResource(id = R.string.showing_results, filteredItems.size, state.marketplaceItems.size),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        if (filteredItems.isEmpty()) {
+            item {
+                EmptyTabMessage(text = stringResource(id = R.string.no_results))
+            }
+        }
+        items(filteredItems) { item ->
+            val previewImage = remember(item.previewImageBase64) { decodeBase64Image(item.previewImageBase64) }
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -873,9 +1068,22 @@ private fun MarketplaceTab(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             ) {
                 Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (previewImage != null) {
+                        Image(
+                            bitmap = previewImage,
+                            contentDescription = item.title,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(144.dp),
+                            contentScale = ContentScale.Crop,
+                        )
+                    }
                     Text(item.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     Text("${item.city}  •  ${item.priceLabel}", style = MaterialTheme.typography.bodyMedium)
                     Text(item.conditionLabel, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (item.postedAtLabel.isNotBlank()) {
+                        Text(item.postedAtLabel, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                     Text(item.sellerLabel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick = { selectedItem = item }) {
@@ -892,11 +1100,22 @@ private fun MarketplaceTab(
 
     val details = selectedItem
     if (details != null) {
+        val detailImage = remember(details.previewImageBase64) { decodeBase64Image(details.previewImageBase64) }
         AlertDialog(
             onDismissRequest = { selectedItem = null },
             title = { Text(details.title) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (detailImage != null) {
+                        Image(
+                            bitmap = detailImage,
+                            contentDescription = details.title,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(180.dp),
+                            contentScale = ContentScale.Crop,
+                        )
+                    }
                     Text("${stringResource(id = R.string.city)}: ${details.city}")
                     Text("${stringResource(id = R.string.price)}: ${details.priceLabel}")
                     Text("${stringResource(id = R.string.condition)}: ${details.conditionLabel}")
@@ -931,19 +1150,94 @@ private fun InstructorsTab(state: AppUiState) {
         return
     }
 
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedInstructor by remember { mutableStateOf<fr.grenobleski.nativeapp.data.model.InstructorItem?>(null) }
+    val filteredItems = remember(state.instructorItems, searchQuery) {
+        state.instructorItems.filter { item ->
+            searchQuery.isBlank() || item.displayName.contains(searchQuery, ignoreCase = true) || item.bio.contains(searchQuery, ignoreCase = true)
+        }
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        items(state.instructorItems) { item ->
+        item {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                label = { Text(stringResource(id = R.string.search_instructors)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+            )
+        }
+        if (filteredItems.isEmpty()) {
+            item { EmptyTabMessage(text = stringResource(id = R.string.no_results)) }
+        }
+        items(filteredItems) { item ->
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(item.displayName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        UserAvatar(
+                            displayName = item.displayName,
+                            photoBase64 = item.profilePhotoBase64,
+                            photoUrl = "",
+                            size = 56.dp,
+                        )
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text(item.displayName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                text = stringResource(id = R.string.years_experience_label, item.yearsExperience),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
                     Text(item.bio, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { selectedInstructor = item }) {
+                            Text(stringResource(id = R.string.view_details))
+                        }
+                    }
                 }
             }
         }
+    }
+
+    val details = selectedInstructor
+    if (details != null) {
+        AlertDialog(
+            onDismissRequest = { selectedInstructor = null },
+            title = { Text(details.displayName) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        UserAvatar(
+                            displayName = details.displayName,
+                            photoBase64 = details.profilePhotoBase64,
+                            photoUrl = "",
+                            size = 62.dp,
+                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(stringResource(id = R.string.years_experience_label, details.yearsExperience))
+                            if (details.phone.isNotBlank()) {
+                                Text("${stringResource(id = R.string.phone)}: ${details.phone}")
+                            }
+                        }
+                    }
+                    if (details.certifications.isNotBlank()) {
+                        Text("${stringResource(id = R.string.certifications)}: ${details.certifications}")
+                    }
+                    Text(details.bio)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { selectedInstructor = null }) {
+                    Text(stringResource(id = R.string.close))
+                }
+            },
+        )
     }
 }
 
@@ -954,17 +1248,53 @@ private fun PistesTab(state: AppUiState) {
         return
     }
 
+    var searchQuery by remember { mutableStateOf("") }
+    val filteredItems = remember(state.pisteItems, searchQuery) {
+        state.pisteItems.filter { item ->
+            searchQuery.isBlank() || item.stationName.contains(searchQuery, ignoreCase = true) || item.weatherLabel.contains(searchQuery, ignoreCase = true)
+        }
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        items(state.pisteItems) { item ->
+        item {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                label = { Text(stringResource(id = R.string.search_conditions)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+            )
+        }
+        items(filteredItems) { item ->
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(item.stationName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    Text("${stringResource(id = R.string.piste_rating)}: ${item.rating}  •  ${item.crowdLabel}", style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        text = "${stringResource(id = R.string.weather)}: ${item.weatherLabel}  •  ${stringResource(id = R.string.temperature)}: ${item.temperatureLabel}°C",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Text(
+                        text = "${stringResource(id = R.string.snow_depth)}: ${item.snowDepthLabel} cm  •  ${stringResource(id = R.string.piste_rating)}: ${item.ratingLabel}",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Text(
+                        text = "${stringResource(id = R.string.altitude)}: ${item.altitudeLabel} m  •  ${stringResource(id = R.string.distance_from_grenoble)}: ${item.distanceLabel} km",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(item.crowdLabel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                     Text(item.comment, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (item.updatedAtLabel.isNotBlank()) {
+                        Text(
+                            text = "${stringResource(id = R.string.updated_at)}: ${item.updatedAtLabel}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
         }
@@ -974,58 +1304,222 @@ private fun PistesTab(state: AppUiState) {
 @Composable
 private fun MessagesTab(
     state: AppUiState,
-    onRecipientChange: (String) -> Unit,
+    onSelectRecipient: (Int) -> Unit,
     onBodyChange: (String) -> Unit,
     onSend: () -> Unit,
 ) {
     val myUserId = state.profileInfo?.userId?.takeIf { it > 0 } ?: state.session?.userId ?: 0
-    val orderedMessages = state.messageItems.asReversed()
+    var chatSearch by remember { mutableStateOf("") }
+    var recipientDialogOpen by remember { mutableStateOf(false) }
+    var recipientSearch by remember { mutableStateOf("") }
+
+    val threadSummaries = remember(state.messageItems, state.chatUsers, myUserId) {
+        val map = linkedMapOf<Int, ChatThreadSummary>()
+
+        state.messageItems.forEach { item ->
+            val outgoing = myUserId > 0 && item.senderId == myUserId
+            val otherId = if (outgoing) item.recipientId else item.senderId
+            if (otherId <= 0 || otherId == myUserId) return@forEach
+
+            val label = if (outgoing) item.recipientLabel else item.senderLabel
+            val photoBase64 = if (outgoing) item.recipientPhotoBase64 else item.senderPhotoBase64
+            val photoUrl = if (outgoing) item.recipientPhotoUrl else item.senderPhotoUrl
+            val unreadIncrement = if (!outgoing && !item.isRead) 1 else 0
+
+            val existing = map[otherId]
+            if (existing == null) {
+                map[otherId] = ChatThreadSummary(
+                    userId = otherId,
+                    label = label.ifBlank { "Utilisateur #$otherId" },
+                    photoBase64 = photoBase64,
+                    photoUrl = photoUrl,
+                    lastMessage = item.body,
+                    lastDateLabel = item.createdAtLabel,
+                    unreadCount = unreadIncrement,
+                )
+            } else {
+                map[otherId] = existing.copy(unreadCount = existing.unreadCount + unreadIncrement)
+            }
+        }
+
+        state.chatUsers.forEach { user ->
+            if (user.id <= 0 || user.id == myUserId) return@forEach
+            val existing = map[user.id]
+            if (existing == null) {
+                map[user.id] = ChatThreadSummary(
+                    userId = user.id,
+                    label = user.label,
+                    photoBase64 = user.photoBase64,
+                    photoUrl = user.photoUrl,
+                    lastMessage = "",
+                    lastDateLabel = "",
+                    unreadCount = 0,
+                )
+            } else if (existing.photoBase64.isBlank() && existing.photoUrl.isBlank()) {
+                map[user.id] = existing.copy(
+                    label = existing.label.ifBlank { user.label },
+                    photoBase64 = user.photoBase64,
+                    photoUrl = user.photoUrl,
+                )
+            }
+        }
+
+        map.values.toList()
+    }
+
+    val filteredThreads = remember(threadSummaries, chatSearch) {
+        threadSummaries.filter {
+            chatSearch.isBlank() || it.label.contains(chatSearch, ignoreCase = true) || it.lastMessage.contains(chatSearch, ignoreCase = true)
+        }
+    }
+
+    val selectedRecipientId = state.messageRecipientId ?: filteredThreads.firstOrNull()?.userId
+    val selectedThread = threadSummaries.firstOrNull { it.userId == selectedRecipientId }
+        ?: state.chatUsers.firstOrNull { it.id == selectedRecipientId }?.let { user ->
+            ChatThreadSummary(
+                userId = user.id,
+                label = user.label,
+                photoBase64 = user.photoBase64,
+                photoUrl = user.photoUrl,
+                lastMessage = "",
+                lastDateLabel = "",
+                unreadCount = 0,
+            )
+        }
+
+    LaunchedEffect(selectedRecipientId) {
+        if (selectedRecipientId != null && selectedRecipientId != state.messageRecipientId) {
+            onSelectRecipient(selectedRecipientId)
+        }
+    }
+
+    val recipientOptions = remember(state.chatUsers, recipientSearch, myUserId) {
+        state.chatUsers.filter { option ->
+            option.id != myUserId && (recipientSearch.isBlank() || option.label.contains(recipientSearch, ignoreCase = true))
+        }
+    }
+    val orderedMessages = remember(state.messageItems, selectedRecipientId, myUserId) {
+        state.messageItems.asReversed().filter { item ->
+            selectedRecipientId != null && (
+                (item.senderId == selectedRecipientId && item.recipientId == myUserId) ||
+                    (item.senderId == myUserId && item.recipientId == selectedRecipientId)
+                )
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        if (orderedMessages.isEmpty()) {
-            EmptyTabMessage(text = stringResource(id = R.string.empty_messages))
-        } else {
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(14.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                items(orderedMessages) { item ->
-                    val mine = myUserId > 0 && item.senderId == myUserId
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start,
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .widthIn(max = 300.dp)
-                                .background(
-                                    color = if (mine) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                                    shape = RoundedCornerShape(16.dp),
-                                )
-                                .padding(horizontal = 12.dp, vertical = 10.dp),
-                        ) {
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(
-                                    text = if (mine) stringResource(id = R.string.you) else item.fromLabel,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = if (mine) Color.White.copy(alpha = 0.88f) else MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                Text(
-                                    text = item.body,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = if (mine) Color.White else MaterialTheme.colorScheme.onSurface,
-                                )
-                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    if (!mine && !item.isRead) {
-                                        Badge { Text(stringResource(id = R.string.new_short)) }
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        ) {
+            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = chatSearch,
+                    onValueChange = { chatSearch = it },
+                    label = { Text(stringResource(id = R.string.search_contacts)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedButton(onClick = { recipientDialogOpen = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text(selectedThread?.label ?: stringResource(id = R.string.choose_recipient))
+                }
+                if (filteredThreads.isEmpty()) {
+                    Text(
+                        text = stringResource(id = R.string.no_contacts_available),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(filteredThreads) { thread ->
+                            val selected = thread.userId == selectedRecipientId
+                            OutlinedButton(
+                                onClick = { onSelectRecipient(thread.userId) },
+                                shape = RoundedCornerShape(14.dp),
+                            ) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    UserAvatar(
+                                        displayName = thread.label,
+                                        photoBase64 = thread.photoBase64,
+                                        photoUrl = thread.photoUrl,
+                                        size = 34.dp,
+                                    )
+                                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                                        Text(thread.label, maxLines = 1)
+                                        if (thread.lastMessage.isNotBlank()) {
+                                            Text(
+                                                text = thread.lastMessage,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 1,
+                                            )
+                                        }
                                     }
-                                    if (item.createdAtLabel.isNotBlank()) {
-                                        Text(
-                                            item.createdAtLabel,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = if (mine) Color.White.copy(alpha = 0.74f) else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
+                                    if (thread.unreadCount > 0) {
+                                        Badge { Text(thread.unreadCount.toString()) }
+                                    }
+                                    if (selected) {
+                                        Icon(Icons.Filled.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Box(modifier = Modifier.weight(1f)) {
+            if (selectedRecipientId == null) {
+                EmptyTabMessage(text = stringResource(id = R.string.choose_contact_first))
+            } else if (orderedMessages.isEmpty()) {
+                EmptyTabMessage(text = stringResource(id = R.string.empty_messages))
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    items(orderedMessages) { item ->
+                        val mine = myUserId > 0 && item.senderId == myUserId
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start,
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .widthIn(max = 300.dp)
+                                    .background(
+                                        color = if (mine) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                        shape = RoundedCornerShape(16.dp),
+                                    )
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                            ) {
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(
+                                            text = if (mine) stringResource(id = R.string.you) else item.senderLabel,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (mine) Color.White.copy(alpha = 0.88f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Text(
+                                        text = item.body,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = if (mine) Color.White else MaterialTheme.colorScheme.onSurface,
+                                    )
+                                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        if (!mine && !item.isRead) {
+                                            Badge { Text(stringResource(id = R.string.new_short)) }
+                                        }
+                                        if (item.createdAtLabel.isNotBlank()) {
+                                            Text(
+                                                item.createdAtLabel,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = if (mine) Color.White.copy(alpha = 0.74f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -1043,13 +1537,9 @@ private fun MessagesTab(
             shape = RoundedCornerShape(16.dp),
         ) {
             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = state.messageRecipientId?.toString().orEmpty(),
-                    onValueChange = onRecipientChange,
-                    label = { Text(stringResource(id = R.string.recipient_id)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                OutlinedButton(onClick = { recipientDialogOpen = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text(selectedThread?.label ?: stringResource(id = R.string.choose_recipient))
+                }
                 OutlinedTextField(
                     value = state.messageDraftBody,
                     onValueChange = onBodyChange,
@@ -1060,7 +1550,7 @@ private fun MessagesTab(
                 )
                 Button(
                     onClick = onSend,
-                    enabled = !state.isSendingMessage,
+                    enabled = !state.isSendingMessage && selectedRecipientId != null,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     if (state.isSendingMessage) {
@@ -1074,6 +1564,58 @@ private fun MessagesTab(
                     Text(stringResource(id = R.string.send_message))
                 }
             }
+        }
+
+        if (recipientDialogOpen) {
+            AlertDialog(
+                onDismissRequest = { recipientDialogOpen = false },
+                title = { Text(stringResource(id = R.string.choose_recipient)) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = recipientSearch,
+                            onValueChange = { recipientSearch = it },
+                            label = { Text(stringResource(id = R.string.recipient)) },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                        )
+                        if (recipientOptions.isEmpty()) {
+                            Text(stringResource(id = R.string.no_contacts_available))
+                        } else {
+                            LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.height(220.dp)) {
+                                items(recipientOptions) { option ->
+                                    OutlinedButton(
+                                        onClick = {
+                                            onSelectRecipient(option.id)
+                                            recipientDialogOpen = false
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            UserAvatar(
+                                                displayName = option.label,
+                                                photoBase64 = option.photoBase64,
+                                                photoUrl = option.photoUrl,
+                                                size = 34.dp,
+                                            )
+                                            Text(option.label)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { recipientDialogOpen = false }) {
+                        Text(stringResource(id = R.string.close))
+                    }
+                },
+            )
         }
     }
 }
@@ -1093,13 +1635,88 @@ private fun ProfileTab(state: AppUiState) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                ProfileAvatar(profile = profile, displayName = profile.displayName)
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(profile.displayName, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                 Text(profile.email, style = MaterialTheme.typography.bodyMedium)
                 if (profile.username.isNotBlank()) {
                     Text("@${profile.username}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                }
             }
+        }
+    }
+}
+
+@Composable
+private fun FilterChipButton(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    if (selected) {
+        Button(onClick = onClick) { Text(label) }
+    } else {
+        OutlinedButton(onClick = onClick) { Text(label) }
+    }
+}
+
+@Composable
+private fun ProfileAvatar(
+    profile: fr.grenobleski.nativeapp.data.model.ProfileInfo,
+    displayName: String,
+) {
+    UserAvatar(
+        displayName = displayName,
+        photoBase64 = profile.profilePictureBase64,
+        photoUrl = profile.googleProfilePictureUrl,
+        size = 72.dp,
+    )
+}
+
+@Composable
+private fun UserAvatar(
+    displayName: String,
+    photoBase64: String,
+    photoUrl: String,
+    size: Dp,
+) {
+    val base64Image = remember(photoBase64) { decodeBase64Image(photoBase64) }
+    var remoteImage by remember(photoUrl) { mutableStateOf<ImageBitmap?>(null) }
+
+    LaunchedEffect(photoUrl) {
+        remoteImage = loadImageFromUrl(photoUrl)
+    }
+
+    val avatarBitmap = base64Image ?: remoteImage
+    if (avatarBitmap != null) {
+        Image(
+            bitmap = avatarBitmap,
+            contentDescription = displayName,
+            modifier = Modifier
+                .size(size)
+                .clip(RoundedCornerShape(999.dp)),
+            contentScale = ContentScale.Crop,
+        )
+    } else {
+        Box(
+            modifier = Modifier
+                .size(size)
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f), RoundedCornerShape(999.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = displayName
+                    .split(" ")
+                    .mapNotNull { it.firstOrNull()?.uppercase() }
+                    .joinToString("")
+                    .take(2)
+                    .ifBlank { "GS" },
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold,
+            )
         }
     }
 }
@@ -1144,6 +1761,47 @@ private fun tabTitle(tab: NativeTab): String {
         NativeTab.PISTES -> stringResource(id = R.string.piste_status)
         NativeTab.MESSAGES -> stringResource(id = R.string.messages)
         NativeTab.PROFILE -> stringResource(id = R.string.profile)
+    }
+}
+
+private fun decodeBase64Image(data: String): ImageBitmap? {
+    if (data.isBlank()) return null
+    return try {
+        val bytes = Base64.decode(data, Base64.DEFAULT)
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+    } catch (_: Exception) {
+        null
+    }
+}
+
+private suspend fun loadImageFromUrl(url: String): ImageBitmap? {
+    if (url.isBlank()) return null
+    return withContext(Dispatchers.IO) {
+        try {
+            val connection = (URL(url).openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = 4000
+                readTimeout = 4000
+            }
+            connection.inputStream.use { stream ->
+                BitmapFactory.decodeStream(stream)?.asImageBitmap()
+            }.also {
+                connection.disconnect()
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+}
+
+private fun uriToBase64(context: Context, uri: Uri?): String? {
+    uri ?: return null
+    return try {
+        context.contentResolver.openInputStream(uri)?.use { stream ->
+            Base64.encodeToString(stream.readBytes(), Base64.NO_WRAP)
+        }
+    } catch (_: Exception) {
+        null
     }
 }
 

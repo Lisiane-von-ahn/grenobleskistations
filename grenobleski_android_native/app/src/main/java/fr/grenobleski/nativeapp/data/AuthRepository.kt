@@ -16,12 +16,19 @@ import fr.grenobleski.nativeapp.data.model.UserSession
 import fr.grenobleski.nativeapp.data.network.GrenobleSkiApiService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.OffsetDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 class AuthRepository(
     private val service: GrenobleSkiApiService,
     private val siteBaseUrl: String,
 ) {
     private val normalizedBaseUrl = siteBaseUrl.trimEnd('/')
+    private val dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm", Locale.FRANCE)
 
     suspend fun login(email: String, password: String): Result<UserSession> = withContext(Dispatchers.IO) {
         val endpoints = listOf("/api/auth/login/", "/api/login/")
@@ -120,7 +127,7 @@ class AuthRepository(
                 conditionLabel = obj.stringOrBlank("condition").ifBlank { "-" },
                 sellerId = sellerId,
                 sellerLabel = if (sellerId > 0) "Vendeur #$sellerId" else "Vendeur",
-                postedAtLabel = obj.stringOrBlank("posted_at", "created_at"),
+                postedAtLabel = formatServerDateTime(obj.stringOrBlank("posted_at", "created_at")),
                 previewImageBase64 = previewImageBase64,
             )
         }
@@ -143,8 +150,13 @@ class AuthRepository(
 
             InstructorItem(
                 id = obj.intOrZero("id"),
+                userId = userObj?.intOrZero("id") ?: 0,
                 displayName = displayName,
                 bio = obj.stringOrBlank("bio", "description", "presentation").ifBlank { "Profil moniteur" },
+                yearsExperience = obj.intOrZero("years_experience"),
+                certifications = obj.stringOrBlank("certifications"),
+                phone = obj.stringOrBlank("phone"),
+                profilePhotoBase64 = obj.stringOrBlank("profile_photo"),
             )
         }
         Result.success(items)
@@ -152,6 +164,31 @@ class AuthRepository(
 
     suspend fun fetchPisteItems(token: String): Result<List<PisteItem>> = withContext(Dispatchers.IO) {
         val authHeader = "Token $token"
+        val conditionsPayload = fetchPayloadFromCandidates(listOf("/api/skistations/conditions/", "/api/skistations/conditions"), authHeader)
+        if (conditionsPayload != null) {
+            val items = extractObjectList(conditionsPayload).map { obj ->
+                val ratingAvg = obj.stringOrBlank("rating_avg").ifBlank {
+                    obj.get("rating_avg")?.takeIf { it.isJsonPrimitive }?.asJsonPrimitive?.toString().orEmpty()
+                }
+                val snowDepth = obj.stringOrBlank("snow_depth_cm")
+                val temperatureValue = obj.stringOrBlank("temperature_c")
+                PisteItem(
+                    id = obj.intOrZero("id"),
+                    stationName = obj.stringOrBlank("station_name", "name").ifBlank { "Station" },
+                    altitudeLabel = obj.stringOrBlank("altitude").ifBlank { "-" },
+                    distanceLabel = obj.stringOrBlank("distance_from_grenoble").ifBlank { "-" },
+                    ratingLabel = ratingAvg.ifBlank { "-" },
+                    crowdLabel = obj.stringOrBlank("crowd_label").ifBlank { "normal" },
+                    weatherLabel = obj.stringOrBlank("weather_description").ifBlank { "indisponible" },
+                    temperatureLabel = temperatureValue.ifBlank { "-" },
+                    snowDepthLabel = snowDepth.ifBlank { "-" },
+                    comment = obj.stringOrBlank("latest_comment").ifBlank { "-" },
+                    updatedAtLabel = formatServerDateTime(obj.stringOrBlank("updated_at")),
+                )
+            }
+            return@withContext Result.success(items)
+        }
+
         val payload = fetchPayloadFromCandidates(listOf("/api/pistereports/", "/api/pistereports"), authHeader)
             ?: return@withContext Result.success(emptyList())
 
@@ -162,9 +199,15 @@ class AuthRepository(
                 stationName = obj.stringOrBlank("ski_station_name").ifBlank {
                     stationObj?.stringOrBlank("name").orEmpty().ifBlank { "Station" }
                 },
-                rating = obj.intOrZero("piste_rating"),
+                altitudeLabel = stationObj?.stringOrBlank("altitude").orEmpty().ifBlank { "-" },
+                distanceLabel = stationObj?.stringOrBlank("distanceFromGrenoble").orEmpty().ifBlank { "-" },
+                ratingLabel = obj.stringOrBlank("piste_rating").ifBlank { "-" },
                 crowdLabel = obj.stringOrBlank("crowd_level").ifBlank { "normal" },
+                weatherLabel = "indisponible",
+                temperatureLabel = "-",
+                snowDepthLabel = "-",
                 comment = obj.stringOrBlank("comment").ifBlank { "-" },
+                updatedAtLabel = formatServerDateTime(obj.stringOrBlank("created_at", "timestamp")),
             )
         }
         Result.success(items)
@@ -190,18 +233,35 @@ class AuthRepository(
             val payload = response.body()
             val items = extractObjectList(payload).map { obj ->
                 val senderObj = obj.get("sender")?.takeIf { it.isJsonObject }?.asJsonObject
-                val senderName = senderObj?.stringOrBlank("username", "email").orEmpty()
-                val senderId = if (senderObj != null) senderObj.intOrZero("id") else obj.intOrZero("sender", "sender_id")
-                val recipientId = obj.intOrZero("recipient", "recipient_id")
+                val senderRichObj = obj.get("sender_user")?.takeIf { it.isJsonObject }?.asJsonObject
+                val recipientObj = obj.get("recipient")?.takeIf { it.isJsonObject }?.asJsonObject
+                val recipientRichObj = obj.get("recipient_user")?.takeIf { it.isJsonObject }?.asJsonObject
+
+                val senderPayload = senderRichObj ?: senderObj
+                val recipientPayload = recipientRichObj ?: recipientObj
+
+                val senderId = senderPayload?.intOrZero("id") ?: obj.intOrZero("sender", "sender_id")
+                val recipientId = recipientPayload?.intOrZero("id") ?: obj.intOrZero("recipient", "recipient_id")
+
+                val senderLabel = senderPayload?.stringOrBlank("display_name", "username", "email").orEmpty()
+                    .ifBlank { obj.stringOrBlank("sender_username", "sender_name") }
+                    .ifBlank { "Utilisateur" }
+                val recipientLabel = recipientPayload?.stringOrBlank("display_name", "username", "email").orEmpty()
+                    .ifBlank { obj.stringOrBlank("recipient_username", "recipient_name") }
+                    .ifBlank { "Utilisateur" }
+
                 MessageItem(
                     id = obj.intOrZero("id"),
                     senderId = senderId,
                     recipientId = recipientId,
-                    fromLabel = senderName.ifBlank {
-                        obj.stringOrBlank("sender_username", "sender_name").ifBlank { "Utilisateur" }
-                    },
+                    senderLabel = senderLabel,
+                    recipientLabel = recipientLabel,
+                    senderPhotoBase64 = senderPayload?.stringOrBlank("profile_picture").orEmpty(),
+                    senderPhotoUrl = senderPayload?.stringOrBlank("google_profile_picture_url").orEmpty(),
+                    recipientPhotoBase64 = recipientPayload?.stringOrBlank("profile_picture").orEmpty(),
+                    recipientPhotoUrl = recipientPayload?.stringOrBlank("google_profile_picture_url").orEmpty(),
                     body = obj.stringOrBlank("body", "message", "content").ifBlank { "-" },
-                    createdAtLabel = obj.stringOrBlank("created_at", "timestamp").ifBlank { "" },
+                    createdAtLabel = formatServerDateTime(obj.stringOrBlank("created_at", "timestamp")),
                     isRead = obj.boolOrFalse("is_read"),
                 )
             }
@@ -241,6 +301,8 @@ class AuthRepository(
                 displayName = displayName.ifBlank { user.stringOrBlank("username", "email") },
                 email = user.stringOrBlank("email"),
                 username = user.stringOrBlank("username"),
+                profilePictureBase64 = user.stringOrBlank("profile_picture"),
+                googleProfilePictureUrl = user.stringOrBlank("google_profile_picture_url"),
             )
         )
     }
@@ -257,10 +319,15 @@ class AuthRepository(
                 obj.stringOrBlank("first_name"),
                 obj.stringOrBlank("last_name"),
             ).filter { it.isNotBlank() }.joinToString(" ")
-                .ifBlank { obj.stringOrBlank("username", "email") }
+                .ifBlank { obj.stringOrBlank("display_name", "username", "email") }
                 .ifBlank { "Utilisateur #$id" }
 
-            ChatUserOption(id = id, label = label)
+            ChatUserOption(
+                id = id,
+                label = label,
+                photoBase64 = obj.stringOrBlank("profile_picture"),
+                photoUrl = obj.stringOrBlank("google_profile_picture_url"),
+            )
         }
         Result.success(users)
     }
@@ -285,7 +352,8 @@ class AuthRepository(
         }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to send message."))
 
         if (!response.isSuccessful) {
-            return@withContext Result.failure(IllegalStateException("Unable to send message."))
+            val bodyText = response.errorBody()?.string().orEmpty().ifBlank { "Unable to send message." }
+            return@withContext Result.failure(IllegalStateException(bodyText))
         }
 
         Result.success(Unit)
@@ -298,7 +366,7 @@ class AuthRepository(
         description: String,
         city: String,
         price: String,
-        imageBase64: String,
+        imagesBase64: List<String>,
     ): Result<Unit> = withContext(Dispatchers.IO) {
         val authHeader = "Token $token"
         val payload = mutableMapOf<String, Any>(
@@ -313,8 +381,10 @@ class AuthRepository(
         if (price.isNotBlank()) {
             payload["price"] = price
         }
-        if (imageBase64.isNotBlank()) {
-            payload["image"] = imageBase64
+        val cleanedImages = imagesBase64.filter { it.isNotBlank() }
+        if (cleanedImages.isNotEmpty()) {
+            payload["image"] = cleanedImages.first()
+            payload["images"] = cleanedImages
         }
 
         val response = runCatching {
@@ -326,7 +396,8 @@ class AuthRepository(
         }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to publish article."))
 
         if (!response.isSuccessful) {
-            return@withContext Result.failure(IllegalStateException("Unable to publish article."))
+            val bodyText = response.errorBody()?.string().orEmpty().ifBlank { "Unable to publish article." }
+            return@withContext Result.failure(IllegalStateException(bodyText))
         }
 
         Result.success(Unit)
@@ -436,6 +507,33 @@ class AuthRepository(
             if (value.isNotBlank()) return value
         }
         return ""
+    }
+
+    private fun formatServerDateTime(raw: String): String {
+        if (raw.isBlank()) return ""
+
+        val zoned = runCatching {
+            OffsetDateTime.parse(raw).atZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime()
+        }.getOrNull()
+        if (zoned != null) {
+            return zoned.format(dateTimeFormatter)
+        }
+
+        val instant = runCatching {
+            Instant.parse(raw).atZone(ZoneId.systemDefault()).toLocalDateTime()
+        }.getOrNull()
+        if (instant != null) {
+            return instant.format(dateTimeFormatter)
+        }
+
+        val local = runCatching {
+            LocalDateTime.parse(raw.replace("Z", ""))
+        }.getOrNull()
+        if (local != null) {
+            return local.format(dateTimeFormatter)
+        }
+
+        return raw
     }
 
     private fun LoginResponse?.toSession(defaultEmail: String): UserSession? {
