@@ -1,3 +1,5 @@
+import os
+
 from django.test import TestCase
 from django.contrib.auth.models import User
 from django.urls import reverse
@@ -147,6 +149,13 @@ class ApiMessagesTests(TestCase):
 class ApiMobileBridgeRoutesTests(TestCase):
 	def setUp(self):
 		self.client = APIClient()
+		self.user = User.objects.create_user(
+			username='mobile@example.com',
+			email='mobile@example.com',
+			password='StrongPass123!',
+			first_name='Mobile',
+			last_name='User',
+		)
 
 	def test_mobile_bridge_info_exists(self):
 		response = self.client.get('/api/mobile/')
@@ -185,3 +194,14 @@ class ApiMobileBridgeRoutesTests(TestCase):
 	def test_mobile_token_login_noslash_route_is_published(self):
 		response = self.client.get('/mobile/token-login')
 		self.assertNotEqual(response.status_code, 404)
+
+	def test_mobile_auth_complete_redirects_to_custom_scheme(self):
+		self.client.force_login(self.user)
+		with patch.dict(os.environ, {'MOBILE_APP_AUTH_REDIRECT': 'grenobleski://auth'}, clear=False):
+			response = self.client.get('/mobile/auth/complete/')
+
+		self.assertEqual(response.status_code, 302)
+		self.assertIn('Location', response)
+		self.assertTrue(response['Location'].startswith('grenobleski://auth?'))
+		self.assertIn('email=mobile%40example.com', response['Location'])
+		self.assertIn('name=Mobile+User', response['Location'])

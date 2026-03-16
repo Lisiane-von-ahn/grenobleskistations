@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.http import HttpResponseRedirect, JsonResponse
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.views.decorators.http import require_GET
 from django.conf import settings
 from django.contrib.auth import login
@@ -464,7 +464,9 @@ def mobile_auth_complete(request):
             'name': display_name,
         }
     )
-    return redirect(f"{app_redirect_base}{separator}{payload}")
+    response = HttpResponse(status=302)
+    response['Location'] = f"{app_redirect_base}{separator}{payload}"
+    return response
 
 
 @require_GET
