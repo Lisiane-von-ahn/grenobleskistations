@@ -146,6 +146,10 @@
     <string name="altitude">Altitude</string>
     <string name="distance_from_grenoble">Distance Grenoble</string>
     <string name="station_capacity">Capacity</string>
+    <string name="view_station_details">View station details</string>
+    <string name="live_cameras">Live cameras</string>
+    <string name="no_live_cameras">No live cameras available for this station yet.</string>
+    <string name="open_camera">Open camera</string>
     <string name="choose_photo">Choose photo</string>
     <string name="choose_photos">Add photos</string>
     <string name="remove_photo">Remove photo</string>

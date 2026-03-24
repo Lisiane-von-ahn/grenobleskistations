@@ -63,6 +63,16 @@ data class StationItem(
     val distanceLabel: String,
     val capacityLabel: String,
     val imageBase64: String,
+    val cameras: List<StationCameraItem> = emptyList(),
+)
+
+data class StationCameraItem(
+    val id: Int,
+    val name: String,
+    val cameraUrl: String,
+    val thumbnailUrl: String = "",
+    val description: String = "",
+    val cameraType: String = "",
 )
 
 data class BusLineItem(
@@ -134,6 +144,8 @@ data class PisteItem(
     val stationName: String,
     val altitudeLabel: String,
     val distanceLabel: String,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
     val ratingLabel: String,
     val crowdLabel: String,
     val weatherLabel: String,

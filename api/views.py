@@ -206,6 +206,8 @@ class SkiStationViewSet(viewsets.ModelViewSet):
                     "station_name": station.name,
                     "altitude": station.altitude,
                     "distance_from_grenoble": station.distanceFromGrenoble,
+                    "latitude": station.latitude,
+                    "longitude": station.longitude,
                     "weather_description": weather.get("weather_description") or "indisponible",
                     "temperature_c": weather.get("temperature_c"),
                     "feels_like_c": weather.get("feels_like_c"),

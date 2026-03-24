@@ -17,6 +17,7 @@ import fr.grenobleski.nativeapp.data.model.ProfileInfo
 import fr.grenobleski.nativeapp.data.model.RegisterRequest
 import fr.grenobleski.nativeapp.data.model.ServiceStoreItem
 import fr.grenobleski.nativeapp.data.model.SkiPartnerItem
+import fr.grenobleski.nativeapp.data.model.StationCameraItem
 import fr.grenobleski.nativeapp.data.model.StationItem
 import fr.grenobleski.nativeapp.data.model.UserSession
 import fr.grenobleski.nativeapp.data.network.GrenobleSkiApiService
@@ -133,6 +134,16 @@ class AuthRepository(
                 obj.intOrZero("capacity").takeIf { it > 0 }?.toString().orEmpty()
             }
             val stationName = obj.stringOrBlank("name", "station_name").ifBlank { "Station" }
+            val cameras = obj.arrayObjects("cameras").map { cameraObj ->
+                StationCameraItem(
+                    id = cameraObj.intOrZero("id"),
+                    name = cameraObj.stringOrBlank("name").ifBlank { "Camera" },
+                    cameraUrl = cameraObj.stringOrBlank("camera_url"),
+                    thumbnailUrl = cameraObj.stringOrBlank("thumbnail_url"),
+                    description = cameraObj.stringOrBlank("description"),
+                    cameraType = cameraObj.stringOrBlank("camera_type"),
+                )
+            }.filter { it.cameraUrl.isNotBlank() }
 
             StationItem(
                 id = obj.intOrZero("id"),
@@ -141,6 +152,7 @@ class AuthRepository(
                 distanceLabel = distance.ifBlank { "-" },
                 capacityLabel = capacity.ifBlank { "-" },
                 imageBase64 = obj.stringOrBlank("image"),
+                cameras = cameras,
             )
         }
         Result.success(items)
@@ -321,6 +333,8 @@ class AuthRepository(
                     stationName = obj.stringOrBlank("station_name", "name").ifBlank { "Station" },
                     altitudeLabel = obj.stringOrBlank("altitude").ifBlank { "-" },
                     distanceLabel = obj.stringOrBlank("distance_from_grenoble").ifBlank { "-" },
+                    latitude = obj.doubleOrNull("latitude"),
+                    longitude = obj.doubleOrNull("longitude"),
                     ratingLabel = ratingAvg.ifBlank { "-" },
                     crowdLabel = obj.stringOrBlank("crowd_label").ifBlank { "normal" },
                     weatherLabel = obj.stringOrBlank("weather_description").ifBlank { "indisponible" },
@@ -345,6 +359,8 @@ class AuthRepository(
                 },
                 altitudeLabel = stationObj?.stringOrBlank("altitude").orEmpty().ifBlank { "-" },
                 distanceLabel = stationObj?.stringOrBlank("distanceFromGrenoble").orEmpty().ifBlank { "-" },
+                latitude = stationObj?.doubleOrNull("latitude"),
+                longitude = stationObj?.doubleOrNull("longitude"),
                 ratingLabel = obj.stringOrBlank("piste_rating").ifBlank { "-" },
                 crowdLabel = obj.stringOrBlank("crowd_level").ifBlank { "normal" },
                 weatherLabel = "indisponible",
@@ -921,6 +937,17 @@ class AuthRepository(
         return false
     }
 
+    private fun JsonObject.doubleOrNull(vararg keys: String): Double? {
+        for (key in keys) {
+            if (!has(key)) continue
+            val value = get(key)
+            if (value.isJsonNull || !value.isJsonPrimitive) continue
+            runCatching { return value.asDouble }.getOrNull()
+            runCatching { return value.asString.toDouble() }.getOrNull()
+        }
+        return null
+    }
+
     private fun JsonObject.firstArrayObjectString(arrayKey: String, valueKey: String): String {
         if (!has(arrayKey)) return ""
         val arr = get(arrayKey)
@@ -941,6 +968,16 @@ class AuthRepository(
         return arr.asJsonArray.mapNotNull { element ->
             val obj = element.takeIf { it.isJsonObject }?.asJsonObject ?: return@mapNotNull null
             obj.stringOrBlank(valueKey).takeIf { it.isNotBlank() }
+        }
+    }
+
+    private fun JsonObject.arrayObjects(arrayKey: String): List<JsonObject> {
+        if (!has(arrayKey)) return emptyList()
+        val arr = get(arrayKey)
+        if (!arr.isJsonArray) return emptyList()
+
+        return arr.asJsonArray.mapNotNull { element ->
+            element.takeIf { it.isJsonObject }?.asJsonObject
         }
     }
 

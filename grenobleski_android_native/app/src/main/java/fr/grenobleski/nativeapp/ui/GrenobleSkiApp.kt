@@ -786,7 +786,11 @@ private fun NativeShell(
                     onOpenBusLines = { onSelectTab(NativeTab.BUS_LINES) },
                     onOpenServices = { onSelectTab(NativeTab.SERVICES) },
                 )
-                NativeTab.STATIONS -> StationsTab(state, onSubmitStationRating)
+                NativeTab.STATIONS -> StationsTab(
+                    state = state,
+                    onSubmitStationRating = onSubmitStationRating,
+                    onOpenUrl = { url -> openExternalUrl(localContext, url) },
+                )
                 NativeTab.BUS_LINES -> BusLinesTab(state)
                 NativeTab.SERVICES -> ServicesTab(
                     state = state,
@@ -1503,6 +1507,7 @@ private fun HomeTab(
 private fun StationsTab(
     state: AppUiState,
     onSubmitStationRating: (Int, Int, String) -> Unit,
+    onOpenUrl: (String) -> Unit,
 ) {
     if (state.stationItems.isEmpty()) {
         EmptyTabMessage(text = stringResource(id = R.string.empty_stations))
@@ -1510,6 +1515,7 @@ private fun StationsTab(
     }
 
     var searchQuery by remember { mutableStateOf("") }
+    var selectedStation by remember { mutableStateOf<fr.grenobleski.nativeapp.data.model.StationItem?>(null) }
     var selectedStationForRating by remember { mutableStateOf<fr.grenobleski.nativeapp.data.model.StationItem?>(null) }
     var stationScore by remember { mutableStateOf(5) }
     var stationComment by remember { mutableStateOf("") }
@@ -1549,7 +1555,10 @@ private fun StationsTab(
         }
         items(visibleItems) { item ->
             val previewImage = remember(item.imageBase64) { decodeBase64Image(item.imageBase64) }
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                modifier = Modifier.clickable { selectedStation = item },
+            ) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (previewImage != null) {
                         Image(
@@ -1583,6 +1592,19 @@ private fun StationsTab(
                             value = "🎿 ${item.capacityLabel}",
                             modifier = Modifier.fillMaxWidth(),
                         )
+                        if (item.cameras.isNotEmpty()) {
+                            PisteMetricPill(
+                                label = stringResource(id = R.string.live_cameras),
+                                value = "📹 ${item.cameras.size}",
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = { selectedStation = item },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(stringResource(id = R.string.view_station_details))
+                        }
                         OutlinedButton(
                             onClick = {
                                 selectedStationForRating = item
@@ -1605,6 +1627,144 @@ private fun StationsTab(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 8.dp),
                 )
+            }
+        }
+    }
+
+    val stationDetails = selectedStation
+    if (stationDetails != null) {
+        val previewImage = remember(stationDetails.imageBase64) { decodeBase64Image(stationDetails.imageBase64) }
+        Dialog(onDismissRequest = { selectedStation = null }) {
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 680.dp),
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .verticalScroll(rememberScrollState()),
+                    ) {
+                        if (previewImage != null) {
+                            Image(
+                                bitmap = previewImage,
+                                contentDescription = stationDetails.name,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(220.dp),
+                                contentScale = ContentScale.Crop,
+                            )
+                        }
+
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            Text(
+                                stationDetails.name,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                PisteMetricPill(
+                                    label = stringResource(id = R.string.altitude),
+                                    value = "⛰ ${stationDetails.altitudeLabel} m",
+                                    modifier = Modifier.weight(1f),
+                                )
+                                PisteMetricPill(
+                                    label = stringResource(id = R.string.distance_from_grenoble),
+                                    value = "📍 ${stationDetails.distanceLabel} km",
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                            PisteMetricPill(
+                                label = stringResource(id = R.string.station_capacity),
+                                value = "🎿 ${stationDetails.capacityLabel}",
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+
+                            Text(
+                                text = stringResource(id = R.string.live_cameras),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+
+                            if (stationDetails.cameras.isEmpty()) {
+                                Text(
+                                    text = stringResource(id = R.string.no_live_cameras),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            } else {
+                                stationDetails.cameras.forEach { camera ->
+                                    Card(
+                                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)),
+                                        shape = RoundedCornerShape(16.dp),
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(14.dp),
+                                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                                        ) {
+                                            Text(camera.name, fontWeight = FontWeight.SemiBold)
+                                            if (camera.description.isNotBlank()) {
+                                                Text(
+                                                    camera.description,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
+                                            }
+                                            if (camera.cameraType.isNotBlank()) {
+                                                Text(
+                                                    camera.cameraType,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                )
+                                            }
+                                            Button(
+                                                onClick = { onOpenUrl(camera.cameraUrl) },
+                                                modifier = Modifier.fillMaxWidth(),
+                                            ) {
+                                                Text(stringResource(id = R.string.open_camera))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        OutlinedButton(
+                            onClick = { selectedStation = null },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(stringResource(id = R.string.close))
+                        }
+                        Button(
+                            onClick = {
+                                selectedStation = null
+                                selectedStationForRating = stationDetails
+                                stationScore = 5
+                                stationComment = ""
+                            },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(stringResource(id = R.string.rate_station))
+                        }
+                    }
+                }
             }
         }
     }
