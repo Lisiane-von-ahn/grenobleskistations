@@ -152,6 +152,8 @@ class AuthRepository(
                 distanceLabel = distance.ifBlank { "-" },
                 capacityLabel = capacity.ifBlank { "-" },
                 imageBase64 = obj.stringOrBlank("image"),
+                latitude = obj.doubleOrNull("latitude"),
+                longitude = obj.doubleOrNull("longitude"),
                 cameras = cameras,
             )
         }
@@ -333,6 +335,7 @@ class AuthRepository(
                     stationName = obj.stringOrBlank("station_name", "name").ifBlank { "Station" },
                     altitudeLabel = obj.stringOrBlank("altitude").ifBlank { "-" },
                     distanceLabel = obj.stringOrBlank("distance_from_grenoble").ifBlank { "-" },
+                    pisteMapUrl = obj.stringOrBlank("piste_map_url"),
                     latitude = obj.doubleOrNull("latitude"),
                     longitude = obj.doubleOrNull("longitude"),
                     ratingLabel = ratingAvg.ifBlank { "-" },
@@ -359,6 +362,7 @@ class AuthRepository(
                 },
                 altitudeLabel = stationObj?.stringOrBlank("altitude").orEmpty().ifBlank { "-" },
                 distanceLabel = stationObj?.stringOrBlank("distanceFromGrenoble").orEmpty().ifBlank { "-" },
+                pisteMapUrl = stationObj?.stringOrBlank("piste_map_url").orEmpty(),
                 latitude = stationObj?.doubleOrNull("latitude"),
                 longitude = stationObj?.doubleOrNull("longitude"),
                 ratingLabel = obj.stringOrBlank("piste_rating").ifBlank { "-" },

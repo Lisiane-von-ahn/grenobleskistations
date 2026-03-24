@@ -5,6 +5,9 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.util.Base64
+import android.webkit.WebChromeClient
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -107,6 +110,7 @@ import fr.grenobleski.nativeapp.AppViewModelFactory
 import fr.grenobleski.nativeapp.BuildConfig
 import fr.grenobleski.nativeapp.R
 import fr.grenobleski.nativeapp.data.AuthRepository
+import fr.grenobleski.nativeapp.data.model.PisteItem
 import fr.grenobleski.nativeapp.data.model.NativeTab
 import fr.grenobleski.nativeapp.data.network.GrenobleSkiApiClient
 import fr.grenobleski.nativeapp.data.session.SessionStore
@@ -808,7 +812,10 @@ private fun NativeShell(
                     onOpenPublishPartner = { publishPartnerDialogOpen = true },
                 )
                 NativeTab.INSTRUCTORS -> InstructorsTab(state, onPrepareMessageToSeller)
-                NativeTab.PISTES -> PistesTab(state)
+                NativeTab.PISTES -> PistesTab(
+                    state = state,
+                    onOpenUrl = { url -> openExternalUrl(localContext, url) },
+                )
                 NativeTab.MESSAGES -> MessagesTab(
                     state = state,
                     onSelectRecipient = onSelectMessageRecipient,
@@ -2877,7 +2884,10 @@ private fun InstructorsTab(
 }
 
 @Composable
-private fun PistesTab(state: AppUiState) {
+private fun PistesTab(
+    state: AppUiState,
+    onOpenUrl: (String) -> Unit,
+) {
     if (state.pisteItems.isEmpty()) {
         EmptyTabMessage(text = stringResource(id = R.string.empty_pistes))
         return
@@ -2911,6 +2921,12 @@ private fun PistesTab(state: AppUiState) {
                 label = { Text(stringResource(id = R.string.search_conditions)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
+            )
+        }
+        item {
+            PisteStationsMapCard(
+                items = filteredItems,
+                onOpenUrl = onOpenUrl,
             )
         }
         items(visibleItems) { item ->
@@ -3008,6 +3024,13 @@ private fun PistesTab(state: AppUiState) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+
+                    val pisteMapUrl = item.pisteMapUrl
+                    if (!pisteMapUrl.isNullOrBlank()) {
+                        OutlinedButton(onClick = { onOpenUrl(pisteMapUrl) }) {
+                            Text(stringResource(id = R.string.open_piste_map))
+                        }
+                    }
                 }
             }
         }
@@ -3019,6 +3042,82 @@ private fun PistesTab(state: AppUiState) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 8.dp),
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PisteStationsMapCard(
+    items: List<PisteItem>,
+    onOpenUrl: (String) -> Unit,
+) {
+    val mapItems = remember(items) {
+        items.filter { it.latitude != null && it.longitude != null }
+    }
+    val firstOfficialMapUrl = remember(items) {
+        items.firstOrNull { it.pisteMapUrl.isNotBlank() }?.pisteMapUrl
+    }
+
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = stringResource(id = R.string.stations_live_map),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = stringResource(id = R.string.piste_map_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            if (mapItems.isNotEmpty()) {
+                val mapHtml = remember(mapItems) { buildStationsMapHtml(mapItems) }
+                AndroidView(
+                    factory = { context ->
+                        WebView(context).apply {
+                            setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                            settings.javaScriptEnabled = true
+                            settings.domStorageEnabled = true
+                            settings.builtInZoomControls = false
+                            settings.displayZoomControls = false
+                            isVerticalScrollBarEnabled = false
+                            isHorizontalScrollBarEnabled = false
+                            webChromeClient = WebChromeClient()
+                            webViewClient = WebViewClient()
+                            loadDataWithBaseURL(
+                                "https://www.openstreetmap.org",
+                                mapHtml,
+                                "text/html",
+                                "utf-8",
+                                null,
+                            )
+                        }
+                    },
+                    update = { webView ->
+                        webView.loadDataWithBaseURL(
+                            "https://www.openstreetmap.org",
+                            mapHtml,
+                            "text/html",
+                            "utf-8",
+                            null,
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(260.dp)
+                        .clip(RoundedCornerShape(18.dp)),
+                )
+            }
+
+            if (!firstOfficialMapUrl.isNullOrBlank()) {
+                OutlinedButton(onClick = { onOpenUrl(firstOfficialMapUrl) }) {
+                    Text(stringResource(id = R.string.interactive_station_map))
+                }
             }
         }
     }
@@ -3048,6 +3147,87 @@ private fun PisteMetricPill(
         )
     }
 }
+
+private fun buildStationsMapHtml(items: List<PisteItem>): String {
+    val markers = items.joinToString(separator = ",\n") { item ->
+        val latitude = item.latitude ?: 0.0
+        val longitude = item.longitude ?: 0.0
+        val popup = buildString {
+            append("<strong>")
+            append(escapeHtml(item.stationName))
+            append("</strong><br/>")
+            append(escapeHtml(item.weatherLabel))
+            append("<br/>")
+            append("Note: ")
+            append(escapeHtml(item.ratingLabel))
+            append(" | Neige: ")
+            append(escapeHtml(item.snowDepthLabel))
+            append(" cm")
+        }
+        """{ lat: $latitude, lng: $longitude, title: \"${escapeForJs(item.stationName)}\", popup: \"${escapeForJs(popup)}\" }"""
+    }
+
+    return """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no\" />
+            <link rel=\"stylesheet\" href=\"https://unpkg.com/leaflet@1.9.4/dist/leaflet.css\" />
+            <style>
+                html, body, #map {
+                    height: 100%;
+                    width: 100%;
+                    margin: 0;
+                    padding: 0;
+                    background: #eef3f8;
+                }
+                .leaflet-container {
+                    font-family: sans-serif;
+                }
+            </style>
+        </head>
+        <body>
+            <div id=\"map\"></div>
+            <script src=\"https://unpkg.com/leaflet@1.9.4/dist/leaflet.js\"></script>
+            <script>
+                const map = L.map('map', { zoomControl: false, attributionControl: true });
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 18,
+                    attribution: '&copy; OpenStreetMap contributors'
+                }).addTo(map);
+
+                const markers = [$markers];
+                const bounds = [];
+
+                markers.forEach((item) => {
+                    const marker = L.marker([item.lat, item.lng]).addTo(map);
+                    marker.bindPopup(item.popup);
+                    bounds.push([item.lat, item.lng]);
+                });
+
+                if (bounds.length === 1) {
+                    map.setView(bounds[0], 10);
+                } else if (bounds.length > 1) {
+                    map.fitBounds(bounds, { padding: [24, 24] });
+                } else {
+                    map.setView([45.1885, 5.7245], 8);
+                }
+            </script>
+        </body>
+        </html>
+    """.trimIndent()
+}
+
+private fun escapeForJs(value: String): String = value
+    .replace("\\", "\\\\")
+    .replace("\"", "\\\"")
+    .replace("\n", "<br/>")
+    .replace("\r", "")
+
+private fun escapeHtml(value: String): String = value
+    .replace("&", "&amp;")
+    .replace("<", "&lt;")
+    .replace(">", "&gt;")
 
 @Composable
 private fun rememberProgressiveItemCount(

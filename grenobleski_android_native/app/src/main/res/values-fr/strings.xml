@@ -148,6 +148,10 @@
     <string name="live_cameras">Cameras en direct</string>
     <string name="no_live_cameras">Aucune camera disponible pour cette station pour le moment.</string>
     <string name="open_camera">Ouvrir la camera</string>
+    <string name="stations_live_map">Carte des stations</string>
+    <string name="piste_map_hint">Visualisez les stations autour de Grenoble sur la carte, puis ouvrez le plan officiel des pistes de la station quand il est disponible.</string>
+    <string name="interactive_station_map">Ouvrir une carte officielle</string>
+    <string name="open_piste_map">Ouvrir le plan des pistes</string>
     <string name="choose_photo">Choisir une photo</string>
     <string name="choose_photos">Ajouter des photos</string>
     <string name="remove_photo">Retirer la photo</string>

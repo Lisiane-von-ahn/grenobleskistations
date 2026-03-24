@@ -20,6 +20,7 @@ class SkiStation(models.Model):
     image = models.BinaryField(null=True, blank=True) 
     altitude = models.IntegerField(null=False,default=1000)
     distanceFromGrenoble = models.IntegerField(null=False,default=100)
+    piste_map_url = models.URLField(null=True, blank=True)
 
     def __str__(self):
         return self.name

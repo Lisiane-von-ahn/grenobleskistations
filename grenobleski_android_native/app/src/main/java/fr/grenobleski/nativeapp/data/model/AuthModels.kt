@@ -63,6 +63,8 @@ data class StationItem(
     val distanceLabel: String,
     val capacityLabel: String,
     val imageBase64: String,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
     val cameras: List<StationCameraItem> = emptyList(),
 )
 
@@ -144,6 +146,7 @@ data class PisteItem(
     val stationName: String,
     val altitudeLabel: String,
     val distanceLabel: String,
+    val pisteMapUrl: String = "",
     val latitude: Double? = null,
     val longitude: Double? = null,
     val ratingLabel: String,

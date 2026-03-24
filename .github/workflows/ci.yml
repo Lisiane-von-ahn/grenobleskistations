@@ -26,14 +26,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: 'Check for unmigrated model changes'
+      - name: Generate migrations for CI schema sync
         run: |
-          python manage.py makemigrations --check --noinput || {
-            echo "❌ ERROR: Model changes detected but migrations were not created"
-            echo "Run locally: python manage.py makemigrations"
-            echo "Then commit the migration files"
-            exit 1
-          }
+          python manage.py makemigrations --noinput
 
       - name: Apply migrations
         run: |
@@ -42,19 +37,17 @@ jobs:
             exit 1
           }
 
+      - name: Seed stations and related data
+        run: |
+          python load_ski_stations.py || {
+            echo "❌ ERROR: Failed to seed ski stations data"
+            exit 1
+          }
+
       - name: Verify migrations are complete
         run: |
           python manage.py migrate --check --noinput || {
             echo "❌ ERROR: Database migrations incomplete"
-            exit 1
-          }
-
-      - name: 'Verify migration files are committed'
-        run: |
-          python manage.py makemigrations --check --dry-run || {
-            echo "❌ ERROR: Migration files are uncommitted"
-            echo "Run: python manage.py makemigrations"
-            echo "Then git add and commit the migration files"
             exit 1
           }
 

@@ -150,6 +150,10 @@
     <string name="live_cameras">Live cameras</string>
     <string name="no_live_cameras">No live cameras available for this station yet.</string>
     <string name="open_camera">Open camera</string>
+    <string name="stations_live_map">Stations map</string>
+    <string name="piste_map_hint">See nearby ski stations on the map, then open the official piste map for a station when available.</string>
+    <string name="interactive_station_map">Open an official station map</string>
+    <string name="open_piste_map">Open piste map</string>
     <string name="choose_photo">Choose photo</string>
     <string name="choose_photos">Add photos</string>
     <string name="remove_photo">Remove photo</string>

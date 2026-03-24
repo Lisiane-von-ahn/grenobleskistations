@@ -8,7 +8,7 @@ import django
 django.setup()
 
 from django.db import transaction
-from api.models import SkiStation, ServiceStore, BusLine, SkiCircuit
+from api.models import SkiStation, SkiStationCamera, ServiceStore, BusLine, SkiCircuit
 
 
 STATIONS_DATA = [
@@ -35,6 +35,24 @@ STATION_IMAGE_MAP = {
     "Alpe d'Huez": 'alpehuez.jpg',
     'Villard-de-Lans / Corrençon': 'villard.jpg',
     'Autrans-Méaudre en Vercors': 'autrans.jpg',
+}
+
+STATION_PISTE_MAPS = {
+    'Chamrousse': 'https://www.chamrousse.com/plan-des-pistes.html',
+    'Les 7 Laux': 'https://www.les7laux.com/hiver/ski-alpin-nordique-autres-glisses/ski/plan-des-pistes/',
+    "Alpe d'Huez": 'https://explore.alpedhuez.com/fr/carte?utm_source=OT&utm_medium=website&utm_campaign=carte',
+    'Villard-de-Lans / Corrençon': 'https://www.villarddelans-correnconenvercors.com/live/info-pistes/',
+    'Autrans-Méaudre en Vercors': 'https://www.autrans-meaudre.fr/fr/',
+    "Le Collet d'Allevard": 'https://www.lecollet.com/fr/',
+    'Les 2 Alpes': 'https://explore.les2alpes.com/fr/carte',
+    'La Grave - La Meije': 'https://www.lagrave-lameije.com/fr/',
+    'Oz 3300': 'https://www.oz3300.com/fr/',
+    'Vaujany': 'https://explore.vaujany.com/fr/carte',
+    'Auris-en-Oisans': 'https://www.auris-en-oisans.fr/',
+    'Le Sappey-en-Chartreuse': 'https://www.chartreuse-tourisme.com/',
+    'Saint-Pierre-de-Chartreuse': 'https://www.coeur-de-chartreuse.com/',
+    'Lans-en-Vercors': 'https://www.lansenvercors.com/',
+    'Gresse-en-Vercors': 'https://www.gresse-en-vercors.fr/',
 }
 
 SERVICE_SEED_BY_STATION = {
@@ -179,6 +197,69 @@ STATION_OFFICIAL_CONTACTS = {
     'Gresse-en-Vercors': {'website_url': 'https://www.gresse-en-vercors.fr', 'phone': '+33 4 76 34 33 40'},
 }
 
+STATION_CAMERAS_SEED = {
+    'Chamrousse': [
+        {
+            'name': 'Webcams station',
+            'camera_url': 'https://www.chamrousse.com/webcams.html',
+            'camera_type': 'snapshot',
+            'description': 'Page officielle des webcams de Chamrousse.',
+        },
+    ],
+    'Les 7 Laux': [
+        {
+            'name': 'Webcams station',
+            'camera_url': 'https://www.les7laux.com/hiver/ski-alpin-nordique-autres-glisses/ski/webcams/',
+            'camera_type': 'snapshot',
+            'description': 'Page officielle des webcams des 7 Laux.',
+        },
+    ],
+    "Alpe d'Huez": [
+        {
+            'name': 'Webcams station',
+            'camera_url': 'https://www.alpedhuez.com/fr/webcams/',
+            'camera_type': 'snapshot',
+            'description': 'Page officielle des webcams de l Alpe d Huez.',
+        },
+    ],
+    'Villard-de-Lans / Corrençon': [
+        {
+            'name': 'Les cretes',
+            'camera_url': 'https://live.neos360.com/villard_de_lans/webcam/Refuge.jpg',
+            'camera_type': 'snapshot',
+            'description': 'Webcam officielle des cretes a Villard-de-Lans.',
+        },
+        {
+            'name': 'Cote 2000',
+            'camera_url': 'https://live.neos360.com/villard_de_lans/webcam/Altitude-2000',
+            'camera_type': 'live_stream',
+            'description': 'Vue officielle du secteur Cote 2000.',
+        },
+        {
+            'name': 'Les falaises',
+            'camera_url': 'https://live.neos360.com/villard_de_lans/webcam/creperie.jpg',
+            'camera_type': 'snapshot',
+            'description': 'Webcam officielle du secteur Correncon.',
+        },
+    ],
+    'Les 2 Alpes': [
+        {
+            'name': 'Webcams et livecams',
+            'camera_url': 'https://www.les2alpes.com/hiver/live/webcams/',
+            'camera_type': 'snapshot',
+            'description': 'Page officielle des webcams des 2 Alpes.',
+        },
+    ],
+    'Vaujany': [
+        {
+            'name': 'Webcams station',
+            'camera_url': 'https://www.vaujany.com/fr/live/webcams/',
+            'camera_type': 'snapshot',
+            'description': 'Page officielle des webcams de Vaujany.',
+        },
+    ],
+}
+
 
 def clip_text(value, max_length):
     return value if len(value) <= max_length else value[:max_length]
@@ -211,6 +292,25 @@ def enrich_service_data(service, station_name):
 def get_services_for_station(station_name):
     specific_services = list(SERVICE_SEED_BY_STATION.get(station_name, []))
     return [enrich_service_data(service, station_name) for service in specific_services]
+
+
+def get_cameras_for_station(station_name, station):
+    cameras = []
+    for index, camera in enumerate(STATION_CAMERAS_SEED.get(station_name, [])):
+        offset = (index + 1) * 0.0018
+        cameras.append(
+            {
+                'name': clip_text(camera.get('name', 'Webcam'), 200),
+                'camera_url': clip_text(camera.get('camera_url', ''), 500),
+                'thumbnail_url': clip_text(camera.get('thumbnail_url', ''), 500) if camera.get('thumbnail_url') else '',
+                'camera_type': camera.get('camera_type', 'snapshot'),
+                'description': clip_text(camera.get('description', ''), 500) if camera.get('description') else '',
+                'location_latitude': float(station.latitude) + offset,
+                'location_longitude': float(station.longitude) + offset,
+                'is_active': True,
+            }
+        )
+    return cameras
 
 BUS_LINES_SEED = [
     {
@@ -360,6 +460,7 @@ def seed_ski_stations():
                 'capacity': station['capacity'],
                 'altitude': station['altitude'],
                 'distanceFromGrenoble': station['distanceFromGrenoble'],
+                'piste_map_url': STATION_PISTE_MAPS.get(station['name'], ''),
                 'image': image_bytes,
             },
         )
@@ -388,6 +489,22 @@ def seed_ski_stations():
                     'source_note': service.get('source_note', ''),
                     'latitude': float(station.latitude) + lat_offset,
                     'longitude': float(station.longitude) + lng_offset,
+                }
+            )
+
+        cameras = get_cameras_for_station(station_name, station)
+        for camera in cameras:
+            SkiStationCamera.objects.update_or_create(
+                ski_station=station,
+                name=camera['name'],
+                defaults={
+                    'camera_url': camera['camera_url'],
+                    'thumbnail_url': camera.get('thumbnail_url', ''),
+                    'camera_type': camera.get('camera_type', 'snapshot'),
+                    'description': camera.get('description', ''),
+                    'location_latitude': camera.get('location_latitude'),
+                    'location_longitude': camera.get('location_longitude'),
+                    'is_active': camera.get('is_active', True),
                 }
             )
 
