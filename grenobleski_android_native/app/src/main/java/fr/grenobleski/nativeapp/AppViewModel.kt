@@ -805,6 +805,10 @@ class AppViewModel(
         state = state.copy(errorMessage = null)
     }
 
+    fun clearStatusMessage() {
+        state = state.copy(statusMessage = null)
+    }
+
     fun setError(message: String) {
         state = state.copy(errorMessage = message, statusMessage = null)
     }

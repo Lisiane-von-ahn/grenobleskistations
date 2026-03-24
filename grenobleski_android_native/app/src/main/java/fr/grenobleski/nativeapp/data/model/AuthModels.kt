@@ -65,6 +65,8 @@ data class StationItem(
     val imageBase64: String,
     val latitude: Double? = null,
     val longitude: Double? = null,
+    val pisteMapUrl: String = "",
+    val pisteMapThumbnailUrl: String = "",
     val cameras: List<StationCameraItem> = emptyList(),
 )
 

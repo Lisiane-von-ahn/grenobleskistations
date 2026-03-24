@@ -54,7 +54,8 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.Terrain
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
@@ -100,6 +101,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.applovin.mediation.MaxAdFormat
@@ -304,6 +306,8 @@ fun GrenobleSkiApp(
             showMobileAds = adsEnabled,
             adBannerUnitId = BuildConfig.APPLOVIN_BANNER_AD_UNIT_ID,
             onOpenAdsPreferences = onOpenAdsPreferences,
+            onDismissError = viewModel::clearError,
+            onDismissStatus = viewModel::clearStatusMessage,
             onSelectTab = viewModel::selectTab,
             onRefresh = viewModel::refreshCurrentTab,
             onLogout = viewModel::logout,
@@ -343,21 +347,34 @@ fun GrenobleSkiApp(
     }
 
     if (showAdsConsentPrompt && onAcceptAdsConsent != null && onRejectAdsConsent != null) {
-        AlertDialog(
-            onDismissRequest = onRejectAdsConsent,
-            title = { Text(stringResource(id = R.string.ads_consent_title)) },
-            text = { Text(stringResource(id = R.string.ads_consent_body)) },
-            confirmButton = {
-                TextButton(onClick = onAcceptAdsConsent) {
-                    Text(stringResource(id = R.string.ads_consent_accept))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = onRejectAdsConsent) {
+        CenteredPanelDialog(
+            title = stringResource(id = R.string.ads_consent_title),
+            onDismiss = onRejectAdsConsent,
+        ) {
+            Text(
+                text = stringResource(id = R.string.ads_consent_body),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                OutlinedButton(
+                    onClick = onRejectAdsConsent,
+                    modifier = Modifier.weight(1f),
+                ) {
                     Text(stringResource(id = R.string.ads_consent_reject))
                 }
-            },
-        )
+                Button(
+                    onClick = onAcceptAdsConsent,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(stringResource(id = R.string.ads_consent_accept))
+                }
+            }
+        }
     }
 }
 
@@ -594,6 +611,8 @@ private fun NativeShell(
     showMobileAds: Boolean,
     adBannerUnitId: String,
     onOpenAdsPreferences: (() -> Unit)?,
+    onDismissError: () -> Unit,
+    onDismissStatus: () -> Unit,
     onSelectTab: (NativeTab) -> Unit,
     onRefresh: () -> Unit,
     onLogout: () -> Unit,
@@ -837,117 +856,119 @@ private fun NativeShell(
                 )
             }
 
-            if (!state.errorMessage.isNullOrBlank()) {
-                Text(
-                    text = state.errorMessage,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(12.dp),
-                )
-            }
+        }
 
-            if (!state.statusMessage.isNullOrBlank()) {
-                Text(
-                    text = state.statusMessage,
-                    color = Color(0xFF126E3A),
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(start = 12.dp, end = 12.dp, bottom = 34.dp),
-                )
-            }
+        if (!state.errorMessage.isNullOrBlank()) {
+            CenteredAlertPopup(
+                title = "Alert",
+                message = state.errorMessage,
+                isError = true,
+                onDismiss = onDismissError,
+            )
+        } else if (!state.statusMessage.isNullOrBlank()) {
+            CenteredAlertPopup(
+                title = "Success",
+                message = state.statusMessage,
+                isError = false,
+                onDismiss = onDismissStatus,
+            )
         }
 
         if (moreMenuOpen) {
-            AlertDialog(
-                onDismissRequest = { moreMenuOpen = false },
-                title = { Text(stringResource(id = R.string.nav_more)) },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            CenteredPanelDialog(
+                title = stringResource(id = R.string.nav_more),
+                onDismiss = { moreMenuOpen = false },
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 420.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    OutlinedButton(onClick = {
+                        moreMenuOpen = false
+                        onSelectTab(NativeTab.STATIONS)
+                    }, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(id = R.string.stations))
+                    }
+                    OutlinedButton(onClick = {
+                        moreMenuOpen = false
+                        onSelectTab(NativeTab.BUS_LINES)
+                    }, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(id = R.string.bus_lines))
+                    }
+                    OutlinedButton(onClick = {
+                        moreMenuOpen = false
+                        onSelectTab(NativeTab.SERVICES)
+                    }, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(id = R.string.services))
+                    }
+                    OutlinedButton(onClick = {
+                        moreMenuOpen = false
+                        onSelectTab(NativeTab.PROFILE)
+                    }, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(id = R.string.profile))
+                    }
+                    OutlinedButton(onClick = {
+                        moreMenuOpen = false
+                        onSelectTab(NativeTab.INSTRUCTORS)
+                    }, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(id = R.string.instructors))
+                    }
+                    OutlinedButton(onClick = {
+                        moreMenuOpen = false
+                        onSelectTab(NativeTab.PARTNERS)
+                    }, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(id = R.string.adventure_partners))
+                    }
+                    OutlinedButton(onClick = {
+                        moreMenuOpen = false
+                        onSelectTab(NativeTab.PISTES)
+                    }, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(id = R.string.piste_status))
+                    }
+                    OutlinedButton(onClick = {
+                        moreMenuOpen = false
+                        publishDialogOpen = true
+                    }, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(id = R.string.publish_article))
+                    }
+                    OutlinedButton(onClick = {
+                        moreMenuOpen = false
+                        publishPartnerDialogOpen = true
+                    }, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(id = R.string.publish_partner_post))
+                    }
+                    OutlinedButton(onClick = {
+                        moreMenuOpen = false
+                        openExternalUrl(localContext, "$siteBase/terms/")
+                    }, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(id = R.string.terms))
+                    }
+                    OutlinedButton(onClick = {
+                        moreMenuOpen = false
+                        openExternalUrl(localContext, "$siteBase/privacy/")
+                    }, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(id = R.string.privacy))
+                    }
+                    if (onOpenAdsPreferences != null) {
                         OutlinedButton(onClick = {
                             moreMenuOpen = false
-                            onSelectTab(NativeTab.STATIONS)
+                            onOpenAdsPreferences.invoke()
                         }, modifier = Modifier.fillMaxWidth()) {
-                            Text(stringResource(id = R.string.stations))
-                        }
-                        OutlinedButton(onClick = {
-                            moreMenuOpen = false
-                            onSelectTab(NativeTab.BUS_LINES)
-                        }, modifier = Modifier.fillMaxWidth()) {
-                            Text(stringResource(id = R.string.bus_lines))
-                        }
-                        OutlinedButton(onClick = {
-                            moreMenuOpen = false
-                            onSelectTab(NativeTab.SERVICES)
-                        }, modifier = Modifier.fillMaxWidth()) {
-                            Text(stringResource(id = R.string.services))
-                        }
-                        OutlinedButton(onClick = {
-                            moreMenuOpen = false
-                            onSelectTab(NativeTab.PROFILE)
-                        }, modifier = Modifier.fillMaxWidth()) {
-                            Text(stringResource(id = R.string.profile))
-                        }
-                        OutlinedButton(onClick = {
-                            moreMenuOpen = false
-                            onSelectTab(NativeTab.INSTRUCTORS)
-                        }, modifier = Modifier.fillMaxWidth()) {
-                            Text(stringResource(id = R.string.instructors))
-                        }
-                        OutlinedButton(onClick = {
-                            moreMenuOpen = false
-                            onSelectTab(NativeTab.PARTNERS)
-                        }, modifier = Modifier.fillMaxWidth()) {
-                            Text(stringResource(id = R.string.adventure_partners))
-                        }
-                        OutlinedButton(onClick = {
-                            moreMenuOpen = false
-                            onSelectTab(NativeTab.PISTES)
-                        }, modifier = Modifier.fillMaxWidth()) {
-                            Text(stringResource(id = R.string.piste_status))
-                        }
-                        OutlinedButton(onClick = {
-                            moreMenuOpen = false
-                            publishDialogOpen = true
-                        }, modifier = Modifier.fillMaxWidth()) {
-                            Text(stringResource(id = R.string.publish_article))
-                        }
-                        OutlinedButton(onClick = {
-                            moreMenuOpen = false
-                            publishPartnerDialogOpen = true
-                        }, modifier = Modifier.fillMaxWidth()) {
-                            Text(stringResource(id = R.string.publish_partner_post))
-                        }
-                        OutlinedButton(onClick = {
-                            moreMenuOpen = false
-                            openExternalUrl(localContext, "$siteBase/terms/")
-                        }, modifier = Modifier.fillMaxWidth()) {
-                            Text(stringResource(id = R.string.terms))
-                        }
-                        OutlinedButton(onClick = {
-                            moreMenuOpen = false
-                            openExternalUrl(localContext, "$siteBase/privacy/")
-                        }, modifier = Modifier.fillMaxWidth()) {
-                            Text(stringResource(id = R.string.privacy))
-                        }
-                        if (onOpenAdsPreferences != null) {
-                            OutlinedButton(onClick = {
-                                moreMenuOpen = false
-                                onOpenAdsPreferences.invoke()
-                            }, modifier = Modifier.fillMaxWidth()) {
-                                Text(stringResource(id = R.string.ad_preferences))
-                            }
+                            Text(stringResource(id = R.string.ad_preferences))
                         }
                     }
-                },
-                confirmButton = {
-                    TextButton(onClick = { moreMenuOpen = false }) {
+
+                    OutlinedButton(
+                        onClick = { moreMenuOpen = false },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
                         Text(stringResource(id = R.string.close))
                     }
-                },
-            )
+                }
+            }
         }
 
         if (publishDialogOpen) {
@@ -1293,6 +1314,86 @@ private fun NativeShell(
                                 }
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CenteredAlertPopup(
+    title: String,
+    message: String,
+    isError: Boolean,
+    onDismiss: () -> Unit,
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(
+                                    if (isError) Color(0xFFB42318) else Color(0xFF0F766E),
+                                    if (isError) Color(0xFFEF4444) else Color(0xFF22C55E),
+                                )
+                            )
+                        )
+                        .padding(start = 18.dp, top = 14.dp, end = 8.dp, bottom = 14.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = if (isError) Icons.Filled.ErrorOutline else Icons.Filled.CheckCircle,
+                            contentDescription = null,
+                            tint = Color.White,
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = title,
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f),
+                        )
+                        IconButton(onClick = onDismiss) {
+                            Icon(
+                                imageVector = Icons.Filled.Close,
+                                contentDescription = stringResource(id = R.string.close),
+                                tint = Color.White,
+                            )
+                        }
+                    }
+                }
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 18.dp, vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    Text(
+                        text = message,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(id = R.string.close))
                     }
                 }
             }
@@ -2888,17 +2989,42 @@ private fun PistesTab(
     state: AppUiState,
     onOpenUrl: (String) -> Unit,
 ) {
-    if (state.pisteItems.isEmpty()) {
-        EmptyTabMessage(text = stringResource(id = R.string.empty_pistes))
-        return
-    }
-
     var searchQuery by remember { mutableStateOf("") }
     val filteredItems = remember(state.pisteItems, searchQuery) {
         state.pisteItems.filter { item ->
             searchQuery.isBlank() || item.stationName.contains(searchQuery, ignoreCase = true) || item.weatherLabel.contains(searchQuery, ignoreCase = true)
         }
     }
+
+    val fallbackMapItems = remember(state.stationItems) {
+        state.stationItems
+            .filter { it.latitude != null && it.longitude != null }
+            .map { station ->
+                fr.grenobleski.nativeapp.data.model.PisteItem(
+                    id = station.id,
+                    stationName = station.name,
+                    altitudeLabel = station.altitudeLabel,
+                    distanceLabel = station.distanceLabel,
+                    pisteMapUrl = station.pisteMapUrl,
+                    pisteMapThumbnailUrl = station.pisteMapThumbnailUrl,
+                    latitude = station.latitude,
+                    longitude = station.longitude,
+                    ratingLabel = "-",
+                    crowdLabel = "normal",
+                    weatherLabel = "indisponible",
+                    temperatureLabel = "-",
+                    snowDepthLabel = "-",
+                    comment = "-",
+                    updatedAtLabel = "",
+                )
+            }
+    }
+
+    val mapItems = remember(filteredItems, fallbackMapItems) {
+        val pisteWithCoords = filteredItems.filter { it.latitude != null && it.longitude != null }
+        if (pisteWithCoords.isNotEmpty()) pisteWithCoords else fallbackMapItems
+    }
+
     val listState = rememberLazyListState()
     val visibleCount = rememberProgressiveItemCount(
         totalCount = filteredItems.size,
@@ -2925,9 +3051,14 @@ private fun PistesTab(
         }
         item {
             PisteStationsMapCard(
-                items = filteredItems,
+                items = mapItems,
                 onOpenUrl = onOpenUrl,
             )
+        }
+        if (filteredItems.isEmpty()) {
+            item {
+                EmptyTabMessage(text = stringResource(id = R.string.empty_pistes))
+            }
         }
         items(visibleItems) { item ->
             val crowdLower = item.crowdLabel.lowercase()
@@ -3671,58 +3802,119 @@ private fun MessagesTab(
         }
 
         if (addFriendDialogOpen) {
-            AlertDialog(
-                onDismissRequest = { addFriendDialogOpen = false },
-                title = { Text(stringResource(id = R.string.add_friend)) },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = addFriendSearch,
-                            onValueChange = { addFriendSearch = it },
-                            label = { Text(stringResource(id = R.string.search_users_to_add)) },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                        )
-                        if (addFriendSearch.length < 2) {
-                            Text(stringResource(id = R.string.type_min_two_chars))
-                        } else if (recipientOptions.isEmpty()) {
-                            Text(stringResource(id = R.string.no_contacts_available))
-                        } else {
-                            LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.height(220.dp)) {
-                                items(recipientOptions) { option ->
-                                    OutlinedButton(
-                                        onClick = {
-                                            onAddFriend(option.id)
-                                            onSelectRecipient(option.id)
-                                            addFriendDialogOpen = false
-                                        },
+            CenteredPanelDialog(
+                title = stringResource(id = R.string.add_friend),
+                onDismiss = { addFriendDialogOpen = false },
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = addFriendSearch,
+                        onValueChange = { addFriendSearch = it },
+                        label = { Text(stringResource(id = R.string.search_users_to_add)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                    )
+                    if (addFriendSearch.length < 2) {
+                        Text(stringResource(id = R.string.type_min_two_chars))
+                    } else if (recipientOptions.isEmpty()) {
+                        Text(stringResource(id = R.string.no_contacts_available))
+                    } else {
+                        LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.height(220.dp)) {
+                            items(recipientOptions) { option ->
+                                OutlinedButton(
+                                    onClick = {
+                                        onAddFriend(option.id)
+                                        onSelectRecipient(option.id)
+                                        addFriendDialogOpen = false
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    Row(
                                         modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
                                     ) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                        ) {
-                                            UserAvatar(
-                                                displayName = option.label,
-                                                photoBase64 = option.photoBase64,
-                                                photoUrl = option.photoUrl,
-                                                size = 34.dp,
-                                            )
-                                            Text(option.label)
-                                        }
+                                        UserAvatar(
+                                            displayName = option.label,
+                                            photoBase64 = option.photoBase64,
+                                            photoUrl = option.photoUrl,
+                                            size = 34.dp,
+                                        )
+                                        Text(option.label)
                                     }
                                 }
                             }
                         }
                     }
-                },
-                confirmButton = {
-                    TextButton(onClick = { addFriendDialogOpen = false }) {
+
+                    OutlinedButton(
+                        onClick = { addFriendDialogOpen = false },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
                         Text(stringResource(id = R.string.close))
                     }
-                },
-            )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CenteredPanelDialog(
+    title: String,
+    onDismiss: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.95f),
+                                    MaterialTheme.colorScheme.tertiary.copy(alpha = 0.9f),
+                                )
+                            )
+                        )
+                        .padding(start = 18.dp, top = 14.dp, end = 8.dp, bottom = 14.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = title,
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f),
+                        )
+                        IconButton(onClick = onDismiss) {
+                            Icon(
+                                imageVector = Icons.Filled.Close,
+                                contentDescription = stringResource(id = R.string.close),
+                                tint = Color.White,
+                            )
+                        }
+                    }
+                }
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 18.dp, vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    content()
+                }
+            }
         }
     }
 }

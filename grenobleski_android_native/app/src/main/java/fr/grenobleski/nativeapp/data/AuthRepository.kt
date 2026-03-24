@@ -154,6 +154,8 @@ class AuthRepository(
                 imageBase64 = obj.stringOrBlank("image"),
                 latitude = obj.doubleOrNull("latitude"),
                 longitude = obj.doubleOrNull("longitude"),
+                pisteMapUrl = obj.stringOrBlank("piste_map_url"),
+                pisteMapThumbnailUrl = obj.stringOrBlank("piste_map_thumbnail_url"),
                 cameras = cameras,
             )
         }
