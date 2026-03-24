@@ -9,8 +9,26 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: grenobleski_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
     env:
       DEBUG: "True"
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/grenobleski_test"
+      SECRET_KEY: "test-secret-key-for-ci"
 
     steps:
       - name: Checkout
@@ -20,43 +38,43 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
+          cache: 'pip'
+
+      - name: Install system dependencies
+        run: |
+          bash scripts/github-django-ci.sh install-system-deps
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          bash scripts/github-django-ci.sh install-python-deps
 
-      - name: Generate migrations for CI schema sync
+      - name: Check for unmigrated model changes
         run: |
-          python manage.py makemigrations --noinput
+          bash scripts/github-django-ci.sh check-unmigrated
+
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          bash scripts/github-django-ci.sh wait-postgres
+
+      - name: Create test database
+        run: |
+          bash scripts/github-django-ci.sh recreate-db
 
       - name: Apply migrations
         run: |
-          python manage.py migrate --noinput || {
-            echo "❌ ERROR: Failed to apply migrations"
-            exit 1
-          }
+          bash scripts/github-django-ci.sh migrate
 
       - name: Seed stations and related data
         run: |
-          python load_ski_stations.py || {
-            echo "❌ ERROR: Failed to seed ski stations data"
-            exit 1
-          }
+          bash scripts/github-django-ci.sh seed
 
       - name: Verify migrations are complete
         run: |
-          python manage.py migrate --check --noinput || {
-            echo "❌ ERROR: Database migrations incomplete"
-            exit 1
-          }
+          bash scripts/github-django-ci.sh verify-migrations
 
       - name: Check project
         run: |
-          python manage.py check || {
-            echo "❌ ERROR: Django system checks failed"
-            exit 1
-          }
+          bash scripts/github-django-ci.sh check-project
 
       - name: Run tests
         run: python manage.py test
