@@ -27,6 +27,7 @@ class GrenobleSkiMobile(toga.App):
         self.stories_data = []
         self.partners_data = []
         self.instructors_data = []
+        self.cameras_data = []
 
         default_api = os.getenv("GRENOBLESKI_API_URL", "https://www.grenobleski.fr/api")
         self.api = GrenobleSkiApiClient(base_url=default_api, data_dir=self.paths.data)
@@ -299,7 +300,7 @@ class GrenobleSkiMobile(toga.App):
         self.content.add(toga.ScrollContainer(content=auth_wrap, style=Pack(flex=1)))
 
     def _compute_nav_keys(self):
-        keys = ["home", "stations", "bus", "services", "marketplace"]
+        keys = ["home", "stations", "bus", "services", "marketplace", "cameras"]
         if self.capabilities.get("has_stories"):
             keys.append("stories")
         if self.capabilities.get("has_partners"):
@@ -410,6 +411,13 @@ class GrenobleSkiMobile(toga.App):
             style=Pack(direction=COLUMN, flex=1),
         )
 
+        cameras_refresh = toga.Button(self.t("refresh"), on_press=self.on_refresh_cameras, style=Pack(width=120))
+        self.cameras_list_box = toga.Box(style=Pack(direction=COLUMN))
+        self.cameras_section = toga.Box(
+            children=[cameras_refresh, toga.ScrollContainer(content=self.cameras_list_box, style=Pack(flex=1, padding_top=8))],
+            style=Pack(direction=COLUMN, flex=1),
+        )
+
         self.msg_recipient_input = toga.TextInput(placeholder=self.t("recipient_id"), style=Pack(padding_bottom=6))
         self.msg_subject_input = toga.TextInput(placeholder=self.t("subject"), style=Pack(padding_bottom=6))
         self.msg_body_input = toga.MultilineTextInput(placeholder=self.t("message_body"), style=Pack(height=80, padding_bottom=6))
@@ -449,6 +457,7 @@ class GrenobleSkiMobile(toga.App):
             "bus": self.bus_section,
             "services": self.services_section,
             "marketplace": self.market_section,
+            "cameras": self.cameras_section,
             "stories": self.stories_section,
             "partners": self.partners_section,
             "instructors": self.instructors_section,
@@ -473,6 +482,7 @@ class GrenobleSkiMobile(toga.App):
             self.t("bus_count", count=len(self.bus_data)),
             self.t("services_count", count=len(self.services_data)),
             self.t("market_count", count=len(self.market_data)),
+            f"📹 {len(self.cameras_data)}",
         ]
         if self.capabilities.get("has_stories"):
             counters.append(self.t("stories_count", count=len(self.stories_data)))
@@ -500,6 +510,66 @@ class GrenobleSkiMobile(toga.App):
             card.add(toga.Label(line, style=Pack(color=COLORS["muted_text"], font_size=11, padding_bottom=3)))
         return card
 
+    def _show_cameras(self, station_name, cameras):
+        """Display camera modal/window for a ski station"""
+        self._clear_box(self.content)
+        
+        title = toga.Label(
+            f"📹 {station_name} Cameras",
+            style=Pack(font_size=18, font_weight="bold", color=COLORS["title_text"], padding_bottom=12),
+        )
+        
+        back_button = toga.Button(
+            self.t("back_to_stations") if self.lang == "fr" else "Back",
+            on_press=lambda w: self._show_section("stations"),
+            style=Pack(background_color=COLORS["accent"], color=COLORS["accent_text"], padding=8, margin_bottom=10),
+        )
+        
+        cameras_list = toga.Box(style=Pack(direction=COLUMN))
+        
+        if not cameras:
+            cameras_list.add(toga.Label(
+                self.t("empty"),
+                style=Pack(color=COLORS["muted_text"], padding=8),
+            ))
+        else:
+            for camera in cameras:
+                camera_name = camera.get('name', 'Camera')
+                camera_type = camera.get('camera_type', 'snapshot')
+                description = camera.get('description', '')
+                camera_url = camera.get('camera_url')
+                thumbnail_url = camera.get('thumbnail_url')
+                
+                lines = [
+                    f"Type: {camera_type}",
+                ]
+                if description:
+                    lines.append(f"📝 {description[:60]}...")
+                
+                card = self._make_card(camera_name, lines)
+                
+                # Add view button if there's a URL
+                if camera_url:
+                    view_btn = toga.Button(
+                        "📺 Open Camera Feed",
+                        on_press=lambda w, url=camera_url: self._open_external_url(url),
+                        style=Pack(
+                            background_color=COLORS["accent"],
+                            color=COLORS["accent_text"],
+                            padding=6,
+                            font_size=10,
+                        ),
+                    )
+                    card.add(view_btn)
+                
+                cameras_list.add(card)
+        
+        content = toga.Box(
+            children=[title, back_button, toga.ScrollContainer(content=cameras_list, style=Pack(flex=1))],
+            style=Pack(direction=COLUMN, flex=1, padding=14, background_color=COLORS["page_bg"]),
+        )
+        self.content.add(content)
+
     def _render_stations_list(self):
         self._clear_box(self.stations_list_box)
         query = (self.station_search.value or "").strip().lower()
@@ -515,9 +585,36 @@ class GrenobleSkiMobile(toga.App):
             title = station.get("name") or "Station"
             lines = [
                 f"{self.t('station')}: {station.get('distanceFromGrenoble', '-')} km",
-                f"Altitude: {station.get('altitude', '-')}",
+                f"Altitude: {station.get('altitude', '-')}m",
             ]
-            self.stations_list_box.add(self._make_card(title, lines))
+            
+            # Add camera count if available
+            cameras = station.get('cameras', [])
+            if cameras:
+                lines.append(f"📹 {len(cameras)} camera(s)")
+            
+            # Add bus lines count if available
+            bus_lines = station.get('bus_lines', [])
+            if bus_lines:
+                lines.append(f"🚌 {len(bus_lines)} bus line(s)")
+            
+            card = self._make_card(title, lines)
+            
+            # Add button to view cameras if available
+            if cameras:
+                cameras_button = toga.Button(
+                    f"📹 View {len(cameras)} Camera(s)",
+                    on_press=lambda w, cams=cameras: self._show_cameras(title, cams),
+                    style=Pack(
+                        background_color=COLORS["accent"],
+                        color=COLORS["accent_text"],
+                        padding=6,
+                        font_size=10,
+                    ),
+                )
+                card.add(cameras_button)
+            
+            self.stations_list_box.add(card)
 
     def _render_bus_list(self):
         self._clear_box(self.bus_list_box)
@@ -528,11 +625,47 @@ class GrenobleSkiMobile(toga.App):
         for line in self.bus_data:
             title = line.get("bus_number") or "Bus"
             lines = [
-                f"{line.get('departure_stop', '-')} -> {line.get('arrival_stop', '-')}",
-                f"Freq: {line.get('frequency', '-')}",
-                f"Travel: {line.get('travel_time', '-')}",
+                f"{line.get('departure_stop', '-')} → {line.get('arrival_stop', '-')}",
             ]
-            self.bus_list_box.add(self._make_card(title, lines))
+            
+            # Add travel time if available
+            travel_time = line.get('travel_time')
+            if travel_time:
+                lines.append(f"Travel: {travel_time}")
+            
+            # Add frequency if available
+            frequency = line.get('frequency')
+            if frequency:
+                lines.append(f"Frequency: {frequency}")
+            
+            # Add operating hours if available
+            first_dep = line.get('first_departure')
+            last_dep = line.get('last_departure')
+            if first_dep and last_dep:
+                lines.append(f"Hours: {first_dep} - {last_dep}")
+            
+            # Add notes if available
+            notes = line.get('notes')
+            if notes:
+                lines.append(f"ℹ️ {notes}")
+            
+            card = self._make_card(title, lines)
+            
+            # Add "View Itinerary" button if URL available
+            if line.get('itinerary_url'):
+                view_button = toga.Button(
+                    self.t("view_itinerary") if self.lang == "fr" else "View Itinerary",
+                    on_press=lambda w, url=line.get('itinerary_url'): self._open_external_url(url),
+                    style=Pack(
+                        background_color=COLORS["accent"],
+                        color=COLORS["accent_text"],
+                        padding=6,
+                        font_size=10,
+                    ),
+                )
+                card.add(view_button)
+            
+            self.bus_list_box.add(card)
 
     def _render_services_list(self):
         self._clear_box(self.services_list_box)
@@ -558,10 +691,100 @@ class GrenobleSkiMobile(toga.App):
             title = listing.get("title") or "Listing"
             lines = [
                 f"{self.t('city')}: {listing.get('city', '-')}",
-                f"{self.t('price')}: {listing.get('price', '-')}",
-                f"{self.t('difficulty')}: {listing.get('condition', '-')}",
+                f"{self.t('price')}: {listing.get('price', '-')} €",
+                f"État: {listing.get('condition', '-')}",
             ]
-            self.market_list_box.add(self._make_card(title, lines))
+            
+            # Vendor/Seller information
+            seller_info = listing.get('seller_info', {})
+            if seller_info:
+                seller_name = seller_info.get('display_name', 'Unknown Seller')
+                lines.append(f"Vendeur: {seller_name}")
+                
+                # Seller ratings
+                seller_ratings = listing.get('seller_ratings', {})
+                if seller_ratings:
+                    avg_score = seller_ratings.get('average_score')
+                    total_ratings = seller_ratings.get('total_ratings', 0)
+                    
+                    if avg_score and total_ratings > 0:
+                        # Display rating with stars
+                        stars = "⭐" * int(avg_score) + "☆" * (5 - int(avg_score))
+                        lines.append(f"{stars} {avg_score}/5 ({total_ratings} avis)")
+            
+            card = self._make_card(title, lines)
+            
+            # Add vendor rating details button if there are comments
+            seller_ratings = listing.get('seller_ratings', {})
+            recent_comments = seller_ratings.get('recent_comments', [])
+            if recent_comments:
+                ratings_button = toga.Button(
+                    f"💬 {len(recent_comments)} Commentaire(s)",
+                    on_press=lambda w, comments=recent_comments, seller=seller_info: self._show_vendor_ratings(seller, comments),
+                    style=Pack(
+                        background_color=COLORS["accent"],
+                        color=COLORS["accent_text"],
+                        padding=6,
+                        font_size=10,
+                    ),
+                )
+                card.add(ratings_button)
+            
+            self.market_list_box.add(card)
+
+    def _show_vendor_ratings(self, seller_info, ratings_comments):
+        """Display vendor/seller ratings and comments in a modal"""
+        self._clear_box(self.content)
+        
+        seller_name = seller_info.get('display_name', 'Unknown Seller')
+        title = toga.Label(
+            f"Évaluations de {seller_name}",
+            style=Pack(font_size=18, font_weight="bold", color=COLORS["title_text"], padding_bottom=12),
+        )
+        
+        back_button = toga.Button(
+            self.t("back_to_marketplace") if self.lang == "fr" else "Back",
+            on_press=lambda w: self._show_section("marketplace"),
+            style=Pack(background_color=COLORS["accent"], color=COLORS["accent_text"], padding=8, margin_bottom=10),
+        )
+        
+        comments_list = toga.Box(style=Pack(direction=COLUMN))
+        
+        if not ratings_comments:
+            comments_list.add(toga.Label(
+                "Aucun commentaire",
+                style=Pack(color=COLORS["muted_text"], padding=8),
+            ))
+        else:
+            for comment in ratings_comments:
+                score = comment.get('score', 0)
+                text = comment.get('comment', '')
+                rater = comment.get('rater_name', 'Anonymous')
+                created = comment.get('created_at', '')
+                
+                # Format date
+                created_short = created.split('T')[0] if created else ''
+                
+                lines = [
+                    f"{rater} - {created_short}",
+                ]
+                
+                # Stars display
+                stars = "⭐" * score + "☆" * (5 - score)
+                lines.append(stars)
+                
+                # Comment text
+                if text:
+                    lines.append(f"💬 {text[:100]}..." if len(text) > 100 else f"💬 {text}")
+                
+                card = self._make_card(f"Note: {score}/5", lines)
+                comments_list.add(card)
+        
+        content = toga.Box(
+            children=[title, back_button, toga.ScrollContainer(content=comments_list, style=Pack(flex=1))],
+            style=Pack(direction=COLUMN, flex=1, padding=14, background_color=COLORS["page_bg"]),
+        )
+        self.content.add(content)
 
     def _render_stories_list(self):
         self._clear_box(self.stories_list_box)
@@ -622,11 +845,51 @@ class GrenobleSkiMobile(toga.App):
             ]
             self.messages_list_box.add(self._make_card(title, lines))
 
+    def _render_cameras_list(self):
+        self._clear_box(self.cameras_list_box)
+        if not self.cameras_data:
+            self.cameras_list_box.add(toga.Label(self.t("empty"), style=Pack(color=COLORS["muted_text"], padding=8)))
+            return
+
+        for camera in self.cameras_data:
+            station_name = camera.get("ski_station_name", camera.get("ski_station", "Station"))
+            camera_name = camera.get("name") or "Camera"
+            camera_type = camera.get("camera_type", "snapshot")
+            description = camera.get("description", "")[:60]
+            camera_url = camera.get('camera_url')
+            
+            title = f"{camera_name}"
+            lines = [
+                f"Station: {station_name}",
+                f"Type: {camera_type}",
+            ]
+            
+            if description:
+                lines.append(f"📝 {description}...")
+            
+            card = self._make_card(title, lines)
+            
+            if camera_url:
+                view_btn = toga.Button(
+                    "📺 Open Camera",
+                    on_press=lambda w, url=camera_url: self._open_external_url(url),
+                    style=Pack(
+                        background_color=COLORS["accent"],
+                        color=COLORS["accent_text"],
+                        padding=6,
+                        font_size=10,
+                    ),
+                )
+                card.add(view_btn)
+            
+            self.cameras_list_box.add(card)
+
     def _render_all_sections(self):
         self._render_stations_list()
         self._render_bus_list()
         self._render_services_list()
         self._render_market_list()
+        self._render_cameras_list()
         if self.capabilities.get("has_stories"):
             self._render_stories_list()
         if self.capabilities.get("has_partners"):
@@ -662,6 +925,7 @@ class GrenobleSkiMobile(toga.App):
             ("services_data", self.api.services),
             ("market_data", self.api.marketplace),
             ("circuits_data", self.api.circuits),
+            ("cameras_data", self.api.cameras),
         ]
         if self.capabilities.get("has_stories"):
             jobs.append(("stories_data", self.api.stories))
@@ -823,6 +1087,19 @@ class GrenobleSkiMobile(toga.App):
         try:
             self.messages_data = await self.api.messages()
             self._render_messages_list()
+            self._refresh_summary()
+            self._set_status("status_ready")
+        except ApiError as exc:
+            self._set_status("status_error", message=str(exc))
+
+    def on_refresh_cameras(self, widget):
+        asyncio.create_task(self._refresh_cameras_only())
+
+    async def _refresh_cameras_only(self):
+        self._set_status("status_loading")
+        try:
+            self.cameras_data = await self.api.cameras()
+            self._render_cameras_list()
             self._refresh_summary()
             self._set_status("status_ready")
         except ApiError as exc:

@@ -68,6 +68,7 @@ def get_marketplace_choices(lang_code=None):
                 ('sale', 'For sale'),
                 ('rent', 'For rent'),
                 ('lend', 'For loan'),
+                ('service', 'Service'),
             ],
             'material_type': [
                 ('ski', 'Skis'),
@@ -77,6 +78,9 @@ def get_marketplace_choices(lang_code=None):
                 ('pants', 'Pants'),
                 ('gloves', 'Gloves'),
                 ('goggles', 'Goggles'),
+                ('service', 'Service'),
+                ('transport', 'Transport'),
+                ('accommodation', 'Accommodation'),
                 ('other', 'Other'),
             ],
             'condition': [
@@ -92,6 +96,7 @@ def get_marketplace_choices(lang_code=None):
             ('sale', 'A vendre'),
             ('rent', 'A louer'),
             ('lend', 'A preter'),
+            ('service', 'Prestation'),
         ],
         'material_type': [
             ('ski', 'Skis'),
@@ -101,6 +106,9 @@ def get_marketplace_choices(lang_code=None):
             ('pants', 'Pantalon'),
             ('gloves', 'Gants'),
             ('goggles', 'Masque'),
+            ('service', 'Service'),
+            ('transport', 'Transport'),
+            ('accommodation', 'Hebergement'),
             ('other', 'Autre'),
         ],
         'condition': [
@@ -132,12 +140,26 @@ class CustomLoginForm(LoginForm):
 class CustomSignupForm(SignupForm):
     first_name = forms.CharField(max_length=150, required=False)
     last_name = forms.CharField(max_length=150, required=False)
+    accept_terms = forms.BooleanField(required=True)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field_name in ('email', 'password1', 'password2', 'first_name', 'last_name'):
             if field_name in self.fields:
                 self.fields[field_name].widget.attrs.update({'class': 'form-control'})
+
+        if 'accept_terms' in self.fields:
+            self.fields['accept_terms'].label = _(
+                "I accept the Terms and Privacy Policy"
+            )
+
+    def clean_accept_terms(self):
+        accepted = self.cleaned_data.get('accept_terms')
+        if not accepted:
+            raise forms.ValidationError(
+                _("You must accept the Terms and Privacy Policy to continue.")
+            )
+        return accepted
 
     def save(self, request):
         user = super().save(request)

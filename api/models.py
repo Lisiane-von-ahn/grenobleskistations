@@ -26,7 +26,7 @@ class SkiStation(models.Model):
 
 
 class BusLine(models.Model):
-    ski_station = models.ForeignKey(SkiStation, on_delete=models.CASCADE, null=True)
+    ski_station = models.ForeignKey(SkiStation, on_delete=models.CASCADE, null=True, related_name='bus_lines')
     bus_number = models.CharField(max_length=120)
     departure_stop = models.CharField(max_length=100)
     arrival_stop = models.CharField(max_length=100)
@@ -35,9 +35,20 @@ class BusLine(models.Model):
     route_points = models.CharField(max_length=255, null=True, blank=True)
     departure_latitude = models.DecimalField(max_digits=8, decimal_places=6, null=True, blank=True)
     departure_longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    # New fields for better itinerary support
+    arrival_latitude = models.DecimalField(max_digits=8, decimal_places=6, null=True, blank=True)
+    arrival_longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    itinerary_url = models.URLField(null=True, blank=True, help_text="URL to external itinerary/timetable")
+    detailed_route = models.JSONField(null=True, blank=True, help_text="JSON array of stops with coordinates")
+    first_departure = models.TimeField(null=True, blank=True)
+    last_departure = models.TimeField(null=True, blank=True)
+    notes = models.TextField(null=True, blank=True, help_text="Additional notes about the bus line")
+
+    class Meta:
+        ordering = ['bus_number']
 
     def __str__(self):
-        return self.bus_number
+        return f"{self.bus_number} - {self.departure_stop} to {self.arrival_stop}"
 
 
 class ServiceStore(models.Model):
@@ -69,6 +80,7 @@ class SkiMaterialListing(models.Model):
         ('sale', 'For Sale'),
         ('rent', 'For Rent'),
         ('lend', 'For Loan'),
+        ('service', 'Service'),
     ]
 
     CONDITION_CHOICES = [
@@ -86,6 +98,9 @@ class SkiMaterialListing(models.Model):
         ('pants', 'Pants'),
         ('gloves', 'Gloves'),
         ('goggles', 'Goggles'),
+        ('service', 'Service'),
+        ('transport', 'Transport'),
+        ('accommodation', 'Accommodation'),
         ('other', 'Other'),
     ]
 
@@ -105,6 +120,21 @@ class SkiMaterialListing(models.Model):
 
     def __str__(self):
         return self.title
+
+    def get_seller_ratings(self):
+        """Get all ratings for this listing's seller"""
+        return MarketplaceUserRating.objects.filter(rated_user=self.user)
+
+    def get_seller_average_rating(self):
+        """Get average rating for the seller"""
+        ratings = self.get_seller_ratings()
+        if not ratings.exists():
+            return None
+        return ratings.aggregate(models.Avg('score'))['score__avg']
+
+    def get_seller_rating_count(self):
+        """Get total rating count for the seller"""
+        return self.get_seller_ratings().count()
 
 
 class SkiMaterialImage(models.Model):
@@ -378,6 +408,38 @@ class UserProfile(models.Model):
         return self.profile_picture is not None
 
 
+class SkiStationCamera(models.Model):
+    """Model to store live camera feeds and information for ski stations"""
+    ski_station = models.ForeignKey(SkiStation, on_delete=models.CASCADE, related_name='cameras')
+    name = models.CharField(max_length=200, help_text="Name/location of the camera")
+    camera_url = models.URLField(help_text="URL to the live camera feed (MJPEG stream, m3u8, or still image)")
+    thumbnail_url = models.URLField(null=True, blank=True, help_text="URL to a static thumbnail image")
+    location_latitude = models.DecimalField(max_digits=8, decimal_places=6, null=True, blank=True)
+    location_longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    camera_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('live_stream', 'Live Stream (MJPEG)'),
+            ('hls_stream', 'HLS Stream (m3u8)'),
+            ('snapshot', 'Snapshot Only'),
+        ],
+        default='snapshot'
+    )
+    description = models.TextField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return f"{self.ski_station.name} - {self.name}"
+
+
+
+
+
 class UserFriend(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friend_links')
     friend = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friend_of_links')
@@ -391,6 +453,146 @@ class UserFriend(models.Model):
 
     def __str__(self):
         return f"{self.user.username} -> {self.friend.username}"
+
+
+class GamificationPoints(models.Model):
+    """Track earned points for various activities"""
+    ACTIVITY_CHOICES = [
+        ('listing_created', 'Created Marketplace Listing'),
+        ('deal_completed', 'Completed Marketplace Deal'),
+        ('listing_sold', 'Sold Item'),
+        ('review_written', 'Wrote a Review'),
+        ('review_received', 'Received Positive Review'),
+        ('story_created', 'Posted Ski Story'),
+        ('partner_post_created', 'Posted Ski Partner Request'),
+        ('condition_report', 'Submitted Condition Report'),
+        ('friend_added', 'Added Friend'),
+        ('instructor_service', 'Completed Instructor Service'),
+        ('first_login', 'First Login'),
+        ('profile_completed', 'Completed Profile'),
+        ('badge_earned', 'Achievement Earned'),
+        ('daily_login', 'Daily Login Streak'),
+        ('other', 'Other Activity'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='gamification_points')
+    activity_type = models.CharField(max_length=30, choices=ACTIVITY_CHOICES)
+    points_earned = models.PositiveIntegerField()
+    description = models.TextField(blank=True, help_text="Detailed description of the activity")
+    related_object_id = models.IntegerField(null=True, blank=True, help_text="ID of related object (listing, deal, etc)")
+    related_object_type = models.CharField(max_length=50, blank=True, help_text="Type of related object")
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['activity_type']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username}: +{self.points_earned} ({self.activity_type})"
+
+
+class GamificationBadge(models.Model):
+    """Achievement badges earned by users"""
+    BADGE_TYPES = [
+        ('marketplace_seller', 'Marketplace Seller'),
+        ('trusted_seller', 'Trusted Seller'),
+        ('power_seller', 'Power Seller'),
+        ('story_teller', 'Story Teller'),
+        ('social_butterfly', 'Social Butterfly'),
+        ('ski_expert', 'Ski Expert'),
+        ('condition_watcher', 'Condition Watcher'),
+        ('partner_matcher', 'Partner Matcher'),
+        ('instructor_master', 'Instructor Master'),
+        ('reviewer', 'Reviewer'),
+        ('helpful_reviewer', 'Helpful Reviewer'),
+        ('first_time', 'First Timer'),
+        ('streak_king', 'Streak King'),
+        ('collector', 'Collector'),
+    ]
+
+    name = models.CharField(max_length=100)
+    badge_type = models.CharField(max_length=30, choices=BADGE_TYPES, unique=True)
+    description = models.TextField()
+    icon_emoji = models.CharField(max_length=10, default='🏆', help_text="Emoji icon for the badge")
+    points_value = models.PositiveIntegerField(default=50, help_text="Points awarded when badge is earned")
+    requirement_description = models.TextField(help_text="Human readable requirements to earn this badge")
+    rarity = models.CharField(
+        max_length=20,
+        choices=[
+            ('common', 'Common'),
+            ('uncommon', 'Uncommon'),
+            ('rare', 'Rare'),
+            ('epic', 'Epic'),
+            ('legendary', 'Legendary'),
+        ],
+        default='common'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['rarity', '-points_value']
+
+    def __str__(self):
+        return f"{self.icon_emoji} {self.name}"
+
+
+class UserBadge(models.Model):
+    """Junction table: users earning badges"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='earned_badges')
+    badge = models.ForeignKey(GamificationBadge, on_delete=models.CASCADE, related_name='users')
+    earned_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ('user', 'badge')
+        ordering = ['-earned_at']
+
+    def __str__(self):
+        return f"{self.user.username} earned {self.badge.name}"
+
+
+class UserGameStats(models.Model):
+    """Aggregate gamification stats per user"""
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='game_stats')
+    total_points = models.PositiveIntegerField(default=0)
+    level = models.PositiveIntegerField(default=1)
+    experience_points = models.PositiveIntegerField(default=0)
+    badges_count = models.PositiveIntegerField(default=0)
+    daily_login_streak = models.PositiveIntegerField(default=0)
+    last_login_date = models.DateField(null=True, blank=True)
+    total_listings_created = models.PositiveIntegerField(default=0)
+    total_deals_completed = models.PositiveIntegerField(default=0)
+    total_reviews_written = models.PositiveIntegerField(default=0)
+    average_seller_rating = models.DecimalField(max_digits=3, decimal_places=2, default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name_plural = "User Game Stats"
+
+    def __str__(self):
+        return f"{self.user.username} - Level {self.level} ({self.total_points} pts)"
+
+    def calculate_level(self):
+        """Calculate level based on total points (non-linear progression)"""
+        # Level 1: 0 points, Level 2: 100 points, Level 3: 300, Level 4: 600, etc.
+        # Formula: points_needed = level^2 * 100
+        level = 1
+        points_needed = 0
+        while points_needed + (level ** 2) * 100 <= self.total_points:
+            points_needed += (level ** 2) * 100
+            level += 1
+        return level
+
+    def update_level(self):
+        """Update the level and return if level changed"""
+        new_level = self.calculate_level()
+        if new_level != self.level:
+            self.level = new_level
+            self.save()
+            return True
+        return False
         
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):

@@ -56,11 +56,13 @@ import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -93,6 +95,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.applovin.mediation.MaxAdFormat
@@ -238,6 +241,7 @@ fun GrenobleSkiApp(
             onFirstNameChange = viewModel::updateFirstName,
             onLastNameChange = viewModel::updateLastName,
             onConfirmPasswordChange = viewModel::updateConfirmPassword,
+            onRegisterTermsAcceptedChange = viewModel::updateRegisterTermsAccepted,
             onLogin = viewModel::login,
             onRegister = viewModel::register,
             onSwitchAuthMode = viewModel::switchAuthMode,
@@ -316,10 +320,20 @@ fun GrenobleSkiApp(
             onUpdatePublishDescription = viewModel::updatePublishDescription,
             onUpdatePublishCity = viewModel::updatePublishCity,
             onUpdatePublishPrice = viewModel::updatePublishPrice,
+            onUpdatePublishMaterialType = viewModel::updatePublishMaterialType,
+            onUpdatePublishTransactionType = viewModel::updatePublishTransactionType,
             onAppendPublishImages = viewModel::appendPublishImagesBase64,
             onRemovePublishImageAt = viewModel::removePublishImageAt,
             onClearPublishImages = viewModel::clearPublishImages,
             onPublishArticle = viewModel::publishArticle,
+            onUpdatePartnerTitle = viewModel::updatePublishPartnerTitle,
+            onUpdatePartnerMessage = viewModel::updatePublishPartnerMessage,
+            onUpdatePartnerCity = viewModel::updatePublishPartnerCity,
+            onUpdatePartnerLevel = viewModel::updatePublishPartnerLevel,
+            onUpdatePartnerDate = viewModel::updatePublishPartnerDate,
+            onPublishPartnerPost = viewModel::publishPartnerPost,
+            onSubmitSellerRating = viewModel::submitSellerRating,
+            onSubmitStationRating = viewModel::submitStationRating,
         )
     }
 
@@ -350,6 +364,7 @@ private fun LoginScreen(
     onFirstNameChange: (String) -> Unit,
     onLastNameChange: (String) -> Unit,
     onConfirmPasswordChange: (String) -> Unit,
+    onRegisterTermsAcceptedChange: (Boolean) -> Unit,
     onLogin: () -> Unit,
     onRegister: () -> Unit,
     onSwitchAuthMode: (Boolean) -> Unit,
@@ -457,6 +472,29 @@ private fun LoginScreen(
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                         )
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Checkbox(
+                                checked = state.registerTermsAccepted,
+                                onCheckedChange = onRegisterTermsAcceptedChange,
+                            )
+                            Text(
+                                text = stringResource(id = R.string.register_accept_terms_text),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            TextButton(onClick = onOpenTerms) { Text(stringResource(id = R.string.terms)) }
+                            TextButton(onClick = onOpenPrivacy) { Text(stringResource(id = R.string.privacy)) }
+                        }
                     }
 
                     Button(
@@ -528,12 +566,14 @@ private fun LoginScreen(
                         }
                     }
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        TextButton(onClick = onOpenTerms) { Text(stringResource(id = R.string.terms)) }
-                        TextButton(onClick = onOpenPrivacy) { Text(stringResource(id = R.string.privacy)) }
+                    if (!state.isRegisterMode) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            TextButton(onClick = onOpenTerms) { Text(stringResource(id = R.string.terms)) }
+                            TextButton(onClick = onOpenPrivacy) { Text(stringResource(id = R.string.privacy)) }
+                        }
                     }
                 }
             }
@@ -570,15 +610,26 @@ private fun NativeShell(
     onUpdatePublishDescription: (String) -> Unit,
     onUpdatePublishCity: (String) -> Unit,
     onUpdatePublishPrice: (String) -> Unit,
+    onUpdatePublishMaterialType: (String) -> Unit,
+    onUpdatePublishTransactionType: (String) -> Unit,
     onAppendPublishImages: (List<String>) -> Unit,
     onRemovePublishImageAt: (Int) -> Unit,
     onClearPublishImages: () -> Unit,
     onPublishArticle: () -> Unit,
+    onUpdatePartnerTitle: (String) -> Unit,
+    onUpdatePartnerMessage: (String) -> Unit,
+    onUpdatePartnerCity: (String) -> Unit,
+    onUpdatePartnerLevel: (String) -> Unit,
+    onUpdatePartnerDate: (String) -> Unit,
+    onPublishPartnerPost: () -> Unit,
+    onSubmitSellerRating: (Int, Int, Int, String) -> Unit,
+    onSubmitStationRating: (Int, Int, String) -> Unit,
 ) {
     val localContext = androidx.compose.ui.platform.LocalContext.current
     var quickMenuOpen by remember { mutableStateOf(false) }
     var moreMenuOpen by remember { mutableStateOf(false) }
     var publishDialogOpen by remember { mutableStateOf(false) }
+    var publishPartnerDialogOpen by remember { mutableStateOf(false) }
     val publishPhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
         val encoded = uris.mapNotNull { uri -> uriToBase64(localContext, uri) }
         onAppendPublishImages(encoded)
@@ -602,6 +653,25 @@ private fun NativeShell(
             state.publishCity.isBlank()
         ) {
             publishDialogOpen = false
+        }
+    }
+
+    LaunchedEffect(
+        state.isPublishingPartner,
+        state.publishPartnerTitle,
+        state.publishPartnerMessage,
+        state.publishPartnerCity,
+        state.selectedTab,
+    ) {
+        if (
+            publishPartnerDialogOpen &&
+            !state.isPublishingPartner &&
+            state.selectedTab == NativeTab.PARTNERS &&
+            state.publishPartnerTitle.isBlank() &&
+            state.publishPartnerMessage.isBlank() &&
+            state.publishPartnerCity.isBlank()
+        ) {
+            publishPartnerDialogOpen = false
         }
     }
 
@@ -639,6 +709,9 @@ private fun NativeShell(
                         }
                         SmallFloatingActionButton(onClick = { onSelectTab(NativeTab.MARKETPLACE) }) {
                             Icon(Icons.Filled.LocalOffer, contentDescription = stringResource(id = R.string.marketplace))
+                        }
+                        SmallFloatingActionButton(onClick = { onSelectTab(NativeTab.PARTNERS) }) {
+                            Icon(Icons.Filled.School, contentDescription = stringResource(id = R.string.adventure_partners))
                         }
                         SmallFloatingActionButton(onClick = { onSelectTab(NativeTab.MESSAGES) }) {
                             Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = stringResource(id = R.string.messages))
@@ -712,13 +785,23 @@ private fun NativeShell(
                     onOpenBusLines = { onSelectTab(NativeTab.BUS_LINES) },
                     onOpenServices = { onSelectTab(NativeTab.SERVICES) },
                 )
-                NativeTab.STATIONS -> StationsTab(state)
+                NativeTab.STATIONS -> StationsTab(state, onSubmitStationRating)
                 NativeTab.BUS_LINES -> BusLinesTab(state)
                 NativeTab.SERVICES -> ServicesTab(
                     state = state,
                     onOpenUrl = { url -> openExternalUrl(localContext, url) },
                 )
-                NativeTab.MARKETPLACE -> MarketplaceTab(state, onPrepareMessageToSeller)
+                NativeTab.MARKETPLACE -> MarketplaceTab(
+                    state = state,
+                    onPrepareMessageToSeller = onPrepareMessageToSeller,
+                    onSubmitSellerRating = onSubmitSellerRating,
+                    onOpenPublishMarketplace = { publishDialogOpen = true },
+                )
+                NativeTab.PARTNERS -> PartnersTab(
+                    state = state,
+                    onPrepareMessageToPartner = onPrepareMessageToSeller,
+                    onOpenPublishPartner = { publishPartnerDialogOpen = true },
+                )
                 NativeTab.INSTRUCTORS -> InstructorsTab(state, onPrepareMessageToSeller)
                 NativeTab.PISTES -> PistesTab(state)
                 NativeTab.MESSAGES -> MessagesTab(
@@ -803,6 +886,12 @@ private fun NativeShell(
                         }
                         OutlinedButton(onClick = {
                             moreMenuOpen = false
+                            onSelectTab(NativeTab.PARTNERS)
+                        }, modifier = Modifier.fillMaxWidth()) {
+                            Text(stringResource(id = R.string.adventure_partners))
+                        }
+                        OutlinedButton(onClick = {
+                            moreMenuOpen = false
                             onSelectTab(NativeTab.PISTES)
                         }, modifier = Modifier.fillMaxWidth()) {
                             Text(stringResource(id = R.string.piste_status))
@@ -812,6 +901,12 @@ private fun NativeShell(
                             publishDialogOpen = true
                         }, modifier = Modifier.fillMaxWidth()) {
                             Text(stringResource(id = R.string.publish_article))
+                        }
+                        OutlinedButton(onClick = {
+                            moreMenuOpen = false
+                            publishPartnerDialogOpen = true
+                        }, modifier = Modifier.fillMaxWidth()) {
+                            Text(stringResource(id = R.string.publish_partner_post))
                         }
                         OutlinedButton(onClick = {
                             moreMenuOpen = false
@@ -886,6 +981,20 @@ private fun NativeShell(
                             modifier = Modifier.padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
+                            val materialOptions = listOf(
+                                "ski" to stringResource(id = R.string.market_type_ski),
+                                "service" to stringResource(id = R.string.market_type_service),
+                                "transport" to stringResource(id = R.string.market_type_transport),
+                                "accommodation" to stringResource(id = R.string.market_type_accommodation),
+                                "other" to stringResource(id = R.string.market_type_other),
+                            )
+                            val transactionOptions = listOf(
+                                "sale" to stringResource(id = R.string.offer_sale),
+                                "rent" to stringResource(id = R.string.offer_rent),
+                                "lend" to stringResource(id = R.string.offer_lend),
+                                "service" to stringResource(id = R.string.offer_service),
+                            )
+
                             val citySuggestions = remember(state.publishCity) {
                                 val query = state.publishCity.trim()
                                 if (query.isBlank()) {
@@ -911,6 +1020,34 @@ private fun NativeShell(
                                 minLines = 2,
                                 maxLines = 4,
                             )
+                            Text(
+                                text = stringResource(id = R.string.marketplace_category),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                items(materialOptions) { option ->
+                                    FilterChipButton(
+                                        label = option.second,
+                                        selected = state.publishMaterialType == option.first,
+                                        onClick = { onUpdatePublishMaterialType(option.first) },
+                                    )
+                                }
+                            }
+                            Text(
+                                text = stringResource(id = R.string.marketplace_offer_type),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                items(transactionOptions) { option ->
+                                    FilterChipButton(
+                                        label = option.second,
+                                        selected = state.publishTransactionType == option.first,
+                                        onClick = { onUpdatePublishTransactionType(option.first) },
+                                    )
+                                }
+                            }
                             OutlinedTextField(
                                 value = state.publishCity,
                                 onValueChange = onUpdatePublishCity,
@@ -1020,6 +1157,125 @@ private fun NativeShell(
                 }
             }
         }
+
+        if (publishPartnerDialogOpen) {
+            Dialog(onDismissRequest = { publishPartnerDialogOpen = false }) {
+                val levelOptions = listOf(
+                    "beginner" to stringResource(id = R.string.partner_level_beginner),
+                    "intermediate" to stringResource(id = R.string.partner_level_intermediate),
+                    "advanced" to stringResource(id = R.string.partner_level_advanced),
+                )
+                Card(
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    Brush.horizontalGradient(
+                                        listOf(
+                                            Color(0xFF1E3A8A),
+                                            Color(0xFF0F766E),
+                                        )
+                                    )
+                                )
+                                .padding(horizontal = 18.dp, vertical = 16.dp),
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(
+                                    text = stringResource(id = R.string.publish_partner_post),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                                Text(
+                                    text = stringResource(id = R.string.partner_post_subtitle),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.White.copy(alpha = 0.86f),
+                                )
+                            }
+                        }
+
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            OutlinedTextField(
+                                value = state.publishPartnerTitle,
+                                onValueChange = onUpdatePartnerTitle,
+                                label = { Text(stringResource(id = R.string.partner_post_title)) },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            OutlinedTextField(
+                                value = state.publishPartnerMessage,
+                                onValueChange = onUpdatePartnerMessage,
+                                label = { Text(stringResource(id = R.string.partner_post_message)) },
+                                minLines = 2,
+                                maxLines = 4,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            OutlinedTextField(
+                                value = state.publishPartnerCity,
+                                onValueChange = onUpdatePartnerCity,
+                                label = { Text(stringResource(id = R.string.city)) },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            Text(
+                                text = stringResource(id = R.string.partner_skill_level),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                items(levelOptions) { option ->
+                                    FilterChipButton(
+                                        label = option.second,
+                                        selected = state.publishPartnerLevel == option.first,
+                                        onClick = { onUpdatePartnerLevel(option.first) },
+                                    )
+                                }
+                            }
+                            OutlinedTextField(
+                                value = state.publishPartnerDate,
+                                onValueChange = onUpdatePartnerDate,
+                                label = { Text(stringResource(id = R.string.partner_preferred_date)) },
+                                placeholder = { Text("2026-03-30") },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            ) {
+                                OutlinedButton(
+                                    onClick = { publishPartnerDialogOpen = false },
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    Text(stringResource(id = R.string.close))
+                                }
+                                Button(
+                                    onClick = onPublishPartnerPost,
+                                    enabled = !state.isPublishingPartner,
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    if (state.isPublishingPartner) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(16.dp),
+                                            strokeWidth = 2.dp,
+                                            color = Color.White,
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                    }
+                                    Text(stringResource(id = R.string.publish))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1054,6 +1310,9 @@ private fun HomeTab(
     onOpenBusLines: () -> Unit,
     onOpenServices: () -> Unit,
 ) {
+    val xpInLevel = state.xpPoints % 100
+    val xpProgress = xpInLevel / 100f
+
     val stories = listOf(
         stringResource(id = R.string.story_powder_alert),
         stringResource(id = R.string.story_last_minute_deals),
@@ -1115,6 +1374,38 @@ private fun HomeTab(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.72f)),
+                        shape = RoundedCornerShape(14.dp),
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Text(
+                                text = stringResource(id = R.string.gamification_level_label, state.xpLevel),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Text(
+                                text = stringResource(id = R.string.gamification_xp_label, state.xpPoints),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            LinearProgressIndicator(
+                                progress = { xpProgress },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            Text(
+                                text = stringResource(id = R.string.gamification_next_level_hint, 100 - xpInLevel),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -1199,13 +1490,19 @@ private fun HomeTab(
 }
 
 @Composable
-private fun StationsTab(state: AppUiState) {
+private fun StationsTab(
+    state: AppUiState,
+    onSubmitStationRating: (Int, Int, String) -> Unit,
+) {
     if (state.stationItems.isEmpty()) {
         EmptyTabMessage(text = stringResource(id = R.string.empty_stations))
         return
     }
 
     var searchQuery by remember { mutableStateOf("") }
+    var selectedStationForRating by remember { mutableStateOf<fr.grenobleski.nativeapp.data.model.StationItem?>(null) }
+    var stationScore by remember { mutableStateOf(5) }
+    var stationComment by remember { mutableStateOf("") }
     val filteredItems = remember(state.stationItems, searchQuery) {
         state.stationItems.filter { item ->
             searchQuery.isBlank() || item.name.contains(searchQuery, ignoreCase = true)
@@ -1276,6 +1573,16 @@ private fun StationsTab(state: AppUiState) {
                             value = "🎿 ${item.capacityLabel}",
                             modifier = Modifier.fillMaxWidth(),
                         )
+                        OutlinedButton(
+                            onClick = {
+                                selectedStationForRating = item
+                                stationScore = 5
+                                stationComment = ""
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(stringResource(id = R.string.rate_station))
+                        }
                     }
                 }
             }
@@ -1288,6 +1595,65 @@ private fun StationsTab(state: AppUiState) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 8.dp),
                 )
+            }
+        }
+    }
+
+    val stationToRate = selectedStationForRating
+    if (stationToRate != null) {
+        Dialog(onDismissRequest = { selectedStationForRating = null }) {
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Text(
+                        text = stringResource(id = R.string.rate_station_title, stationToRate.name),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items((1..5).toList()) { score ->
+                            FilterChipButton(
+                                label = "$score",
+                                selected = stationScore == score,
+                                onClick = { stationScore = score },
+                            )
+                        }
+                    }
+                    OutlinedTextField(
+                        value = stationComment,
+                        onValueChange = { stationComment = it },
+                        label = { Text(stringResource(id = R.string.optional_comment)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 2,
+                        maxLines = 4,
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        OutlinedButton(
+                            onClick = { selectedStationForRating = null },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(stringResource(id = R.string.close))
+                        }
+                        Button(
+                            onClick = {
+                                onSubmitStationRating(stationToRate.id, stationScore, stationComment)
+                                selectedStationForRating = null
+                            },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(stringResource(id = R.string.submit_rating))
+                        }
+                    }
+                }
             }
         }
     }
@@ -1565,25 +1931,40 @@ private fun ServicesTab(
 private fun MarketplaceTab(
     state: AppUiState,
     onPrepareMessageToSeller: (Int, String) -> Unit,
+    onSubmitSellerRating: (Int, Int, Int, String) -> Unit,
+    onOpenPublishMarketplace: () -> Unit,
 ) {
     var selectedItem by remember { mutableStateOf<fr.grenobleski.nativeapp.data.model.MarketplaceItem?>(null) }
+    var rateSellerDialogItem by remember { mutableStateOf<fr.grenobleski.nativeapp.data.model.MarketplaceItem?>(null) }
+    var sellerScore by remember { mutableStateOf(5) }
+    var sellerComment by remember { mutableStateOf("") }
     var searchQuery by remember { mutableStateOf("") }
     var selectedCity by remember { mutableStateOf("") }
     var selectedCondition by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf("") }
+    var selectedOfferType by remember { mutableStateOf("") }
     val availableCities = remember(state.marketplaceItems) {
         (state.marketplaceItems.map { it.city }.filter { it.isNotBlank() && it != "-" } + RHONE_ALPES_CITIES)
             .distinct()
             .sorted()
     }
     val availableConditions = remember(state.marketplaceItems) { state.marketplaceItems.map { it.conditionLabel }.filter { it.isNotBlank() && it != "-" }.distinct().sorted() }
-    val filteredItems = remember(state.marketplaceItems, searchQuery, selectedCity, selectedCondition) {
+    val availableCategories = remember(state.marketplaceItems) {
+        state.marketplaceItems.map { it.materialTypeLabel }.filter { it.isNotBlank() && it != "-" }.distinct().sorted()
+    }
+    val availableOfferTypes = remember(state.marketplaceItems) {
+        state.marketplaceItems.map { it.transactionTypeLabel }.filter { it.isNotBlank() && it != "-" }.distinct().sorted()
+    }
+    val filteredItems = remember(state.marketplaceItems, searchQuery, selectedCity, selectedCondition, selectedCategory, selectedOfferType) {
         state.marketplaceItems.filter { item ->
-            val matchesQuery = searchQuery.isBlank() || listOf(item.title, item.description, item.city).any {
+            val matchesQuery = searchQuery.isBlank() || listOf(item.title, item.description, item.city, item.materialTypeLabel, item.transactionTypeLabel).any {
                 it.contains(searchQuery, ignoreCase = true)
             }
             val matchesCity = selectedCity.isBlank() || item.city == selectedCity
             val matchesCondition = selectedCondition.isBlank() || item.conditionLabel == selectedCondition
-            matchesQuery && matchesCity && matchesCondition
+            val matchesCategory = selectedCategory.isBlank() || item.materialTypeLabel == selectedCategory
+            val matchesOfferType = selectedOfferType.isBlank() || item.transactionTypeLabel == selectedOfferType
+            matchesQuery && matchesCity && matchesCondition && matchesCategory && matchesOfferType
         }
     }
     val listState = rememberLazyListState()
@@ -1614,12 +1995,30 @@ private fun MarketplaceTab(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
-                Text(
-                    text = stringResource(id = R.string.marketplace_filters),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(id = R.string.marketplace_filters),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Button(
+                        onClick = onOpenPublishMarketplace,
+                        modifier = Modifier.height(32.dp),
+                    ) {
+                        Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(stringResource(id = R.string.add_article), fontSize = 12.sp)
+                    }
+                }
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(end = 8.dp),
+                ) {
                     item {
                         FilterChipButton(
                             label = stringResource(id = R.string.all_cities),
@@ -1635,7 +2034,11 @@ private fun MarketplaceTab(
                         )
                     }
                 }
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(end = 8.dp),
+                ) {
                     item {
                         FilterChipButton(
                             label = stringResource(id = R.string.all_conditions),
@@ -1648,6 +2051,46 @@ private fun MarketplaceTab(
                             label = condition,
                             selected = selectedCondition == condition,
                             onClick = { selectedCondition = condition },
+                        )
+                    }
+                }
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(end = 8.dp),
+                ) {
+                    item {
+                        FilterChipButton(
+                            label = stringResource(id = R.string.all_categories),
+                            selected = selectedCategory.isBlank(),
+                            onClick = { selectedCategory = "" },
+                        )
+                    }
+                    items(availableCategories) { category ->
+                        FilterChipButton(
+                            label = category,
+                            selected = selectedCategory == category,
+                            onClick = { selectedCategory = category },
+                        )
+                    }
+                }
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(end = 8.dp),
+                ) {
+                    item {
+                        FilterChipButton(
+                            label = stringResource(id = R.string.all_offer_types),
+                            selected = selectedOfferType.isBlank(),
+                            onClick = { selectedOfferType = "" },
+                        )
+                    }
+                    items(availableOfferTypes) { offerType ->
+                        FilterChipButton(
+                            label = offerType,
+                            selected = selectedOfferType == offerType,
+                            onClick = { selectedOfferType = offerType },
                         )
                     }
                 }
@@ -1749,6 +2192,18 @@ private fun MarketplaceTab(
                         }
                         Text(listing.sellerLabel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FilterChipButton(
+                                label = listing.materialTypeLabel,
+                                selected = false,
+                                onClick = { selectedCategory = listing.materialTypeLabel },
+                            )
+                            FilterChipButton(
+                                label = listing.transactionTypeLabel,
+                                selected = false,
+                                onClick = { selectedOfferType = listing.transactionTypeLabel },
+                            )
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(onClick = { selectedItem = listing }) {
                                 Text(stringResource(id = R.string.view_details))
                             }
@@ -1832,6 +2287,18 @@ private fun MarketplaceTab(
                     ) {
                         Text(details.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                         Text(details.conditionLabel, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FilterChipButton(
+                                label = details.materialTypeLabel,
+                                selected = false,
+                                onClick = { selectedCategory = details.materialTypeLabel },
+                            )
+                            FilterChipButton(
+                                label = details.transactionTypeLabel,
+                                selected = false,
+                                onClick = { selectedOfferType = details.transactionTypeLabel },
+                            )
+                        }
 
                         if (galleryImages.size > 1) {
                             Text(
@@ -1886,6 +2353,77 @@ private fun MarketplaceTab(
                             ) {
                                 Text(stringResource(id = R.string.contact_seller))
                             }
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                selectedItem = null
+                                sellerScore = 5
+                                sellerComment = ""
+                                rateSellerDialogItem = details
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(stringResource(id = R.string.rate_seller))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    val sellerListing = rateSellerDialogItem
+    if (sellerListing != null) {
+        Dialog(onDismissRequest = { rateSellerDialogItem = null }) {
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Text(
+                        text = stringResource(id = R.string.rate_seller_title, sellerListing.title),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items((1..5).toList()) { score ->
+                            FilterChipButton(
+                                label = "$score",
+                                selected = sellerScore == score,
+                                onClick = { sellerScore = score },
+                            )
+                        }
+                    }
+                    OutlinedTextField(
+                        value = sellerComment,
+                        onValueChange = { sellerComment = it },
+                        label = { Text(stringResource(id = R.string.optional_comment)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 2,
+                        maxLines = 4,
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        OutlinedButton(
+                            onClick = { rateSellerDialogItem = null },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(stringResource(id = R.string.close))
+                        }
+                        Button(
+                            onClick = {
+                                onSubmitSellerRating(sellerListing.id, sellerListing.sellerId, sellerScore, sellerComment)
+                                rateSellerDialogItem = null
+                            },
+                            modifier = Modifier.weight(1f),
+                            enabled = sellerListing.sellerId > 0,
+                        ) {
+                            Text(stringResource(id = R.string.submit_rating))
                         }
                     }
                 }
@@ -3018,6 +3556,123 @@ private fun EmptyTabMessage(text: String) {
 }
 
 @Composable
+private fun PartnersTab(
+    state: AppUiState,
+    onPrepareMessageToPartner: (Int, String) -> Unit,
+    onOpenPublishPartner: () -> Unit,
+) {
+    if (state.partnerItems.isEmpty()) {
+        EmptyTabMessage(text = stringResource(id = R.string.empty_partners))
+        return
+    }
+
+    var searchQuery by remember { mutableStateOf("") }
+    val filteredItems = remember(state.partnerItems, searchQuery) {
+        state.partnerItems.filter { item ->
+            searchQuery.isBlank() ||
+                item.title.contains(searchQuery, ignoreCase = true) ||
+                item.city.contains(searchQuery, ignoreCase = true) ||
+                item.stationLabel.contains(searchQuery, ignoreCase = true) ||
+                item.organizerLabel.contains(searchQuery, ignoreCase = true)
+        }
+    }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        item {
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(
+                                    Color(0xFFE0F2FE),
+                                    Color(0xFFD1FAE5),
+                                )
+                            )
+                        )
+                        .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = stringResource(id = R.string.partner_cta_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = stringResource(id = R.string.partner_cta_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Button(onClick = onOpenPublishPartner) {
+                        Text(stringResource(id = R.string.publish_partner_post))
+                    }
+                }
+            }
+        }
+
+        item {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                label = { Text(stringResource(id = R.string.search_partners)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+
+        if (filteredItems.isEmpty()) {
+            item {
+                EmptyTabMessage(text = stringResource(id = R.string.no_results))
+            }
+        }
+
+        items(filteredItems) { item ->
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = item.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = item.message,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = stringResource(id = R.string.partner_meta_row, item.organizerLabel, item.city),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = stringResource(id = R.string.partner_level_date_row, item.levelLabel, item.preferredDateLabel),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Button(
+                        onClick = { onPrepareMessageToPartner(item.organizerId, item.title) },
+                        enabled = item.organizerId > 0,
+                    ) {
+                        Text(stringResource(id = R.string.contact_partner))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun tabTitle(tab: NativeTab): String {
     return when (tab) {
         NativeTab.HOME -> stringResource(id = R.string.nav_home)
@@ -3025,6 +3680,7 @@ private fun tabTitle(tab: NativeTab): String {
         NativeTab.BUS_LINES -> stringResource(id = R.string.bus_lines)
         NativeTab.SERVICES -> stringResource(id = R.string.services)
         NativeTab.MARKETPLACE -> stringResource(id = R.string.marketplace)
+        NativeTab.PARTNERS -> stringResource(id = R.string.adventure_partners)
         NativeTab.INSTRUCTORS -> stringResource(id = R.string.instructors)
         NativeTab.PISTES -> stringResource(id = R.string.piste_status)
         NativeTab.MESSAGES -> stringResource(id = R.string.messages)

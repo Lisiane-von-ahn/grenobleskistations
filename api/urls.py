@@ -3,6 +3,8 @@ from django.views.generic import RedirectView
 from rest_framework.routers import DefaultRouter
 from .views import (
     BusLineViewSet,
+    GamificationBadgeViewSet,
+    GamificationPointsViewSet,
     InstructorProfileViewSet,
     InstructorReviewViewSet,
     InstructorServiceViewSet,
@@ -17,9 +19,12 @@ from .views import (
     SkiPartnerPostViewSet,
     SkiPartnerReportViewSet,
     SkiStationViewSet,
+    SkiStationCameraViewSet,
     SkiStoryViewSet,
     SnowConditionUpdateViewSet,
+    UserBadgeViewSet,
     UserFriendViewSet,
+    UserGameStatsViewSet,
     UserProfileViewSet,
     UserViewSet,
     auth_login_view, auth_logout_view, auth_me_view, auth_google_login_view,
@@ -29,6 +34,7 @@ from .views import (
 router = DefaultRouter()
 router.register(r'skistations', SkiStationViewSet)
 router.register(r'buslines', BusLineViewSet)
+router.register(r'cameras', SkiStationCameraViewSet, basename='cameras')
 router.register(r'servicestores', ServiceStoreViewSet)
 router.register(r'skicircuits', SkiCircuitViewSet)
 router.register(r'skimaterial', SkiMaterialListingViewSet)
@@ -47,6 +53,10 @@ router.register(r'marketplace-saved-filters', MarketplaceSavedFilterViewSet, bas
 router.register(r'marketplace-deals', MarketplaceDealViewSet, basename='marketplace-deals')
 router.register(r'marketplace-ratings', MarketplaceUserRatingViewSet, basename='marketplace-ratings')
 router.register(r'userfriends', UserFriendViewSet, basename='userfriends')
+router.register(r'gamification/game-stats', UserGameStatsViewSet, basename='game-stats')
+router.register(r'gamification/points', GamificationPointsViewSet, basename='points')
+router.register(r'gamification/badges', GamificationBadgeViewSet, basename='badges')
+router.register(r'gamification/user-badges', UserBadgeViewSet, basename='user-badges')
 
 urlpatterns = [
     path('auth/register/', auth_register_view, name='auth-register'),

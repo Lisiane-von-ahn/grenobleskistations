@@ -12,6 +12,7 @@ data class RegisterRequest(
     val password: String,
     @SerializedName("first_name") val firstName: String,
     @SerializedName("last_name") val lastName: String,
+    @SerializedName("accept_terms") val acceptTerms: Boolean,
 )
 
 data class UserDto(
@@ -48,6 +49,7 @@ enum class NativeTab {
     BUS_LINES,
     SERVICES,
     MARKETPLACE,
+    PARTNERS,
     INSTRUCTORS,
     PISTES,
     MESSAGES,
@@ -95,11 +97,25 @@ data class MarketplaceItem(
     val city: String,
     val priceLabel: String,
     val conditionLabel: String,
+    val materialTypeLabel: String,
+    val transactionTypeLabel: String,
     val sellerId: Int,
     val sellerLabel: String,
     val postedAtLabel: String,
     val previewImageBase64: String,
     val imageGalleryBase64: List<String> = emptyList(),
+)
+
+data class SkiPartnerItem(
+    val id: Int,
+    val organizerId: Int,
+    val organizerLabel: String,
+    val title: String,
+    val message: String,
+    val city: String,
+    val stationLabel: String,
+    val levelLabel: String,
+    val preferredDateLabel: String,
 )
 
 data class InstructorItem(

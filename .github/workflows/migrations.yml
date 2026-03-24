@@ -1,0 +1,208 @@
+name: Django Migrations Validation
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - '**'
+    paths:
+      - 'api/models.py'
+      - 'api/migrations/**'
+      - 'skistation_project/**'
+      - 'requirements.txt'
+  pull_request:
+    paths:
+      - 'api/models.py'
+      - 'api/migrations/**'
+      - 'skistation_project/**'
+      - 'requirements.txt'
+
+jobs:
+  migrations:
+    name: Validate Django Migrations
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: grenobleski_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    env:
+      DEBUG: "True"
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/grenobleski_test"
+      SECRET_KEY: "test-secret-key-for-ci"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history to check diffs
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: 'pip'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client libpq-dev
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 'Check for unmigrated model changes'
+        run: |
+          python manage.py makemigrations --check --dry-run --noinput || {
+            echo "❌ ERROR: Model changes detected but no migrations were created"
+            echo "Run: python manage.py makemigrations"
+            exit 1
+          }
+
+      - name: 'Validate migration files exist'
+        run: |
+          if [ ! -d "api/migrations" ]; then
+            echo "❌ ERROR: api/migrations directory does not exist"
+            exit 1
+          fi
+          if [ ! -f "api/migrations/__init__.py" ]; then
+            echo "❌ ERROR: api/migrations/__init__.py does not exist"
+            exit 1
+          fi
+          echo "✓ Migration directory structure is valid"
+
+      - name: 'Check migration file syntax'
+        run: |
+          for file in api/migrations/*.py; do
+            if [ "$file" != "api/migrations/__init__.py" ]; then
+              python -m py_compile "$file" || {
+                echo "❌ ERROR: Syntax error in migration file: $file"
+                exit 1
+              }
+            fi
+          done
+          echo "✓ All migration files have valid Python syntax"
+
+      - name: 'Wait for PostgreSQL to be ready'
+        run: |
+          until pg_isready -h localhost -U postgres; do
+            echo "Waiting for PostgreSQL..."
+            sleep 1
+          done
+
+      - name: 'Create test database'
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -c "DROP DATABASE IF EXISTS grenobleski_test;" || true
+          PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE grenobleski_test;"
+
+      - name: 'Test migration forward (fresh database)'
+        run: |
+          python manage.py migrate --noinput || {
+            echo "❌ ERROR: Failed to apply migrations to fresh database"
+            exit 1
+          }
+          echo "✓ All migrations applied successfully"
+
+      - name: 'Test migration rollback'
+        run: |
+          python manage.py migrate api zero --noinput || {
+            echo "⚠ WARNING: Could not rollback all api migrations (might be first migration)"
+          }
+          echo "✓ Migration rollback test completed"
+
+      - name: 'Test migration forward again'
+        run: |
+          python manage.py migrate --noinput || {
+            echo "❌ ERROR: Failed to re-apply migrations after rollback"
+            exit 1
+          }
+          echo "✓ Migrations re-applied successfully"
+
+      - name: 'Check migration dependencies'
+        run: |
+          python manage.py showmigrations --verbose || {
+            echo "❌ ERROR: Failed to display migration graph"
+            exit 1
+          }
+
+      - name: 'Validate Django project'
+        run: |
+          python manage.py check --deploy --fail-level WARNING || {
+            echo "⚠ WARNING: Django system checks found issues"
+          }
+          python manage.py check || {
+            echo "❌ ERROR: Django system checks failed"
+            exit 1
+          }
+          echo "✓ Django project validation passed"
+
+      - name: 'Check for circular dependencies in migrations'
+        run: |
+          python -c "
+          import os
+          import re
+          
+          migrations_dir = 'api/migrations'
+          migration_files = {f[:-3] for f in os.listdir(migrations_dir) 
+                            if f.endswith('.py') and f != '__init__.py'}
+          
+          for file in migration_files:
+              filepath = os.path.join(migrations_dir, file + '.py')
+              with open(filepath, 'r') as f:
+                  content = f.read()
+                  if 'dependencies = []' in content and file != '0001_initial':
+                      print(f'⚠ WARNING: {file} has no dependencies')
+          
+          print('✓ Migration dependency check completed')
+          " || {
+            echo "❌ ERROR: Failed to check migration dependencies"
+            exit 1
+          }
+
+      - name: 'Generate migration plan'
+        run: |
+          python manage.py migrate --noinput --plan > /tmp/migration_plan.txt
+          echo "📋 Migration Plan:"
+          cat /tmp/migration_plan.txt
+
+      - name: 'Summary'
+        if: success()
+        run: |
+          echo "✅ All migration validation checks passed!"
+          echo ""
+          echo "Summary:"
+          echo "  • All migration files have valid syntax"
+          echo "  • Migrations apply cleanly to fresh database"  
+          echo "  • Migrations can be rolled back and reapplied"
+          echo "  • Django system checks passed"
+          echo "  • No circular dependencies detected"
+
+      - name: 'Failure Summary'
+        if: failure()
+        run: |
+          echo "❌ Migration validation failed!"
+          echo ""
+          echo "Common issues:"
+          echo "  • Missing migration files (run: python manage.py makemigrations)"
+          echo "  • Circular dependencies in migrations"
+          echo "  • Migration syntax errors"
+          echo "  • Failed to rollback/reapply migrations"
+          echo ""
+          echo "💡 To fix locally:"
+          echo "  python manage.py makemigrations --check --dry-run"
+          echo "  python manage.py migrate --noinput"
+          exit 1

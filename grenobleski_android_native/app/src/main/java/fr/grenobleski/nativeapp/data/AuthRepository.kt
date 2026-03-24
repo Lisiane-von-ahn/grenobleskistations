@@ -15,6 +15,7 @@ import fr.grenobleski.nativeapp.data.model.PisteItem
 import fr.grenobleski.nativeapp.data.model.ProfileInfo
 import fr.grenobleski.nativeapp.data.model.RegisterRequest
 import fr.grenobleski.nativeapp.data.model.ServiceStoreItem
+import fr.grenobleski.nativeapp.data.model.SkiPartnerItem
 import fr.grenobleski.nativeapp.data.model.StationItem
 import fr.grenobleski.nativeapp.data.model.UserSession
 import fr.grenobleski.nativeapp.data.network.GrenobleSkiApiService
@@ -73,6 +74,7 @@ class AuthRepository(
         password: String,
         firstName: String,
         lastName: String,
+        acceptTerms: Boolean,
     ): Result<UserSession> = withContext(Dispatchers.IO) {
         val response = service.register(
             url = "$normalizedBaseUrl/api/auth/register/",
@@ -81,6 +83,7 @@ class AuthRepository(
                 password = password,
                 firstName = firstName,
                 lastName = lastName,
+                acceptTerms = acceptTerms,
             ),
         )
 
@@ -188,6 +191,26 @@ class AuthRepository(
         val payload = fetchPayloadFromCandidates(listOf("/api/skimaterial/", "/api/skimaterial"), authHeader)
             ?: return@withContext Result.success(emptyList())
 
+        val materialLabels = mapOf(
+            "ski" to "Materiel ski",
+            "boots" to "Chaussures",
+            "helmet" to "Casque",
+            "jacket" to "Veste",
+            "pants" to "Pantalon",
+            "gloves" to "Gants",
+            "goggles" to "Masque",
+            "service" to "Service",
+            "transport" to "Transport",
+            "accommodation" to "Hebergement",
+            "other" to "Autre",
+        )
+        val transactionLabels = mapOf(
+            "sale" to "A vendre",
+            "rent" to "A louer",
+            "lend" to "A preter",
+            "service" to "Prestation",
+        )
+
         val items = extractObjectList(payload).map { obj ->
             val sellerId = obj.intOrZero("user", "user_id")
             val imageGalleryBase64 = buildList {
@@ -196,6 +219,8 @@ class AuthRepository(
                 addAll(obj.arrayObjectStrings("images", "image"))
             }.distinct()
             val previewImageBase64 = imageGalleryBase64.firstOrNull().orEmpty()
+            val materialType = obj.stringOrBlank("material_type").lowercase()
+            val transactionType = obj.stringOrBlank("transaction_type").lowercase()
             MarketplaceItem(
                 id = obj.intOrZero("id"),
                 title = obj.stringOrBlank("title", "material_type").ifBlank { "Annonce #${obj.intOrZero("id")}" },
@@ -203,6 +228,8 @@ class AuthRepository(
                 city = obj.stringOrBlank("city").ifBlank { "-" },
                 priceLabel = obj.stringOrBlank("price").ifBlank { "-" },
                 conditionLabel = obj.stringOrBlank("condition").ifBlank { "-" },
+                materialTypeLabel = materialLabels[materialType] ?: materialType.ifBlank { "Autre" },
+                transactionTypeLabel = transactionLabels[transactionType] ?: transactionType.ifBlank { "-" },
                 sellerId = sellerId,
                 sellerLabel = if (sellerId > 0) "Vendeur #$sellerId" else "Vendeur",
                 postedAtLabel = formatServerDateTime(obj.stringOrBlank("posted_at", "created_at")),
@@ -236,6 +263,41 @@ class AuthRepository(
                 certifications = obj.stringOrBlank("certifications"),
                 phone = obj.stringOrBlank("phone"),
                 profilePhotoBase64 = obj.stringOrBlank("profile_photo"),
+            )
+        }
+        Result.success(items)
+    }
+
+    suspend fun fetchPartnerItems(token: String): Result<List<SkiPartnerItem>> = withContext(Dispatchers.IO) {
+        val authHeader = "Token $token"
+        val payload = fetchPayloadFromCandidates(listOf("/api/skipartnerposts/", "/api/skipartnerposts"), authHeader)
+            ?: return@withContext Result.success(emptyList())
+
+        val userMap = fetchChatUsers(token)
+            .getOrDefault(emptyList())
+            .associateBy { it.id }
+
+        val levelLabels = mapOf(
+            "beginner" to "Debutant",
+            "intermediate" to "Intermediaire",
+            "advanced" to "Avance",
+        )
+
+        val items = extractObjectList(payload).map { obj ->
+            val organizerId = obj.intOrZero("user", "user_id")
+            val organizerLabel = userMap[organizerId]?.label
+                ?: "Utilisateur #$organizerId"
+
+            SkiPartnerItem(
+                id = obj.intOrZero("id"),
+                organizerId = organizerId,
+                organizerLabel = organizerLabel,
+                title = obj.stringOrBlank("title").ifBlank { "Sortie ski" },
+                message = obj.stringOrBlank("message").ifBlank { "-" },
+                city = obj.stringOrBlank("city").ifBlank { "-" },
+                stationLabel = obj.stringOrBlank("ski_station_name", "station_name").ifBlank { "-" },
+                levelLabel = levelLabels[obj.stringOrBlank("skill_level")] ?: obj.stringOrBlank("skill_level").ifBlank { "-" },
+                preferredDateLabel = obj.stringOrBlank("preferred_date").ifBlank { "-" },
             )
         }
         Result.success(items)
@@ -604,6 +666,8 @@ class AuthRepository(
         city: String,
         price: String,
         imagesBase64: List<String>,
+        materialType: String,
+        transactionType: String,
     ): Result<Unit> = withContext(Dispatchers.IO) {
         val authHeader = "Token $token"
         val payload = mutableMapOf<String, Any>(
@@ -611,8 +675,8 @@ class AuthRepository(
             "title" to title,
             "description" to description,
             "city" to city,
-            "material_type" to "ski",
-            "transaction_type" to "sale",
+            "material_type" to materialType,
+            "transaction_type" to transactionType,
             "condition" to "good",
         )
         if (price.isNotBlank()) {
@@ -637,6 +701,118 @@ class AuthRepository(
             return@withContext Result.failure(IllegalStateException(bodyText))
         }
 
+        Result.success(Unit)
+    }
+
+    suspend fun publishPartnerPost(
+        token: String,
+        title: String,
+        message: String,
+        city: String,
+        skillLevel: String,
+        preferredDate: String,
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        val authHeader = "Token $token"
+        val payload = mutableMapOf<String, Any>(
+            "title" to title,
+            "message" to message,
+            "city" to city,
+            "skill_level" to skillLevel,
+        )
+        if (preferredDate.isNotBlank()) {
+            payload["preferred_date"] = preferredDate
+        }
+
+        val response = runCatching {
+            service.postResource(
+                url = "$normalizedBaseUrl/api/skipartnerposts/",
+                authHeader = authHeader,
+                payload = payload,
+            )
+        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to publish partner post."))
+
+        if (!response.isSuccessful) {
+            val bodyText = response.errorBody()?.string().orEmpty().ifBlank { "Unable to publish partner post." }
+            return@withContext Result.failure(IllegalStateException(bodyText))
+        }
+
+        Result.success(Unit)
+    }
+
+    suspend fun rateSeller(
+        token: String,
+        listingId: Int,
+        ratedUserId: Int,
+        score: Int,
+        comment: String,
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        if (listingId <= 0 || ratedUserId <= 0) {
+            return@withContext Result.failure(IllegalStateException("Invalid seller rating payload."))
+        }
+        if (score !in 1..5) {
+            return@withContext Result.failure(IllegalStateException("Score must be between 1 and 5."))
+        }
+
+        val authHeader = "Token $token"
+        val payload = mutableMapOf<String, Any>(
+            "listing" to listingId,
+            "rated_user" to ratedUserId,
+            "score" to score,
+        )
+        if (comment.isNotBlank()) {
+            payload["comment"] = comment
+        }
+
+        val response = runCatching {
+            service.postResource(
+                url = "$normalizedBaseUrl/api/marketplace-ratings/",
+                authHeader = authHeader,
+                payload = payload,
+            )
+        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to rate seller."))
+
+        if (!response.isSuccessful) {
+            val bodyText = response.errorBody()?.string().orEmpty().ifBlank { "Unable to rate seller." }
+            return@withContext Result.failure(IllegalStateException(bodyText))
+        }
+        Result.success(Unit)
+    }
+
+    suspend fun rateStation(
+        token: String,
+        stationId: Int,
+        score: Int,
+        comment: String,
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        if (stationId <= 0) {
+            return@withContext Result.failure(IllegalStateException("Invalid station id."))
+        }
+        if (score !in 1..5) {
+            return@withContext Result.failure(IllegalStateException("Score must be between 1 and 5."))
+        }
+
+        val authHeader = "Token $token"
+        val payload = mutableMapOf<String, Any>(
+            "ski_station" to stationId,
+            "piste_rating" to score,
+            "crowd_level" to "normal",
+        )
+        if (comment.isNotBlank()) {
+            payload["comment"] = comment
+        }
+
+        val response = runCatching {
+            service.postResource(
+                url = "$normalizedBaseUrl/api/pistereports/",
+                authHeader = authHeader,
+                payload = payload,
+            )
+        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to rate station."))
+
+        if (!response.isSuccessful) {
+            val bodyText = response.errorBody()?.string().orEmpty().ifBlank { "Unable to rate station." }
+            return@withContext Result.failure(IllegalStateException(bodyText))
+        }
         Result.success(Unit)
     }
 

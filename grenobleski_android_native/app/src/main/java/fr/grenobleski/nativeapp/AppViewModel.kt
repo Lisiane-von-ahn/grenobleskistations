@@ -18,6 +18,7 @@ import fr.grenobleski.nativeapp.data.model.NativeTab
 import fr.grenobleski.nativeapp.data.model.PisteItem
 import fr.grenobleski.nativeapp.data.model.ProfileInfo
 import fr.grenobleski.nativeapp.data.model.ServiceStoreItem
+import fr.grenobleski.nativeapp.data.model.SkiPartnerItem
 import fr.grenobleski.nativeapp.data.model.StationItem
 import fr.grenobleski.nativeapp.data.model.UserSession
 import fr.grenobleski.nativeapp.data.session.SessionStore
@@ -29,6 +30,7 @@ data class AppUiState(
     val firstName: String = "",
     val lastName: String = "",
     val confirmPassword: String = "",
+    val registerTermsAccepted: Boolean = false,
     val isRegisterMode: Boolean = false,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
@@ -42,6 +44,7 @@ data class AppUiState(
     val favoriteBusLineIds: Set<Int> = emptySet(),
     val favoriteServiceIds: Set<Int> = emptySet(),
     val marketplaceItems: List<MarketplaceItem> = emptyList(),
+    val partnerItems: List<SkiPartnerItem> = emptyList(),
     val instructorItems: List<InstructorItem> = emptyList(),
     val pisteItems: List<PisteItem> = emptyList(),
     val messageItems: List<MessageItem> = emptyList(),
@@ -54,8 +57,16 @@ data class AppUiState(
     val publishDescription: String = "",
     val publishCity: String = "",
     val publishPrice: String = "",
+    val publishMaterialType: String = "ski",
+    val publishTransactionType: String = "sale",
     val publishImagesBase64: List<String> = emptyList(),
     val isPublishingArticle: Boolean = false,
+    val publishPartnerTitle: String = "",
+    val publishPartnerMessage: String = "",
+    val publishPartnerCity: String = "",
+    val publishPartnerLevel: String = "intermediate",
+    val publishPartnerDate: String = "",
+    val isPublishingPartner: Boolean = false,
     val profileInfo: ProfileInfo? = null,
     val profileEditFirstName: String = "",
     val profileEditLastName: String = "",
@@ -66,12 +77,22 @@ data class AppUiState(
     val isSavingProfile: Boolean = false,
     val isChangingPassword: Boolean = false,
     val statusMessage: String? = null,
+    val xpPoints: Int = 0,
+    val xpLevel: Int = 1,
 )
 
 class AppViewModel(
     private val repository: AuthRepository,
     private val sessionStore: SessionStore,
 ) : ViewModel() {
+    companion object {
+        private const val XP_SEND_MESSAGE = 5
+        private const val XP_PUBLISH_MARKET = 20
+        private const val XP_PUBLISH_PARTNER = 20
+        private const val XP_RATE_SELLER = 10
+        private const val XP_RATE_STATION = 10
+    }
+
     var state by mutableStateOf(AppUiState())
         private set
 
@@ -103,6 +124,10 @@ class AppViewModel(
         state = state.copy(confirmPassword = value, errorMessage = null)
     }
 
+    fun updateRegisterTermsAccepted(accepted: Boolean) {
+        state = state.copy(registerTermsAccepted = accepted, errorMessage = null)
+    }
+
     fun updateProfileEditFirstName(value: String) {
         state = state.copy(profileEditFirstName = value, errorMessage = null, statusMessage = null)
     }
@@ -131,6 +156,7 @@ class AppViewModel(
         state = state.copy(
             isRegisterMode = registerMode,
             errorMessage = null,
+            registerTermsAccepted = if (registerMode) state.registerTermsAccepted else false,
         )
     }
 
@@ -179,6 +205,10 @@ class AppViewModel(
             state = state.copy(errorMessage = "Email and password are required.")
             return
         }
+        if (!state.registerTermsAccepted) {
+            state = state.copy(errorMessage = "You must accept Terms and Privacy Policy.")
+            return
+        }
         if (state.password != state.confirmPassword) {
             state = state.copy(errorMessage = "Passwords do not match.")
             return
@@ -192,6 +222,7 @@ class AppViewModel(
                 password = state.password,
                 firstName = state.firstName.trim(),
                 lastName = state.lastName.trim(),
+                acceptTerms = state.registerTermsAccepted,
             )
 
             if (result.isSuccess) {
@@ -200,6 +231,7 @@ class AppViewModel(
                     isLoading = false,
                     password = "",
                     confirmPassword = "",
+                    registerTermsAccepted = false,
                     isRegisterMode = false,
                 )
                 establishSession(session)
@@ -412,6 +444,15 @@ class AppViewModel(
                     }
                 }
 
+                NativeTab.PARTNERS -> {
+                    val result = repository.fetchPartnerItems(session.token)
+                    if (result.isSuccess) {
+                        state = state.copy(partnerItems = result.getOrNull()!!)
+                    } else {
+                        state = state.copy(errorMessage = result.exceptionOrNull()?.message ?: "Unable to load partner posts")
+                    }
+                }
+
                 NativeTab.INSTRUCTORS -> {
                     val result = repository.fetchInstructorItems(session.token)
                     if (result.isSuccess) {
@@ -543,6 +584,7 @@ class AppViewModel(
                 state = state.copy(isSendingMessage = false, messageDraftBody = "", statusMessage = null)
                 repository.addFriend(session.token, recipientId)
                 refreshMessagesData(session, preserveSelection = recipientId)
+                awardXp(XP_SEND_MESSAGE, "Message envoye")
             } else {
                 val msg = result.exceptionOrNull()?.message ?: "Unable to send message"
                 state = state.copy(isSendingMessage = false, errorMessage = msg)
@@ -564,6 +606,14 @@ class AppViewModel(
 
     fun updatePublishPrice(value: String) {
         state = state.copy(publishPrice = value)
+    }
+
+    fun updatePublishMaterialType(value: String) {
+        state = state.copy(publishMaterialType = value)
+    }
+
+    fun updatePublishTransactionType(value: String) {
+        state = state.copy(publishTransactionType = value)
     }
 
     fun updatePublishImageBase64(value: String) {
@@ -590,6 +640,26 @@ class AppViewModel(
 
     fun clearPublishImages() {
         state = state.copy(publishImagesBase64 = emptyList())
+    }
+
+    fun updatePublishPartnerTitle(value: String) {
+        state = state.copy(publishPartnerTitle = value)
+    }
+
+    fun updatePublishPartnerMessage(value: String) {
+        state = state.copy(publishPartnerMessage = value)
+    }
+
+    fun updatePublishPartnerCity(value: String) {
+        state = state.copy(publishPartnerCity = value)
+    }
+
+    fun updatePublishPartnerLevel(value: String) {
+        state = state.copy(publishPartnerLevel = value)
+    }
+
+    fun updatePublishPartnerDate(value: String) {
+        state = state.copy(publishPartnerDate = value)
     }
 
     fun publishArticle() {
@@ -619,6 +689,8 @@ class AppViewModel(
                 city = city,
                 price = state.publishPrice.trim(),
                 imagesBase64 = state.publishImagesBase64,
+                materialType = state.publishMaterialType,
+                transactionType = state.publishTransactionType,
             )
 
             if (result.isSuccess) {
@@ -628,13 +700,102 @@ class AppViewModel(
                     publishDescription = "",
                     publishCity = "",
                     publishPrice = "",
+                    publishMaterialType = "ski",
+                    publishTransactionType = "sale",
                     publishImagesBase64 = emptyList(),
                     selectedTab = NativeTab.MARKETPLACE,
                 )
                 refreshCurrentTab()
+                awardXp(XP_PUBLISH_MARKET, "Annonce marketplace publiee")
             } else {
                 val message = result.exceptionOrNull()?.message ?: "Unable to publish article"
                 state = state.copy(isPublishingArticle = false, errorMessage = message)
+            }
+        }
+    }
+
+    fun publishPartnerPost() {
+        val session = state.session ?: return
+        val title = state.publishPartnerTitle.trim()
+        val message = state.publishPartnerMessage.trim()
+        val city = state.publishPartnerCity.trim()
+        val level = state.publishPartnerLevel.trim().ifBlank { "intermediate" }
+        val preferredDate = state.publishPartnerDate.trim()
+
+        if (title.isBlank() || message.isBlank() || city.isBlank()) {
+            state = state.copy(errorMessage = "Title, message and city are required.")
+            return
+        }
+
+        viewModelScope.launch {
+            state = state.copy(isPublishingPartner = true, errorMessage = null)
+            val result = repository.publishPartnerPost(
+                token = session.token,
+                title = title,
+                message = message,
+                city = city,
+                skillLevel = level,
+                preferredDate = preferredDate,
+            )
+
+            if (result.isSuccess) {
+                state = state.copy(
+                    isPublishingPartner = false,
+                    publishPartnerTitle = "",
+                    publishPartnerMessage = "",
+                    publishPartnerCity = "",
+                    publishPartnerLevel = "intermediate",
+                    publishPartnerDate = "",
+                    selectedTab = NativeTab.PARTNERS,
+                    statusMessage = "Annonce partenaire publiee.",
+                )
+                refreshCurrentTab()
+                awardXp(XP_PUBLISH_PARTNER, "Annonce partenaire publiee")
+            } else {
+                val messageText = result.exceptionOrNull()?.message ?: "Unable to publish partner post"
+                state = state.copy(isPublishingPartner = false, errorMessage = messageText)
+            }
+        }
+    }
+
+    fun submitSellerRating(listingId: Int, sellerId: Int, score: Int, comment: String) {
+        val session = state.session ?: return
+        viewModelScope.launch {
+            state = state.copy(errorMessage = null)
+            val result = repository.rateSeller(
+                token = session.token,
+                listingId = listingId,
+                ratedUserId = sellerId,
+                score = score,
+                comment = comment,
+            )
+            if (result.isSuccess) {
+                state = state.copy(statusMessage = "Evaluation vendeur enregistree.")
+                awardXp(XP_RATE_SELLER, "Evaluation vendeur")
+            } else {
+                val message = result.exceptionOrNull()?.message ?: "Unable to rate seller"
+                state = state.copy(errorMessage = message)
+            }
+        }
+    }
+
+    fun submitStationRating(stationId: Int, score: Int, comment: String) {
+        val session = state.session ?: return
+        viewModelScope.launch {
+            state = state.copy(errorMessage = null)
+            val result = repository.rateStation(
+                token = session.token,
+                stationId = stationId,
+                score = score,
+                comment = comment,
+            )
+            if (result.isSuccess) {
+                state = state.copy(statusMessage = "Evaluation station enregistree.")
+                refreshCurrentTab()
+                awardXp(XP_RATE_STATION, "Evaluation station")
+            } else {
+                val message = result.exceptionOrNull()?.message ?: "Unable to rate station"
+                state = state.copy(errorMessage = message)
             }
         }
     }
@@ -660,6 +821,7 @@ class AppViewModel(
             NativeTab.BUS_LINES -> state.busLineItems.isNotEmpty()
             NativeTab.SERVICES -> state.serviceStoreItems.isNotEmpty()
             NativeTab.MARKETPLACE -> state.marketplaceItems.isNotEmpty()
+            NativeTab.PARTNERS -> state.partnerItems.isNotEmpty()
             NativeTab.INSTRUCTORS -> state.instructorItems.isNotEmpty()
             NativeTab.PISTES -> state.pisteItems.isNotEmpty()
             NativeTab.MESSAGES -> state.messageItems.isNotEmpty() || state.chatUsers.isNotEmpty() || state.friendLinks.isNotEmpty()
@@ -701,6 +863,11 @@ class AppViewModel(
                 current.marketplaceItems
             }
 
+            val partnerItems = repository.fetchPartnerItems(session.token).getOrElse {
+                firstError = firstError ?: (it.message ?: "Unable to load partner posts")
+                current.partnerItems
+            }
+
             val instructorItems = repository.fetchInstructorItems(session.token).getOrElse {
                 firstError = firstError ?: (it.message ?: "Unable to load instructors")
                 current.instructorItems
@@ -736,6 +903,7 @@ class AppViewModel(
                 busLineItems = busLineItems,
                 serviceStoreItems = serviceStoreItems,
                 marketplaceItems = marketplaceItems,
+                partnerItems = partnerItems,
                 instructorItems = instructorItems,
                 pisteItems = pisteItems,
                 messageItems = messageItems,
@@ -775,6 +943,17 @@ class AppViewModel(
             profileEditFirstName = firstName,
             profileEditLastName = lastName,
             profileEditEmail = email,
+        )
+    }
+
+    private fun awardXp(points: Int, reason: String) {
+        if (points <= 0) return
+        val newXp = state.xpPoints + points
+        val newLevel = (newXp / 100) + 1
+        state = state.copy(
+            xpPoints = newXp,
+            xpLevel = newLevel,
+            statusMessage = "+$points XP - $reason",
         )
     }
 }

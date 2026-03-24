@@ -9,6 +9,8 @@ except Exception:
 
 from .models import (
     BusLine,
+    GamificationBadge,
+    GamificationPoints,
     InstructorProfile,
     InstructorReview,
     InstructorService,
@@ -24,9 +26,12 @@ from .models import (
     SkiPartnerPost,
     SkiPartnerReport,
     SkiStation,
+    SkiStationCamera,
     SkiStory,
     SnowConditionUpdate,
+    UserBadge,
     UserFriend,
+    UserGameStats,
     UserProfile,
 )
 
@@ -59,14 +64,31 @@ def _display_name_for_user(user):
     return (user.username or user.email or '').strip()
 
 class SkiStationSerializer(serializers.ModelSerializer):
+    cameras = serializers.SerializerMethodField()
+    bus_lines = serializers.SerializerMethodField()
+
     class Meta:
         model = SkiStation
         fields = '__all__'
+
+    def get_cameras(self, obj):
+        cameras = obj.cameras.filter(is_active=True)
+        return SkiStationCameraSerializer(cameras, many=True).data
+
+    def get_bus_lines(self, obj):
+        bus_lines = obj.bus_lines.all()
+        return BusLineSerializer(bus_lines, many=True).data
 
 class BusLineSerializer(serializers.ModelSerializer):
     class Meta:
         model = BusLine
         fields = '__all__'
+
+class SkiStationCameraSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SkiStationCamera
+        fields = '__all__'
+        read_only_fields = ['created_at', 'updated_at']
 
 class ServiceStoreSerializer(serializers.ModelSerializer):
     class Meta:
@@ -86,10 +108,56 @@ class SkiMaterialImageSerializer(serializers.ModelSerializer):
 
 class SkiMaterialListingSerializer(serializers.ModelSerializer):
     images = SkiMaterialImageSerializer(many=True, read_only=True)
+    seller_info = serializers.SerializerMethodField()
+    seller_ratings = serializers.SerializerMethodField()
 
     class Meta:
         model = SkiMaterialListing
         fields = '__all__'
+
+    def get_seller_info(self, obj):
+        """Get seller profile information"""
+        return {
+            'id': obj.user.id,
+            'display_name': _display_name_for_user(obj.user),
+            'username': obj.user.username,
+            'email': obj.user.email,
+            'profile_picture': _profile_picture_for_user(obj.user),
+            'google_profile_picture_url': _google_picture_for_user(obj.user),
+        }
+
+    def get_seller_ratings(self, obj):
+        """Get seller's rating statistics and recent comments"""
+        from django.db.models import Avg
+        
+        ratings = MarketplaceUserRating.objects.filter(rated_user=obj.user).order_by('-created_at')
+        
+        if not ratings.exists():
+            return {
+                'average_score': None,
+                'total_ratings': 0,
+                'recent_comments': [],
+            }
+        
+        avg_score = ratings.aggregate(Avg('score'))['score__avg']
+        
+        # Get last 3 ratings with comments
+        recent_ratings = ratings.filter(comment__isnull=False, comment__gt='')[:3]
+        recent_comments = [
+            {
+                'score': rating.score,
+                'comment': rating.comment,
+                'created_at': rating.created_at.isoformat(),
+                'rater_name': _display_name_for_user(rating.rater),
+            }
+            for rating in recent_ratings
+        ]
+        
+        return {
+            'average_score': round(avg_score, 1) if avg_score else None,
+            'total_ratings': ratings.count(),
+            'recent_comments': recent_comments,
+        }
 
 class MessageSerializer(serializers.ModelSerializer):
     sender_user = serializers.SerializerMethodField()
@@ -239,3 +307,63 @@ class UserFriendSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserFriend
         fields = '__all__'
+
+
+class GamificationPointsSerializer(serializers.ModelSerializer):
+    user_display_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = GamificationPoints
+        fields = '__all__'
+        read_only_fields = ['user', 'created_at']
+
+    def get_user_display_name(self, obj):
+        return _display_name_for_user(obj.user)
+
+
+class GamificationBadgeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GamificationBadge
+        fields = '__all__'
+        read_only_fields = ['created_at']
+
+
+class UserBadgeSerializer(serializers.ModelSerializer):
+    badge = GamificationBadgeSerializer(read_only=True)
+    
+    class Meta:
+        model = UserBadge
+        fields = '__all__'
+        read_only_fields = ['user', 'earned_at']
+
+
+class UserGameStatsSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+    earned_badges = UserBadgeSerializer(read_only=True, many=True)
+    recent_points = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = UserGameStats
+        fields = [
+            'id',
+            'user',
+            'total_points',
+            'level',
+            'experience_points',
+            'badges_count',
+            'daily_login_streak',
+            'last_login_date',
+            'total_listings_created',
+            'total_deals_completed',
+            'total_reviews_written',
+            'average_seller_rating',
+            'earned_badges',
+            'recent_points',
+            'updated_at',
+        ]
+        read_only_fields = ['user', 'updated_at']
+
+    def get_recent_points(self, obj):
+        """Get recent 5 points earned"""
+        recent = obj.user.gamification_points.all()[:5]
+        return GamificationPointsSerializer(recent, many=True).data

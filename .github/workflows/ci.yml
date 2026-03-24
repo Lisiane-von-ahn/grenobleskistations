@@ -26,17 +26,44 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: 'Check for unmigrated model changes'
+        run: |
+          python manage.py makemigrations --check --noinput || {
+            echo "❌ ERROR: Model changes detected but migrations were not created"
+            echo "Run locally: python manage.py makemigrations"
+            echo "Then commit the migration files"
+            exit 1
+          }
+
       - name: Apply migrations
-        run: python manage.py migrate --noinput
+        run: |
+          python manage.py migrate --noinput || {
+            echo "❌ ERROR: Failed to apply migrations"
+            exit 1
+          }
 
       - name: Verify migrations are complete
-        run: python manage.py migrate --check --noinput
+        run: |
+          python manage.py migrate --check --noinput || {
+            echo "❌ ERROR: Database migrations incomplete"
+            exit 1
+          }
 
-      - name: Verify migration files are committed
-        run: python manage.py makemigrations --check --dry-run
+      - name: 'Verify migration files are committed'
+        run: |
+          python manage.py makemigrations --check --dry-run || {
+            echo "❌ ERROR: Migration files are uncommitted"
+            echo "Run: python manage.py makemigrations"
+            echo "Then git add and commit the migration files"
+            exit 1
+          }
 
       - name: Check project
-        run: python manage.py check
+        run: |
+          python manage.py check || {
+            echo "❌ ERROR: Django system checks failed"
+            exit 1
+          }
 
       - name: Run tests
         run: python manage.py test

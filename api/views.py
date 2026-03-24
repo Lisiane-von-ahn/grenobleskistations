@@ -11,7 +11,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.db.models import Avg, Q
+from django.db.models import Avg, Count, Q
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.authentication import SessionAuthentication, TokenAuthentication
@@ -41,6 +41,8 @@ except Exception:
 from .models import (
     BusLine,
     CrowdStatusUpdate,
+    GamificationBadge,
+    GamificationPoints,
     InstructorProfile,
     InstructorReview,
     InstructorService,
@@ -56,13 +58,18 @@ from .models import (
     SkiPartnerPost,
     SkiPartnerReport,
     SkiStation,
+    SkiStationCamera,
     SkiStory,
     SnowConditionUpdate,
+    UserBadge,
     UserFriend,
+    UserGameStats,
     UserProfile,
 )
 from .serializers import (
     BusLineSerializer,
+    GamificationBadgeSerializer,
+    GamificationPointsSerializer,
     InstructorProfileSerializer,
     InstructorReviewSerializer,
     InstructorServiceSerializer,
@@ -77,9 +84,12 @@ from .serializers import (
     SkiPartnerPostSerializer,
     SkiPartnerReportSerializer,
     SkiStationSerializer,
+    SkiStationCameraSerializer,
     SkiStorySerializer,
     SnowConditionUpdateSerializer,
+    UserBadgeSerializer,
     UserFriendSerializer,
+    UserGameStatsSerializer,
     UserProfileSerializer,
     UserSerializer,
 )
@@ -212,6 +222,17 @@ class SkiStationViewSet(viewsets.ModelViewSet):
 class BusLineViewSet(viewsets.ModelViewSet):
     queryset = BusLine.objects.all()
     serializer_class = BusLineSerializer
+
+class SkiStationCameraViewSet(viewsets.ModelViewSet):
+    queryset = SkiStationCamera.objects.filter(is_active=True)
+    serializer_class = SkiStationCameraSerializer
+    
+    def get_queryset(self):
+        queryset = SkiStationCamera.objects.filter(is_active=True)
+        ski_station_id = self.request.query_params.get('ski_station_id', None)
+        if ski_station_id is not None:
+            queryset = queryset.filter(ski_station_id=ski_station_id)
+        return queryset
 
 class ServiceStoreViewSet(viewsets.ModelViewSet):
     queryset = ServiceStore.objects.all()
@@ -536,6 +557,89 @@ class UserFriendViewSet(viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class UserGameStatsViewSet(viewsets.ReadOnlyModelViewSet):
+    """User gamification statistics - read only"""
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserGameStatsSerializer
+
+    def get_queryset(self):
+        user = _current_authenticated_user(self)
+        if user is None:
+            return UserGameStats.objects.none()
+        # Users can only view their own stats
+        return UserGameStats.objects.filter(user=user)
+
+    @action(detail=False, methods=['get'])
+    def me(self, request):
+        """Get current user's game stats"""
+        try:
+            stats = UserGameStats.objects.get(user=request.user)
+            serializer = self.get_serializer(stats)
+            return Response(serializer.data)
+        except UserGameStats.DoesNotExist:
+            return Response({'detail': 'Stats not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=False, methods=['get'])
+    def leaderboard(self, request):
+        """Get top players by level and points"""
+        limit = int(request.query_params.get('limit', 10))
+        stats = UserGameStats.objects.order_by('-level', '-total_points')[:limit]
+        serializer = self.get_serializer(stats, many=True)
+        return Response(serializer.data)
+
+
+class GamificationPointsViewSet(viewsets.ReadOnlyModelViewSet):
+    """View earned points history - read only"""
+    permission_classes = [IsAuthenticated]
+    serializer_class = GamificationPointsSerializer
+
+    def get_queryset(self):
+        user = _current_authenticated_user(self)
+        if user is None:
+            return GamificationPoints.objects.none()
+        return GamificationPoints.objects.filter(user=user).order_by('-created_at')
+
+    @action(detail=False, methods=['get'])
+    def summary(self, request):
+        """Get points summary by activity type"""
+        from django.db.models import Sum
+        
+        user = request.user
+        summary = GamificationPoints.objects.filter(user=user).values('activity_type').annotate(
+            total_points=Sum('points_earned'),
+            count=Count('id')
+        ).order_by('-total_points')
+        
+        return Response(summary)
+
+
+class GamificationBadgeViewSet(viewsets.ReadOnlyModelViewSet):
+    """Available badges - read only"""
+    serializer_class = GamificationBadgeSerializer
+    queryset = GamificationBadge.objects.all().order_by('-points_value')
+    permission_classes = [AllowAny]
+
+
+class UserBadgeViewSet(viewsets.ReadOnlyModelViewSet):
+    """User earned badges - read only"""
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserBadgeSerializer
+
+    def get_queryset(self):
+        user = _current_authenticated_user(self)
+        if user is None:
+            return UserBadge.objects.none()
+        return UserBadge.objects.filter(user=user).select_related('badge').order_by('-earned_at')
+
+    @action(detail=False, methods=['get'])
+    def available(self, request):
+        """Get badges not yet earned by user"""
+        earned_badge_ids = UserBadge.objects.filter(user=request.user).values_list('badge_id', flat=True)
+        available_badges = GamificationBadge.objects.exclude(id__in=earned_badge_ids).order_by('-points_value')
+        serializer = GamificationBadgeSerializer(available_badges, many=True)
+        return Response(serializer.data)
+
+
 def _serialize_user(user):
     profile = getattr(user, "profile", None)
     google_profile_picture_url = None
@@ -587,10 +691,20 @@ def auth_register_view(request):
     password = request.data.get("password")
     first_name = (request.data.get("first_name") or "").strip()
     last_name = (request.data.get("last_name") or "").strip()
+    accept_terms_raw = request.data.get("accept_terms")
+
+    accepted_values = {True, "true", "1", 1, "yes", "on", "True", "YES", "ON"}
+    accept_terms = accept_terms_raw in accepted_values
 
     if not email or not password:
         return Response(
             {"error": "Email and password are required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not accept_terms:
+        return Response(
+            {"error": "Terms and Privacy Policy acceptance is required."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 

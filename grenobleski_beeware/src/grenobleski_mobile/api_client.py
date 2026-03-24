@@ -235,6 +235,12 @@ class GrenobleSkiApiClient:
     async def bus_lines(self):
         return await self._list_resource("/buslines/")
 
+    async def cameras(self):
+        return await self._list_resource("/cameras/")
+
+    async def cameras_for_station(self, ski_station_id):
+        return await self._list_resource(f"/cameras/?ski_station_id={ski_station_id}")
+
     async def services(self):
         return await self._list_resource("/servicestores/")
 
