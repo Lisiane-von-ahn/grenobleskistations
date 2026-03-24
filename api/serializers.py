@@ -301,6 +301,7 @@ class MarketplaceUserRatingSerializer(serializers.ModelSerializer):
     class Meta:
         model = MarketplaceUserRating
         fields = '__all__'
+        read_only_fields = ['rater', 'created_at', 'updated_at']
 
 
 class UserFriendSerializer(serializers.ModelSerializer):

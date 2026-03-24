@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -946,9 +947,15 @@ private fun NativeShell(
                 Card(
                     shape = RoundedCornerShape(24.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp),
                 ) {
-                    Column {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 760.dp),
+                    ) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -978,7 +985,10 @@ private fun NativeShell(
                         }
 
                         Column(
-                            modifier = Modifier.padding(16.dp),
+                            modifier = Modifier
+                                .weight(1f, fill = false)
+                                .verticalScroll(rememberScrollState())
+                                .padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
                             val materialOptions = listOf(
@@ -2377,36 +2387,66 @@ private fun MarketplaceTab(
             Card(
                 shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 560.dp),
+                    verticalArrangement = Arrangement.spacedBy(0.dp),
                 ) {
-                    Text(
-                        text = stringResource(id = R.string.rate_seller_title, sellerListing.title),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items((1..5).toList()) { score ->
-                            FilterChipButton(
-                                label = "$score",
-                                selected = sellerScore == score,
-                                onClick = { sellerScore = score },
-                            )
-                        }
+                    Column(
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .verticalScroll(rememberScrollState())
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Text(
+                            text = stringResource(id = R.string.rate_seller_title, sellerListing.title),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            text = stringResource(id = R.string.rate_seller),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+
+                        MarketplaceStarRatingSelector(
+                            selectedScore = sellerScore,
+                            onScoreSelected = { sellerScore = it },
+                        )
+
+                        Text(
+                            text = when (sellerScore) {
+                                1 -> "Tres decu"
+                                2 -> "Peut mieux faire"
+                                3 -> "Correct"
+                                4 -> "Tres bien"
+                                else -> "Excellent"
+                            },
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+
+                        OutlinedTextField(
+                            value = sellerComment,
+                            onValueChange = { sellerComment = it },
+                            label = { Text(stringResource(id = R.string.optional_comment)) },
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 3,
+                            maxLines = 5,
+                        )
                     }
-                    OutlinedTextField(
-                        value = sellerComment,
-                        onValueChange = { sellerComment = it },
-                        label = { Text(stringResource(id = R.string.optional_comment)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        minLines = 2,
-                        maxLines = 4,
-                    )
+
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         OutlinedButton(
@@ -2427,6 +2467,41 @@ private fun MarketplaceTab(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MarketplaceStarRatingSelector(
+    selectedScore: Int,
+    onScoreSelected: (Int) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        (1..5).forEach { score ->
+            val isFilled = score <= selectedScore
+            TextButton(
+                onClick = { onScoreSelected(score) },
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(
+                        if (isFilled) Color(0xFFFFF3D6) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+                    )
+                    .border(
+                        width = 1.dp,
+                        color = if (isFilled) Color(0xFFF59E0B) else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+                        shape = RoundedCornerShape(12.dp),
+                    ),
+            ) {
+                Text(
+                    text = if (isFilled) "★" else "☆",
+                    fontSize = 23.sp,
+                    color = if (isFilled) Color(0xFFF59E0B) else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }

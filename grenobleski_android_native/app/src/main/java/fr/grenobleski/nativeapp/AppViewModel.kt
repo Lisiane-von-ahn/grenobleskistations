@@ -768,6 +768,7 @@ class AppViewModel(
                 ratedUserId = sellerId,
                 score = score,
                 comment = comment,
+                raterUserId = session.userId,
             )
             if (result.isSuccess) {
                 state = state.copy(statusMessage = "Evaluation vendeur enregistree.")

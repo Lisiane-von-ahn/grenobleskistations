@@ -1,7 +1,11 @@
 package com.grenobleski.app.ui.components
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,9 +13,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
+import androidx.compose.material3.CardDefaults
+import androidx.compose.ui.window.Dialog
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
@@ -52,6 +59,7 @@ data class BadgeUnlockedData(
     val pointsValue: Int
 )
 
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun PointsEarnedDialog(
     data: PointsEarnedData,
@@ -85,68 +93,75 @@ fun PointsEarnedDialog(
                     .clip(RoundedCornerShape(24.dp)),
                 colors = CardDefaults.cardColors(containerColor = Color.White)
             ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    // Header with celebration
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(
-                                brush = Brush.linearGradient(
-                                    colors = listOf(Color(0xFF27ae60), Color(0xFF2ecc71))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 650.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    // Scrollable content area
+                    Column(modifier = Modifier.weight(1f, fill = false)) {
+                        // Header with celebration (non-scrollable)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    brush = Brush.linearGradient(
+                                        colors = listOf(Color(0xFF27ae60), Color(0xFF2ecc71))
+                                    )
                                 )
-                            )
-                            .padding(24.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        // Confetti animation
-                        if (showConfetti) {
-                            repeat(30) {
-                                val angle = (360f / 30) * it
-                                val duration = Random.nextInt(1500, 2500)
-                                ConfettiPiece(angle = angle, duration = duration)
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            // Confetti animation
+                            if (showConfetti) {
+                                repeat(30) {
+                                    val angle = (360f / 30) * it
+                                    val duration = Random.nextInt(1500, 2500)
+                                    ConfettiPiece(angle = angle, duration = duration)
+                                }
+                            }
+                            
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("")  // Spacer
+                                
+                                Text(
+                                    text = "🎉 Points Earned!",
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White,
+                                    modifier = Modifier.weight(1f),
+                                    textAlign = TextAlign.Center
+                                )
+                                
+                                IconButton(onClick = { showDialog = false }) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Close,
+                                        contentDescription = "Close",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
                             }
                         }
                         
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                        // Body content (scrollable only in this section)
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp)
+                                .verticalScroll(rememberScrollState()),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Text("")  // Spacer
-                            
-                            Text(
-                                text = "🎉 Points Earned!",
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White,
-                                modifier = Modifier.weight(1f),
-                                textAlign = TextAlign.Center
-                            )
-                            
-                            IconButton(onClick = { showDialog = false }) {
-                                Icon(
-                                    imageVector = Icons.Filled.Close,
-                                    contentDescription = "Close",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                        }
-                    }
-                    
-                    // Body content
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(24.dp)
-                            .verticalScroll(rememberScrollState()),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
                         // Big points display with animation
                         AnimatedContent(
                             targetState = data.pointsEarned,
                             transitionSpec = {
-                                slideInVertically { -it } + fadeIn() with 
+                                slideInVertically { -it } + fadeIn() togetherWith 
                                 slideOutVertically { it } + fadeOut()
                             }
                         ) { points ->
@@ -216,7 +231,7 @@ fun PointsEarnedDialog(
                                             fontWeight = FontWeight.Bold
                                         )
                                         Text(
-                                            text = "${data.stats.totalPoints:,}",
+                                            text = "${data.stats.totalPoints}",
                                             fontSize = 28.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = Color(0xFF27ae60)
@@ -324,9 +339,10 @@ fun PointsEarnedDialog(
                                 value = "⭐ ${data.stats.averageSellerRating}"
                             )
                         }
+                        }
                     }
                     
-                    // Footer button
+                    // Footer button (non-scrollable, fixed at bottom)
                     Button(
                         onClick = { showDialog = false },
                         modifier = Modifier
@@ -400,8 +416,8 @@ fun ConfettiPiece(angle: Float, duration: Int) {
         )
     )
     
-    val xOffset = randomX * 100 * animationProgress
-    val yOffset = 100 * animationProgress
+    val xOffset = randomX * 100 * animationProgress * cos(Math.toRadians(angle.toDouble())).toFloat()
+    val yOffset = 100 * animationProgress * sin(Math.toRadians(angle.toDouble())).toFloat()
     
     Box(
         modifier = Modifier

@@ -43,7 +43,7 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      - name: Build release APK
+      - name: Build release APK & AAB
         env:
           KEYSTORE_PATH: ${{ runner.temp }}/release.keystore
           KEY_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
@@ -51,14 +51,35 @@ jobs:
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           BUILD_NUMBER: ${{ github.run_number }}
           VERSION_NAME: "1.${{ github.run_number }}.0"
-        run: ./gradlew assembleRelease --no-daemon
+        run: |
+          ./gradlew assembleRelease --no-daemon
+          ./gradlew bundleRelease --no-daemon
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: grenobleski-release-${{ github.run_number }}
+          name: grenobleski-release-apk-${{ github.run_number }}
           path: grenobleski_android_native/app/build/outputs/apk/release/app-release.apk
           retention-days: 30
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: grenobleski-release-aab-${{ github.run_number }}
+          path: grenobleski_android_native/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 30
+
+      - name: Deploy to Google Play Store (Internal Testing)
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
+          packageName: fr.grenobleski.nativeapp
+          releaseFiles: grenobleski_android_native/app/build/outputs/bundle/release/app-release.aab
+          track: internal
+          status: completed
+          changesNotSentForReview: true
+          releaseName: "v1.${{ github.run_number }}.0 - ${{ github.event.head_commit.message }}"
 
       - name: Create GitHub Release
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'

@@ -2,6 +2,7 @@ package fr.grenobleski.nativeapp.data
 
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 import fr.grenobleski.nativeapp.data.model.DashboardCounts
 import fr.grenobleski.nativeapp.data.model.BusLineItem
 import fr.grenobleski.nativeapp.data.model.ChatUserOption
@@ -118,7 +119,8 @@ class AuthRepository(
     suspend fun fetchStationItems(token: String): Result<List<StationItem>> = withContext(Dispatchers.IO) {
         val authHeader = "Token $token"
         val payload = fetchPayloadFromCandidates(listOf("/api/skistations/", "/api/skistations"), authHeader)
-            ?: return@withContext Result.success(emptyList())
+            ?: fetchPayloadFromCandidates(listOf("/api/skistations/conditions/", "/api/skistations/conditions"), authHeader)
+            ?: return@withContext Result.failure(IllegalStateException("Unable to load stations."))
 
         val items = extractObjectList(payload).map { obj ->
             val altitude = obj.stringOrBlank("altitude").ifBlank {
@@ -130,10 +132,11 @@ class AuthRepository(
             val capacity = obj.stringOrBlank("capacity").ifBlank {
                 obj.intOrZero("capacity").takeIf { it > 0 }?.toString().orEmpty()
             }
+            val stationName = obj.stringOrBlank("name", "station_name").ifBlank { "Station" }
 
             StationItem(
                 id = obj.intOrZero("id"),
-                name = obj.stringOrBlank("name").ifBlank { "Station" },
+                name = stationName,
                 altitudeLabel = altitude.ifBlank { "-" },
                 distanceLabel = distance.ifBlank { "-" },
                 capacityLabel = capacity.ifBlank { "-" },
@@ -697,8 +700,9 @@ class AuthRepository(
         }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to publish article."))
 
         if (!response.isSuccessful) {
-            val bodyText = response.errorBody()?.string().orEmpty().ifBlank { "Unable to publish article." }
-            return@withContext Result.failure(IllegalStateException(bodyText))
+            val bodyText = response.errorBody()?.string().orEmpty()
+            val message = extractApiErrorMessage(bodyText, "Unable to publish article.")
+            return@withContext Result.failure(IllegalStateException(message))
         }
 
         Result.success(Unit)
@@ -732,8 +736,9 @@ class AuthRepository(
         }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to publish partner post."))
 
         if (!response.isSuccessful) {
-            val bodyText = response.errorBody()?.string().orEmpty().ifBlank { "Unable to publish partner post." }
-            return@withContext Result.failure(IllegalStateException(bodyText))
+            val bodyText = response.errorBody()?.string().orEmpty()
+            val errorMessage = extractApiErrorMessage(bodyText, "Unable to publish partner post.")
+            return@withContext Result.failure(IllegalStateException(errorMessage))
         }
 
         Result.success(Unit)
@@ -745,6 +750,7 @@ class AuthRepository(
         ratedUserId: Int,
         score: Int,
         comment: String,
+        raterUserId: Int = 0,
     ): Result<Unit> = withContext(Dispatchers.IO) {
         if (listingId <= 0 || ratedUserId <= 0) {
             return@withContext Result.failure(IllegalStateException("Invalid seller rating payload."))
@@ -762,6 +768,9 @@ class AuthRepository(
         if (comment.isNotBlank()) {
             payload["comment"] = comment
         }
+        if (raterUserId > 0) {
+            payload["rater"] = raterUserId
+        }
 
         val response = runCatching {
             service.postResource(
@@ -772,8 +781,9 @@ class AuthRepository(
         }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to rate seller."))
 
         if (!response.isSuccessful) {
-            val bodyText = response.errorBody()?.string().orEmpty().ifBlank { "Unable to rate seller." }
-            return@withContext Result.failure(IllegalStateException(bodyText))
+            val bodyText = response.errorBody()?.string().orEmpty()
+            val message = extractApiErrorMessage(bodyText, "Unable to rate seller.")
+            return@withContext Result.failure(IllegalStateException(message))
         }
         Result.success(Unit)
     }
@@ -810,8 +820,9 @@ class AuthRepository(
         }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to rate station."))
 
         if (!response.isSuccessful) {
-            val bodyText = response.errorBody()?.string().orEmpty().ifBlank { "Unable to rate station." }
-            return@withContext Result.failure(IllegalStateException(bodyText))
+            val bodyText = response.errorBody()?.string().orEmpty()
+            val message = extractApiErrorMessage(bodyText, "Unable to rate station.")
+            return@withContext Result.failure(IllegalStateException(message))
         }
         Result.success(Unit)
     }
@@ -931,6 +942,52 @@ class AuthRepository(
             val obj = element.takeIf { it.isJsonObject }?.asJsonObject ?: return@mapNotNull null
             obj.stringOrBlank(valueKey).takeIf { it.isNotBlank() }
         }
+    }
+
+    private fun extractApiErrorMessage(rawBody: String, fallback: String): String {
+        val body = rawBody.trim()
+        if (body.isBlank()) return fallback
+
+        val parsed = runCatching { JsonParser.parseString(body) }.getOrNull()
+        if (parsed == null) return body
+
+        return extractMessageFromJson(parsed).ifBlank { fallback }
+    }
+
+    private fun extractMessageFromJson(element: JsonElement): String {
+        if (element.isJsonNull) return ""
+
+        if (element.isJsonPrimitive) {
+            return runCatching { element.asString }.getOrDefault("").trim()
+        }
+
+        if (element.isJsonArray) {
+            val arrayMessages = element.asJsonArray.mapNotNull { item ->
+                val msg = extractMessageFromJson(item)
+                msg.takeIf { it.isNotBlank() }
+            }
+            return arrayMessages.firstOrNull().orEmpty()
+        }
+
+        if (element.isJsonObject) {
+            val obj = element.asJsonObject
+            val preferredKeys = listOf("detail", "error", "message", "non_field_errors", "comment", "score", "rated_user", "listing")
+
+            for (key in preferredKeys) {
+                if (!obj.has(key)) continue
+                val msg = extractMessageFromJson(obj.get(key))
+                if (msg.isNotBlank()) return msg
+            }
+
+            val firstEntry = obj.entrySet().firstOrNull()
+            if (firstEntry != null) {
+                val msg = extractMessageFromJson(firstEntry.value)
+                if (msg.isNotBlank()) return msg
+                return firstEntry.key
+            }
+        }
+
+        return ""
     }
 
     private fun formatServerDateTime(raw: String): String {

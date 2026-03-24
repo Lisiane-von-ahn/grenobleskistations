@@ -98,6 +98,41 @@
         </div>
     </form>
 </div>
+        <div class="builder-section mb-4">
+            <h5 class="mb-3">{% trans "Type et caracteristiques" %}</h5>
+            <div class="row g-3">
+                <div class="col-md-3">
+                    {{ form.transaction_type.label_tag }}
+                    {{ form.transaction_type }}
+                    {{ form.transaction_type.errors }}
+                </div>
+                <div class="col-md-3">
+                    {{ form.material_type.label_tag }}
+                    {{ form.material_type }}
+                    {{ form.material_type.errors }}
+                </div>
+                <div class="col-md-3">
+                    {{ form.condition.label_tag }}
+                    {{ form.condition }}
+                    {{ form.condition.errors }}
+                </div>
+                <div class="col-md-3">
+                    {{ form.price.label_tag }}
+                    {{ form.price }}
+                    {{ form.price.errors }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.brand.label_tag }}
+                    {{ form.brand }}
+                    {{ form.brand.errors }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.size.label_tag }}
+                    {{ form.size }}
+                    {{ form.size.errors }}
+                </div>
+            </div>
+        </div>
 
 <script>
     (function () {

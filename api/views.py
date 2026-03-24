@@ -522,7 +522,20 @@ class MarketplaceUserRatingViewSet(viewsets.ModelViewSet):
         )
 
     def perform_create(self, serializer):
-        serializer.save(rater=self.request.user)
+        listing = serializer.validated_data.get('listing')
+        rated_user = serializer.validated_data.get('rated_user')
+        rater = self.request.user
+
+        if listing is None:
+            raise ValidationError('listing is required.')
+        if rated_user is None:
+            raise ValidationError('rated_user is required.')
+        if rated_user.id == rater.id:
+            raise ValidationError('You cannot rate yourself.')
+        if listing.user_id != rated_user.id:
+            raise ValidationError('rated_user must be the owner of the listing.')
+
+        serializer.save(rater=rater)
 
 
 class UserFriendViewSet(viewsets.ModelViewSet):
