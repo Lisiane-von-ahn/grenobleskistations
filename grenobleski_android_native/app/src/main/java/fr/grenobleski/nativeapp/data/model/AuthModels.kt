@@ -147,6 +147,7 @@ data class PisteItem(
     val altitudeLabel: String,
     val distanceLabel: String,
     val pisteMapUrl: String = "",
+    val pisteMapThumbnailUrl: String = "",
     val latitude: Double? = null,
     val longitude: Double? = null,
     val ratingLabel: String,

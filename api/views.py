@@ -207,6 +207,7 @@ class SkiStationViewSet(viewsets.ModelViewSet):
                     "altitude": station.altitude,
                     "distance_from_grenoble": station.distanceFromGrenoble,
                     "piste_map_url": station.piste_map_url or "",
+                    "piste_map_thumbnail_url": station.piste_map_thumbnail_url or "",
                     "latitude": station.latitude,
                     "longitude": station.longitude,
                     "weather_description": weather.get("weather_description") or "indisponible",

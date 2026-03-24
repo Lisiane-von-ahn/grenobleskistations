@@ -21,6 +21,7 @@ class SkiStation(models.Model):
     altitude = models.IntegerField(null=False,default=1000)
     distanceFromGrenoble = models.IntegerField(null=False,default=100)
     piste_map_url = models.URLField(null=True, blank=True)
+    piste_map_thumbnail_url = models.URLField(null=True, blank=True)
 
     def __str__(self):
         return self.name

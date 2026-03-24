@@ -1,9 +1,11 @@
 import os
 from pathlib import Path
+from io import BytesIO
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'skistation_project.settings')
 
 import django
+from PIL import Image, ImageDraw, ImageFont
 
 django.setup()
 
@@ -53,6 +55,15 @@ STATION_PISTE_MAPS = {
     'Saint-Pierre-de-Chartreuse': 'https://www.coeur-de-chartreuse.com/',
     'Lans-en-Vercors': 'https://www.lansenvercors.com/',
     'Gresse-en-Vercors': 'https://www.gresse-en-vercors.fr/',
+}
+
+STATION_PISTE_MAP_THUMBNAILS = {
+    'Chamrousse': 'https://www.chamrousse.com/medias/images/info_pages/multitailles/1920x1440_plan-des-pistes-alpin-chamrousse-2025-2026-3572.jpg',
+    'Les 7 Laux': 'https://woody.cloudly.space/app/uploads/les-sept-laux/2026/03/thumbs/50629/ratio_16_9_large/coucher-de-soleil-aux-7-laux-2026-1200x675.webp',
+    "Alpe d'Huez": 'https://www.alpedhuez.com/wp-content/uploads/2025/11/icon-map.png',
+    'Villard-de-Lans / Corrençon': 'https://woody.cloudly.space/app/uploads/villarddelanscorrencon/2022/11/thumbs/%C2%A9CaroleSavary-Paysage-LacdesPres-Hiver-2-1200x600.webp',
+    'Les 2 Alpes': 'https://woody.cloudly.space/app/themes/woody-theme/src/img/blank/ratio_square.webp',
+    'Vaujany': 'https://www.vaujany.com/wp-content/uploads/vauj-skyline-blanc.png',
 }
 
 SERVICE_SEED_BY_STATION = {
@@ -437,6 +448,89 @@ def get_image_bytes(filename):
     image_path = Path(__file__).resolve().parent / 'static' / 'images' / filename
     if image_path.exists():
         return image_path.read_bytes()
+    return None
+
+
+def create_station_placeholder_image(station_name):
+    width, height = 1400, 900
+    seed = sum(ord(char) for char in station_name)
+    top_color = (
+        40 + (seed * 3) % 90,
+        80 + (seed * 5) % 100,
+        120 + (seed * 7) % 100,
+    )
+    bottom_color = (
+        180 + seed % 50,
+        210 + (seed * 2) % 40,
+        235 + (seed * 4) % 20,
+    )
+
+    image = Image.new('RGB', (width, height), top_color)
+    draw = ImageDraw.Draw(image)
+
+    for y in range(height):
+        ratio = y / max(height - 1, 1)
+        color = tuple(
+            int(top_color[index] * (1 - ratio) + bottom_color[index] * ratio)
+            for index in range(3)
+        )
+        draw.line([(0, y), (width, y)], fill=color)
+
+    mountain_color = (248, 250, 252)
+    ridge_shadow = (148, 163, 184)
+    draw.polygon(
+        [
+            (0, height),
+            (180, 510),
+            (360, 640),
+            (520, 430),
+            (720, 620),
+            (900, 350),
+            (1110, 610),
+            (1270, 470),
+            (width, height),
+        ],
+        fill=mountain_color,
+    )
+    draw.polygon(
+        [
+            (0, height),
+            (260, 680),
+            (430, 780),
+            (630, 590),
+            (820, 760),
+            (1030, 540),
+            (1200, 700),
+            (width, height),
+        ],
+        fill=ridge_shadow,
+    )
+
+    accent = (255, 214, 10)
+    draw.ellipse((1120, 80, 1260, 220), fill=accent)
+
+    title_font = ImageFont.load_default()
+    subtitle_font = ImageFont.load_default()
+    draw.text((92, 88), 'GRENOBLESKI', fill=(255, 255, 255), font=subtitle_font)
+    draw.text((92, 140), station_name.upper(), fill=(255, 255, 255), font=title_font)
+    draw.text((92, 188), 'Station de ski proche de Grenoble', fill=(230, 240, 255), font=subtitle_font)
+
+    output = BytesIO()
+    image.save(output, format='PNG')
+    return output.getvalue()
+
+
+def get_station_image_bytes(station_name):
+    filename = STATION_IMAGE_MAP.get(station_name)
+    if filename:
+        image_bytes = get_image_bytes(filename)
+        if image_bytes:
+            return image_bytes
+
+    generated_bytes = create_station_placeholder_image(station_name)
+    if generated_bytes:
+        return generated_bytes
+
     fallback_path = Path(__file__).resolve().parent / 'static' / 'images' / 'ski.png'
     if fallback_path.exists():
         return fallback_path.read_bytes()
@@ -450,7 +544,7 @@ def seed_ski_stations():
 
     station_by_name = {}
     for station in STATIONS_DATA:
-        image_bytes = get_image_bytes(STATION_IMAGE_MAP.get(station['name'], 'ski.png'))
+        image_bytes = get_station_image_bytes(station['name'])
 
         station_obj, created = SkiStation.objects.update_or_create(
             name=station['name'],
@@ -461,6 +555,7 @@ def seed_ski_stations():
                 'altitude': station['altitude'],
                 'distanceFromGrenoble': station['distanceFromGrenoble'],
                 'piste_map_url': STATION_PISTE_MAPS.get(station['name'], ''),
+                'piste_map_thumbnail_url': STATION_PISTE_MAP_THUMBNAILS.get(station['name'], ''),
                 'image': image_bytes,
             },
         )

@@ -9,12 +9,14 @@ on:
     paths:
       - 'api/models.py'
       - 'api/migrations/**'
+      - 'load_ski_stations.py'
       - 'skistation_project/**'
       - 'requirements.txt'
   pull_request:
     paths:
       - 'api/models.py'
       - 'api/migrations/**'
+      - 'load_ski_stations.py'
       - 'skistation_project/**'
       - 'requirements.txt'
 
@@ -117,6 +119,14 @@ jobs:
           }
           echo "✓ All migrations applied successfully"
 
+      - name: 'Run seed after fresh migrations'
+        run: |
+          python load_ski_stations.py || {
+            echo "❌ ERROR: Failed to seed data after fresh migrations"
+            exit 1
+          }
+          echo "✓ Seed executed successfully on fresh database"
+
       - name: 'Test migration rollback'
         run: |
           python manage.py migrate api zero --noinput || {
@@ -131,6 +141,14 @@ jobs:
             exit 1
           }
           echo "✓ Migrations re-applied successfully"
+
+      - name: 'Run seed after rollback and reapply'
+        run: |
+          python load_ski_stations.py || {
+            echo "❌ ERROR: Failed to seed data after rollback/reapply"
+            exit 1
+          }
+          echo "✓ Seed executed successfully after rollback/reapply"
 
       - name: 'Check migration dependencies'
         run: |
@@ -188,6 +206,7 @@ jobs:
           echo "  • All migration files have valid syntax"
           echo "  • Migrations apply cleanly to fresh database"  
           echo "  • Migrations can be rolled back and reapplied"
+          echo "  • Seed runs successfully after migrations"
           echo "  • Django system checks passed"
           echo "  • No circular dependencies detected"
 
@@ -201,8 +220,10 @@ jobs:
           echo "  • Circular dependencies in migrations"
           echo "  • Migration syntax errors"
           echo "  • Failed to rollback/reapply migrations"
+          echo "  • Seed failed after schema setup"
           echo ""
           echo "💡 To fix locally:"
           echo "  python manage.py makemigrations --check --dry-run"
           echo "  python manage.py migrate --noinput"
+          echo "  python load_ski_stations.py"
           exit 1
