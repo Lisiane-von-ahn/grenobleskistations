@@ -24,6 +24,7 @@ from .models import (
     SkiMaterialImage,
     SkiMaterialListing,
     SkiPartnerPost,
+    CarpoolReservation,
     SkiPartnerReport,
     SkiStation,
     SkiStationCamera,
@@ -268,9 +269,45 @@ class InstructorReviewSerializer(serializers.ModelSerializer):
 
 
 class SkiPartnerPostSerializer(serializers.ModelSerializer):
+    ski_station_name = serializers.SerializerMethodField()
+    organizer_display = serializers.SerializerMethodField()
+    seats_reserved = serializers.SerializerMethodField()
+    seats_remaining = serializers.SerializerMethodField()
+    my_reserved_seats = serializers.SerializerMethodField()
+
     class Meta:
         model = SkiPartnerPost
         fields = '__all__'
+        read_only_fields = ['user', 'created_at']
+
+    def get_ski_station_name(self, obj):
+        station = getattr(obj, 'ski_station', None)
+        return station.name if station else ''
+
+    def get_organizer_display(self, obj):
+        return _display_name_for_user(obj.user)
+
+    def get_seats_reserved(self, obj):
+        return obj.seats_reserved if obj.is_carpool else 0
+
+    def get_seats_remaining(self, obj):
+        return obj.seats_remaining if obj.is_carpool else 0
+
+    def get_my_reserved_seats(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return 0
+        reservation = obj.reservations.filter(user=request.user, status=CarpoolReservation.STATUS_ACTIVE).first()
+        if not reservation:
+            return 0
+        return int(reservation.seats_reserved or 0)
+
+
+class CarpoolReservationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CarpoolReservation
+        fields = '__all__'
+        read_only_fields = ['user', 'created_at', 'updated_at']
 
 
 class SkiPartnerReportSerializer(serializers.ModelSerializer):

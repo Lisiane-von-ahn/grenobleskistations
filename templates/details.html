@@ -89,6 +89,21 @@
             background: var(--bs-primary, #0d6efd);
             color: #fff;
         }
+        .map-legend {
+            background: rgba(255, 255, 255, 0.94);
+            border-radius: 8px;
+            padding: 8px 10px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+            font-size: 0.82rem;
+            line-height: 1.35;
+        }
+        .map-legend .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
 
         @media (max-width: 991.98px) {
             .station-hero-image {
@@ -220,6 +235,22 @@
                         <p id="sunset" class="mb-0"></p>
                     </div>
 
+                    {% if google_place_rating and google_place_rating.rating %}
+                    <div class="card section-card p-4 mb-4">
+                        <h5 class="mb-2">{% trans "Avis Google (station)" %}</h5>
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <div>
+                                <div class="fs-4 fw-bold text-warning">{{ google_place_rating.rating|floatformat:1 }}/5</div>
+                                <small class="text-muted">{{ google_place_rating.review_count }} avis</small>
+                            </div>
+                            {% if google_place_rating.maps_url %}
+                            <a class="btn btn-sm btn-outline-primary" href="{{ google_place_rating.maps_url }}" target="_blank" rel="noopener">Voir sur Google Maps</a>
+                            {% endif %}
+                        </div>
+                        <small class="text-muted">{{ google_place_rating.name }}</small>
+                    </div>
+                    {% endif %}
+
                     <div class="card section-card p-4">
                         <h5 class="mb-3">{% trans "Lignes de bus vers la station" %}</h5>
                         {% for bus_line in bus_lines %}
@@ -228,7 +259,8 @@
                                 <small><i class="fas fa-map-marker-alt"></i> {% trans "Départ:" %} {{ bus_line.departure_stop }}</small><br>
                                 <small><i class="fas fa-map-signs"></i> {% trans "Arrivée:" %} {{ bus_line.arrival_stop }}</small><br>
                                 <small><i class="fas fa-clock"></i> {% trans "Fréquence:" %} {{ bus_line.frequency }}</small><br>
-                                <small><i class="fas fa-hourglass-half"></i> {% trans "Trajet:" %} {{ bus_line.travel_time }}</small>
+                                <small><i class="fas fa-hourglass-half"></i> {% trans "Trajet:" %} {{ bus_line.travel_time }}</small><br>
+                                <a href="{% url 'bus_line_detail' bus_line.id %}" class="btn btn-sm btn-outline-primary mt-2">{% trans "Voir l'itinéraire" %}</a>
                             </div>
                         {% empty %}
                             <p class="text-muted mb-0">{% trans "Aucune ligne de bus renseignée." %}</p>
@@ -240,6 +272,78 @@
                     <div class="card section-card p-3">
                         <h5 class="mb-3">{% trans "Carte de localisation" %}</h5>
                         <div id="ski-map" style="height: 450px; border-radius: 12px;"></div>
+                    </div>
+                </div>
+
+                <!-- Caméras et Cartes de Pistes -->
+                <div class="col-lg-12">
+                    <div class="card section-card p-0">
+                        <div class="nav nav-tabs" id="mediaTabs" role="tablist">
+                            {% if station.cameras.all %}
+                            <button class="nav-link active" id="cameras-tab" data-bs-toggle="tab" data-bs-target="#cameras" type="button" role="tab">
+                                <i class="bi bi-camera-video"></i> {% trans "Caméras en direct" %} <span class="badge bg-primary">{{ station.cameras.count }}</span>
+                            </button>
+                            {% endif %}
+                            {% if station.piste_map_thumbnail_url %}
+                            <button class="nav-link {% if not station.cameras.all %}active{% endif %}" id="piste-map-tab" data-bs-toggle="tab" data-bs-target="#piste-map" type="button" role="tab">
+                                <i class="bi bi-map"></i> {% trans "Carte des pistes" %}
+                            </button>
+                            {% endif %}
+                        </div>
+                        <div class="tab-content p-3" id="mediaContent">
+                            <!-- Caméras -->
+                            {% if station.cameras.all %}
+                            <div class="tab-pane fade show active" id="cameras" role="tabpanel">
+                                <div class="row g-3">
+                                    {% for camera in station.cameras.all %}
+                                    <div class="col-md-6 col-lg-4">
+                                        <div class="card h-100 border-light shadow-sm">
+                                            {% if camera.thumbnail_url %}
+                                            <a href="{{ camera.camera_url }}" target="_blank" rel="noopener" class="d-block bg-dark ratio ratio-16x9 overflow-hidden">
+                                                <img src="{{ camera.thumbnail_url }}" class="img-fluid object-fit-cover" alt="{{ camera.name }}" style="object-fit: cover;">
+                                            </a>
+                                            {% else %}
+                                            <div class="card-body bg-light d-flex align-items-center justify-content-center py-5">
+                                                <i class="bi bi-camera-video-off" style="font-size: 2rem; color: #999;"></i>
+                                            </div>
+                                            {% endif %}
+                                            <div class="card-body">
+                                                <h6 class="card-title mb-1">{{ camera.name }}</h6>
+                                                {% if camera.description %}
+                                                <p class="card-text small text-muted mb-2">{{ camera.description }}</p>
+                                                {% endif %}
+                                                <a href="{{ camera.camera_url }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
+                                                    {% trans "Ouvrir webcam" %} <i class="bi bi-arrow-up-right"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Carte des pistes -->
+                            {% if station.piste_map_thumbnail_url %}
+                            <div class="tab-pane fade {% if not station.cameras.all %}show active{% endif %}" id="piste-map" role="tabpanel">
+                                <div class="row">
+                                    <div class="col-lg-8 mx-auto">
+                                        <div class="text-center mb-3">
+                                            <a href="{{ station.piste_map_url }}" target="_blank" rel="noopener" class="btn btn-primary">
+                                                <i class="bi bi-box-arrow-up-right"></i> {% trans "Ouvrir la carte interactive" %}
+                                            </a>
+                                        </div>
+                                        <a href="{{ station.piste_map_url }}" target="_blank" rel="noopener" class="d-block">
+                                            <img src="{{ station.piste_map_thumbnail_url }}" class="img-fluid rounded shadow" alt="{% trans 'Carte des pistes' %}" style="max-width: 100%; height: auto;">
+                                        </a>
+                                        <small class="d-block text-center text-muted mt-2">
+                                            {% trans "Cliquez pour accéder à la carte interactive officielle" %}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
 
@@ -582,6 +686,83 @@
     
         // Bind a popup with the ski station's information
         marker.bindPopup("<b>{{ station.name }}</b><br>{% trans 'Capacité:' %} {{ station.capacity }} {% trans 'personnes' %}<br>{% trans 'Pistes:' %} {{ station.num_circuits }}");
+
+        // Overpass overlays: amenities + downhill piste geometries
+        var amenitiesLayer = L.layerGroup().addTo(map);
+        var pistesLayer = L.layerGroup().addTo(map);
+
+        L.control.layers(null, {
+            'Amenities': amenitiesLayer,
+            'Pistes OSM': pistesLayer
+        }, { collapsed: true }).addTo(map);
+
+        const mapLegend = L.control({ position: 'bottomright' });
+        mapLegend.onAdd = function() {
+            var div = L.DomUtil.create('div', 'map-legend');
+            div.innerHTML = [
+                '<strong>Overlays</strong>',
+                '<div><span class="dot" style="background:#16a34a;"></span>Parking</div>',
+                '<div><span class="dot" style="background:#0369a1;"></span>Toilets</div>',
+                '<div><span class="dot" style="background:#f59e0b;"></span>Food</div>',
+                '<div><span class="dot" style="background:#dc2626;"></span>Piste line</div>'
+            ].join('');
+            return div;
+        };
+        mapLegend.addTo(map);
+
+        function amenityStyle(amenityType) {
+            if (amenityType === 'parking') return { color: '#16a34a' };
+            if (amenityType === 'toilets') return { color: '#0369a1' };
+            return { color: '#f59e0b' };
+        }
+
+        function drawOverpassElements(elements) {
+            elements.forEach(function(el) {
+                if (el.type === 'node' && el.tags && el.tags.amenity) {
+                    var style = amenityStyle(el.tags.amenity);
+                    var amenityName = el.tags.name || el.tags.amenity;
+                    var markerCircle = L.circleMarker([el.lat, el.lon], {
+                        radius: 5,
+                        color: style.color,
+                        fillColor: style.color,
+                        fillOpacity: 0.9,
+                        weight: 1
+                    });
+                    markerCircle.bindPopup('<strong>' + amenityName + '</strong><br>Amenity: ' + el.tags.amenity);
+                    markerCircle.addTo(amenitiesLayer);
+                }
+
+                if (el.type === 'way' && el.geometry && el.geometry.length > 1 && el.tags && el.tags['piste:type'] === 'downhill') {
+                    var points = el.geometry.map(function(g) { return [g.lat, g.lon]; });
+                    var pisteName = el.tags.name || el.tags.ref || 'Piste';
+                    var line = L.polyline(points, {
+                        color: '#dc2626',
+                        weight: 2.2,
+                        opacity: 0.85
+                    });
+                    line.bindPopup('<strong>' + pisteName + '</strong>');
+                    line.addTo(pistesLayer);
+                }
+            });
+        }
+
+        function loadOverpassLayers() {
+            const overpassUrl = `/api/overpass/nearby/?lat=${encodeURIComponent(stationLat)}&lon=${encodeURIComponent(stationLng)}`;
+
+            fetch(overpassUrl)
+                .then((response) => response.json())
+                .then((data) => {
+                    if (!data || !data.elements) {
+                        return;
+                    }
+                    drawOverpassElements(data.elements);
+                })
+                .catch((error) => {
+                    console.warn('Overpass unavailable:', error);
+                });
+        }
+
+        loadOverpassLayers();
     
         var apiKey = '{{ WEATHER_API_KEY }}';  
         var weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${stationLat}&lon=${stationLng}&appid=${apiKey}&units=metric`;

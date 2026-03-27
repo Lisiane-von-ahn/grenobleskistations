@@ -8,14 +8,15 @@
     <section class="premium-shell mb-4 p-3">
         <div class="premium-hero">
             <span class="premium-kicker">Partenaires</span>
-            <h2 class="premium-title h3 mb-1">Publier une sortie partenaire</h2>
-            <p class="premium-subtitle mb-0">Creer une annonce claire pour trouver des partenaires avec le bon niveau.</p>
+            <h2 class="premium-title h3 mb-1">{% if is_carpool_mode %}Publier un covoiturage{% else %}Publier une sortie partenaire{% endif %}</h2>
+            <p class="premium-subtitle mb-0">{% if is_carpool_mode %}Renseignez trajet, heure et places disponibles pour une reservation simple.{% else %}Creer une annonce claire pour trouver des partenaires avec le bon niveau.{% endif %}</p>
         </div>
     </section>
 
     <section class="market-search-panel">
         <form method="post" class="row g-3">
             {% csrf_token %}
+            <input type="hidden" name="kind" value="{% if is_carpool_mode %}carpool{% endif %}">
             <div class="col-lg-6">
                 <label class="form-label">Titre</label>
                 <input type="text" name="title" maxlength="120" class="form-control" required placeholder="Ex: Ski samedi matin a Chamrousse">
@@ -43,15 +44,37 @@
             </div>
             <div class="col-lg-6">
                 <label class="form-label">Ville de depart</label>
-                            <input type="text" name="city" maxlength="80" class="form-control" placeholder="Grenoble" list="city-autocomplete-list" data-city-autocomplete="true" autocomplete="address-level2">
+                <input type="text" name="city" maxlength="80" class="form-control" placeholder="Grenoble" list="city-autocomplete-list" data-city-autocomplete="true" autocomplete="address-level2">
             </div>
+            {% if is_carpool_mode %}
+            <div class="col-lg-4">
+                <label class="form-label">Ville depart covoiturage</label>
+                <input type="text" name="departure_city" maxlength="80" class="form-control" placeholder="Grenoble" list="city-autocomplete-list" data-city-autocomplete="true" autocomplete="address-level2" required>
+            </div>
+            <div class="col-lg-4">
+                <label class="form-label">Date depart</label>
+                <input type="date" name="departure_date" class="form-control" required>
+            </div>
+            <div class="col-lg-4">
+                <label class="form-label">Heure depart</label>
+                <input type="time" name="departure_time" class="form-control" required>
+            </div>
+            <div class="col-lg-4">
+                <label class="form-label">Places disponibles</label>
+                <input type="number" name="total_seats" class="form-control" min="1" max="8" value="3" required>
+            </div>
+            <div class="col-lg-8">
+                <label class="form-label">Image voiture (URL)</label>
+                <input type="url" name="vehicle_image_url" class="form-control" placeholder="https://...">
+            </div>
+            {% endif %}
             <div class="col-12">
                 <label class="form-label">Description</label>
                 <textarea name="message" rows="4" class="form-control" required placeholder="Niveau, rythme, covoiturage, horaires..."></textarea>
             </div>
             <div class="col-12 d-flex gap-2">
                 <button class="btn btn-success" type="submit">Publier</button>
-                <a class="btn btn-outline-secondary" href="{% url 'ski_partners' %}">Retour</a>
+                <a class="btn btn-outline-secondary" href="{% if is_carpool_mode %}{% url 'covoiturage' %}{% else %}{% url 'ski_partners' %}{% endif %}">Retour</a>
             </div>
         </form>
     </section>

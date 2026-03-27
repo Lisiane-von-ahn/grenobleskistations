@@ -3,15 +3,18 @@ import os
 import base64
 import binascii
 import json
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.db.models import Avg, Count, Q
+from django.db import transaction
+from django.db.models import Avg, Count, Q, Sum
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.authentication import SessionAuthentication, TokenAuthentication
@@ -55,6 +58,7 @@ from .models import (
     SkiCircuit,
     SkiMaterialListing,
     SkiMaterialImage,
+    CarpoolReservation,
     SkiPartnerPost,
     SkiPartnerReport,
     SkiStation,
@@ -81,6 +85,7 @@ from .serializers import (
     ServiceStoreSerializer,
     SkiCircuitSerializer,
     SkiMaterialListingSerializer,
+    CarpoolReservationSerializer,
     SkiPartnerPostSerializer,
     SkiPartnerReportSerializer,
     SkiStationSerializer,
@@ -452,12 +457,129 @@ class SkiPartnerPostViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = SkiPartnerPost.objects.select_related('user', 'ski_station').all()
+        kind = (self.request.query_params.get('kind') or '').strip().lower()
+
+        if kind == 'carpool':
+            carpool_filter = (
+                Q(is_carpool=True)
+                | Q(title__icontains='covoitur')
+                | Q(message__icontains='covoitur')
+                | Q(title__icontains='carpool')
+                | Q(message__icontains='carpool')
+                | Q(title__icontains='trajet')
+                | Q(message__icontains='trajet')
+                | Q(title__icontains='voiture')
+                | Q(message__icontains='voiture')
+                | Q(title__icontains='ride share')
+                | Q(message__icontains='ride share')
+            )
+            qs = qs.filter(carpool_filter)
+
         if self.action == 'list':
             return qs.filter(is_active=True)
         return qs
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        is_carpool = bool(serializer.validated_data.get('is_carpool'))
+        save_kwargs = {'user': self.request.user}
+        if is_carpool and not serializer.validated_data.get('departure_city'):
+            save_kwargs['departure_city'] = serializer.validated_data.get('city', '')
+        serializer.save(**save_kwargs)
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated], url_path='my-reservations')
+    def my_reservations(self, request):
+        reservations = (
+            CarpoolReservation.objects.filter(
+                user=request.user,
+                status=CarpoolReservation.STATUS_ACTIVE,
+                post__is_active=True,
+                post__is_carpool=True,
+            )
+            .select_related('post', 'post__ski_station', 'post__user')
+            .order_by('post__departure_datetime', '-created_at')
+        )
+
+        payload = []
+        for reservation in reservations:
+            post_data = SkiPartnerPostSerializer(reservation.post, context={'request': request}).data
+            payload.append(
+                {
+                    'reservation_id': reservation.id,
+                    'seats_reserved': reservation.seats_reserved,
+                    'status': reservation.status,
+                    'created_at': reservation.created_at,
+                    'updated_at': reservation.updated_at,
+                    'post': post_data,
+                }
+            )
+        return Response(payload)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def reserve(self, request, pk=None):
+        post = self.get_object()
+        if not post.is_active:
+            raise ValidationError('This carpool post is no longer active.')
+        if not post.is_carpool:
+            raise ValidationError('Reservation is only available for carpool posts.')
+        if post.user_id == request.user.id:
+            raise ValidationError('You cannot reserve seats on your own carpool.')
+
+        try:
+            requested_seats = int(request.data.get('seats', 1))
+        except (TypeError, ValueError):
+            requested_seats = 1
+        if requested_seats < 1:
+            raise ValidationError('seats must be at least 1.')
+
+        with transaction.atomic():
+            locked_post = SkiPartnerPost.objects.select_for_update().get(id=post.id)
+            existing = CarpoolReservation.objects.select_for_update().filter(post=locked_post, user=request.user).first()
+            seats_taken_other = int(
+                CarpoolReservation.objects.filter(post=locked_post, status=CarpoolReservation.STATUS_ACTIVE)
+                .exclude(user=request.user)
+                .aggregate(total=Sum('seats_reserved'))['total']
+                or 0
+            )
+            capacity_left = int(locked_post.total_seats or 0) - seats_taken_other
+            if requested_seats > capacity_left:
+                raise ValidationError(f'Only {max(capacity_left, 0)} seat(s) available.')
+
+            reservation, _created = CarpoolReservation.objects.update_or_create(
+                post=locked_post,
+                user=request.user,
+                defaults={
+                    'seats_reserved': requested_seats,
+                    'status': CarpoolReservation.STATUS_ACTIVE,
+                },
+            )
+
+        return Response(
+            {
+                'detail': 'Reservation saved.',
+                'reservation': CarpoolReservationSerializer(reservation, context={'request': request}).data,
+                'post': SkiPartnerPostSerializer(self.get_object(), context={'request': request}).data,
+            }
+        )
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def cancel_reservation(self, request, pk=None):
+        post = self.get_object()
+        reservation = CarpoolReservation.objects.filter(
+            post=post,
+            user=request.user,
+            status=CarpoolReservation.STATUS_ACTIVE,
+        ).first()
+        if not reservation:
+            raise ValidationError('No active reservation found for this post.')
+
+        reservation.status = CarpoolReservation.STATUS_CANCELLED
+        reservation.save(update_fields=['status', 'updated_at'])
+        return Response(
+            {
+                'detail': 'Reservation cancelled.',
+                'post': SkiPartnerPostSerializer(self.get_object(), context={'request': request}).data,
+            }
+        )
 
 
 class SkiPartnerReportViewSet(viewsets.ModelViewSet):
@@ -985,4 +1107,63 @@ def mobile_bridge_info_view(request):
         },
         status=status.HTTP_200_OK,
     )
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def overpass_nearby_view(request):
+    try:
+        lat = float(request.GET.get('lat', '0'))
+        lon = float(request.GET.get('lon', '0'))
+    except (TypeError, ValueError):
+        return Response({'error': 'lat/lon are required numeric query params.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        amenity_radius = max(500, min(int(request.GET.get('amenity_radius', '5000')), 15000))
+    except ValueError:
+        amenity_radius = 5000
+    try:
+        piste_radius = max(1000, min(int(request.GET.get('piste_radius', '7000')), 25000))
+    except ValueError:
+        piste_radius = 7000
+
+    cache_key = f"overpass_nearby:{lat:.4f}:{lon:.4f}:{amenity_radius}:{piste_radius}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return Response(cached)
+
+    overpass_query = f'''
+        [out:json][timeout:20];
+        (
+          node["amenity"~"parking|toilets|restaurant|cafe"](around:{amenity_radius},{lat},{lon});
+          way["piste:type"="downhill"](around:{piste_radius},{lat},{lon});
+        );
+        out body geom;
+    '''.strip()
+
+    request_body = urlencode({'data': overpass_query}).encode('utf-8')
+    outgoing = Request(
+        'https://overpass-api.de/api/interpreter',
+        data=request_body,
+        headers={
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            'User-Agent': 'GrenobleSki/1.0',
+        },
+    )
+
+    try:
+        with urlopen(outgoing, timeout=8) as response:
+            payload = json.loads(response.read().decode('utf-8'))
+    except (HTTPError, URLError, TimeoutError, ValueError):
+        logger.warning('Overpass proxy failed for lat=%s lon=%s', lat, lon, exc_info=True)
+        return Response({'elements': [], 'source': 'overpass', 'cached': False, 'error': 'overpass_unavailable'})
+
+    elements = payload.get('elements') if isinstance(payload, dict) else []
+    result = {
+        'elements': elements if isinstance(elements, list) else [],
+        'source': 'overpass',
+        'cached': False,
+    }
+    cache.set(cache_key, result, timeout=60 * 15)
+    return Response(result)
 

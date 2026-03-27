@@ -27,6 +27,7 @@ from .views import (
     UserGameStatsViewSet,
     UserProfileViewSet,
     UserViewSet,
+    overpass_nearby_view,
     auth_login_view, auth_logout_view, auth_me_view, auth_google_login_view,
     auth_password_change_view, auth_profile_update_view,
     auth_register_view, login_view, mobile_bridge_info_view,
@@ -59,6 +60,7 @@ router.register(r'gamification/badges', GamificationBadgeViewSet, basename='badg
 router.register(r'gamification/user-badges', UserBadgeViewSet, basename='user-badges')
 
 urlpatterns = [
+    path('overpass/nearby/', overpass_nearby_view, name='api-overpass-nearby'),
     path('auth/register/', auth_register_view, name='auth-register'),
     path('auth/login/', auth_login_view, name='auth-login'),
     path('auth/google-login/', auth_google_login_view, name='auth-google-login'),

@@ -323,105 +323,196 @@ def get_cameras_for_station(station_name, station):
         )
     return cameras
 
+
+def build_detailed_bus_route(item, station):
+    departure_lat = float(item.get('departure_latitude')) if item.get('departure_latitude') is not None else None
+    departure_lng = float(item.get('departure_longitude')) if item.get('departure_longitude') is not None else None
+    arrival_lat = float(item.get('arrival_latitude')) if item.get('arrival_latitude') is not None else float(station.latitude)
+    arrival_lng = float(item.get('arrival_longitude')) if item.get('arrival_longitude') is not None else float(station.longitude)
+
+    route_points = [segment.strip() for segment in (item.get('route_points') or '').split('→') if segment.strip()]
+    stop_names = []
+    if item.get('departure_stop'):
+        stop_names.append(item['departure_stop'])
+
+    for stop_name in route_points[1:-1]:
+        if stop_name and stop_name not in stop_names:
+            stop_names.append(stop_name)
+
+    if item.get('arrival_stop') and item['arrival_stop'] not in stop_names:
+        stop_names.append(item['arrival_stop'])
+
+    if not stop_names:
+        return []
+
+    if len(stop_names) == 1 or None in (departure_lat, departure_lng, arrival_lat, arrival_lng):
+        return [
+            {
+                'name': stop_names[0],
+                'latitude': departure_lat or arrival_lat,
+                'longitude': departure_lng or arrival_lng,
+                'kind': 'departure',
+                'order': 1,
+            }
+        ]
+
+    segment_count = max(len(stop_names) - 1, 1)
+    detailed_route = []
+    for index, stop_name in enumerate(stop_names):
+        ratio = index / segment_count
+        kind = 'intermediate'
+        if index == 0:
+            kind = 'departure'
+        elif index == len(stop_names) - 1:
+            kind = 'arrival'
+
+        detailed_route.append(
+            {
+                'name': stop_name,
+                'latitude': round(departure_lat + ((arrival_lat - departure_lat) * ratio), 6),
+                'longitude': round(departure_lng + ((arrival_lng - departure_lng) * ratio), 6),
+                'kind': kind,
+                'order': index + 1,
+            }
+        )
+
+    return detailed_route
+
 BUS_LINES_SEED = [
     {
         'station_name': 'Chamrousse',
         'bus_number': 'N93',
         'departure_stop': 'Grenoble Gare Routière',
         'arrival_stop': 'Chamrousse - Roche Béranger',
-        'frequency': 'Consulter l\'horaire officiel',
+        'frequency': 'Hiver: 2-3/jour | Eté: 1-2/jour',
         'travel_time': '1h10',
         'route_points': 'Gare Routière → Grand\'Place → Uriage → Chamrousse',
         'departure_latitude': 45.191210,
         'departure_longitude': 5.714260,
+        'first_departure': '06:30',
+        'last_departure': '20:00',
+        'itinerary_url': 'https://www.chamrousse.com/acces-station/',
+        'notes': 'Navette directe gratuite pour résidents station. Été: réduction accès pistes. Hiver 2025-2026.',
     },
     {
         'station_name': 'Les 7 Laux',
         'bus_number': 'N94',
         'departure_stop': 'Grenoble Gare Routière',
         'arrival_stop': 'Prapoutel - Les 7 Laux',
-        'frequency': 'Consulter l\'horaire officiel',
+        'frequency': 'Hiver: 2-3/jour | Eté: 1-2/jour',
         'travel_time': '1h05',
         'route_points': 'Gare Routière → Crolles → Brignoud → Prapoutel',
         'departure_latitude': 45.191210,
         'departure_longitude': 5.714260,
+        'first_departure': '07:00',
+        'last_departure': '18:30',
+        'itinerary_url': 'https://www.les7laux.com/hiver/acces-domaine/',
+        'notes': 'Service régulier hiver. Vérifier avant jour de visite.',
     },
     {
         'station_name': "Alpe d'Huez",
         'bus_number': 'T76',
         'departure_stop': 'Grenoble Gare SNCF',
         'arrival_stop': 'Alpe d\'Huez Station',
-        'frequency': 'Consulter l\'horaire officiel',
+        'frequency': 'Hiver: 3-4/jour | Eté: 1-2/jour',
         'travel_time': '1h40',
         'route_points': 'Grenoble → Bourg-d\'Oisans → Alpe d\'Huez',
         'departure_latitude': 45.191887,
         'departure_longitude': 5.714684,
+        'first_departure': '06:00',
+        'last_departure': '20:30',
+        'itinerary_url': 'https://explore.alpedhuez.com/fr/acces',
+        'notes': 'Ligne directe principale. Package ski+bus disponible hiver.',
     },
     {
         'station_name': 'Villard-de-Lans / Corrençon',
         'bus_number': 'T64',
         'departure_stop': 'Grenoble Gare Routière',
         'arrival_stop': 'Villard-de-Lans Office de tourisme',
-        'frequency': 'Toutes les 60 min',
+        'frequency': 'Toutes les 60 min (hiver) | 2/jour (été)',
         'travel_time': '55 min',
         'route_points': 'Gare Routière → Seyssins → Lans-en-Vercors → Villard',
         'departure_latitude': 45.191210,
         'departure_longitude': 5.714260,
+        'first_departure': '06:30',
+        'last_departure': '20:00',
+        'itinerary_url': 'https://www.villarddelans-correnconenvercors.com/pratique/acces/',
+        'notes': 'Fréquence élevée en hiver. Accès facile depuis Grenoble.',
     },
     {
         'station_name': "Le Collet d'Allevard",
         'bus_number': 'N97',
         'departure_stop': 'Brignoud Gare',
         'arrival_stop': 'Le Collet d\'Allevard Front de neige',
-        'frequency': 'Consulter l\'horaire officiel',
+        'frequency': 'Hiver: 3/jour | Eté: 1/jour',
         'travel_time': '50 min',
         'route_points': 'Brignoud → Allevard → Le Collet',
         'departure_latitude': 45.259167,
         'departure_longitude': 5.902222,
+        'first_departure': '07:30',
+        'last_departure': '17:00',
+        'itinerary_url': 'https://www.lecollet.com/fr/acces-station/',
+        'notes': 'Station familiale. Départ depuis Brignoud via train TAG.',
     },
     {
         'station_name': 'Les 2 Alpes',
         'bus_number': 'T73',
         'departure_stop': 'Grenoble Gare SNCF',
         'arrival_stop': 'Les 2 Alpes Office de tourisme',
-        'frequency': 'Consulter l\'horaire officiel',
+        'frequency': 'Hiver: 3-4/jour | Eté: glacier ouvert 1-2/jour',
         'travel_time': '1h45',
         'route_points': 'Grenoble → Vizille → Bourg-d\'Oisans → Les 2 Alpes',
         'departure_latitude': 45.191887,
         'departure_longitude': 5.714684,
+        'first_departure': '06:30',
+        'last_departure': '19:00',
+        'itinerary_url': 'https://explore.les2alpes.com/fr/acces-station',
+        'notes': 'Station majeure avec glacier. Été: randonnée et ski alpinisme.',
     },
     {
         'station_name': 'Vaujany',
         'bus_number': 'T71',
         'departure_stop': 'Grenoble Gare SNCF',
         'arrival_stop': 'Vaujany Office de tourisme',
-        'frequency': 'Consulter l\'horaire officiel',
+        'frequency': 'Hiver: 2-3/jour | Eté: 1/jour',
         'travel_time': '1h30',
         'route_points': 'Grenoble → Allemond → Vaujany',
         'departure_latitude': 45.191887,
         'departure_longitude': 5.714684,
+        'first_departure': '07:00',
+        'last_departure': '18:00',
+        'itinerary_url': 'https://www.vaujany.com/fr/infos/acces-station/',
+        'notes': 'Station famille connectée aux 2 Alpes (Oman Express gondole).',
     },
     {
         'station_name': 'Saint-Pierre-de-Chartreuse',
         'bus_number': 'T40',
         'departure_stop': 'Grenoble Gare Routière',
         'arrival_stop': 'Saint-Pierre-de-Chartreuse Plan de Ville',
-        'frequency': 'Consulter l\'horaire officiel',
+        'frequency': 'Hiver: 2/jour | Eté: 1/jour',
         'travel_time': '1h05',
         'route_points': 'Grenoble → Saint-Laurent-du-Pont → Saint-Pierre-de-Chartreuse',
         'departure_latitude': 45.191210,
         'departure_longitude': 5.714260,
+        'first_departure': '07:00',
+        'last_departure': '17:30',
+        'itinerary_url': 'https://www.coeur-de-chartreuse.com/decouvrir/acces-pratique',
+        'notes': 'Massif de la Chartreuse. Ski et randonnée raquettes.',
     },
     {
         'station_name': 'Lans-en-Vercors',
         'bus_number': 'T65',
         'departure_stop': 'Grenoble Gare Routière',
         'arrival_stop': 'Lans-en-Vercors Centre',
-        'frequency': 'Consulter l\'horaire officiel',
+        'frequency': 'Hiver: 2/jour | Eté: 1/jour',
         'travel_time': '45 min',
         'route_points': 'Grenoble → Seyssins → Lans-en-Vercors',
         'departure_latitude': 45.191210,
         'departure_longitude': 5.714260,
+        'first_departure': '07:30',
+        'last_departure': '18:00',
+        'itinerary_url': 'https://www.lansenvercors.com/acces',
+        'notes': 'Plateforme des Vercors. Domaine familial, ski alpin et nordique.',
     },
 ]
 
@@ -608,6 +699,16 @@ def seed_ski_stations():
         station = station_by_name.get(item['station_name'])
         if not station:
             continue
+        arrival_latitude = item.get('arrival_latitude', float(station.latitude))
+        arrival_longitude = item.get('arrival_longitude', float(station.longitude))
+        detailed_route = item.get('detailed_route') or build_detailed_bus_route(
+            {
+                **item,
+                'arrival_latitude': arrival_latitude,
+                'arrival_longitude': arrival_longitude,
+            },
+            station,
+        )
         active_bus_numbers_by_station.setdefault(station.id, set()).add(item['bus_number'])
         BusLine.objects.update_or_create(
             ski_station=station,
@@ -620,6 +721,13 @@ def seed_ski_stations():
                 'route_points': item['route_points'],
                 'departure_latitude': item['departure_latitude'],
                 'departure_longitude': item['departure_longitude'],
+                'arrival_latitude': arrival_latitude,
+                'arrival_longitude': arrival_longitude,
+                'first_departure': item.get('first_departure'),
+                'last_departure': item.get('last_departure'),
+                'itinerary_url': item.get('itinerary_url'),
+                'detailed_route': detailed_route,
+                'notes': item.get('notes'),
             }
         )
 

@@ -232,6 +232,10 @@ class GrenobleSkiApiClient:
     async def stations(self):
         return await self._list_resource("/skistations/")
 
+    async def station_conditions(self):
+        data = await self._request("GET", "/skistations/conditions/", authenticated=False)
+        return self._extract_list(data)
+
     async def bus_lines(self):
         return await self._list_resource("/buslines/")
 
@@ -267,6 +271,36 @@ class GrenobleSkiApiClient:
 
     async def ski_partners(self):
         return await self._list_resource("/skipartnerposts/")
+
+    async def ski_carpools(self):
+        return await self._list_resource("/skipartnerposts/?kind=carpool")
+
+    async def my_carpool_reservations(self):
+        return await self._list_resource("/skipartnerposts/my-reservations/")
+
+    async def create_carpool(self, payload):
+        return await self._request(
+            "POST",
+            "/skipartnerposts/",
+            payload=payload,
+            authenticated=True,
+        )
+
+    async def reserve_carpool(self, post_id, seats=1):
+        return await self._request(
+            "POST",
+            f"/skipartnerposts/{post_id}/reserve/",
+            payload={"seats": int(seats)},
+            authenticated=True,
+        )
+
+    async def cancel_carpool_reservation(self, post_id):
+        return await self._request(
+            "POST",
+            f"/skipartnerposts/{post_id}/cancel_reservation/",
+            payload={},
+            authenticated=True,
+        )
 
     async def instructor_services(self):
         return await self._list_resource("/instructorservices/")

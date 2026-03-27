@@ -47,6 +47,10 @@
         background-color: #f3fbff;
     }
 
+    .bus-table-row.is-active {
+        background-color: #d9f2ff;
+    }
+
     .bus-line-chip {
         display: inline-flex;
         align-items: center;
@@ -172,29 +176,55 @@
                             <table class="table table-bordered table-hover mb-0">
                                 <thead class="table-light">
                                     <tr>
-                                        <th scope="col">{% trans "Numéro de bus" %}</th>
+                                        <th scope="col">{% trans "Numéro" %}</th>
                                         <th scope="col">{% trans "Départ" %}</th>
                                         <th scope="col">{% trans "Arrivée" %}</th>
-                                        <th scope="col">{% trans "Fréquence" %}</th>
-                                        <th scope="col">{% trans "Temps de trajet" %}</th>
-                                        <th scope="col">{% trans "Points de passage" %}</th>
-                                        <th scope="col">{% trans "Station de ski" %}</th>
+                                        <th scope="col">{% trans "Horaires" %}</th>
+                                        <th scope="col">{% trans "Temps/Fréquence" %}</th>
+                                        <th scope="col">{% trans "Itinéraire" %}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for line in bus_lines %}
-                                    <tr class="bus-table-row" data-line-url="{{ line.line_url }}" title="{% trans 'Ouvrir la fiche de cette ligne' %}">
+                                    <tr class="bus-table-row" data-line-id="{{ line.id }}">
                                         <td><span class="bus-line-chip">{{ line.bus_number }}</span></td>
-                                        <td>{{ line.departure_stop }}</td>
-                                        <td>{{ line.arrival_stop }}</td>
-                                        <td>{{ line.frequency }}</td>
-                                        <td>{{ line.travel_time }}</td>
-                                        <td>{{ line.route_points|default:"-" }}</td>
                                         <td>
-                                            {{ line.ski_station.name }}
-                                            <div><small class="text-muted">{% trans "Cliquer pour ouvrir" %}</small></div>
+                                            <strong>{{ line.departure_stop }}</strong>
+                                            {% if line.first_departure %}<br><small class="text-muted">dès {{ line.first_departure }}</small>{% endif %}
+                                        </td>
+                                        <td>
+                                            <strong>{{ line.ski_station.name }}</strong><br>
+                                            {{ line.arrival_stop }}
+                                        </td>
+                                        <td>
+                                            {% if line.first_departure and line.last_departure %}
+                                                <small>
+                                                    <i class="bi bi-clock"></i> {{ line.first_departure }} - {{ line.last_departure }}
+                                                </small>
+                                            {% else %}
+                                                <small class="text-muted">-</small>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <small>{{ line.travel_time }}</small><br>
+                                            <small class="text-muted">{{ line.frequency }}</small>
+                                        </td>
+                                        <td>
+                                            <a href="{{ line.line_url }}" class="btn btn-sm btn-outline-primary">{% trans "Voir le trajet" %}</a>
+                                            {% if line.official_url %}
+                                                <div class="mt-2">
+                                                    <a href="{{ line.official_url }}" target="_blank" rel="noopener" class="small text-muted">{% trans "Source officielle" %}</a>
+                                                </div>
+                                            {% endif %}
                                         </td>
                                     </tr>
+                                    {% if line.notes %}
+                                    <tr class="table-light">
+                                        <td colspan="6">
+                                            <small><i class="bi bi-info-circle"></i> {{ line.notes }}</small>
+                                        </td>
+                                    </tr>
+                                    {% endif %}
                                     {% endfor %}
                                 </tbody>
                             </table>
@@ -230,31 +260,74 @@
         {% endfor %}
     ];
 
+    const busRoutes = {{ bus_map_routes_json|safe }};
+
+    const routePalette = ['#0d6efd', '#198754', '#fd7e14', '#6f42c1', '#dc3545', '#20c997', '#0dcaf0', '#6610f2'];
+    const routeLayersById = {};
+
+    const setRouteActiveState = (lineId, isActive) => {
+        const routeLayer = routeLayersById[String(lineId)];
+        const row = document.querySelector(`.bus-table-row[data-line-id="${lineId}"]`);
+
+        if (row) {
+            row.classList.toggle('is-active', isActive);
+        }
+
+        if (!routeLayer) {
+            return;
+        }
+
+        routeLayer.setStyle({
+            weight: isActive ? 7 : 4,
+            opacity: isActive ? 1 : 0.75,
+        });
+
+        if (isActive) {
+            routeLayer.bringToFront();
+        }
+    };
+
+    busRoutes.forEach((route, index) => {
+        if (!route.stops || route.stops.length < 2) {
+            return;
+        }
+
+        const latLngs = route.stops.map((stop) => [stop.latitude, stop.longitude]);
+        const color = routePalette[index % routePalette.length];
+        const polyline = L.polyline(latLngs, {
+            color,
+            weight: 4,
+            opacity: 0.75,
+        }).addTo(map);
+
+        routeLayersById[String(route.id)] = polyline;
+
+        polyline.bindPopup(
+            `<strong>{% trans "Ligne" %} ${route.line}</strong><br>${route.station_name}<br><a href="${route.line_url}">{% trans "Voir le trajet" %}</a>`
+        );
+
+        polyline.on('mouseover', () => setRouteActiveState(route.id, true));
+        polyline.on('mouseout', () => setRouteActiveState(route.id, false));
+        polyline.on('click', () => {
+            window.location.href = route.line_url;
+        });
+    });
+
     busPoints.forEach((point) => {
         const popup = `<strong>{% trans "Ligne" %} ${point.line}</strong><br>${point.stop}<br>{% trans "Vers" %} ${point.station}<br>${point.route}`;
         L.marker([point.lat, point.lng]).addTo(map).bindPopup(popup);
     });
 
     document.querySelectorAll('.bus-table-row').forEach((row) => {
-        row.addEventListener('click', () => {
-            const url = row.dataset.lineUrl;
-            if (url) {
-                window.open(url, '_blank', 'noopener');
-            }
-        });
+        const lineId = row.dataset.lineId;
+        if (!lineId) {
+            return;
+        }
 
-        row.addEventListener('keypress', (event) => {
-            if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                const url = row.dataset.lineUrl;
-                if (url) {
-                    window.open(url, '_blank', 'noopener');
-                }
-            }
-        });
-
-        row.setAttribute('tabindex', '0');
-        row.setAttribute('role', 'button');
+        row.addEventListener('mouseenter', () => setRouteActiveState(lineId, true));
+        row.addEventListener('mouseleave', () => setRouteActiveState(lineId, false));
+        row.addEventListener('focusin', () => setRouteActiveState(lineId, true));
+        row.addEventListener('focusout', () => setRouteActiveState(lineId, false));
     });
 </script>
 

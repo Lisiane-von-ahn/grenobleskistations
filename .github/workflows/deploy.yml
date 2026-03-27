@@ -66,6 +66,18 @@ jobs:
               "${{ secrets.BOOTSTRAP_ADMIN_PASSWORD }}" \
               "${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}"
 
+            echo "==> Displaying migration plan before apply"
+            docker compose -f docker-compose.yml run --rm --no-deps --entrypoint "" web python manage.py migrate --plan
+
+            echo "==> Applying all Django migrations explicitly from GitHub Actions"
+            docker compose -f docker-compose.yml run --rm --no-deps --entrypoint "" web python manage.py migrate --noinput
+
+            echo "==> Verifying that no pending migrations remain"
+            docker compose -f docker-compose.yml run --rm --no-deps --entrypoint "" web python manage.py migrate --check --noinput
+
+            echo "==> Showing migration state"
+            docker compose -f docker-compose.yml run --rm --no-deps --entrypoint "" web python manage.py showmigrations
+
             REQUIRED_PATHS='["/auth/login/","/auth/register/","/auth/google-login/","/auth/me/","/auth/logout/","/messages/","/skistories/","/skipartnerposts/","/instructorservices/","/mobile/"]'
 
             check_openapi() {

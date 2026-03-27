@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}Mes reservations covoiturage{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <section class="premium-shell mb-4 p-3">
+        <div class="premium-hero">
+            <span class="premium-kicker">Covoiturage</span>
+            <h2 class="premium-title h3 mb-1">Mes reservations</h2>
+            <p class="premium-subtitle mb-0">{{ upcoming_count }} trajet(s) a venir.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2 mt-3">
+            <a class="btn btn-outline-success" href="{% url 'covoiturage' %}">Retour covoiturage</a>
+            <a class="btn btn-success" href="{% url 'ski_partner_publish' %}?kind=carpool">Publier un covoiturage</a>
+        </div>
+    </section>
+
+    <section>
+        <div class="row g-4">
+            {% for reservation in reservations %}
+            <div class="col-lg-6">
+                <article class="card border-0 shadow-sm p-4 h-100" style="border-radius: 18px;">
+                    <h5 class="mb-2">{{ reservation.post.title }}</h5>
+                    <div class="small text-muted mb-2">
+                        Organisateur: {{ reservation.post.user.username }}
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 mb-2">
+                        {% if reservation.post.ski_station %}<span class="badge bg-secondary">{{ reservation.post.ski_station.name }}</span>{% endif %}
+                        <span class="badge bg-light text-dark">Depart: {{ reservation.post.departure_city|default:reservation.post.city|default:'-' }}</span>
+                        <span class="badge bg-info text-dark">{% if reservation.post.departure_datetime %}{{ reservation.post.departure_datetime|date:'d/m/Y H:i' }}{% else %}-{% endif %}</span>
+                    </div>
+                    <p class="mb-2">{{ reservation.post.message }}</p>
+                    <div class="small text-muted mb-3">
+                        Vous avez reserve <strong>{{ reservation.seats_reserved }}</strong> place(s) - reste <strong>{{ reservation.post.seats_remaining }}</strong> place(s).
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a class="btn btn-sm btn-primary" href="{% url 'messages' %}?user={{ reservation.post.user.id }}&subject={{ reservation.post.title|urlencode }}">Contacter</a>
+                        <form method="post" class="d-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="form_type" value="cancel">
+                            <input type="hidden" name="reservation_id" value="{{ reservation.id }}">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Annuler reservation</button>
+                        </form>
+                    </div>
+                </article>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="alert alert-light border mb-0">Aucune reservation active pour le moment.</div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

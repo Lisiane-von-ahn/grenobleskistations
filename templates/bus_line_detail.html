@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load l10n %}
+
+{% block title %}{{ line.bus_number }} - {% trans "Itinéraire bus" %}{% endblock %}
+
+{% block content %}
+<style>
+    .bus-detail-card {
+        border: 0;
+        border-radius: 16px;
+        box-shadow: 0 10px 28px rgba(16, 24, 40, 0.08);
+    }
+
+    .bus-stop-list {
+        display: grid;
+        gap: 0.85rem;
+    }
+
+    .bus-stop-item {
+        display: flex;
+        gap: 0.85rem;
+        align-items: flex-start;
+        padding: 0.9rem 1rem;
+        border: 1px solid #dce5ec;
+        border-radius: 14px;
+        background: #fff;
+    }
+
+    .bus-stop-badge {
+        min-width: 2rem;
+        height: 2rem;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #0d6efd;
+        color: #fff;
+        font-weight: 700;
+    }
+
+    .bus-stop-item[data-kind="arrival"] .bus-stop-badge {
+        background: #198754;
+    }
+
+    .bus-stop-item[data-kind="intermediate"] .bus-stop-badge {
+        background: #6c757d;
+    }
+
+    @media (max-width: 767.98px) {
+        #bus-line-map {
+            height: 320px !important;
+        }
+    }
+</style>
+
+<div class="container py-4">
+    <div class="card bus-detail-card p-4 mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+            <div>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">{{ line.bus_number }}</span>
+                <h2 class="h3 mt-3 mb-2">{% trans "Trajet interne" %}</h2>
+                <p class="text-muted mb-0">{{ line.departure_stop }} → {{ line.arrival_stop }}</p>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{% url 'bus' %}" class="btn btn-outline-secondary">{% trans "Retour aux lignes" %}</a>
+                {% if official_itinerary_url %}
+                <a href="{{ official_itinerary_url }}" target="_blank" rel="noopener" class="btn btn-outline-primary">{% trans "Source officielle" %}</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-md-3">
+                <div class="p-3 rounded bg-light h-100">
+                    <small class="text-muted d-block">{% trans "Station" %}</small>
+                    <strong>{{ station.name }}</strong>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="p-3 rounded bg-light h-100">
+                    <small class="text-muted d-block">{% trans "Temps" %}</small>
+                    <strong>{{ line.travel_time|default:'-' }}</strong>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="p-3 rounded bg-light h-100">
+                    <small class="text-muted d-block">{% trans "Premier départ" %}</small>
+                    <strong>{{ line.first_departure|default:'-' }}</strong>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="p-3 rounded bg-light h-100">
+                    <small class="text-muted d-block">{% trans "Dernier départ" %}</small>
+                    <strong>{{ line.last_departure|default:'-' }}</strong>
+                </div>
+            </div>
+        </div>
+
+        {% if line.notes %}
+        <div class="alert alert-info mt-3 mb-0">{{ line.notes }}</div>
+        {% endif %}
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card bus-detail-card p-3">
+                <h5 class="mb-3">{% trans "Carte du trajet" %}</h5>
+                <div id="bus-line-map" style="height: 460px; border-radius: 14px;"></div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card bus-detail-card p-3">
+                <h5 class="mb-3">{% trans "Arrêts" %}</h5>
+                <div class="bus-stop-list">
+                    {% for stop in route_stops %}
+                    <div class="bus-stop-item" data-kind="{{ stop.kind }}">
+                        <span class="bus-stop-badge">{{ forloop.counter }}</span>
+                        <div>
+                            <strong>{{ stop.name }}</strong>
+                            <div class="small text-muted">
+                                {% if stop.kind == 'departure' %}{% trans "Départ" %}{% elif stop.kind == 'arrival' %}{% trans "Arrivée" %}{% else %}{% trans "Arrêt intermédiaire" %}{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted mb-0">{% trans "Aucun arrêt détaillé disponible pour cette ligne." %}</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ route_stops_json|json_script:"bus-route-stops" }}
+<script>
+    const stops = JSON.parse(document.getElementById('bus-route-stops').textContent || '[]');
+    const fallbackCenter = [{{ station.latitude|unlocalize }}, {{ station.longitude|unlocalize }}];
+    const map = L.map('bus-line-map').setView(fallbackCenter, 10);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: 'Map data © OpenStreetMap contributors'
+    }).addTo(map);
+
+    if (stops.length) {
+        const latLngs = stops.map((stop) => [stop.latitude, stop.longitude]);
+        const bounds = L.latLngBounds(latLngs);
+
+        L.polyline(latLngs, {
+            color: '#0d6efd',
+            weight: 4,
+            opacity: 0.8,
+        }).addTo(map);
+
+        stops.forEach((stop, index) => {
+            const label = stop.kind === 'departure'
+                ? '{% trans "Départ" %}'
+                : (stop.kind === 'arrival' ? '{% trans "Arrivée" %}' : '{% trans "Arrêt" %}');
+
+            L.marker([stop.latitude, stop.longitude])
+                .addTo(map)
+                .bindPopup(`<strong>${index + 1}. ${stop.name}</strong><br>${label}`);
+        });
+
+        map.fitBounds(bounds.pad(0.15));
+    }
+</script>
+{% endblock %}

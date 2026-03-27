@@ -55,6 +55,7 @@ CSRF_COOKIE_SECURE = not DEBUG
 SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 
 WEATHER_API_KEY = os.getenv('WEATHER_API_KEY', 'qssdsdsd')
+GOOGLE_PLACES_API_KEY = os.getenv('GOOGLE_PLACES_API_KEY', '').strip()
 
 # Ads configuration (web)
 ENABLE_WEB_ADS = env_bool('ENABLE_WEB_ADS', False)
@@ -129,6 +130,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'skistation_project.middleware.UsageAnalyticsMiddleware',
     'skistation_project.middleware.ForcePasswordResetMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',

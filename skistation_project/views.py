@@ -17,6 +17,7 @@ from api.models import (
     MarketplaceDeal,
     MarketplaceUserRating,
     SkiPartnerPost,
+    CarpoolReservation,
     SkiPartnerReport,
     SkiStory,
     UserProfile,
@@ -58,8 +59,10 @@ import base64
 from html import escape
 import json
 import os
-from datetime import timedelta, date
+from datetime import timedelta, date, datetime
 from urllib.parse import quote_plus, urlencode
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 import re
 from django.utils.translation import check_for_language
 from django.utils import translation
@@ -88,6 +91,63 @@ def _partner_organizer_display(user):
     if first or last:
         return f"{first} {last}".strip()
     return user.username
+
+
+def _carpool_keyword_filter():
+    return (
+        Q(is_carpool=True)
+        | Q(title__icontains='covoitur')
+        | Q(message__icontains='covoitur')
+        | Q(title__icontains='carpool')
+        | Q(message__icontains='carpool')
+        | Q(title__icontains='trajet')
+        | Q(message__icontains='trajet')
+        | Q(title__icontains='voiture')
+        | Q(message__icontains='voiture')
+        | Q(title__icontains='ride share')
+        | Q(message__icontains='ride share')
+    )
+
+
+def _fetch_google_place_rating(station):
+    api_key = (getattr(settings, 'GOOGLE_PLACES_API_KEY', '') or '').strip()
+    if not api_key:
+        return None
+
+    query = f"{station.name} ski resort"
+    params = urlencode(
+        {
+            'query': query,
+            'location': f"{station.latitude},{station.longitude}",
+            'radius': 30000,
+            'type': 'tourist_attraction',
+            'key': api_key,
+        }
+    )
+    url = f"https://maps.googleapis.com/maps/api/place/textsearch/json?{params}"
+    request = Request(url, headers={'User-Agent': 'GrenobleSki/1.0'})
+
+    try:
+        with urlopen(request, timeout=2.5) as response:
+            payload = json.loads(response.read().decode('utf-8'))
+    except (HTTPError, URLError, TimeoutError, ValueError):
+        return None
+
+    if payload.get('status') not in ('OK', 'ZERO_RESULTS'):
+        return None
+    results = payload.get('results') or []
+    if not results:
+        return None
+
+    first = results[0]
+    place_id = first.get('place_id', '')
+    return {
+        'name': first.get('name') or station.name,
+        'rating': first.get('rating'),
+        'review_count': first.get('user_ratings_total', 0),
+        'place_id': place_id,
+        'maps_url': f"https://www.google.com/maps/place/?q=place_id:{place_id}" if place_id else '',
+    }
 
 
 def _build_circuit_breakdown(circuits_by_difficulty, total_pistes):
@@ -131,6 +191,69 @@ def _build_circuit_breakdown_summary(circuit_breakdown):
     if not visible_items:
         return ''
     return ' | '.join(f"{item['label']}: {item['num_pistes']}" for item in visible_items)
+
+
+def _build_bus_route_stops(line):
+    detailed_route = getattr(line, 'detailed_route', None) or []
+    cleaned_stops = []
+
+    for index, stop in enumerate(detailed_route):
+        if not isinstance(stop, dict):
+            continue
+        lat = stop.get('latitude')
+        lng = stop.get('longitude')
+        if lat is None or lng is None:
+            continue
+        cleaned_stops.append(
+            {
+                'name': stop.get('name') or f'Arret {index + 1}',
+                'latitude': float(lat),
+                'longitude': float(lng),
+                'kind': stop.get('kind') or 'intermediate',
+                'order': stop.get('order') or (index + 1),
+            }
+        )
+
+    if cleaned_stops:
+        return cleaned_stops
+
+    departure_lat = getattr(line, 'departure_latitude', None)
+    departure_lng = getattr(line, 'departure_longitude', None)
+    arrival_lat = getattr(line, 'arrival_latitude', None) or getattr(line.ski_station, 'latitude', None)
+    arrival_lng = getattr(line, 'arrival_longitude', None) or getattr(line.ski_station, 'longitude', None)
+
+    if None in (departure_lat, departure_lng, arrival_lat, arrival_lng):
+        return []
+
+    route_names = [segment.strip() for segment in (getattr(line, 'route_points', '') or '').split('→') if segment.strip()]
+    stop_names = [line.departure_stop]
+    for name in route_names[1:-1]:
+        if name not in stop_names:
+            stop_names.append(name)
+    if line.arrival_stop not in stop_names:
+        stop_names.append(line.arrival_stop)
+
+    segment_count = max(len(stop_names) - 1, 1)
+    generated = []
+    for index, name in enumerate(stop_names):
+        ratio = index / segment_count
+        kind = 'intermediate'
+        if index == 0:
+            kind = 'departure'
+        elif index == len(stop_names) - 1:
+            kind = 'arrival'
+
+        generated.append(
+            {
+                'name': name,
+                'latitude': float(departure_lat) + ((float(arrival_lat) - float(departure_lat)) * ratio),
+                'longitude': float(departure_lng) + ((float(arrival_lng) - float(departure_lng)) * ratio),
+                'kind': kind,
+                'order': index + 1,
+            }
+        )
+
+    return generated
 
 
 def home(request):
@@ -190,7 +313,7 @@ def home(request):
 
 def ski_station_detail(request, station_id):
     ski_station = get_object_or_404(
-        SkiStation.objects.annotate(num_circuits=Coalesce(Sum('skicircuit__num_pistes'), Value(0))),
+        SkiStation.objects.prefetch_related('cameras', 'bus_lines').annotate(num_circuits=Coalesce(Sum('skicircuit__num_pistes'), Value(0))),
         id=station_id,
     )
     bus_lines = BusLine.objects.filter(ski_station=ski_station)
@@ -302,6 +425,7 @@ def ski_station_detail(request, station_id):
     destination = f"{ski_station.latitude},{ski_station.longitude}"
     station_transit_url = f"https://www.google.com/maps/dir/?api=1&destination={destination}&travelmode=transit"
     station_driving_url = f"https://www.google.com/maps/dir/?api=1&destination={destination}&travelmode=driving"
+    google_place_rating = _fetch_google_place_rating(ski_station)
 
     context = {
         'station': ski_station,
@@ -326,6 +450,7 @@ def ski_station_detail(request, station_id):
         'piste_chart_reports': json.dumps(chart_reports),
         'piste_chart_ratings': json.dumps(chart_ratings),
         'piste_chart_crowd': json.dumps(chart_crowd),
+        'google_place_rating': google_place_rating,
     }
 
     return render(request, 'details.html', context)
@@ -506,8 +631,10 @@ def bus_lines(request):
 
     bus_lines_data = []
     bus_map_points = []
+    bus_map_routes = []
     for line in lines:
-        line_url = _line_url(line)
+        official_url = getattr(line, 'itinerary_url', None) or _line_url(line)
+        route_stops = _build_bus_route_stops(line)
         item = {
             'id': line.id,
             'bus_number': line.bus_number,
@@ -517,9 +644,25 @@ def bus_lines(request):
             'travel_time': line.travel_time,
             'route_points': getattr(line, 'route_points', ''),
             'ski_station': line.ski_station,
-            'line_url': line_url,
+            'line_url': reverse('bus_line_detail', args=[line.id]),
+            'official_url': official_url,
+            'first_departure': getattr(line, 'first_departure', None),
+            'last_departure': getattr(line, 'last_departure', None),
+            'itinerary_url': getattr(line, 'itinerary_url', None),
+            'notes': getattr(line, 'notes', None),
         }
         bus_lines_data.append(item)
+
+        if route_stops:
+            bus_map_routes.append(
+                {
+                    'id': line.id,
+                    'line': line.bus_number,
+                    'station_name': line.ski_station.name if line.ski_station else '',
+                    'line_url': reverse('bus_line_detail', args=[line.id]),
+                    'stops': route_stops,
+                }
+            )
 
         dep_lat = getattr(line, 'departure_latitude', None)
         dep_lng = getattr(line, 'departure_longitude', None)
@@ -552,9 +695,24 @@ def bus_lines(request):
         'transit_url': transit_url,
         'driving_url': driving_url,
         'bus_map_points': bus_map_points,
+        'bus_map_routes_json': json.dumps(bus_map_routes),
     }
 
     return render(request, 'bus.html', context)
+
+
+def bus_line_detail(request, line_id):
+    line = get_object_or_404(BusLine.objects.select_related('ski_station'), id=line_id)
+    route_stops = _build_bus_route_stops(line)
+
+    context = {
+        'line': line,
+        'station': line.ski_station,
+        'route_stops': route_stops,
+        'route_stops_json': json.dumps(route_stops),
+        'official_itinerary_url': getattr(line, 'itinerary_url', None),
+    }
+    return render(request, 'bus_line_detail.html', context)
 
 def terms_and_conditions(request):
     return render(request, 'terms.html')
@@ -1064,12 +1222,15 @@ def listing_detail(request, id):
 
 
 def ski_partners(request):
+    kind = request.GET.get('kind', '').strip().lower()
     station_id = request.GET.get('station', '').strip()
     level = request.GET.get('level', '').strip()
     city = request.GET.get('city', '').strip()
 
     posts = SkiPartnerPost.objects.filter(is_active=True).select_related('user', 'ski_station').annotate(report_count=Count('reports'))
     posts = posts.filter(report_count__lt=3)
+    if kind == 'carpool':
+        posts = posts.filter(_carpool_keyword_filter())
     if station_id:
         posts = posts.filter(ski_station_id=station_id)
     if level:
@@ -1085,7 +1246,7 @@ def ski_partners(request):
             if post:
                 post.delete()
                 messages.success(request, 'Annonce partenaire supprimee.')
-            return redirect('ski_partners')
+            return redirect('covoiturage' if kind == 'carpool' else 'ski_partners')
 
         if form_type == 'report':
             post_id = request.POST.get('post_id', '').strip()
@@ -1102,11 +1263,72 @@ def ski_partners(request):
                     post.is_active = False
                     post.save(update_fields=['is_active'])
                 messages.success(request, 'Signalement enregistre.')
-            return redirect('ski_partners')
+            return redirect('covoiturage' if kind == 'carpool' else 'ski_partners')
+
+        if form_type == 'reserve' and kind == 'carpool':
+            post_id = request.POST.get('post_id', '').strip()
+            seats_requested = request.POST.get('seats', '1').strip()
+            try:
+                seats_requested = max(1, int(seats_requested))
+            except ValueError:
+                seats_requested = 1
+
+            post = SkiPartnerPost.objects.filter(id=post_id, is_active=True).first()
+            if not post or not post.is_carpool:
+                messages.error(request, 'Covoiturage introuvable.')
+                return redirect('covoiturage')
+            if post.user_id == request.user.id:
+                messages.error(request, 'Impossible de reserver votre propre trajet.')
+                return redirect('covoiturage')
+
+            seats_taken_other = int(
+                CarpoolReservation.objects.filter(post=post, status=CarpoolReservation.STATUS_ACTIVE)
+                .exclude(user=request.user)
+                .aggregate(total=Sum('seats_reserved'))['total']
+                or 0
+            )
+            seats_left = max(int(post.total_seats or 0) - seats_taken_other, 0)
+            if seats_requested > seats_left:
+                messages.error(request, f'Plus assez de places disponibles ({seats_left} restante(s)).')
+                return redirect('covoiturage')
+
+            CarpoolReservation.objects.update_or_create(
+                post=post,
+                user=request.user,
+                defaults={
+                    'seats_reserved': seats_requested,
+                    'status': CarpoolReservation.STATUS_ACTIVE,
+                },
+            )
+            messages.success(request, 'Reservation enregistree.')
+            return redirect('covoiturage')
+
+        if form_type == 'cancel_reserve' and kind == 'carpool':
+            post_id = request.POST.get('post_id', '').strip()
+            reservation = CarpoolReservation.objects.filter(
+                post_id=post_id,
+                user=request.user,
+                status=CarpoolReservation.STATUS_ACTIVE,
+            ).first()
+            if reservation:
+                reservation.status = CarpoolReservation.STATUS_CANCELLED
+                reservation.save(update_fields=['status', 'updated_at'])
+                messages.success(request, 'Reservation annulee.')
+            return redirect('covoiturage')
 
     post_list = list(posts[:60])
     for post in post_list:
         post.organizer_display = _partner_organizer_display(post.user)
+        if post.is_carpool:
+            post.my_reservation = (
+                CarpoolReservation.objects.filter(
+                    post=post,
+                    user=request.user,
+                    status=CarpoolReservation.STATUS_ACTIVE,
+                ).first()
+                if request.user.is_authenticated
+                else None
+            )
 
     # Statistiques top stations/services
     top_stations_services = (
@@ -1115,6 +1337,9 @@ def ski_partners(request):
         .values('name', 'count')
     )
     total_partners = SkiPartnerPost.objects.filter(is_active=True).count()
+    total_carpools = SkiPartnerPost.objects.filter(
+        is_active=True,
+    ).filter(_carpool_keyword_filter()).count()
 
     return render(
         request,
@@ -1128,12 +1353,67 @@ def ski_partners(request):
             'level_choices': SkiPartnerPost.LEVEL_CHOICES,
             'top_stations_services': top_stations_services,
             'total_partners': total_partners,
+            'total_carpools': total_carpools,
+            'is_carpool_page': kind == 'carpool',
+            'kind': kind,
+        },
+    )
+
+
+def covoiturage(request):
+    request.GET = request.GET.copy()
+    request.GET['kind'] = 'carpool'
+    return ski_partners(request)
+
+
+@login_required
+def my_carpool_reservations(request):
+    if request.method == 'POST':
+        form_type = (request.POST.get('form_type') or '').strip()
+        if form_type == 'cancel':
+            reservation_id = (request.POST.get('reservation_id') or '').strip()
+            reservation = CarpoolReservation.objects.filter(
+                id=reservation_id,
+                user=request.user,
+                status=CarpoolReservation.STATUS_ACTIVE,
+            ).select_related('post').first()
+            if reservation:
+                reservation.status = CarpoolReservation.STATUS_CANCELLED
+                reservation.save(update_fields=['status', 'updated_at'])
+                messages.success(request, 'Reservation annulee.')
+            return redirect('my_carpool_reservations')
+
+    reservations = list(
+        CarpoolReservation.objects.filter(
+            user=request.user,
+            status=CarpoolReservation.STATUS_ACTIVE,
+            post__is_active=True,
+            post__is_carpool=True,
+        )
+        .select_related('post', 'post__ski_station', 'post__user')
+        .order_by('post__departure_datetime', '-created_at')[:120]
+    )
+
+    now_dt = timezone.now()
+    upcoming_count = sum(
+        1 for reservation in reservations if reservation.post.departure_datetime and reservation.post.departure_datetime >= now_dt
+    )
+
+    return render(
+        request,
+        'my_carpool_reservations.html',
+        {
+            'reservations': reservations,
+            'upcoming_count': upcoming_count,
         },
     )
 
 
 @login_required
 def ski_partner_publish(request):
+    kind = (request.GET.get('kind') or request.POST.get('kind') or '').strip().lower()
+    is_carpool_mode = kind == 'carpool'
+
     if request.method == 'POST':
         title = request.POST.get('title', '').strip()
         message_body = request.POST.get('message', '').strip()
@@ -1141,6 +1421,16 @@ def ski_partner_publish(request):
         preferred_date = request.POST.get('preferred_date', '').strip() or None
         city_post = request.POST.get('city', '').strip()
         station_post = request.POST.get('ski_station', '').strip() or None
+        departure_city = request.POST.get('departure_city', '').strip()
+        departure_date = request.POST.get('departure_date', '').strip()
+        departure_time = request.POST.get('departure_time', '').strip()
+        vehicle_image_url = request.POST.get('vehicle_image_url', '').strip()
+        total_seats_raw = request.POST.get('total_seats', '1').strip()
+
+        try:
+            total_seats = max(1, int(total_seats_raw or '1'))
+        except ValueError:
+            total_seats = 1
 
         valid_levels = {choice[0] for choice in SkiPartnerPost.LEVEL_CHOICES}
         title = _mask_sensitive_contact_data(title[:120])
@@ -1172,18 +1462,42 @@ def ski_partner_publish(request):
                 messages.error(request, 'La date de sortie doit etre aujourd\'hui ou plus tard.')
                 return redirect('ski_partner_publish')
             preferred_date = parsed_date
-        else:
-            SkiPartnerPost.objects.create(
-                user=request.user,
-                ski_station_id=int(station_post) if station_post and station_post.isdigit() else None,
-                title=title,
-                message=message_body,
-                city=city_post[:80],
-                skill_level=skill_level,
-                preferred_date=preferred_date,
-            )
-            messages.success(request, 'Sortie partenaire publiee.')
-            return redirect('ski_partners')
+
+        departure_dt = None
+        if is_carpool_mode:
+            if not departure_city:
+                messages.error(request, 'Ville de depart requise pour un covoiturage.')
+                return redirect('ski_partner_publish')
+            if not departure_date or not departure_time:
+                messages.error(request, 'Date et heure de depart requises pour un covoiturage.')
+                return redirect('ski_partner_publish')
+            try:
+                departure_dt = timezone.make_aware(
+                    datetime.fromisoformat(f"{departure_date}T{departure_time}:00")
+                )
+            except ValueError:
+                messages.error(request, 'Date/heure de depart invalide.')
+                return redirect('ski_partner_publish')
+            if departure_dt < timezone.now():
+                messages.error(request, 'Le depart doit etre dans le futur.')
+                return redirect('ski_partner_publish')
+
+        SkiPartnerPost.objects.create(
+            user=request.user,
+            ski_station_id=int(station_post) if station_post and station_post.isdigit() else None,
+            title=title,
+            message=message_body,
+            city=city_post[:80],
+            skill_level=skill_level,
+            preferred_date=preferred_date,
+            is_carpool=is_carpool_mode,
+            departure_city=(departure_city or city_post)[:80] if is_carpool_mode else '',
+            departure_datetime=departure_dt,
+            total_seats=total_seats if is_carpool_mode else 1,
+            vehicle_image_url=vehicle_image_url if is_carpool_mode else '',
+        )
+        messages.success(request, 'Sortie partenaire publiee.')
+        return redirect('covoiturage' if is_carpool_mode else 'ski_partners')
 
     return render(
         request,
@@ -1191,6 +1505,7 @@ def ski_partner_publish(request):
         {
             'stations': SkiStation.objects.order_by('name'),
             'level_choices': SkiPartnerPost.LEVEL_CHOICES,
+            'is_carpool_mode': is_carpool_mode,
         },
     )
 
@@ -1751,7 +2066,8 @@ def instructors_list(request):
 
     # Statistiques top stations par nombre de moniteurs/services
     top_stations_instructors = (
-        SkiStation.objects.annotate(count=Count('instructorprofile', distinct=True))
+        SkiStation.objects.annotate(count=Count('instructor_services__instructor', distinct=True))
+        .filter(count__gt=0)
         .order_by('-count', 'name')[:5]
         .values('name', 'count')
     )

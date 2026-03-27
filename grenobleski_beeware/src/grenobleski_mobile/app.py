@@ -19,6 +19,7 @@ class GrenobleSkiMobile(toga.App):
         self.capabilities = {}
 
         self.stations_data = []
+        self.station_conditions_data = []
         self.bus_data = []
         self.services_data = []
         self.market_data = []
@@ -26,6 +27,8 @@ class GrenobleSkiMobile(toga.App):
         self.messages_data = []
         self.stories_data = []
         self.partners_data = []
+        self.carpool_data = []
+        self.carpool_reservations_data = []
         self.instructors_data = []
         self.cameras_data = []
 
@@ -305,6 +308,8 @@ class GrenobleSkiMobile(toga.App):
             keys.append("stories")
         if self.capabilities.get("has_partners"):
             keys.append("partners")
+            keys.append("carpool")
+            keys.append("reservations")
         if self.capabilities.get("has_instructors"):
             keys.append("instructors")
         if self.capabilities.get("has_messages"):
@@ -404,6 +409,41 @@ class GrenobleSkiMobile(toga.App):
             style=Pack(direction=COLUMN, flex=1),
         )
 
+        carpool_refresh = toga.Button(self.t("refresh"), on_press=self.on_refresh_carpool, style=Pack(width=120))
+        self.carpool_title_input = toga.TextInput(placeholder=self.t("carpool_title"), style=Pack(padding_bottom=6))
+        self.carpool_message_input = toga.MultilineTextInput(placeholder=self.t("carpool_message"), style=Pack(height=70, padding_bottom=6))
+        self.carpool_departure_city_input = toga.TextInput(placeholder=self.t("departure_city_input"), style=Pack(padding_bottom=6))
+        self.carpool_departure_date_input = toga.TextInput(placeholder=self.t("departure_date_input"), style=Pack(padding_bottom=6))
+        self.carpool_departure_time_input = toga.TextInput(placeholder=self.t("departure_time_input"), style=Pack(padding_bottom=6))
+        self.carpool_seats_input = toga.TextInput(placeholder=self.t("seats_input"), value="3", style=Pack(padding_bottom=6, width=120))
+        self.carpool_station_id_input = toga.TextInput(placeholder=self.t("station_id_optional"), style=Pack(padding_bottom=6, width=180))
+        carpool_publish = toga.Button(self.t("publish_carpool"), on_press=self.on_create_carpool, style=Pack(width=190))
+        carpool_form_line = toga.Box(
+            children=[self.carpool_seats_input, self.carpool_station_id_input, carpool_publish],
+            style=Pack(direction=ROW, padding_bottom=6),
+        )
+        self.carpool_list_box = toga.Box(style=Pack(direction=COLUMN))
+        self.carpool_section = toga.Box(
+            children=[
+                carpool_refresh,
+                self.carpool_title_input,
+                self.carpool_message_input,
+                self.carpool_departure_city_input,
+                self.carpool_departure_date_input,
+                self.carpool_departure_time_input,
+                carpool_form_line,
+                toga.ScrollContainer(content=self.carpool_list_box, style=Pack(flex=1, padding_top=8)),
+            ],
+            style=Pack(direction=COLUMN, flex=1),
+        )
+
+        reservations_refresh = toga.Button(self.t("refresh"), on_press=self.on_refresh_reservations, style=Pack(width=120))
+        self.reservations_list_box = toga.Box(style=Pack(direction=COLUMN))
+        self.reservations_section = toga.Box(
+            children=[reservations_refresh, toga.ScrollContainer(content=self.reservations_list_box, style=Pack(flex=1, padding_top=8))],
+            style=Pack(direction=COLUMN, flex=1),
+        )
+
         instructors_refresh = toga.Button(self.t("refresh"), on_press=self.on_refresh_instructors, style=Pack(width=120))
         self.instructors_list_box = toga.Box(style=Pack(direction=COLUMN))
         self.instructors_section = toga.Box(
@@ -460,6 +500,8 @@ class GrenobleSkiMobile(toga.App):
             "cameras": self.cameras_section,
             "stories": self.stories_section,
             "partners": self.partners_section,
+            "carpool": self.carpool_section,
+            "reservations": self.reservations_section,
             "instructors": self.instructors_section,
             "messages": self.messages_section,
             "profile": self.profile_section,
@@ -488,6 +530,8 @@ class GrenobleSkiMobile(toga.App):
             counters.append(self.t("stories_count", count=len(self.stories_data)))
         if self.capabilities.get("has_partners"):
             counters.append(self.t("partners_count", count=len(self.partners_data)))
+            counters.append(self.t("carpool_count", count=len(self.carpool_data)))
+            counters.append(self.t("reservations_count", count=len(self.carpool_reservations_data)))
         if self.capabilities.get("has_instructors"):
             counters.append(self.t("instructors_count", count=len(self.instructors_data)))
         if self.capabilities.get("has_messages"):
@@ -577,6 +621,12 @@ class GrenobleSkiMobile(toga.App):
         if query:
             data = [item for item in data if query in (item.get("name") or "").lower()]
 
+        conditions_by_station = {
+            item.get("id"): item
+            for item in self.station_conditions_data
+            if isinstance(item, dict) and item.get("id") is not None
+        }
+
         if not data:
             self.stations_list_box.add(toga.Label(self.t("empty"), style=Pack(color=COLORS["muted_text"], padding=8)))
             return
@@ -587,6 +637,18 @@ class GrenobleSkiMobile(toga.App):
                 f"{self.t('station')}: {station.get('distanceFromGrenoble', '-')} km",
                 f"Altitude: {station.get('altitude', '-')}m",
             ]
+
+            condition = conditions_by_station.get(station.get("id"))
+            if condition:
+                rating_avg = condition.get("rating_avg")
+                crowd_label = condition.get("crowd_label")
+                snow_depth = condition.get("snow_depth_cm")
+                if rating_avg is not None:
+                    lines.append(f"⭐ Pistes: {rating_avg}/5")
+                if crowd_label:
+                    lines.append(f"Affluence: {crowd_label}")
+                if snow_depth is not None:
+                    lines.append(f"Neige: {snow_depth} cm")
             
             # Add camera count if available
             cameras = station.get('cameras', [])
@@ -650,12 +712,13 @@ class GrenobleSkiMobile(toga.App):
                 lines.append(f"ℹ️ {notes}")
             
             card = self._make_card(title, lines)
-            
-            # Add "View Itinerary" button if URL available
-            if line.get('itinerary_url'):
+
+            line_id = line.get("id")
+            if line_id:
+                route_url = self.api.website_url(f"/bus/{line_id}/")
                 view_button = toga.Button(
-                    self.t("view_itinerary") if self.lang == "fr" else "View Itinerary",
-                    on_press=lambda w, url=line.get('itinerary_url'): self._open_external_url(url),
+                    self.t("view_route"),
+                    on_press=lambda w, url=route_url: self._open_external_url(url),
                     style=Pack(
                         background_color=COLORS["accent"],
                         color=COLORS["accent_text"],
@@ -664,6 +727,19 @@ class GrenobleSkiMobile(toga.App):
                     ),
                 )
                 card.add(view_button)
+
+            if line.get('itinerary_url'):
+                source_button = toga.Button(
+                    self.t("official_source"),
+                    on_press=lambda w, url=line.get('itinerary_url'): self._open_external_url(url),
+                    style=Pack(
+                        background_color=COLORS["auth_secondary"],
+                        color=COLORS["title_text"],
+                        padding=6,
+                        font_size=10,
+                    ),
+                )
+                card.add(source_button)
             
             self.bus_list_box.add(card)
 
@@ -810,10 +886,99 @@ class GrenobleSkiMobile(toga.App):
             title = post.get("title") or "Partner"
             lines = [
                 f"{self.t('city')}: {post.get('city', '-')}",
-                f"{self.t('station')}: {post.get('ski_station', '-')}",
+                f"{self.t('station')}: {post.get('ski_station_name') or post.get('ski_station', '-')}",
                 f"Level: {post.get('skill_level', '-')}",
             ]
             self.partners_list_box.add(self._make_card(title, lines))
+
+    def _render_carpool_list(self):
+        self._clear_box(self.carpool_list_box)
+        if not self.carpool_data:
+            self.carpool_list_box.add(toga.Label(self.t("empty"), style=Pack(color=COLORS["muted_text"], padding=8)))
+            return
+
+        for post in self.carpool_data:
+            title = post.get("title") or "Covoiturage"
+            lines = [
+                f"{self.t('city')}: {post.get('city', '-')}",
+                f"{self.t('station')}: {post.get('ski_station_name') or post.get('ski_station', '-')}",
+                f"Level: {post.get('skill_level', '-')}",
+            ]
+            remaining = post.get('seats_remaining', 0)
+            total_seats = post.get('total_seats', 0)
+            if total_seats:
+                lines.append(f"{self.t('seats')}: {remaining}/{total_seats}")
+            if post.get('departure_city'):
+                lines.append(f"{self.t('departure')}: {post.get('departure_city')}")
+            if post.get('departure_datetime'):
+                lines.append(f"{self.t('departure_time')}: {post.get('departure_datetime')}")
+            message = (post.get('message') or '').strip()
+            if message:
+                lines.append(message[:120])
+            card = self._make_card(title, lines)
+
+            my_reserved = int(post.get('my_reserved_seats') or 0)
+            post_id = post.get('id')
+            if post_id and post.get('is_carpool'):
+                if my_reserved > 0:
+                    cancel_btn = toga.Button(
+                        self.t("cancel_seat"),
+                        on_press=lambda w, pid=post_id: asyncio.create_task(self._cancel_carpool_seat(pid)),
+                        style=Pack(
+                            background_color=COLORS["auth_secondary"],
+                            color=COLORS["title_text"],
+                            padding=6,
+                            font_size=10,
+                        ),
+                    )
+                    card.add(cancel_btn)
+                elif remaining > 0:
+                    reserve_btn = toga.Button(
+                        self.t("reserve_seat"),
+                        on_press=lambda w, pid=post_id: asyncio.create_task(self._reserve_carpool_seat(pid)),
+                        style=Pack(
+                            background_color=COLORS["accent"],
+                            color=COLORS["accent_text"],
+                            padding=6,
+                            font_size=10,
+                        ),
+                    )
+                    card.add(reserve_btn)
+
+            self.carpool_list_box.add(card)
+
+    def _render_reservations_list(self):
+        self._clear_box(self.reservations_list_box)
+        if not self.carpool_reservations_data:
+            self.reservations_list_box.add(toga.Label(self.t("empty"), style=Pack(color=COLORS["muted_text"], padding=8)))
+            return
+
+        for item in self.carpool_reservations_data:
+            post = item.get('post') or {}
+            title = post.get('title') or self.t('my_reservations')
+            lines = [
+                f"{self.t('station')}: {post.get('ski_station_name') or post.get('ski_station', '-')}",
+                f"{self.t('departure')}: {post.get('departure_city') or post.get('city', '-')}",
+                f"{self.t('departure_time')}: {post.get('departure_datetime', '-')}",
+                f"{self.t('seats')}: {item.get('seats_reserved', 0)}",
+            ]
+            card = self._make_card(title, lines)
+
+            post_id = post.get('id')
+            if post_id:
+                cancel_btn = toga.Button(
+                    self.t("cancel_seat"),
+                    on_press=lambda w, pid=post_id: asyncio.create_task(self._cancel_carpool_seat(pid, refresh_reservations=True)),
+                    style=Pack(
+                        background_color=COLORS["auth_secondary"],
+                        color=COLORS["title_text"],
+                        padding=6,
+                        font_size=10,
+                    ),
+                )
+                card.add(cancel_btn)
+
+            self.reservations_list_box.add(card)
 
     def _render_instructors_list(self):
         self._clear_box(self.instructors_list_box)
@@ -894,6 +1059,8 @@ class GrenobleSkiMobile(toga.App):
             self._render_stories_list()
         if self.capabilities.get("has_partners"):
             self._render_partners_list()
+            self._render_carpool_list()
+            self._render_reservations_list()
         if self.capabilities.get("has_instructors"):
             self._render_instructors_list()
         if self.capabilities.get("has_messages"):
@@ -921,6 +1088,7 @@ class GrenobleSkiMobile(toga.App):
 
         jobs = [
             ("stations_data", self.api.stations),
+            ("station_conditions_data", self.api.station_conditions),
             ("bus_data", self.api.bus_lines),
             ("services_data", self.api.services),
             ("market_data", self.api.marketplace),
@@ -931,6 +1099,8 @@ class GrenobleSkiMobile(toga.App):
             jobs.append(("stories_data", self.api.stories))
         if self.capabilities.get("has_partners"):
             jobs.append(("partners_data", self.api.ski_partners))
+            jobs.append(("carpool_data", self.api.ski_carpools))
+            jobs.append(("carpool_reservations_data", self.api.my_carpool_reservations))
         if self.capabilities.get("has_instructors"):
             jobs.append(("instructors_data", self.api.instructor_services))
         if self.capabilities.get("has_messages"):
@@ -995,6 +1165,7 @@ class GrenobleSkiMobile(toga.App):
         self._set_status("status_loading")
         try:
             self.stations_data = await self.api.stations()
+            self.station_conditions_data = await self.api.station_conditions()
             self._render_stations_list()
             self._refresh_summary()
             self._set_status("status_ready")
@@ -1061,6 +1232,103 @@ class GrenobleSkiMobile(toga.App):
         try:
             self.partners_data = await self.api.ski_partners()
             self._render_partners_list()
+            self._refresh_summary()
+            self._set_status("status_ready")
+        except ApiError as exc:
+            self._set_status("status_error", message=str(exc))
+
+    def on_refresh_carpool(self, widget):
+        asyncio.create_task(self._refresh_carpool_only())
+
+    async def _refresh_carpool_only(self):
+        self._set_status("status_loading")
+        try:
+            self.carpool_data = await self.api.ski_carpools()
+            self._render_carpool_list()
+            self._refresh_summary()
+            self._set_status("status_ready")
+        except ApiError as exc:
+            self._set_status("status_error", message=str(exc))
+
+    def on_create_carpool(self, widget):
+        asyncio.create_task(self._create_carpool_post())
+
+    async def _create_carpool_post(self):
+        title = (self.carpool_title_input.value or "").strip()
+        message = (self.carpool_message_input.value or "").strip()
+        departure_city = (self.carpool_departure_city_input.value or "").strip()
+        departure_date = (self.carpool_departure_date_input.value or "").strip()
+        departure_time = (self.carpool_departure_time_input.value or "").strip()
+        seats_raw = (self.carpool_seats_input.value or "1").strip()
+        station_id_raw = (self.carpool_station_id_input.value or "").strip()
+
+        if not title or not message or not departure_city or not departure_date or not departure_time:
+            self._set_status("status_error", message=self.t("missing_carpool_fields"))
+            return
+
+        try:
+            seats = max(1, int(seats_raw))
+        except ValueError:
+            seats = 1
+
+        payload = {
+            "title": title,
+            "message": message,
+            "city": departure_city,
+            "skill_level": "intermediate",
+            "is_carpool": True,
+            "departure_city": departure_city,
+            "departure_datetime": f"{departure_date}T{departure_time}:00",
+            "total_seats": seats,
+        }
+        if station_id_raw.isdigit():
+            payload["ski_station"] = int(station_id_raw)
+
+        self._set_status("status_loading")
+        try:
+            await self.api.create_carpool(payload)
+            self.carpool_title_input.value = ""
+            self.carpool_message_input.value = ""
+            self.carpool_departure_city_input.value = ""
+            self.carpool_departure_date_input.value = ""
+            self.carpool_departure_time_input.value = ""
+            self._set_status("status_ready")
+            await self._refresh_carpool_only()
+            await self._refresh_reservations_only()
+            self.main_window.info_dialog("Info", self.t("carpool_created"))
+        except ApiError as exc:
+            self._set_status("status_error", message=str(exc))
+
+    async def _reserve_carpool_seat(self, post_id):
+        self._set_status("status_loading")
+        try:
+            await self.api.reserve_carpool(post_id, seats=1)
+            self._set_status("status_ready")
+            await self._refresh_carpool_only()
+            self.main_window.info_dialog("Info", self.t("reservation_saved"))
+        except ApiError as exc:
+            self._set_status("status_error", message=str(exc))
+
+    async def _cancel_carpool_seat(self, post_id, refresh_reservations=False):
+        self._set_status("status_loading")
+        try:
+            await self.api.cancel_carpool_reservation(post_id)
+            self._set_status("status_ready")
+            await self._refresh_carpool_only()
+            if refresh_reservations:
+                await self._refresh_reservations_only()
+            self.main_window.info_dialog("Info", self.t("reservation_cancelled"))
+        except ApiError as exc:
+            self._set_status("status_error", message=str(exc))
+
+    def on_refresh_reservations(self, widget):
+        asyncio.create_task(self._refresh_reservations_only())
+
+    async def _refresh_reservations_only(self):
+        self._set_status("status_loading")
+        try:
+            self.carpool_reservations_data = await self.api.my_carpool_reservations()
+            self._render_reservations_list()
             self._refresh_summary()
             self._set_status("status_ready")
         except ApiError as exc:
@@ -1145,6 +1413,7 @@ class GrenobleSkiMobile(toga.App):
         self.user = None
         self.capabilities = {}
         self.stations_data = []
+        self.station_conditions_data = []
         self.bus_data = []
         self.services_data = []
         self.market_data = []
@@ -1152,6 +1421,8 @@ class GrenobleSkiMobile(toga.App):
         self.messages_data = []
         self.stories_data = []
         self.partners_data = []
+        self.carpool_data = []
+        self.carpool_reservations_data = []
         self.instructors_data = []
         self._build_auth_view()
         self._set_status("status_ready")

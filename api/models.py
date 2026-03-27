@@ -303,6 +303,11 @@ class SkiPartnerPost(models.Model):
     city = models.CharField(max_length=80, blank=True)
     skill_level = models.CharField(max_length=16, choices=LEVEL_CHOICES, default=LEVEL_INTERMEDIATE)
     preferred_date = models.DateField(null=True, blank=True)
+    is_carpool = models.BooleanField(default=False)
+    departure_city = models.CharField(max_length=80, blank=True)
+    departure_datetime = models.DateTimeField(null=True, blank=True)
+    total_seats = models.PositiveSmallIntegerField(default=1)
+    vehicle_image_url = models.URLField(blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -311,6 +316,45 @@ class SkiPartnerPost(models.Model):
 
     def __str__(self):
         return f"{self.user.username}: {self.title}"
+
+    @property
+    def seats_reserved(self):
+        return int(
+            self.reservations.filter(status=CarpoolReservation.STATUS_ACTIVE).aggregate(
+                total=models.Sum('seats_reserved')
+            )['total']
+            or 0
+        )
+
+    @property
+    def seats_remaining(self):
+        return max(int(self.total_seats or 0) - self.seats_reserved, 0)
+
+
+class CarpoolReservation(models.Model):
+    STATUS_ACTIVE = 'active'
+    STATUS_CANCELLED = 'cancelled'
+
+    STATUS_CHOICES = [
+        (STATUS_ACTIVE, 'Active'),
+        (STATUS_CANCELLED, 'Cancelled'),
+    ]
+
+    post = models.ForeignKey(SkiPartnerPost, on_delete=models.CASCADE, related_name='reservations')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='carpool_reservations')
+    seats_reserved = models.PositiveSmallIntegerField(default=1)
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default=STATUS_ACTIVE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+        constraints = [
+            models.UniqueConstraint(fields=['post', 'user'], name='uniq_carpool_reservation_per_post_user'),
+        ]
+
+    def __str__(self):
+        return f"Reservation post#{self.post_id} user#{self.user_id} seats={self.seats_reserved}"
 
 
 class SkiPartnerReport(models.Model):
@@ -595,6 +639,42 @@ class UserGameStats(models.Model):
             self.save()
             return True
         return False
+
+
+class AppUsageEvent(models.Model):
+    """Request-level analytics events used by the admin usage dashboard."""
+
+    PLATFORM_WEB = 'web'
+    PLATFORM_API = 'api'
+    PLATFORM_MOBILE = 'mobile'
+    PLATFORM_UNKNOWN = 'unknown'
+
+    PLATFORM_CHOICES = [
+        (PLATFORM_WEB, 'Web'),
+        (PLATFORM_API, 'API'),
+        (PLATFORM_MOBILE, 'Mobile'),
+        (PLATFORM_UNKNOWN, 'Unknown'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='usage_events')
+    feature_name = models.CharField(max_length=80, db_index=True)
+    path = models.CharField(max_length=255, db_index=True)
+    method = models.CharField(max_length=8)
+    status_code = models.PositiveSmallIntegerField(default=200)
+    platform = models.CharField(max_length=10, choices=PLATFORM_CHOICES, default=PLATFORM_UNKNOWN, db_index=True)
+    is_api = models.BooleanField(default=False, db_index=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['feature_name', '-created_at']),
+            models.Index(fields=['platform', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.feature_name} {self.method} {self.path} ({self.status_code})"
         
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):

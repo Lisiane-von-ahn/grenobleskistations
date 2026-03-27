@@ -11,13 +11,17 @@
     <section class="premium-shell mb-4 p-3">
         <div class="premium-hero">
             <span class="premium-kicker">Communaute</span>
-            <h2 class="premium-title h3 mb-1">Trouver des partenaires de ski</h2>
-            <p class="premium-subtitle">Publiez votre sortie et trouvez des personnes avec le meme niveau.</p>
+            <h2 class="premium-title h3 mb-1">{% if is_carpool_page %}Trouver un covoiturage ski{% else %}Trouver des partenaires de ski{% endif %}</h2>
+            <p class="premium-subtitle">{% if is_carpool_page %}Proposez ou trouvez une place voiture pour monter en station.{% else %}Publiez votre sortie et trouvez des personnes avec le meme niveau.{% endif %}</p>
         </div>
         <div class="d-flex flex-wrap gap-2 mt-3">
             {% if user.is_authenticated %}
-            <a class="btn btn-success" href="{% url 'ski_partner_publish' %}" target="_blank" rel="noopener">Publier une sortie</a>
+            <a class="btn btn-success" href="{% url 'ski_partner_publish' %}{% if is_carpool_page %}?kind=carpool{% endif %}">Publier une sortie</a>
+            {% if is_carpool_page %}
+            <a class="btn btn-outline-dark" href="{% url 'my_carpool_reservations' %}">Mes reservations</a>
             {% endif %}
+            {% endif %}
+            <a class="btn btn-outline-success" href="{% url 'covoiturage' %}">Covoiturage</a>
             <a class="btn btn-outline-primary" href="{% url 'ski_stories' %}">Stories ski</a>
         </div>
     </section>
@@ -33,8 +37,8 @@
                     {% endfor %}
                 </div>
                 <div>
-                    <span class="fw-semibold">Total partenaires actifs :</span>
-                    <span class="badge bg-success">{{ total_partners }}</span>
+                    <span class="fw-semibold">{% if is_carpool_page %}Total covoiturages actifs :{% else %}Total partenaires actifs :{% endif %}</span>
+                    <span class="badge bg-success">{% if is_carpool_page %}{{ total_carpools }}{% else %}{{ total_partners }}{% endif %}</span>
                 </div>
             </div>
         </div>
@@ -42,6 +46,9 @@
 
     <section class="market-search-panel mb-4 premium-panel">
         <form method="get" class="row g-3">
+            {% if is_carpool_page %}
+            <input type="hidden" name="kind" value="carpool">
+            {% endif %}
             <div class="col-lg-4">
                 <label class="form-label">Station</label>
                 <select name="station" class="form-control">
@@ -66,7 +73,7 @@
             </div>
             <div class="col-12 d-flex gap-2">
                 <button class="btn btn-primary" type="submit">Filtrer</button>
-                <a class="btn btn-outline-secondary" href="{% url 'ski_partners' %}">Reinitialiser</a>
+                <a class="btn btn-outline-secondary" href="{% if is_carpool_page %}{% url 'covoiturage' %}{% else %}{% url 'ski_partners' %}{% endif %}">Reinitialiser</a>
             </div>
         </form>
     </section>
@@ -88,8 +95,51 @@
                         {% if post.preferred_date %}<span class="badge bg-info text-dark">{{ post.preferred_date|date:'d/m/Y' }}</span>{% endif %}
                         {% if post.ski_station %}<span class="badge bg-secondary">{{ post.ski_station.name }}</span>{% endif %}
                         {% if post.city %}<span class="badge bg-light text-dark">{{ post.city }}</span>{% endif %}
+                        {% if post.is_carpool %}
+                        <span class="badge bg-success">{{ post.seats_remaining }} place(s) restante(s)</span>
+                        {% endif %}
                     </div>
+                    {% if post.is_carpool %}
+                    <div class="row g-2 mb-2 align-items-center">
+                        {% if post.vehicle_image_url %}
+                        <div class="col-4">
+                            <img src="{{ post.vehicle_image_url }}" alt="Voiture" class="img-fluid rounded" style="height: 92px; width: 100%; object-fit: cover;">
+                        </div>
+                        <div class="col-8">
+                        {% else %}
+                        <div class="col-12">
+                        {% endif %}
+                            <div class="small text-muted"><strong>Depart:</strong> {{ post.departure_city|default:post.city|default:'-' }}</div>
+                            <div class="small text-muted"><strong>Horaire:</strong> {% if post.departure_datetime %}{{ post.departure_datetime|date:'d/m/Y H:i' }}{% else %}-{% endif %}</div>
+                            <div class="small text-muted"><strong>Places:</strong> {{ post.seats_reserved }}/{{ post.total_seats }} reservees</div>
+                        </div>
+                    </div>
+                    {% endif %}
                     <p class="mb-3">{{ post.message }}</p>
+                    {% if is_carpool_page and user.is_authenticated and user != post.user %}
+                    <div class="d-flex gap-2 align-items-center flex-wrap mb-2">
+                        {% if post.my_reservation %}
+                        <span class="badge bg-primary">Vous avez reserve {{ post.my_reservation.seats_reserved }} place(s)</span>
+                        <form method="post" class="d-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="form_type" value="cancel_reserve">
+                            <input type="hidden" name="post_id" value="{{ post.id }}">
+                            <button type="submit" class="btn btn-sm btn-outline-warning">Annuler reservation</button>
+                        </form>
+                        {% elif post.seats_remaining > 0 %}
+                        <form method="post" class="d-flex gap-2 align-items-center">
+                            {% csrf_token %}
+                            <input type="hidden" name="form_type" value="reserve">
+                            <input type="hidden" name="post_id" value="{{ post.id }}">
+                            <label class="small mb-0">Places</label>
+                            <input type="number" name="seats" min="1" max="{{ post.seats_remaining }}" value="1" class="form-control form-control-sm" style="width: 88px;">
+                            <button type="submit" class="btn btn-sm btn-success">Reserver</button>
+                        </form>
+                        {% else %}
+                        <span class="badge bg-danger">Complet</span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
                     {% if user.is_authenticated and user != post.user %}
                     <div class="d-flex gap-2">
                         <a class="btn btn-sm btn-primary" href="{% url 'messages' %}?user={{ post.user.id }}&subject={{ post.title|urlencode }}">Contacter via chat</a>
