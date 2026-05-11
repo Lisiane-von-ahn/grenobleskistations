@@ -25,6 +25,7 @@
     <string name="bus_lines">Bus lines</string>
     <string name="services">Services</string>
     <string name="marketplace">Marketplace</string>
+    <string name="carpool">Carpool</string>
     <string name="missing_credentials">Email and password are required.</string>
     <string name="mobile_auth_invalid">Mobile authentication callback is invalid.</string>
     <string name="mobile_bridge_unavailable">Google mobile login is unavailable: server mobile callback is not deployed yet.</string>
@@ -55,6 +56,7 @@
     <string name="dashboard_welcome">Welcome back</string>
     <string name="dashboard_subtitle_premium">Your premium mountain dashboard: stories, activity and live marketplace.</string>
     <string name="recent_activities">Recent activities</string>
+    <string name="home_latest_marketplace">Latest Marketplace listings</string>
     <string name="activity_market_updated">%1$d marketplace items updated</string>
     <string name="activity_instructors_ready">%1$d instructors available now</string>
     <string name="activity_piste_reports">%1$d piste reports published</string>

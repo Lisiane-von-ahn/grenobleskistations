@@ -1234,5 +1234,123 @@ msgstr "Filter saved."
 msgid "Filtre supprime."
 msgstr "Filter deleted."
 
+#: templates/ski_material_listings.html
+msgid "Par categorie"
+msgstr "By category"
+
+#: templates/listing_detail.html
+msgid "Detail Marketplace"
+msgstr "Marketplace Detail"
+
+#: templates/listing_detail.html
+#, python-format
+msgid "Seller rating %(avg)s/5 (%(count)s reviews)"
+msgstr "Seller rating %(avg)s/5 (%(count)s reviews)"
+
+#: templates/listing_detail.html
+#, python-format
+msgid "Size %(size)s"
+msgstr "Size %(size)s"
+
+#: templates/listing_detail.html
+msgid "Transaction"
+msgstr "Transaction"
+
+#: templates/listing_detail.html
+msgid "Status:"
+msgstr "Status:"
+
+#: templates/listing_detail.html
+msgid "buyer"
+msgstr "buyer"
+
+#: templates/listing_detail.html
+msgid "seller"
+msgstr "seller"
+
+#: templates/listing_detail.html
+msgid "confirmed"
+msgstr "confirmed"
+
+#: templates/listing_detail.html
+msgid "pending"
+msgstr "pending"
+
+#: templates/listing_detail.html
+msgid "No transaction requested."
+msgstr "No transaction requested."
+
+#: templates/listing_detail.html
+msgid "Request transaction"
+msgstr "Request transaction"
+
+#: templates/listing_detail.html
+msgid "Confirm transaction as buyer"
+msgstr "Confirm transaction as buyer"
+
+#: templates/listing_detail.html
+msgid "Rate seller"
+msgstr "Rate seller"
+
+#: templates/listing_detail.html
+msgid "Score"
+msgstr "Score"
+
+#: templates/listing_detail.html
+msgid "Choose"
+msgstr "Choose"
+
+#: templates/listing_detail.html
+msgid "Comment"
+msgstr "Comment"
+
+#: templates/listing_detail.html
+msgid "Your review..."
+msgstr "Your review..."
+
+#: templates/listing_detail.html
+msgid "Save my rating"
+msgstr "Save my rating"
+
+#: templates/listing_detail.html
+msgid "Rating is available after both sides confirm the transaction."
+msgstr "Rating is available after both sides confirm the transaction."
+
+#: templates/listing_detail.html
+msgid "Transactions to confirm"
+msgstr "Transactions to confirm"
+
+#: templates/listing_detail.html
+msgid "Buyer:"
+msgstr "Buyer:"
+
+#: templates/listing_detail.html
+msgid "Confirm as seller"
+msgstr "Confirm as seller"
+
+#: templates/listing_detail.html
+msgid "Already confirmed as seller."
+msgstr "Already confirmed as seller."
+
+#: templates/listing_detail.html
+msgid "Recent reviews"
+msgstr "Recent reviews"
+
+#: templates/edit_listing.html
+msgid "Edit Marketplace item"
+msgstr "Edit Marketplace item"
+
+#: templates/edit_listing.html
+msgid "Update the information to keep a clear and premium listing."
+msgstr "Update the information to keep a clear and premium listing."
+
+#: templates/edit_listing.html
+msgid "Save"
+msgstr "Save"
+
+#: templates/edit_listing.html
+msgid "Cancel"
+msgstr "Cancel"
+
 #~ msgid "Impossible d\\'afficher la tendance pour le moment."
 #~ msgstr "Unable to display trend at the moment."

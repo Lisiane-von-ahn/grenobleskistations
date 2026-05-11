@@ -3,7 +3,7 @@
 {% load base64_filters %}
 {% load i18n %}
 
-{% block title %}{% trans "Marketplace Materiel de Ski" %}{% endblock %}
+{% block title %}{% trans "Marketplace" %}{% endblock %}
 
 {% block content %}
 <div class="container py-4">
@@ -12,7 +12,7 @@
             <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3">
                 <div>
                     <span class="premium-kicker">Marketplace</span>
-                    <h2 class="mb-2 premium-title h3">{% trans "Marketplace Materiel de Ski" %}</h2>
+                    <h2 class="mb-2 premium-title h3">{% trans "Marketplace" %}</h2>
                     <p class="premium-subtitle">{% trans "Vendre, louer ou preter facilement." %}</p>
                 </div>
                 <a href="{% url 'ajouter_materiel' %}" class="btn btn-success btn-lg">{% trans "Ajouter un article" %}</a>
@@ -186,7 +186,7 @@
             </div>
             <div class="col-lg-6">
                 <div class="market-card p-3 h-100">
-                    <h5 class="mb-3">{% trans "Par materiel" %}</h5>
+                    <h5 class="mb-3">{% trans "Par categorie" %}</h5>
                     <div class="d-flex flex-wrap gap-2">
                         {% for row in material_stats %}
                         <span class="filter-chip">{{ row.label }}: {{ row.total }}</span>

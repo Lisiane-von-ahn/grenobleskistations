@@ -355,13 +355,30 @@ class GrenobleSkiMobile(toga.App):
         )
         self.home_summary = toga.Label("", style=Pack(color=COLORS["title_text"], padding=8))
         self.home_counts = toga.Label("", style=Pack(color=COLORS["muted_text"], padding=8, padding_top=0))
+        self.home_market_title = toga.Label(
+            self.t("home_latest_marketplace"),
+            style=Pack(color=COLORS["title_text"], font_weight="bold", padding_left=8, padding_right=8, padding_top=2, padding_bottom=6),
+        )
+        self.home_market_list_box = toga.Box(style=Pack(direction=COLUMN, padding_left=8, padding_right=8, padding_bottom=6))
+        home_children = [
+            self.home_summary,
+            summary_card,
+            self.home_counts,
+            self.home_market_title,
+            self.home_market_list_box,
+        ]
+        if self.capabilities.get("has_partners"):
+            self.home_carpool_button = toga.Button(
+                self.t("home_open_carpool"),
+                on_press=self.on_home_open_carpool,
+                style=Pack(width=220, padding=10),
+            )
+            home_children.append(self.home_carpool_button)
+        else:
+            self.home_carpool_button = None
+        home_children.append(toga.Button(self.t("refresh"), on_press=self.on_refresh_all, style=Pack(width=170, padding=10)))
         self.home_section = toga.Box(
-            children=[
-                self.home_summary,
-                summary_card,
-                self.home_counts,
-                toga.Button(self.t("refresh"), on_press=self.on_refresh_all, style=Pack(width=170, padding=10)),
-            ],
+            children=home_children,
             style=Pack(direction=COLUMN),
         )
 
@@ -541,6 +558,29 @@ class GrenobleSkiMobile(toga.App):
         self.home_counts.text = " | ".join(counters)
         self.profile_name.text = name
         self.profile_email.text = self.user.get("email", "")
+
+    def _render_home_market_highlights(self):
+        self._clear_box(self.home_market_list_box)
+        if not self.market_data:
+            self.home_market_list_box.add(toga.Label(self.t("empty"), style=Pack(color=COLORS["muted_text"], padding=6)))
+            return
+
+        sorted_market = sorted(
+            self.market_data,
+            key=lambda item: ((item.get("created_at") or ""), int(item.get("id") or 0)),
+            reverse=True,
+        )
+
+        for listing in sorted_market[:4]:
+            created_at = (listing.get("created_at") or "")
+            created_day = created_at.split("T")[0] if created_at else "-"
+            title = listing.get("title") or "Listing"
+            lines = [
+                f"{self.t('price')}: {listing.get('price', '-')} €",
+                f"{self.t('city')}: {listing.get('city', '-')}",
+                f"{self.t('published')}: {created_day}",
+            ]
+            self.home_market_list_box.add(self._make_card(title, lines))
 
     def _make_card(self, title, lines):
         card = toga.Box(style=Pack(direction=COLUMN, background_color=COLORS["card_bg"], padding=14, padding_bottom=16, padding_top=14))
@@ -1050,6 +1090,7 @@ class GrenobleSkiMobile(toga.App):
             self.cameras_list_box.add(card)
 
     def _render_all_sections(self):
+        self._render_home_market_highlights()
         self._render_stations_list()
         self._render_bus_list()
         self._render_services_list()
@@ -1205,11 +1246,15 @@ class GrenobleSkiMobile(toga.App):
         self._set_status("status_loading")
         try:
             self.market_data = await self.api.marketplace()
+            self._render_home_market_highlights()
             self._render_market_list()
             self._refresh_summary()
             self._set_status("status_ready")
         except ApiError as exc:
             self._set_status("status_error", message=str(exc))
+
+    def on_home_open_carpool(self, widget):
+        self._show_section("carpool")
 
     def on_refresh_stories(self, widget):
         asyncio.create_task(self._refresh_stories_only())

@@ -71,3 +71,121 @@ msgstr "Filtre enregistre."
 #: skistation_project/views.py:434
 msgid "Filtre supprime."
 msgstr "Filtre supprime."
+
+#: templates/ski_material_listings.html
+msgid "Par categorie"
+msgstr "Par categorie"
+
+#: templates/listing_detail.html
+msgid "Detail Marketplace"
+msgstr "Detail Marketplace"
+
+#: templates/listing_detail.html
+#, python-format
+msgid "Seller rating %(avg)s/5 (%(count)s reviews)"
+msgstr "Note vendeur %(avg)s/5 (%(count)s avis)"
+
+#: templates/listing_detail.html
+#, python-format
+msgid "Size %(size)s"
+msgstr "Taille %(size)s"
+
+#: templates/listing_detail.html
+msgid "Transaction"
+msgstr "Transaction"
+
+#: templates/listing_detail.html
+msgid "Status:"
+msgstr "Statut:"
+
+#: templates/listing_detail.html
+msgid "buyer"
+msgstr "acheteur"
+
+#: templates/listing_detail.html
+msgid "seller"
+msgstr "vendeur"
+
+#: templates/listing_detail.html
+msgid "confirmed"
+msgstr "confirme"
+
+#: templates/listing_detail.html
+msgid "pending"
+msgstr "en attente"
+
+#: templates/listing_detail.html
+msgid "No transaction requested."
+msgstr "Aucune transaction demandee."
+
+#: templates/listing_detail.html
+msgid "Request transaction"
+msgstr "Demander transaction"
+
+#: templates/listing_detail.html
+msgid "Confirm transaction as buyer"
+msgstr "Confirmer transaction cote acheteur"
+
+#: templates/listing_detail.html
+msgid "Rate seller"
+msgstr "Noter le vendeur"
+
+#: templates/listing_detail.html
+msgid "Score"
+msgstr "Note"
+
+#: templates/listing_detail.html
+msgid "Choose"
+msgstr "Choisir"
+
+#: templates/listing_detail.html
+msgid "Comment"
+msgstr "Commentaire"
+
+#: templates/listing_detail.html
+msgid "Your review..."
+msgstr "Votre avis..."
+
+#: templates/listing_detail.html
+msgid "Save my rating"
+msgstr "Enregistrer ma note"
+
+#: templates/listing_detail.html
+msgid "Rating is available after both sides confirm the transaction."
+msgstr "La note est disponible apres confirmation de la transaction par les deux parties."
+
+#: templates/listing_detail.html
+msgid "Transactions to confirm"
+msgstr "Transactions a confirmer"
+
+#: templates/listing_detail.html
+msgid "Buyer:"
+msgstr "Acheteur:"
+
+#: templates/listing_detail.html
+msgid "Confirm as seller"
+msgstr "Confirmer cote vendeur"
+
+#: templates/listing_detail.html
+msgid "Already confirmed as seller."
+msgstr "Deja confirme cote vendeur."
+
+#: templates/listing_detail.html
+msgid "Recent reviews"
+msgstr "Avis recents"
+
+#: templates/edit_listing.html
+msgid "Edit Marketplace item"
+msgstr "Modifier article Marketplace"
+
+#: templates/edit_listing.html
+msgid "Update the information to keep a clear and premium listing."
+msgstr "Mettez a jour les informations pour conserver une fiche claire et premium."
+
+#: templates/edit_listing.html
+msgid "Save"
+msgstr "Enregistrer"
+
+#: templates/edit_listing.html
+msgid "Cancel"
+msgstr "Annuler"

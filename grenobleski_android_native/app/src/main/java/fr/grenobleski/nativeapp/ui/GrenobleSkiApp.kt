@@ -808,6 +808,7 @@ private fun NativeShell(
                     onOpenMarketplace = { onSelectTab(NativeTab.MARKETPLACE) },
                     onOpenBusLines = { onSelectTab(NativeTab.BUS_LINES) },
                     onOpenServices = { onSelectTab(NativeTab.SERVICES) },
+                    onOpenCarpool = { onSelectTab(NativeTab.PARTNERS) },
                 )
                 NativeTab.STATIONS -> StationsTab(
                     state = state,
@@ -1431,6 +1432,7 @@ private fun HomeTab(
     onOpenMarketplace: () -> Unit,
     onOpenBusLines: () -> Unit,
     onOpenServices: () -> Unit,
+    onOpenCarpool: () -> Unit,
 ) {
     val xpInLevel = state.xpPoints % 100
     val xpProgress = xpInLevel / 100f
@@ -1441,6 +1443,9 @@ private fun HomeTab(
         stringResource(id = R.string.story_bus_live_updates),
         stringResource(id = R.string.story_local_guides),
     )
+    val latestMarketplaceItems = remember(state.marketplaceItems) {
+        state.marketplaceItems.sortedByDescending { it.id }.take(4)
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -1605,6 +1610,60 @@ private fun HomeTab(
                     ActivityLine(stringResource(id = R.string.activity_market_updated, state.dashboardCounts.marketplace))
                     ActivityLine(stringResource(id = R.string.activity_instructors_ready, state.instructorItems.size))
                     ActivityLine(stringResource(id = R.string.activity_piste_reports, state.pisteItems.size))
+                }
+            }
+        }
+
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(16.dp),
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = stringResource(id = R.string.home_latest_marketplace),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        TextButton(onClick = onOpenMarketplace) {
+                            Text(text = stringResource(id = R.string.marketplace))
+                        }
+                    }
+
+                    if (latestMarketplaceItems.isEmpty()) {
+                        Text(
+                            text = stringResource(id = R.string.empty_marketplace),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    } else {
+                        latestMarketplaceItems.forEach { item ->
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(
+                                    text = item.title,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium,
+                                )
+                                Text(
+                                    text = "${item.city} • ${item.priceLabel}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+
+                    OutlinedButton(onClick = onOpenCarpool, modifier = Modifier.fillMaxWidth()) {
+                        Text(text = stringResource(id = R.string.carpool))
+                    }
                 }
             }
         }

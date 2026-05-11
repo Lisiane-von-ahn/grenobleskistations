@@ -877,7 +877,7 @@
                         {% with current=request.resolver_match.url_name %}
                         <ul class="nav" id="site-main-nav">
                             <li><a href="{% url 'my_template_view' %}" class="{% if current == 'my_template_view' %}active{% endif %}">{% trans "Accueil" %}</a></li>
-                            <li><a href="{% url 'ski_material_listings' %}" class="{% if current == 'ski_material_listings' or current == 'listing_detail' or current == 'ajouter_materiel' or current == 'edit_listing' %}active{% endif %}">{% trans "Matériel de Ski" %}</a></li>
+                            <li><a href="{% url 'ski_material_listings' %}" class="{% if current == 'ski_material_listings' or current == 'listing_detail' or current == 'ajouter_materiel' or current == 'edit_listing' %}active{% endif %}">{% trans "Marketplace" %}</a></li>
                             <li><a href="{% url 'ski_station_search' %}" class="{% if current == 'ski_station_search' or current == 'ski_station_detail' %}active{% endif %}">{% trans "Recherche" %}</a></li>
                             <li><a href="{% url 'services' %}" class="{% if current == 'services' or current == 'service_detail' %}active{% endif %}">{% trans "Services" %}</a></li>
                             <li><a href="{% url 'instructors' %}" class="{% if current == 'instructors' or current == 'become_instructor' or current == 'instructor_services' %}active{% endif %}">{% trans "Moniteurs" %}</a></li>
