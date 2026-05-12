@@ -5,6 +5,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import fr.grenobleski.nativeapp.data.model.DashboardCounts
 import fr.grenobleski.nativeapp.data.model.BusLineItem
+import fr.grenobleski.nativeapp.data.model.CarpoolPendingReservation
 import fr.grenobleski.nativeapp.data.model.ChatUserOption
 import fr.grenobleski.nativeapp.data.model.FriendLink
 import fr.grenobleski.nativeapp.data.model.InstructorItem
@@ -317,10 +318,116 @@ class AuthRepository(
                 stationLabel = obj.stringOrBlank("ski_station_name", "station_name").ifBlank { "-" },
                 levelLabel = levelLabels[obj.stringOrBlank("skill_level")] ?: obj.stringOrBlank("skill_level").ifBlank { "-" },
                 preferredDateLabel = obj.stringOrBlank("preferred_date").ifBlank { "-" },
+                isCarpool = obj.boolOrFalse("is_carpool"),
+                departureCity = obj.stringOrBlank("departure_city").ifBlank { obj.stringOrBlank("city") },
+                departureDateTimeLabel = formatServerDateTime(obj.stringOrBlank("departure_datetime", "preferred_date")),
+                seatsReserved = obj.intOrZero("seats_reserved"),
+                seatsRemaining = obj.intOrZero("seats_remaining"),
+                totalSeats = obj.intOrZero("total_seats"),
+                myReservedSeats = obj.intOrZero("my_reserved_seats"),
+                myReservationStatus = obj.stringOrBlank("my_reservation_status"),
+                pendingReservations = obj.arrayObjects("pending_reservations").map { pendingObj ->
+                    CarpoolPendingReservation(
+                        reservationId = pendingObj.intOrZero("reservation_id", "id"),
+                        userId = pendingObj.intOrZero("user_id", "user"),
+                        userLabel = pendingObj.stringOrBlank("user_label", "username", "user_name").ifBlank {
+                            val fallback = pendingObj.intOrZero("user_id", "user")
+                            if (fallback > 0) "Utilisateur #$fallback" else "Utilisateur"
+                        },
+                        seatsReserved = pendingObj.intOrZero("seats_reserved", "seats"),
+                    )
+                },
             )
         }
         Result.success(items)
     }
+
+    suspend fun requestCarpoolReservation(token: String, postId: Int, seats: Int): Result<Unit> = withContext(Dispatchers.IO) {
+        if (postId <= 0) {
+            return@withContext Result.failure(IllegalStateException("Invalid carpool post id."))
+        }
+        val authHeader = "Token $token"
+        val payload = mapOf("seats" to seats.coerceAtLeast(1))
+        val response = runCatching {
+            service.postResource(
+                url = "$normalizedBaseUrl/api/skipartnerposts/$postId/reserve/",
+                authHeader = authHeader,
+                payload = payload,
+            )
+        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to request reservation."))
+
+        if (!response.isSuccessful) {
+            val bodyText = response.errorBody()?.string().orEmpty()
+            val message = extractApiErrorMessage(bodyText, "Unable to request reservation.")
+            return@withContext Result.failure(IllegalStateException(message))
+        }
+        Result.success(Unit)
+    }
+
+    suspend fun cancelCarpoolReservation(token: String, postId: Int): Result<Unit> = withContext(Dispatchers.IO) {
+        if (postId <= 0) {
+            return@withContext Result.failure(IllegalStateException("Invalid carpool post id."))
+        }
+        val authHeader = "Token $token"
+        val response = runCatching {
+            service.postResource(
+                url = "$normalizedBaseUrl/api/skipartnerposts/$postId/cancel_reservation/",
+                authHeader = authHeader,
+                payload = emptyMap(),
+            )
+        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to cancel reservation."))
+
+        if (!response.isSuccessful) {
+            val bodyText = response.errorBody()?.string().orEmpty()
+            val message = extractApiErrorMessage(bodyText, "Unable to cancel reservation.")
+            return@withContext Result.failure(IllegalStateException(message))
+        }
+        Result.success(Unit)
+    }
+
+    suspend fun approveCarpoolReservation(token: String, postId: Int, reservationId: Int): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            if (postId <= 0 || reservationId <= 0) {
+                return@withContext Result.failure(IllegalStateException("Invalid reservation payload."))
+            }
+            val authHeader = "Token $token"
+            val response = runCatching {
+                service.postResource(
+                    url = "$normalizedBaseUrl/api/skipartnerposts/$postId/approve_reservation/",
+                    authHeader = authHeader,
+                    payload = mapOf("reservation_id" to reservationId),
+                )
+            }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to approve reservation."))
+
+            if (!response.isSuccessful) {
+                val bodyText = response.errorBody()?.string().orEmpty()
+                val message = extractApiErrorMessage(bodyText, "Unable to approve reservation.")
+                return@withContext Result.failure(IllegalStateException(message))
+            }
+            Result.success(Unit)
+        }
+
+    suspend fun rejectCarpoolReservation(token: String, postId: Int, reservationId: Int): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            if (postId <= 0 || reservationId <= 0) {
+                return@withContext Result.failure(IllegalStateException("Invalid reservation payload."))
+            }
+            val authHeader = "Token $token"
+            val response = runCatching {
+                service.postResource(
+                    url = "$normalizedBaseUrl/api/skipartnerposts/$postId/reject_reservation/",
+                    authHeader = authHeader,
+                    payload = mapOf("reservation_id" to reservationId),
+                )
+            }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to reject reservation."))
+
+            if (!response.isSuccessful) {
+                val bodyText = response.errorBody()?.string().orEmpty()
+                val message = extractApiErrorMessage(bodyText, "Unable to reject reservation.")
+                return@withContext Result.failure(IllegalStateException(message))
+            }
+            Result.success(Unit)
+        }
 
     suspend fun fetchPisteItems(token: String): Result<List<PisteItem>> = withContext(Dispatchers.IO) {
         val authHeader = "Token $token"

@@ -78,16 +78,45 @@
         </form>
     </section>
 
+    <section class="social-surface mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5 class="mb-0">Stories montagne</h5>
+            <small class="text-muted">Communaute Grenoble & Alpes</small>
+        </div>
+        <div class="social-story-strip">
+            <div class="social-story">
+                <div class="avatar">GS</div>
+                <small>Grenoble</small>
+            </div>
+            <div class="social-story">
+                <div class="avatar">CH</div>
+                <small>Chamrousse</small>
+            </div>
+            <div class="social-story">
+                <div class="avatar">2A</div>
+                <small>Les 2 Alpes</small>
+            </div>
+            <div class="social-story">
+                <div class="avatar">VL</div>
+                <small>Villard</small>
+            </div>
+            <div class="social-story">
+                <div class="avatar">AL</div>
+                <small>Alpe d'Huez</small>
+            </div>
+        </div>
+    </section>
+
     <section>
         <div class="row g-4">
             {% for post in partner_posts %}
             <div class="col-lg-6">
-                <article class="card border-0 shadow-sm p-4 h-100 market-card" style="border-radius: 18px;">
+                <article class="card social-post-card p-4 h-100 market-card">
                     <div class="d-flex align-items-center mb-2">
                         <img src="{% if post.user.profile.profile_photo %}data:image/png;base64,{{ post.user.profile.profile_photo|b64encode }}{% else %}{% static 'images/default-profile.png' %}{% endif %}" alt="{{ post.user.username }}" class="rounded-circle me-3" style="width:56px;height:56px;object-fit:cover;">
                         <div>
                             <h5 class="mb-1">{{ post.title }}</h5>
-                            <small class="text-muted">Par {{ post.user.username }} - {{ post.created_at|date:'d/m/Y H:i' }}</small>
+                            <small class="social-meta">Par {{ post.user.username }} - {{ post.created_at|date:'d/m/Y H:i' }}</small>
                         </div>
                     </div>
                     <div class="mb-2 d-flex flex-wrap gap-2">
@@ -116,15 +145,54 @@
                     </div>
                     {% endif %}
                     <p class="mb-3">{{ post.message }}</p>
+                    <div class="d-flex gap-2 flex-wrap mb-3">
+                        <span class="badge bg-light text-dark">#grenoble</span>
+                        <span class="badge bg-light text-dark">#alpes</span>
+                        {% if post.ski_station %}<span class="badge bg-light text-dark">#station</span>{% endif %}
+                    </div>
+                    {% if is_carpool_page and user.is_authenticated and user == post.user %}
+                    <div class="border rounded p-2 mb-2 bg-light">
+                        <div class="small fw-semibold mb-2">Demandes en attente</div>
+                        {% for reservation in post.pending_reservations %}
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                            <span class="small">
+                                <strong>{{ reservation.user.username }}</strong> demande {{ reservation.seats_reserved }} place(s)
+                            </span>
+                            <div class="d-flex gap-1">
+                                <form method="post" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="form_type" value="approve_reserve">
+                                    <input type="hidden" name="post_id" value="{{ post.id }}">
+                                    <input type="hidden" name="reservation_id" value="{{ reservation.id }}">
+                                    <button type="submit" class="btn btn-sm btn-success">Approuver</button>
+                                </form>
+                                <form method="post" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="form_type" value="reject_reserve">
+                                    <input type="hidden" name="post_id" value="{{ post.id }}">
+                                    <input type="hidden" name="reservation_id" value="{{ reservation.id }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Refuser</button>
+                                </form>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="small text-muted">Aucune demande en attente.</div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                     {% if is_carpool_page and user.is_authenticated and user != post.user %}
                     <div class="d-flex gap-2 align-items-center flex-wrap mb-2">
                         {% if post.my_reservation %}
-                        <span class="badge bg-primary">Vous avez reserve {{ post.my_reservation.seats_reserved }} place(s)</span>
+                        {% if post.my_reservation.status == 'pending' %}
+                        <span class="badge bg-warning text-dark">Demande en attente ({{ post.my_reservation.seats_reserved }} place(s))</span>
+                        {% else %}
+                        <span class="badge bg-primary">Reservation approuvee ({{ post.my_reservation.seats_reserved }} place(s))</span>
+                        {% endif %}
                         <form method="post" class="d-inline">
                             {% csrf_token %}
                             <input type="hidden" name="form_type" value="cancel_reserve">
                             <input type="hidden" name="post_id" value="{{ post.id }}">
-                            <button type="submit" class="btn btn-sm btn-outline-warning">Annuler reservation</button>
+                            <button type="submit" class="btn btn-sm btn-outline-warning">Annuler</button>
                         </form>
                         {% elif post.seats_remaining > 0 %}
                         <form method="post" class="d-flex gap-2 align-items-center">
@@ -133,7 +201,7 @@
                             <input type="hidden" name="post_id" value="{{ post.id }}">
                             <label class="small mb-0">Places</label>
                             <input type="number" name="seats" min="1" max="{{ post.seats_remaining }}" value="1" class="form-control form-control-sm" style="width: 88px;">
-                            <button type="submit" class="btn btn-sm btn-success">Reserver</button>
+                            <button type="submit" class="btn btn-sm btn-success">Demander</button>
                         </form>
                         {% else %}
                         <span class="badge bg-danger">Complet</span>

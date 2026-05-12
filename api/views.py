@@ -120,6 +120,17 @@ def _encode_binary_field(value):
     return base64.b64encode(value).decode("utf-8")
 
 
+def _send_platform_message(sender, recipient, subject, body):
+    if not sender or not recipient or sender.id == recipient.id:
+        return
+    Message.objects.create(
+        sender=sender,
+        recipient=recipient,
+        subject=(subject or 'Notification covoiturage')[:255],
+        body=(body or '')[:4000],
+    )
+
+
 def _decode_base64_binary(value):
     if value in (None, ""):
         return None
@@ -491,7 +502,7 @@ class SkiPartnerPostViewSet(viewsets.ModelViewSet):
         reservations = (
             CarpoolReservation.objects.filter(
                 user=request.user,
-                status=CarpoolReservation.STATUS_ACTIVE,
+                status__in=[CarpoolReservation.STATUS_PENDING, CarpoolReservation.STATUS_ACTIVE],
                 post__is_active=True,
                 post__is_carpool=True,
             )
@@ -530,32 +541,33 @@ class SkiPartnerPostViewSet(viewsets.ModelViewSet):
             requested_seats = 1
         if requested_seats < 1:
             raise ValidationError('seats must be at least 1.')
+        if requested_seats > int(post.total_seats or 0):
+            raise ValidationError(f'seats must be <= {int(post.total_seats or 0)} for this carpool.')
 
         with transaction.atomic():
             locked_post = SkiPartnerPost.objects.select_for_update().get(id=post.id)
-            existing = CarpoolReservation.objects.select_for_update().filter(post=locked_post, user=request.user).first()
-            seats_taken_other = int(
-                CarpoolReservation.objects.filter(post=locked_post, status=CarpoolReservation.STATUS_ACTIVE)
-                .exclude(user=request.user)
-                .aggregate(total=Sum('seats_reserved'))['total']
-                or 0
-            )
-            capacity_left = int(locked_post.total_seats or 0) - seats_taken_other
-            if requested_seats > capacity_left:
-                raise ValidationError(f'Only {max(capacity_left, 0)} seat(s) available.')
-
             reservation, _created = CarpoolReservation.objects.update_or_create(
                 post=locked_post,
                 user=request.user,
                 defaults={
                     'seats_reserved': requested_seats,
-                    'status': CarpoolReservation.STATUS_ACTIVE,
+                    'status': CarpoolReservation.STATUS_PENDING,
                 },
             )
 
+        _send_platform_message(
+            sender=request.user,
+            recipient=post.user,
+            subject=f'Demande de reservation: {post.title}',
+            body=(
+                f"{request.user.username} a demande {requested_seats} place(s) pour votre covoiturage "
+                f"\"{post.title}\"."
+            ),
+        )
+
         return Response(
             {
-                'detail': 'Reservation saved.',
+                'detail': 'Reservation request sent. Awaiting organizer approval.',
                 'reservation': CarpoolReservationSerializer(reservation, context={'request': request}).data,
                 'post': SkiPartnerPostSerializer(self.get_object(), context={'request': request}).data,
             }
@@ -567,16 +579,114 @@ class SkiPartnerPostViewSet(viewsets.ModelViewSet):
         reservation = CarpoolReservation.objects.filter(
             post=post,
             user=request.user,
-            status=CarpoolReservation.STATUS_ACTIVE,
+            status__in=[CarpoolReservation.STATUS_PENDING, CarpoolReservation.STATUS_ACTIVE],
         ).first()
         if not reservation:
-            raise ValidationError('No active reservation found for this post.')
+            raise ValidationError('No pending/active reservation found for this post.')
 
         reservation.status = CarpoolReservation.STATUS_CANCELLED
         reservation.save(update_fields=['status', 'updated_at'])
+        _send_platform_message(
+            sender=request.user,
+            recipient=post.user,
+            subject=f'Annulation de reservation: {post.title}',
+            body=(
+                f"{request.user.username} a annule sa reservation ({reservation.seats_reserved} place(s)) "
+                f"pour votre covoiturage \"{post.title}\"."
+            ),
+        )
         return Response(
             {
                 'detail': 'Reservation cancelled.',
+                'post': SkiPartnerPostSerializer(self.get_object(), context={'request': request}).data,
+            }
+        )
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def approve_reservation(self, request, pk=None):
+        post = self.get_object()
+        if post.user_id != request.user.id:
+            raise ValidationError('Only the organizer can approve reservations.')
+
+        reservation_id = request.data.get('reservation_id')
+        if not reservation_id:
+            raise ValidationError('reservation_id is required.')
+
+        with transaction.atomic():
+            locked_post = SkiPartnerPost.objects.select_for_update().get(id=post.id)
+            reservation = (
+                CarpoolReservation.objects.select_for_update()
+                .filter(id=reservation_id, post=locked_post, status=CarpoolReservation.STATUS_PENDING)
+                .select_related('user')
+                .first()
+            )
+            if not reservation:
+                raise ValidationError('Pending reservation not found.')
+
+            seats_taken = int(
+                CarpoolReservation.objects.filter(post=locked_post, status=CarpoolReservation.STATUS_ACTIVE)
+                .exclude(id=reservation.id)
+                .aggregate(total=Sum('seats_reserved'))['total']
+                or 0
+            )
+            capacity_left = max(int(locked_post.total_seats or 0) - seats_taken, 0)
+            if int(reservation.seats_reserved or 0) > capacity_left:
+                raise ValidationError(f'Only {capacity_left} seat(s) available.')
+
+            reservation.status = CarpoolReservation.STATUS_ACTIVE
+            reservation.save(update_fields=['status', 'updated_at'])
+
+        _send_platform_message(
+            sender=request.user,
+            recipient=reservation.user,
+            subject=f'Reservation approuvee: {post.title}',
+            body=(
+                f"Votre demande de {reservation.seats_reserved} place(s) pour \"{post.title}\" "
+                'a ete approuvee.'
+            ),
+        )
+        return Response(
+            {
+                'detail': 'Reservation approved.',
+                'reservation': CarpoolReservationSerializer(reservation, context={'request': request}).data,
+                'post': SkiPartnerPostSerializer(self.get_object(), context={'request': request}).data,
+            }
+        )
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def reject_reservation(self, request, pk=None):
+        post = self.get_object()
+        if post.user_id != request.user.id:
+            raise ValidationError('Only the organizer can reject reservations.')
+
+        reservation_id = request.data.get('reservation_id')
+        if not reservation_id:
+            raise ValidationError('reservation_id is required.')
+
+        reservation = (
+            CarpoolReservation.objects.filter(
+                id=reservation_id,
+                post=post,
+                status=CarpoolReservation.STATUS_PENDING,
+            )
+            .select_related('user')
+            .first()
+        )
+        if not reservation:
+            raise ValidationError('Pending reservation not found.')
+
+        reservation.status = CarpoolReservation.STATUS_REJECTED
+        reservation.save(update_fields=['status', 'updated_at'])
+        _send_platform_message(
+            sender=request.user,
+            recipient=reservation.user,
+            subject=f'Reservation refusee: {post.title}',
+            body=f"Votre demande de reservation pour \"{post.title}\" a ete refusee.",
+        )
+        return Response(
+            {
+                'detail': 'Reservation rejected.',
+                'reservation': CarpoolReservationSerializer(reservation, context={'request': request}).data,
                 'post': SkiPartnerPostSerializer(self.get_object(), context={'request': request}).data,
             }
         )

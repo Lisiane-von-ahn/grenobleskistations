@@ -58,6 +58,7 @@ import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -341,6 +342,10 @@ fun GrenobleSkiApp(
             onUpdatePartnerLevel = viewModel::updatePublishPartnerLevel,
             onUpdatePartnerDate = viewModel::updatePublishPartnerDate,
             onPublishPartnerPost = viewModel::publishPartnerPost,
+            onRequestCarpoolReservation = viewModel::requestCarpoolReservation,
+            onCancelCarpoolReservation = viewModel::cancelCarpoolReservation,
+            onApproveCarpoolReservation = viewModel::approveCarpoolReservation,
+            onRejectCarpoolReservation = viewModel::rejectCarpoolReservation,
             onSubmitSellerRating = viewModel::submitSellerRating,
             onSubmitStationRating = viewModel::submitStationRating,
         )
@@ -646,6 +651,10 @@ private fun NativeShell(
     onUpdatePartnerLevel: (String) -> Unit,
     onUpdatePartnerDate: (String) -> Unit,
     onPublishPartnerPost: () -> Unit,
+    onRequestCarpoolReservation: (Int, Int) -> Unit,
+    onCancelCarpoolReservation: (Int) -> Unit,
+    onApproveCarpoolReservation: (Int, Int) -> Unit,
+    onRejectCarpoolReservation: (Int, Int) -> Unit,
     onSubmitSellerRating: (Int, Int, Int, String) -> Unit,
     onSubmitStationRating: (Int, Int, String) -> Unit,
 ) {
@@ -828,8 +837,13 @@ private fun NativeShell(
                 )
                 NativeTab.PARTNERS -> PartnersTab(
                     state = state,
+                    currentUserId = currentUserId,
                     onPrepareMessageToPartner = onPrepareMessageToSeller,
                     onOpenPublishPartner = { publishPartnerDialogOpen = true },
+                    onRequestCarpoolReservation = onRequestCarpoolReservation,
+                    onCancelCarpoolReservation = onCancelCarpoolReservation,
+                    onApproveCarpoolReservation = onApproveCarpoolReservation,
+                    onRejectCarpoolReservation = onRejectCarpoolReservation,
                 )
                 NativeTab.INSTRUCTORS -> InstructorsTab(state, onPrepareMessageToSeller)
                 NativeTab.PISTES -> PistesTab(
@@ -2013,6 +2027,7 @@ private fun BusLinesTab(state: AppUiState) {
     }
 
     var searchQuery by remember { mutableStateOf("") }
+    var seatsByPost by remember { mutableStateOf(mapOf<Int, String>()) }
     var selectedStationId by remember { mutableStateOf<Int?>(null) }
 
     val filteredItems = remember(state.busLineItems, searchQuery, selectedStationId, stationNamesById) {
@@ -4224,8 +4239,13 @@ private fun EmptyTabMessage(text: String) {
 @Composable
 private fun PartnersTab(
     state: AppUiState,
+    currentUserId: Int,
     onPrepareMessageToPartner: (Int, String) -> Unit,
     onOpenPublishPartner: () -> Unit,
+    onRequestCarpoolReservation: (Int, Int) -> Unit,
+    onCancelCarpoolReservation: (Int) -> Unit,
+    onApproveCarpoolReservation: (Int, Int) -> Unit,
+    onRejectCarpoolReservation: (Int, Int) -> Unit,
 ) {
     if (state.partnerItems.isEmpty()) {
         EmptyTabMessage(text = stringResource(id = R.string.empty_partners))
@@ -4233,6 +4253,7 @@ private fun PartnersTab(
     }
 
     var searchQuery by remember { mutableStateOf("") }
+    var seatsByPost by remember { mutableStateOf(mapOf<Int, String>()) }
     val filteredItems = remember(state.partnerItems, searchQuery) {
         state.partnerItems.filter { item ->
             searchQuery.isBlank() ||
@@ -4301,7 +4322,15 @@ private fun PartnersTab(
         }
 
         items(filteredItems) { item ->
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+            val requestedSeatsRaw = seatsByPost[item.id].orEmpty().ifBlank { "1" }
+            val requestedSeats = requestedSeatsRaw.toIntOrNull()?.coerceAtLeast(1) ?: 1
+            val isOrganizer = currentUserId > 0 && currentUserId == item.organizerId
+            val hasMyPendingOrActive = item.myReservationStatus == "pending" || item.myReservationStatus == "active"
+
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(16.dp),
+            ) {
                 Column(
                     modifier = Modifier.padding(14.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -4326,6 +4355,123 @@ private fun PartnersTab(
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+
+                    if (item.isCarpool) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            AssistChip(
+                                onClick = {},
+                                enabled = false,
+                                label = { Text(text = stringResource(id = R.string.carpool_seats_left, item.seatsRemaining, item.totalSeats)) },
+                            )
+                            if (item.departureCity.isNotBlank()) {
+                                AssistChip(
+                                    onClick = {},
+                                    enabled = false,
+                                    label = { Text(text = stringResource(id = R.string.carpool_departure_city_chip, item.departureCity)) },
+                                )
+                            }
+                        }
+
+                        if (item.departureDateTimeLabel.isNotBlank() && item.departureDateTimeLabel != "-") {
+                            Text(
+                                text = stringResource(id = R.string.carpool_departure_time_line, item.departureDateTimeLabel),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+
+                        if (!isOrganizer) {
+                            when {
+                                hasMyPendingOrActive -> {
+                                    AssistChip(
+                                        onClick = {},
+                                        enabled = false,
+                                        label = {
+                                            Text(
+                                                text = if (item.myReservationStatus == "pending") {
+                                                    stringResource(id = R.string.carpool_status_pending_chip, item.myReservedSeats)
+                                                } else {
+                                                    stringResource(id = R.string.carpool_status_active_chip, item.myReservedSeats)
+                                                }
+                                            )
+                                        },
+                                    )
+                                    OutlinedButton(onClick = { onCancelCarpoolReservation(item.id) }) {
+                                        Text(stringResource(id = R.string.carpool_cancel_request))
+                                    }
+                                }
+
+                                item.seatsRemaining > 0 -> {
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        OutlinedTextField(
+                                            value = requestedSeatsRaw,
+                                            onValueChange = { value ->
+                                                if (value.isBlank() || value.all(Char::isDigit)) {
+                                                    seatsByPost = seatsByPost + (item.id to value)
+                                                }
+                                            },
+                                            label = { Text(stringResource(id = R.string.carpool_seats_label)) },
+                                            modifier = Modifier.width(120.dp),
+                                            singleLine = true,
+                                        )
+                                        Button(onClick = {
+                                            onRequestCarpoolReservation(
+                                                item.id,
+                                                requestedSeats.coerceAtMost(maxOf(1, item.seatsRemaining)),
+                                            )
+                                        }) {
+                                            Text(stringResource(id = R.string.carpool_request_button))
+                                        }
+                                    }
+                                }
+
+                                else -> {
+                                    AssistChip(
+                                        onClick = {},
+                                        enabled = false,
+                                        label = { Text(stringResource(id = R.string.carpool_full_chip)) },
+                                    )
+                                }
+                            }
+                        } else {
+                            if (item.pendingReservations.isNotEmpty()) {
+                                Text(
+                                    text = stringResource(id = R.string.carpool_pending_requests_title),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                                item.pendingReservations.forEach { pending ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Text(
+                                            text = stringResource(
+                                                id = R.string.carpool_pending_request_line,
+                                                pending.userLabel,
+                                                pending.seatsReserved,
+                                            ),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            modifier = Modifier.weight(1f),
+                                        )
+                                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            Button(onClick = { onApproveCarpoolReservation(item.id, pending.reservationId) }) {
+                                                Text(stringResource(id = R.string.carpool_approve))
+                                            }
+                                            OutlinedButton(onClick = { onRejectCarpoolReservation(item.id, pending.reservationId) }) {
+                                                Text(stringResource(id = R.string.carpool_reject))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     Button(
                         onClick = { onPrepareMessageToPartner(item.organizerId, item.title) },
                         enabled = item.organizerId > 0,

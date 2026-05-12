@@ -758,6 +758,78 @@ class AppViewModel(
         }
     }
 
+    fun requestCarpoolReservation(postId: Int, seats: Int) {
+        val session = state.session ?: return
+        if (postId <= 0) return
+
+        viewModelScope.launch {
+            state = state.copy(isTabLoading = true, errorMessage = null)
+            val result = repository.requestCarpoolReservation(
+                token = session.token,
+                postId = postId,
+                seats = seats.coerceAtLeast(1),
+            )
+            if (result.isSuccess) {
+                state = state.copy(statusMessage = "Demande de reservation envoyee.")
+                refreshCurrentTab()
+            } else {
+                val message = result.exceptionOrNull()?.message ?: "Unable to request reservation"
+                state = state.copy(errorMessage = message, isTabLoading = false)
+            }
+        }
+    }
+
+    fun cancelCarpoolReservation(postId: Int) {
+        val session = state.session ?: return
+        if (postId <= 0) return
+
+        viewModelScope.launch {
+            state = state.copy(isTabLoading = true, errorMessage = null)
+            val result = repository.cancelCarpoolReservation(session.token, postId)
+            if (result.isSuccess) {
+                state = state.copy(statusMessage = "Reservation/demande annulee.")
+                refreshCurrentTab()
+            } else {
+                val message = result.exceptionOrNull()?.message ?: "Unable to cancel reservation"
+                state = state.copy(errorMessage = message, isTabLoading = false)
+            }
+        }
+    }
+
+    fun approveCarpoolReservation(postId: Int, reservationId: Int) {
+        val session = state.session ?: return
+        if (postId <= 0 || reservationId <= 0) return
+
+        viewModelScope.launch {
+            state = state.copy(isTabLoading = true, errorMessage = null)
+            val result = repository.approveCarpoolReservation(session.token, postId, reservationId)
+            if (result.isSuccess) {
+                state = state.copy(statusMessage = "Demande approuvee.")
+                refreshCurrentTab()
+            } else {
+                val message = result.exceptionOrNull()?.message ?: "Unable to approve reservation"
+                state = state.copy(errorMessage = message, isTabLoading = false)
+            }
+        }
+    }
+
+    fun rejectCarpoolReservation(postId: Int, reservationId: Int) {
+        val session = state.session ?: return
+        if (postId <= 0 || reservationId <= 0) return
+
+        viewModelScope.launch {
+            state = state.copy(isTabLoading = true, errorMessage = null)
+            val result = repository.rejectCarpoolReservation(session.token, postId, reservationId)
+            if (result.isSuccess) {
+                state = state.copy(statusMessage = "Demande refusee.")
+                refreshCurrentTab()
+            } else {
+                val message = result.exceptionOrNull()?.message ?: "Unable to reject reservation"
+                state = state.copy(errorMessage = message, isTabLoading = false)
+            }
+        }
+    }
+
     fun submitSellerRating(listingId: Int, sellerId: Int, score: Int, comment: String) {
         val session = state.session ?: return
         viewModelScope.launch {

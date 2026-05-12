@@ -130,6 +130,22 @@ data class SkiPartnerItem(
     val stationLabel: String,
     val levelLabel: String,
     val preferredDateLabel: String,
+    val isCarpool: Boolean = false,
+    val departureCity: String = "",
+    val departureDateTimeLabel: String = "",
+    val seatsReserved: Int = 0,
+    val seatsRemaining: Int = 0,
+    val totalSeats: Int = 0,
+    val myReservedSeats: Int = 0,
+    val myReservationStatus: String = "",
+    val pendingReservations: List<CarpoolPendingReservation> = emptyList(),
+)
+
+data class CarpoolPendingReservation(
+    val reservationId: Int,
+    val userId: Int,
+    val userLabel: String,
+    val seatsReserved: Int,
 )
 
 data class InstructorItem(

@@ -332,18 +332,22 @@ class SkiPartnerPost(models.Model):
 
 
 class CarpoolReservation(models.Model):
+    STATUS_PENDING = 'pending'
     STATUS_ACTIVE = 'active'
+    STATUS_REJECTED = 'rejected'
     STATUS_CANCELLED = 'cancelled'
 
     STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),
         (STATUS_ACTIVE, 'Active'),
+        (STATUS_REJECTED, 'Rejected'),
         (STATUS_CANCELLED, 'Cancelled'),
     ]
 
     post = models.ForeignKey(SkiPartnerPost, on_delete=models.CASCADE, related_name='reservations')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='carpool_reservations')
     seats_reserved = models.PositiveSmallIntegerField(default=1)
-    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default=STATUS_ACTIVE)
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default=STATUS_PENDING)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -33,7 +33,13 @@
                     </div>
                     <p class="mb-2">{{ reservation.post.message }}</p>
                     <div class="small text-muted mb-3">
-                        Vous avez reserve <strong>{{ reservation.seats_reserved }}</strong> place(s) - reste <strong>{{ reservation.post.seats_remaining }}</strong> place(s).
+                        {% if reservation.status == 'pending' %}
+                        Statut: <span class="badge bg-warning text-dark">En attente de validation</span>
+                        {% else %}
+                        Statut: <span class="badge bg-primary">Approuvee</span>
+                        {% endif %}
+                        <br>
+                        Vous avez demande <strong>{{ reservation.seats_reserved }}</strong> place(s) - reste <strong>{{ reservation.post.seats_remaining }}</strong> place(s).
                     </div>
                     <div class="d-flex gap-2 flex-wrap">
                         <a class="btn btn-sm btn-primary" href="{% url 'messages' %}?user={{ reservation.post.user.id }}&subject={{ reservation.post.title|urlencode }}">Contacter</a>
@@ -41,7 +47,7 @@
                             {% csrf_token %}
                             <input type="hidden" name="form_type" value="cancel">
                             <input type="hidden" name="reservation_id" value="{{ reservation.id }}">
-                            <button type="submit" class="btn btn-sm btn-outline-danger">Annuler reservation</button>
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Annuler demande/reservation</button>
                         </form>
                     </div>
                 </article>

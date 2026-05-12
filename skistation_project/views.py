@@ -55,6 +55,7 @@ from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from allauth.account.adapter import DefaultAccountAdapter
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.db import transaction
 import base64
 from html import escape
 import json
@@ -106,6 +107,17 @@ def _carpool_keyword_filter():
         | Q(message__icontains='voiture')
         | Q(title__icontains='ride share')
         | Q(message__icontains='ride share')
+    )
+
+
+def _send_platform_message(sender, recipient, subject, body):
+    if not sender or not recipient or sender.id == recipient.id:
+        return
+    Message.objects.create(
+        sender=sender,
+        recipient=recipient,
+        subject=(subject or 'Notification covoiturage')[:255],
+        body=(body or '')[:4000],
     )
 
 
@@ -1281,15 +1293,8 @@ def ski_partners(request):
                 messages.error(request, 'Impossible de reserver votre propre trajet.')
                 return redirect('covoiturage')
 
-            seats_taken_other = int(
-                CarpoolReservation.objects.filter(post=post, status=CarpoolReservation.STATUS_ACTIVE)
-                .exclude(user=request.user)
-                .aggregate(total=Sum('seats_reserved'))['total']
-                or 0
-            )
-            seats_left = max(int(post.total_seats or 0) - seats_taken_other, 0)
-            if seats_requested > seats_left:
-                messages.error(request, f'Plus assez de places disponibles ({seats_left} restante(s)).')
+            if seats_requested > int(post.total_seats or 0):
+                messages.error(request, f'Impossible de demander plus de {int(post.total_seats or 0)} place(s).')
                 return redirect('covoiturage')
 
             CarpoolReservation.objects.update_or_create(
@@ -1297,10 +1302,19 @@ def ski_partners(request):
                 user=request.user,
                 defaults={
                     'seats_reserved': seats_requested,
-                    'status': CarpoolReservation.STATUS_ACTIVE,
+                    'status': CarpoolReservation.STATUS_PENDING,
                 },
             )
-            messages.success(request, 'Reservation enregistree.')
+            _send_platform_message(
+                sender=request.user,
+                recipient=post.user,
+                subject=f'Demande de reservation: {post.title}',
+                body=(
+                    f"{request.user.username} a demande {seats_requested} place(s) pour votre covoiturage "
+                    f"\"{post.title}\"."
+                ),
+            )
+            messages.success(request, 'Demande de reservation envoyee. En attente de validation.')
             return redirect('covoiturage')
 
         if form_type == 'cancel_reserve' and kind == 'carpool':
@@ -1308,12 +1322,91 @@ def ski_partners(request):
             reservation = CarpoolReservation.objects.filter(
                 post_id=post_id,
                 user=request.user,
-                status=CarpoolReservation.STATUS_ACTIVE,
+                status__in=[CarpoolReservation.STATUS_PENDING, CarpoolReservation.STATUS_ACTIVE],
             ).first()
             if reservation:
                 reservation.status = CarpoolReservation.STATUS_CANCELLED
                 reservation.save(update_fields=['status', 'updated_at'])
-                messages.success(request, 'Reservation annulee.')
+                _send_platform_message(
+                    sender=request.user,
+                    recipient=reservation.post.user,
+                    subject=f'Annulation de reservation: {reservation.post.title}',
+                    body=(
+                        f"{request.user.username} a annule sa reservation de {reservation.seats_reserved} place(s) "
+                        f"sur votre covoiturage \"{reservation.post.title}\"."
+                    ),
+                )
+                messages.success(request, 'Demande/reservation annulee.')
+            return redirect('covoiturage')
+
+        if form_type == 'approve_reserve' and kind == 'carpool':
+            post_id = request.POST.get('post_id', '').strip()
+            reservation_id = request.POST.get('reservation_id', '').strip()
+
+            with transaction.atomic():
+                post = (
+                    SkiPartnerPost.objects.select_for_update()
+                    .filter(id=post_id, is_active=True, is_carpool=True, user=request.user)
+                    .first()
+                )
+                reservation = (
+                    CarpoolReservation.objects.select_for_update()
+                    .filter(id=reservation_id, post_id=post_id, status=CarpoolReservation.STATUS_PENDING)
+                    .select_related('user', 'post')
+                    .first()
+                )
+                if not post or not reservation:
+                    messages.error(request, 'Demande de reservation introuvable.')
+                    return redirect('covoiturage')
+
+                seats_taken = int(
+                    CarpoolReservation.objects.filter(post=post, status=CarpoolReservation.STATUS_ACTIVE)
+                    .exclude(id=reservation.id)
+                    .aggregate(total=Sum('seats_reserved'))['total']
+                    or 0
+                )
+                seats_left = max(int(post.total_seats or 0) - seats_taken, 0)
+                if int(reservation.seats_reserved or 0) > seats_left:
+                    messages.error(request, f'Impossible de valider: seulement {seats_left} place(s) restante(s).')
+                    return redirect('covoiturage')
+
+                reservation.status = CarpoolReservation.STATUS_ACTIVE
+                reservation.save(update_fields=['status', 'updated_at'])
+
+            _send_platform_message(
+                sender=request.user,
+                recipient=reservation.user,
+                subject=f'Reservation approuvee: {reservation.post.title}',
+                body=(
+                    f"Votre demande de {reservation.seats_reserved} place(s) pour \"{reservation.post.title}\" "
+                    'a ete approuvee par l\'organisateur.'
+                ),
+            )
+            messages.success(request, 'Demande approuvee.')
+            return redirect('covoiturage')
+
+        if form_type == 'reject_reserve' and kind == 'carpool':
+            post_id = request.POST.get('post_id', '').strip()
+            reservation_id = request.POST.get('reservation_id', '').strip()
+            reservation = CarpoolReservation.objects.filter(
+                id=reservation_id,
+                post_id=post_id,
+                post__user=request.user,
+                post__is_carpool=True,
+                status=CarpoolReservation.STATUS_PENDING,
+            ).select_related('user', 'post').first()
+            if reservation:
+                reservation.status = CarpoolReservation.STATUS_REJECTED
+                reservation.save(update_fields=['status', 'updated_at'])
+                _send_platform_message(
+                    sender=request.user,
+                    recipient=reservation.user,
+                    subject=f'Reservation refusee: {reservation.post.title}',
+                    body=(
+                        f"Votre demande de reservation pour \"{reservation.post.title}\" a ete refusee."
+                    ),
+                )
+                messages.success(request, 'Demande refusee.')
             return redirect('covoiturage')
 
     post_list = list(posts[:60])
@@ -1324,10 +1417,22 @@ def ski_partners(request):
                 CarpoolReservation.objects.filter(
                     post=post,
                     user=request.user,
-                    status=CarpoolReservation.STATUS_ACTIVE,
+                    status__in=[CarpoolReservation.STATUS_PENDING, CarpoolReservation.STATUS_ACTIVE],
                 ).first()
                 if request.user.is_authenticated
                 else None
+            )
+            post.pending_reservations = (
+                list(
+                    CarpoolReservation.objects.filter(
+                        post=post,
+                        status=CarpoolReservation.STATUS_PENDING,
+                    )
+                    .select_related('user')
+                    .order_by('created_at')[:20]
+                )
+                if request.user.is_authenticated and request.user.id == post.user_id
+                else []
             )
 
     # Statistiques top stations/services
@@ -1375,18 +1480,27 @@ def my_carpool_reservations(request):
             reservation = CarpoolReservation.objects.filter(
                 id=reservation_id,
                 user=request.user,
-                status=CarpoolReservation.STATUS_ACTIVE,
+                status__in=[CarpoolReservation.STATUS_PENDING, CarpoolReservation.STATUS_ACTIVE],
             ).select_related('post').first()
             if reservation:
                 reservation.status = CarpoolReservation.STATUS_CANCELLED
                 reservation.save(update_fields=['status', 'updated_at'])
-                messages.success(request, 'Reservation annulee.')
+                _send_platform_message(
+                    sender=request.user,
+                    recipient=reservation.post.user,
+                    subject=f'Annulation de reservation: {reservation.post.title}',
+                    body=(
+                        f"{request.user.username} a annule sa reservation ({reservation.seats_reserved} place(s)) "
+                        f"pour votre covoiturage \"{reservation.post.title}\"."
+                    ),
+                )
+                messages.success(request, 'Demande/reservation annulee.')
             return redirect('my_carpool_reservations')
 
     reservations = list(
         CarpoolReservation.objects.filter(
             user=request.user,
-            status=CarpoolReservation.STATUS_ACTIVE,
+            status__in=[CarpoolReservation.STATUS_PENDING, CarpoolReservation.STATUS_ACTIVE],
             post__is_active=True,
             post__is_carpool=True,
         )

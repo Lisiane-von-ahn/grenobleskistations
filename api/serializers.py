@@ -274,6 +274,8 @@ class SkiPartnerPostSerializer(serializers.ModelSerializer):
     seats_reserved = serializers.SerializerMethodField()
     seats_remaining = serializers.SerializerMethodField()
     my_reserved_seats = serializers.SerializerMethodField()
+    my_reservation_status = serializers.SerializerMethodField()
+    pending_reservations = serializers.SerializerMethodField()
 
     class Meta:
         model = SkiPartnerPost
@@ -297,10 +299,48 @@ class SkiPartnerPostSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if not request or not request.user.is_authenticated:
             return 0
-        reservation = obj.reservations.filter(user=request.user, status=CarpoolReservation.STATUS_ACTIVE).first()
+        reservation = obj.reservations.filter(
+            user=request.user,
+            status__in=[CarpoolReservation.STATUS_PENDING, CarpoolReservation.STATUS_ACTIVE],
+        ).first()
         if not reservation:
             return 0
         return int(reservation.seats_reserved or 0)
+
+    def get_my_reservation_status(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return ''
+        reservation = obj.reservations.filter(
+            user=request.user,
+            status__in=[CarpoolReservation.STATUS_PENDING, CarpoolReservation.STATUS_ACTIVE],
+        ).first()
+        return reservation.status if reservation else ''
+
+    def get_pending_reservations(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return []
+        if request.user.id != obj.user_id:
+            return []
+
+        pending_rows = (
+            obj.reservations.filter(status=CarpoolReservation.STATUS_PENDING)
+            .select_related('user')
+            .order_by('created_at')[:20]
+        )
+        payload = []
+        for reservation in pending_rows:
+            payload.append(
+                {
+                    'reservation_id': reservation.id,
+                    'user_id': reservation.user_id,
+                    'user_label': _display_name_for_user(reservation.user),
+                    'seats_reserved': int(reservation.seats_reserved or 0),
+                    'created_at': reservation.created_at,
+                }
+            )
+        return payload
 
 
 class CarpoolReservationSerializer(serializers.ModelSerializer):
