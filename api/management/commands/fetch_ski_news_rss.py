@@ -43,6 +43,14 @@ def _extract_image_url(description):
     return match.group(1) if match else ''
 
 
+def _fit_max_len(value, max_len):
+    if not value:
+        return ''
+    if max_len is None or len(value) <= max_len:
+        return value
+    return value[:max_len]
+
+
 def _parse_pub_date(value):
     if not value:
         return timezone.now()
@@ -80,7 +88,11 @@ class Command(BaseCommand):
         min_published = now - timedelta(days=days)
 
         stations = list(SkiStation.objects.order_by('distanceFromGrenoble', 'name')[:80])
+        link_max_len = SkiNewsItem._meta.get_field('link').max_length
+        source_url_max_len = SkiNewsItem._meta.get_field('source_url').max_length
+        image_url_max_len = SkiNewsItem._meta.get_field('image_url').max_length
         fetched_count = 0
+        skipped_too_long = 0
         touched_links = set()
 
         for feed in RSS_FEEDS:
@@ -107,6 +119,11 @@ class Command(BaseCommand):
 
                 if not title or not link:
                     continue
+
+                if link_max_len and len(link) > link_max_len:
+                    skipped_too_long += 1
+                    continue
+
                 if pub_date < min_published:
                     continue
 
@@ -116,8 +133,9 @@ class Command(BaseCommand):
                 is_highlighted = any(term in haystack for term in terms) or station is not None
 
                 source_name = feed.get('source_name') or (item.findtext('source') or '').strip()
-                image_url = _extract_image_url(description_raw)
+                image_url = _fit_max_len(_extract_image_url(description_raw), image_url_max_len)
                 summary = description[:600]
+                source_url = _fit_max_len(feed['url'], source_url_max_len)
 
                 SkiNewsItem.objects.update_or_create(
                     link=link,
@@ -125,7 +143,7 @@ class Command(BaseCommand):
                         'title': title[:255],
                         'summary': summary,
                         'source_name': source_name[:120],
-                        'source_url': feed['url'],
+                        'source_url': source_url,
                         'language': feed['language'],
                         'ski_station': station,
                         'image_url': image_url,
@@ -165,3 +183,5 @@ class Command(BaseCommand):
         SkiNewsItem.objects.filter(published_at__lt=min_published).delete()
 
         self.stdout.write(self.style.SUCCESS(f'RSS sync complete: {fetched_count} news items upserted.'))
+        if skipped_too_long:
+            self.stdout.write(self.style.WARNING(f'Skipped {skipped_too_long} entries with link length > {link_max_len}.'))
