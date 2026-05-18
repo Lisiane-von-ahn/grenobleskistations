@@ -20,6 +20,7 @@ from api.models import (
     CarpoolReservation,
     SkiPartnerReport,
     SkiStory,
+    SkiStoryComment,
     SkiNewsItem,
     UserProfile,
     UserFriend,
@@ -1667,7 +1668,17 @@ def ski_partner_publish(request):
 
 def ski_stories(request):
     now = timezone.now()
-    active_stories = SkiStory.objects.filter(expires_at__gt=now).select_related('user', 'ski_station')
+    active_stories = (
+        SkiStory.objects
+        .filter(expires_at__gt=now)
+        .select_related('user', 'ski_station', 'user__profile')
+        .prefetch_related('comments__user')
+        .annotate(
+            like_count=Count('likes', distinct=True),
+            comment_count=Count('comments', distinct=True),
+        )
+        .order_by('-created_at')
+    )
     current_lang = (translation.get_language() or 'fr')[:2]
     news_items = list(
         SkiNewsItem.objects.select_related('ski_station')
@@ -1675,6 +1686,9 @@ def ski_stories(request):
         .order_by('-is_highlighted', '-published_at')[:12]
     )
     highlighted_news = [item for item in news_items if item.is_highlighted][:4]
+
+    paginator = Paginator(active_stories, 24)
+    stories_page_obj = paginator.get_page(1)
 
     if request.method == 'POST':
         if not request.user.is_authenticated:
@@ -1716,10 +1730,188 @@ def ski_stories(request):
         request,
         'ski_stories.html',
         {
-            'stories': active_stories[:120],
+            'stories': stories_page_obj.object_list,
+            'stories_has_next': stories_page_obj.has_next(),
+            'stories_next_page': stories_page_obj.next_page_number() if stories_page_obj.has_next() else None,
             'stations': SkiStation.objects.order_by('name'),
             'news_items': news_items,
             'highlighted_news': highlighted_news,
+        },
+    )
+
+
+def _story_user_label(user_obj):
+    first = (user_obj.first_name or '').strip()
+    last = (user_obj.last_name or '').strip()
+    if first or last:
+        return f"{first} {last}".strip()
+    return user_obj.username
+
+
+def _serialize_story_for_web(story, request_user=None):
+    profile_picture = getattr(getattr(story.user, 'profile', None), 'profile_picture', None)
+    image_base64 = base64.b64encode(story.image).decode('utf-8') if story.image else ''
+    avatar_base64 = base64.b64encode(profile_picture).decode('utf-8') if profile_picture else ''
+
+    comments = []
+    recent_comments = story.comments.select_related('user').order_by('-created_at')[:3]
+    for row in recent_comments:
+        comments.append(
+            {
+                'user_label': _story_user_label(row.user),
+                'body': row.body,
+                'created_at': timezone.localtime(row.created_at).strftime('%d/%m %H:%M'),
+            }
+        )
+
+    is_friend = False
+    if request_user and request_user.is_authenticated and request_user.id != story.user_id:
+        is_friend = UserFriend.objects.filter(user=request_user, friend_id=story.user_id).exists()
+
+    return {
+        'id': story.id,
+        'user_id': story.user_id,
+        'user_label': _story_user_label(story.user),
+        'username': story.user.username,
+        'profile_url': reverse('user_public_profile', args=[story.user_id]),
+        'image_base64': image_base64,
+        'avatar_base64': avatar_base64,
+        'created_at': timezone.localtime(story.created_at).strftime('%d/%m %H:%M'),
+        'station_name': story.ski_station.name if story.ski_station else '',
+        'caption': story.caption or '',
+        'like_count': int(getattr(story, 'like_count', 0) or 0),
+        'comment_count': int(getattr(story, 'comment_count', 0) or 0),
+        'recent_comments': comments,
+        'is_mine': bool(request_user and request_user.is_authenticated and request_user.id == story.user_id),
+        'is_friend': is_friend,
+    }
+
+
+@require_GET
+def ski_stories_feed(request):
+    now = timezone.now()
+    page_raw = (request.GET.get('page') or '1').strip()
+    page_number = int(page_raw) if page_raw.isdigit() and int(page_raw) > 0 else 1
+
+    queryset = (
+        SkiStory.objects
+        .filter(expires_at__gt=now)
+        .select_related('user', 'ski_station', 'user__profile')
+        .prefetch_related('comments__user')
+        .annotate(
+            like_count=Count('likes', distinct=True),
+            comment_count=Count('comments', distinct=True),
+        )
+        .order_by('-created_at')
+    )
+
+    paginator = Paginator(queryset, 24)
+    page_obj = paginator.get_page(page_number)
+    payload = [_serialize_story_for_web(story, request_user=request.user) for story in page_obj.object_list]
+
+    return JsonResponse(
+        {
+            'results': payload,
+            'has_next': page_obj.has_next(),
+            'next_page': page_obj.next_page_number() if page_obj.has_next() else None,
+        }
+    )
+
+
+@login_required
+def story_add_comment(request, story_id):
+    if request.method != 'POST':
+        messages.error(request, 'Methode non autorisee.')
+        return redirect('ski_stories')
+
+    story = get_object_or_404(SkiStory, id=story_id, expires_at__gt=timezone.now())
+    body = (request.POST.get('body') or '').strip()
+    if not body:
+        messages.error(request, 'Commentaire vide.')
+        return redirect('ski_stories')
+
+    SkiStoryComment.objects.create(story=story, user=request.user, body=body[:300])
+    messages.success(request, 'Commentaire ajoute.')
+    return redirect('ski_stories')
+
+
+@login_required
+def story_add_friend(request, user_id):
+    if request.method != 'POST':
+        messages.error(request, 'Methode non autorisee.')
+        return redirect('ski_stories')
+
+    friend = User.objects.filter(id=user_id).exclude(id=request.user.id).first()
+    if not friend:
+        messages.error(request, 'Utilisateur invalide.')
+        return redirect('ski_stories')
+
+    UserFriend.objects.get_or_create(user=request.user, friend=friend)
+    UserFriend.objects.get_or_create(user=friend, friend=request.user)
+    messages.success(request, 'Ami ajoute.')
+    return redirect('ski_stories')
+
+
+@login_required
+def story_remove_friend(request, user_id):
+    if request.method != 'POST':
+        messages.error(request, 'Methode non autorisee.')
+        return redirect('ski_stories')
+
+    friend = User.objects.filter(id=user_id).exclude(id=request.user.id).first()
+    if not friend:
+        messages.error(request, 'Utilisateur invalide.')
+        return redirect('ski_stories')
+
+    UserFriend.objects.filter(user=request.user, friend=friend).delete()
+    UserFriend.objects.filter(user=friend, friend=request.user).delete()
+    messages.success(request, 'Ami retire.')
+    return redirect('user_public_profile', user_id=user_id)
+
+
+def user_public_profile(request, user_id):
+    target_user = get_object_or_404(User, id=user_id)
+    profile = UserProfile.objects.filter(user=target_user).first()
+
+    recent_stories = list(
+        SkiStory.objects.filter(user=target_user, expires_at__gt=timezone.now())
+        .select_related('ski_station')
+        .order_by('-created_at')[:20]
+    )
+    recent_comments = list(
+        SkiStoryComment.objects.filter(user=target_user)
+        .select_related('story')
+        .order_by('-created_at')[:20]
+    )
+
+    story_count = SkiStory.objects.filter(user=target_user, expires_at__gt=timezone.now()).count()
+    comment_count = SkiStoryComment.objects.filter(user=target_user).count()
+    friend_count = UserFriend.objects.filter(user=target_user).count()
+    public_messages_count = Message.objects.filter(sender=target_user, is_private=False).count()
+    is_authenticated = bool(request.user and request.user.is_authenticated)
+    is_friend = False
+    if is_authenticated and request.user.id != target_user.id:
+        is_friend = UserFriend.objects.filter(user=request.user, friend=target_user).exists()
+
+    avatar_base64 = base64.b64encode(profile.profile_picture).decode('utf-8') if profile and profile.profile_picture else None
+    display_name = _story_user_label(target_user)
+
+    return render(
+        request,
+        'user_public_profile.html',
+        {
+            'target_user': target_user,
+            'display_name': display_name,
+            'avatar_base64': avatar_base64,
+            'organization_name': (profile.organization_name if profile else '') or '',
+            'story_count': story_count,
+            'comment_count': comment_count,
+            'friend_count': friend_count,
+            'public_messages_count': public_messages_count,
+            'recent_stories': recent_stories,
+            'recent_comments': recent_comments,
+            'is_friend': is_friend,
+            'is_authenticated': is_authenticated,
         },
     )
 

@@ -83,6 +83,19 @@ WEATHER_POOL = [
     'windy',
 ]
 
+FIRST_NAMES = [
+    "Adam", "Luke", "Noah", "Liam", "Ethan", "Mason", "Leo", "Hugo", "Arthur", "Louis",
+    "Jules", "Nolan", "Theo", "Gabriel", "Max", "Paul", "Oscar", "Alex", "Tom", "Sam",
+    "Emma", "Chloe", "Lea", "Sarah", "Mia", "Lina", "Camille", "Alice", "Eva", "Zoe",
+    "Sofia", "Nina", "Clara", "Manon", "Louise", "Jeanne", "Ines", "Mila", "Elsa", "Lucie",
+]
+
+LAST_NAMES = [
+    "Martin", "Bernard", "Dubois", "Thomas", "Robert", "Richard", "Petit", "Durand", "Leroy", "Moreau",
+    "Simon", "Laurent", "Lefevre", "Mercier", "Garcia", "Faure", "Roux", "Vincent", "Muller", "Lambert",
+    "Rossi", "Fischer", "Schmidt", "Lopez", "Bianchi", "Navarro", "Guerin", "Chevalier", "Henry", "Boyer",
+]
+
 CROWD_POOL = [
     SkiStory.CROWD_QUIET,
     SkiStory.CROWD_NORMAL,
@@ -127,10 +140,10 @@ class Command(BaseCommand):
 
         seeded_users = []
         for i in range(1, users_target + 1):
-            username = f"story_user_{i:03d}"
-            email = f"story_user_{i:03d}@grenobleski.local"
-            first_name = f"Story{i:03d}"
-            last_name = "Rider"
+            first_name = FIRST_NAMES[(i - 1) % len(FIRST_NAMES)]
+            last_name = LAST_NAMES[((i - 1) // len(FIRST_NAMES)) % len(LAST_NAMES)]
+            username = f"{first_name.lower()}.{last_name.lower()}{i:02d}"
+            email = f"{username}@grenobleski.local"
             user, created = User.objects.get_or_create(
                 username=username,
                 defaults={

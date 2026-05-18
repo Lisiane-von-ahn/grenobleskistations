@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% if LANGUAGE_CODE == 'en' %}Community profile{% else %}Profil communaute{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <section class="premium-shell p-3 mb-4">
+        <div class="d-flex align-items-center gap-3">
+            {% if avatar_base64 %}
+            <img src="data:image/png;base64,{{ avatar_base64 }}" alt="{{ target_user.username }}" style="width:68px;height:68px;border-radius:50%;object-fit:cover;">
+            {% else %}
+            <span class="avatar" style="width:68px;height:68px;font-size:24px;">🎿</span>
+            {% endif %}
+            <div>
+                <h2 class="premium-title h4 mb-1">{{ display_name }}</h2>
+                <div class="market-subtle">@{{ target_user.username }}</div>
+                {% if organization_name %}
+                <div class="small">{{ organization_name }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    <section class="row g-3 mb-4">
+        <div class="col-lg-3 col-md-6">
+            <article class="market-card p-3 h-100">
+                <div class="market-subtle">{% trans "Stories actives" %}</div>
+                <h3 class="h4 mb-0">{{ story_count }}</h3>
+            </article>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <article class="market-card p-3 h-100">
+                <div class="market-subtle">{% trans "Commentaires" %}</div>
+                <h3 class="h4 mb-0">{{ comment_count }}</h3>
+            </article>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <article class="market-card p-3 h-100">
+                <div class="market-subtle">{% trans "Amis" %}</div>
+                <h3 class="h4 mb-0">{{ friend_count }}</h3>
+            </article>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <article class="market-card p-3 h-100">
+                <div class="market-subtle">{% trans "Messages publics" %}</div>
+                <h3 class="h4 mb-0">{{ public_messages_count }}</h3>
+            </article>
+        </div>
+    </section>
+
+    <section class="market-search-panel premium-panel mb-4">
+        <div class="d-flex gap-2 flex-wrap">
+            {% if is_authenticated and request.user.id != target_user.id %}
+                {% if is_friend %}
+                <form method="post" action="{% url 'story_remove_friend' user_id=target_user.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-danger">{% trans "Retirer ami" %}</button>
+                </form>
+                {% else %}
+                <form method="post" action="{% url 'story_add_friend' user_id=target_user.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary">{% trans "Ajouter en ami" %}</button>
+                </form>
+                {% endif %}
+                <a href="{% url 'messages' %}?user={{ target_user.id }}" class="btn btn-outline-secondary">{% trans "Envoyer un message" %}</a>
+            {% elif not is_authenticated %}
+            <a href="{% url 'login' %}?next={{ request.path|urlencode }}" class="btn btn-primary">{% trans "Se connecter pour interagir" %}</a>
+            {% endif %}
+            <a href="{% url 'ski_stories' %}" class="btn btn-outline-secondary">{% trans "Retour stories" %}</a>
+        </div>
+    </section>
+
+    <section class="row g-3">
+        <div class="col-lg-6">
+            <article class="market-card p-3 h-100">
+                <h4 class="h5">{% trans "Dernieres stories" %}</h4>
+                {% for story in recent_stories %}
+                <div class="border-top pt-2 mt-2">
+                    <div class="small market-subtle">{{ story.created_at|date:'d/m H:i' }}{% if story.ski_station %} - {{ story.ski_station.name }}{% endif %}</div>
+                    <div>{{ story.caption|default:'-' }}</div>
+                </div>
+                {% empty %}
+                <p class="market-subtle mb-0">{% trans "Aucune story recente" %}</p>
+                {% endfor %}
+            </article>
+        </div>
+        <div class="col-lg-6">
+            <article class="market-card p-3 h-100">
+                <h4 class="h5">{% trans "Derniers commentaires" %}</h4>
+                {% for comment in recent_comments %}
+                <div class="border-top pt-2 mt-2">
+                    <div class="small market-subtle">{{ comment.created_at|date:'d/m H:i' }}</div>
+                    <div>{{ comment.body }}</div>
+                </div>
+                {% empty %}
+                <p class="market-subtle mb-0">{% trans "Aucun commentaire recent" %}</p>
+                {% endfor %}
+            </article>
+        </div>
+    </section>
+</div>
+{% endblock %}

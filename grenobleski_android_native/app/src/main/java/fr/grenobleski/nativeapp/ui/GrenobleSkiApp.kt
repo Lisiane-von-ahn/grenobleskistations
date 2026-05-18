@@ -1402,6 +1402,15 @@ private fun NativeShell(
                             Text("• $body", style = MaterialTheme.typography.bodySmall)
                         }
                     }
+                    val viewerUserId = state.profileInfo?.userId?.takeIf { it > 0 } ?: state.session?.userId ?: 0
+                    if (selectedActivity.userId > 0 && selectedActivity.userId != viewerUserId) {
+                        OutlinedButton(
+                            onClick = { onAddFriend(selectedActivity.userId) },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(stringResource(id = R.string.add_friend))
+                        }
+                    }
                 }
             }
         }

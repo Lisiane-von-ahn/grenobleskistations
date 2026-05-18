@@ -50,6 +50,7 @@ data class AppUiState(
     val selectedUserActivity: UserActivitySummary? = null,
     val isUserActivityLoading: Boolean = false,
     val storiesPage: Int = 1,
+    val storiesNextPage: Int? = 2,
     val storiesHasNextPage: Boolean = true,
     val isStoriesLoadingMore: Boolean = false,
     val storiesStationFilterId: Int? = null,
@@ -439,6 +440,7 @@ class AppViewModel(
                             skiNewsItems = newsResult.getOrDefault(state.skiNewsItems),
                             highlightedSkiNewsItems = newsResult.getOrDefault(state.skiNewsItems).filter { it.highlighted }.take(5),
                             storiesPage = 1,
+                            storiesNextPage = page?.nextPage,
                             storiesHasNextPage = page?.hasNextPage ?: false,
                         )
                     } else {
@@ -466,6 +468,7 @@ class AppViewModel(
                             storyItems = page.items,
                             highlightedStoryItems = highlighted,
                             storiesPage = 1,
+                            storiesNextPage = page.nextPage,
                             storiesHasNextPage = page.hasNextPage,
                             skiNewsItems = newsResult.getOrDefault(state.skiNewsItems),
                             highlightedSkiNewsItems = newsResult.getOrDefault(state.skiNewsItems).filter { it.highlighted }.take(5),
@@ -603,6 +606,7 @@ class AppViewModel(
                     storyItems = page.items,
                     highlightedStoryItems = highlighted,
                     storiesPage = 1,
+                    storiesNextPage = page.nextPage,
                     storiesHasNextPage = page.hasNextPage,
                     isTabLoading = false,
                 )
@@ -618,7 +622,7 @@ class AppViewModel(
     fun loadMoreStories() {
         val session = state.session ?: return
         if (state.isStoriesLoadingMore || !state.storiesHasNextPage) return
-        val nextPage = state.storiesPage + 1
+        val nextPage = state.storiesNextPage ?: (state.storiesPage + 1)
 
         viewModelScope.launch {
             state = state.copy(isStoriesLoadingMore = true, errorMessage = null)
@@ -640,6 +644,7 @@ class AppViewModel(
                     storyItems = merged,
                     highlightedStoryItems = highlighted,
                     storiesPage = nextPage,
+                    storiesNextPage = page.nextPage,
                     storiesHasNextPage = page.hasNextPage,
                     isStoriesLoadingMore = false,
                 )

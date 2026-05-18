@@ -103,7 +103,7 @@
     </section>
 
     <section>
-        <div class="row g-3">
+        <div id="stories-grid" class="row g-3">
             {% for story in stories %}
             <div class="col-lg-3 col-md-4 col-sm-6">
                 <article class="market-card p-2 h-100">
@@ -115,10 +115,28 @@
                             {% else %}
                             <span class="avatar" style="width: 24px; height: 24px; font-size: 11px;">🎿</span>
                             {% endif %}
-                            <strong>{{ story.user.username }}</strong>
+                            <a href="{% url 'user_public_profile' story.user.id %}" class="text-decoration-none"><strong>{{ story.user.username }}</strong></a>
                         </div>
                         <div class="market-subtle small">{{ story.created_at|date:'d/m H:i' }}{% if story.ski_station %} - {{ story.ski_station.name }}{% endif %}</div>
                         {% if story.caption %}<p class="mb-0 small mt-1">{{ story.caption }}</p>{% endif %}
+                        <div class="small mt-1 market-subtle">{{ story.like_count|default:0 }} ♥ • {{ story.comment_count|default:0 }} 💬</div>
+
+                        {% if user.is_authenticated and user.id != story.user.id %}
+                        <form method="post" action="{% url 'story_add_friend' user_id=story.user.id %}" class="mt-2">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-primary w-100">{% trans "Ajouter en ami" %}</button>
+                        </form>
+                        <form method="post" action="{% url 'story_add_comment' story_id=story.id %}" class="mt-2">
+                            {% csrf_token %}
+                            <input type="text" name="body" maxlength="300" class="form-control form-control-sm mb-1" placeholder="{% if LANGUAGE_CODE == 'en' %}Add a comment{% else %}Ajouter un commentaire{% endif %}" required>
+                            <button type="submit" class="btn btn-sm btn-outline-secondary w-100">{% trans "Commenter" %}</button>
+                        </form>
+                        {% endif %}
+
+                        {% for c in story.comments.all|slice:':3' %}
+                        <div class="small mt-1"><strong>{{ c.user.username }}</strong>: {{ c.body }}</div>
+                        {% endfor %}
+
                         {% if user.is_authenticated and user == story.user %}
                         <form method="post" action="{% url 'delete_story' story_id=story.id %}" class="mt-2" onsubmit="return confirm('Supprimer cette story ?');">
                             {% csrf_token %}
@@ -134,6 +152,107 @@
             </div>
             {% endfor %}
         </div>
+
+                {% if stories_has_next %}
+                <div id="stories-loading-sentinel" class="text-center py-4 market-subtle" data-next-page="{{ stories_next_page }}" data-authenticated="{% if user.is_authenticated %}1{% else %}0{% endif %}" data-csrf-token="{{ csrf_token }}">
+                        {% if LANGUAGE_CODE == 'en' %}Loading more stories...{% else %}Chargement des stories suivantes...{% endif %}
+                </div>
+                {% endif %}
     </section>
 </div>
+
+<script>
+(() => {
+    const sentinel = document.getElementById('stories-loading-sentinel');
+    const grid = document.getElementById('stories-grid');
+    if (!sentinel || !grid) return;
+    const canInteract = sentinel.dataset.authenticated === '1';
+    const csrfToken = sentinel.dataset.csrfToken || '';
+    const addFriendLabel = 'Ajouter en ami';
+    const commentLabel = 'Commenter';
+    const addCommentPlaceholder = 'Ajouter un commentaire';
+
+    let loading = false;
+    let nextPage = parseInt(sentinel.dataset.nextPage || '0', 10);
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text || '';
+        return div.innerHTML;
+    }
+
+    function storyCardHtml(story) {
+        const avatar = story.avatar_base64
+            ? `<img src="data:image/png;base64,${story.avatar_base64}" alt="${escapeHtml(story.username)}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;">`
+            : `<span class="avatar" style="width:24px;height:24px;font-size:11px;">🎿</span>`;
+
+        const comments = (story.recent_comments || []).map((c) => {
+            return `<div class="small mt-1"><strong>${escapeHtml(c.user_label)}</strong>: ${escapeHtml(c.body)}</div>`;
+        }).join('');
+
+        const friendForm = canInteract && !story.is_mine
+            ? `<form method="post" action="/ski-stories/user/${story.user_id}/add-friend/" class="mt-2"><input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}"><button type="submit" class="btn btn-sm btn-outline-primary w-100">${escapeHtml(addFriendLabel)}</button></form>`
+            : '';
+        const commentForm = canInteract && !story.is_mine
+            ? `<form method="post" action="/ski-stories/${story.id}/comment/" class="mt-2"><input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}"><input type="text" name="body" maxlength="300" class="form-control form-control-sm mb-1" placeholder="${escapeHtml(addCommentPlaceholder)}" required><button type="submit" class="btn btn-sm btn-outline-secondary w-100">${escapeHtml(commentLabel)}</button></form>`
+            : '';
+        const deleteForm = canInteract && story.is_mine
+            ? `<form method="post" action="/ski-stories/${story.id}/delete/" class="mt-2" onsubmit="return confirm('Supprimer cette story ?');"><input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}"><button type="submit" class="btn btn-sm btn-outline-danger w-100">Supprimer</button></form>`
+            : '';
+
+        return `
+            <div class="col-lg-3 col-md-4 col-sm-6">
+                <article class="market-card p-2 h-100">
+                    <img src="data:image/jpeg;base64,${story.image_base64}" alt="Story" class="market-image" style="height:230px;object-fit:cover;">
+                    <div class="p-2">
+                        <div class="d-flex align-items-center gap-2 small">
+                            ${avatar}
+                            <a href="${story.profile_url}" class="text-decoration-none"><strong>${escapeHtml(story.user_label)}</strong></a>
+                        </div>
+                        <div class="market-subtle small">${escapeHtml(story.created_at)}${story.station_name ? ' - ' + escapeHtml(story.station_name) : ''}</div>
+                        ${story.caption ? `<p class="mb-0 small mt-1">${escapeHtml(story.caption)}</p>` : ''}
+                        <div class="small mt-1 market-subtle">${story.like_count} ♥ • ${story.comment_count} 💬</div>
+                        ${friendForm}
+                        ${commentForm}
+                        ${comments}
+                        ${deleteForm}
+                    </div>
+                </article>
+            </div>
+        `;
+    }
+
+    async function loadMoreStories() {
+        if (loading || !nextPage) return;
+        loading = true;
+        try {
+            const response = await fetch(`/ski-stories/feed/?page=${nextPage}`, { credentials: 'same-origin' });
+            if (!response.ok) throw new Error('Unable to load stories');
+            const payload = await response.json();
+            const html = (payload.results || []).map(storyCardHtml).join('');
+            if (html) {
+                grid.insertAdjacentHTML('beforeend', html);
+            }
+            nextPage = payload.next_page || null;
+            if (!payload.has_next || !nextPage) {
+                sentinel.remove();
+            }
+        } catch (err) {
+            sentinel.textContent = 'Impossible de charger plus de stories.';
+        } finally {
+            loading = false;
+        }
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+                loadMoreStories();
+            }
+        });
+    }, { rootMargin: '320px 0px' });
+
+    observer.observe(sentinel);
+})();
+</script>
 {% endblock %}
