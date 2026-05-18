@@ -1,55 +1,272 @@
 {% extends 'base.html' %}
 {% load i18n %}
+{% load custom_filters %}
 
 {% block title %}{% if LANGUAGE_CODE == 'en' %}Community profile{% else %}Profil communaute{% endif %}{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <section class="premium-shell p-3 mb-4">
-        <div class="d-flex align-items-center gap-3">
+<style>
+    .public-profile-shell {
+        --pp-ink: #133349;
+        --pp-accent: #1d7f89;
+        --pp-accent-soft: #e7f7f8;
+        --pp-hero-grad: linear-gradient(135deg, #f7fdff 0%, #e8f5f3 45%, #f6fbff 100%);
+        --pp-card-border: rgba(20, 77, 106, 0.12);
+    }
+
+    .public-profile-hero {
+        background: var(--pp-hero-grad);
+        border: 1px solid var(--pp-card-border);
+        border-radius: 22px;
+        padding: 1.25rem;
+        box-shadow: 0 14px 36px rgba(17, 75, 101, 0.08);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .public-profile-hero::after {
+        content: "";
+        position: absolute;
+        right: -42px;
+        top: -42px;
+        width: 140px;
+        height: 140px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(29, 127, 137, 0.24) 0%, rgba(29, 127, 137, 0) 72%);
+    }
+
+    .public-profile-avatar {
+        width: 82px;
+        height: 82px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid #fff;
+        box-shadow: 0 8px 20px rgba(12, 78, 110, 0.2);
+        background: #fff;
+    }
+
+    .public-profile-emoji-avatar {
+        width: 82px;
+        height: 82px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 30px;
+        border: 3px solid #fff;
+        background: #fff;
+        box-shadow: 0 8px 20px rgba(12, 78, 110, 0.2);
+    }
+
+    .public-profile-kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+        border-radius: 999px;
+        padding: .28rem .65rem;
+        background: rgba(29, 127, 137, 0.12);
+        color: var(--pp-accent);
+        font-size: .74rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+    }
+
+    .public-profile-name {
+        margin: .45rem 0 .12rem;
+        color: var(--pp-ink);
+        font-weight: 800;
+    }
+
+    .public-profile-handle {
+        color: #5a7285;
+        font-size: .94rem;
+    }
+
+    .public-profile-org {
+        margin-top: .18rem;
+        font-size: .9rem;
+        color: #3f6278;
+    }
+
+    .public-metric-card {
+        border: 1px solid var(--pp-card-border);
+        border-radius: 16px;
+        background: #fff;
+        padding: .9rem 1rem;
+        box-shadow: 0 8px 20px rgba(18, 60, 88, 0.06);
+        height: 100%;
+    }
+
+    .public-metric-label {
+        font-size: .77rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        color: #668297;
+    }
+
+    .public-metric-value {
+        margin-top: .28rem;
+        font-size: 1.45rem;
+        font-weight: 800;
+        color: var(--pp-ink);
+        line-height: 1.1;
+    }
+
+    .public-profile-actions {
+        border: 1px solid var(--pp-card-border);
+        border-radius: 16px;
+        background: #fff;
+        padding: .95rem;
+        box-shadow: 0 8px 20px rgba(18, 60, 88, 0.06);
+    }
+
+    .public-activity-card {
+        border: 1px solid var(--pp-card-border);
+        border-radius: 18px;
+        background: #fff;
+        box-shadow: 0 10px 28px rgba(18, 60, 88, 0.08);
+        height: 100%;
+        overflow: hidden;
+    }
+
+    .public-activity-header {
+        padding: .9rem 1rem;
+        border-bottom: 1px solid rgba(20, 77, 106, 0.12);
+        background: linear-gradient(180deg, #f8fcff 0%, #f2fbf8 100%);
+    }
+
+    .public-activity-header h4 {
+        margin: 0;
+        font-size: 1.04rem;
+        font-weight: 700;
+        color: var(--pp-ink);
+    }
+
+    .public-activity-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .public-activity-item {
+        padding: .95rem 1rem;
+        border-top: 1px solid rgba(20, 77, 106, 0.08);
+    }
+
+    .public-activity-item:first-child {
+        border-top: none;
+    }
+
+    .public-story-meta,
+    .public-comment-meta {
+        display: flex;
+        gap: .45rem;
+        flex-wrap: wrap;
+        margin-bottom: .38rem;
+    }
+
+    .public-chip {
+        border-radius: 999px;
+        font-size: .72rem;
+        font-weight: 700;
+        padding: .18rem .55rem;
+        background: var(--pp-accent-soft);
+        color: #2e6374;
+    }
+
+    .public-story-caption,
+    .public-comment-body {
+        color: #28465b;
+        margin: 0;
+    }
+
+    .public-story-thumb {
+        margin-top: .6rem;
+        width: 100%;
+        height: 160px;
+        object-fit: cover;
+        border-radius: 12px;
+        border: 1px solid rgba(20, 77, 106, 0.12);
+    }
+
+    .public-empty-state {
+        margin: 0;
+        color: #60798b;
+        font-size: .95rem;
+    }
+
+    @media (max-width: 768px) {
+        .public-profile-hero {
+            padding: 1rem;
+        }
+
+        .public-profile-avatar,
+        .public-profile-emoji-avatar {
+            width: 72px;
+            height: 72px;
+        }
+
+        .public-story-thumb {
+            height: 130px;
+        }
+    }
+</style>
+
+<div class="container py-4 public-profile-shell">
+    <section class="public-profile-hero mb-4">
+        <div class="d-flex align-items-start gap-3 flex-wrap position-relative" style="z-index:1;">
             {% if avatar_base64 %}
-            <img src="data:image/png;base64,{{ avatar_base64 }}" alt="{{ target_user.username }}" style="width:68px;height:68px;border-radius:50%;object-fit:cover;">
+            <img src="data:image/png;base64,{{ avatar_base64 }}" alt="{{ target_user.username }}" class="public-profile-avatar">
             {% else %}
-            <span class="avatar" style="width:68px;height:68px;font-size:24px;">🎿</span>
+            <span class="public-profile-emoji-avatar" aria-hidden="true">🎿</span>
             {% endif %}
-            <div>
-                <h2 class="premium-title h4 mb-1">{{ display_name }}</h2>
-                <div class="market-subtle">@{{ target_user.username }}</div>
+            <div class="flex-grow-1">
+                <span class="public-profile-kicker">{% trans "Rider profile" %}</span>
+                <h2 class="h3 public-profile-name">{{ display_name }}</h2>
+                <div class="public-profile-handle">@{{ target_user.username }}</div>
                 {% if organization_name %}
-                <div class="small">{{ organization_name }}</div>
+                <div class="public-profile-org">{{ organization_name }}</div>
                 {% endif %}
             </div>
         </div>
     </section>
 
-    <section class="row g-3 mb-4">
-        <div class="col-lg-3 col-md-6">
-            <article class="market-card p-3 h-100">
-                <div class="market-subtle">{% trans "Stories actives" %}</div>
-                <h3 class="h4 mb-0">{{ story_count }}</h3>
+    <section class="row g-3 mb-3">
+        <div class="col-lg-2 col-md-4 col-6">
+            <article class="public-metric-card">
+                <div class="public-metric-label">{% trans "Stories" %}</div>
+                <div class="public-metric-value">{{ story_count }}</div>
             </article>
         </div>
-        <div class="col-lg-3 col-md-6">
-            <article class="market-card p-3 h-100">
-                <div class="market-subtle">{% trans "Commentaires" %}</div>
-                <h3 class="h4 mb-0">{{ comment_count }}</h3>
+        <div class="col-lg-2 col-md-4 col-6">
+            <article class="public-metric-card">
+                <div class="public-metric-label">{% trans "Commentaires" %}</div>
+                <div class="public-metric-value">{{ comment_count }}</div>
             </article>
         </div>
-        <div class="col-lg-3 col-md-6">
-            <article class="market-card p-3 h-100">
-                <div class="market-subtle">{% trans "Amis" %}</div>
-                <h3 class="h4 mb-0">{{ friend_count }}</h3>
+        <div class="col-lg-2 col-md-4 col-6">
+            <article class="public-metric-card">
+                <div class="public-metric-label">{% trans "Amis" %}</div>
+                <div class="public-metric-value">{{ friend_count }}</div>
             </article>
         </div>
-        <div class="col-lg-3 col-md-6">
-            <article class="market-card p-3 h-100">
-                <div class="market-subtle">{% trans "Messages publics" %}</div>
-                <h3 class="h4 mb-0">{{ public_messages_count }}</h3>
+        <div class="col-lg-3 col-md-6 col-6">
+            <article class="public-metric-card">
+                <div class="public-metric-label">{% trans "Likes recus" %}</div>
+                <div class="public-metric-value">{{ total_likes_received }}</div>
+            </article>
+        </div>
+        <div class="col-lg-3 col-md-6 col-12">
+            <article class="public-metric-card">
+                <div class="public-metric-label">{% trans "Messages publics" %}</div>
+                <div class="public-metric-value">{{ public_messages_count }}</div>
             </article>
         </div>
     </section>
 
-    <section class="market-search-panel premium-panel mb-4">
+    <section class="public-profile-actions mb-4">
         <div class="d-flex gap-2 flex-wrap">
             {% if is_authenticated and request.user.id != target_user.id %}
                 {% if is_friend %}
@@ -72,32 +289,60 @@
     </section>
 
     <section class="row g-3">
-        <div class="col-lg-6">
-            <article class="market-card p-3 h-100">
-                <h4 class="h5">{% trans "Dernieres stories" %}</h4>
-                {% for story in recent_stories %}
-                <div class="border-top pt-2 mt-2">
-                    <div class="small market-subtle">{{ story.created_at|date:'d/m H:i' }}{% if story.ski_station %} - {{ story.ski_station.name }}{% endif %}</div>
-                    <div>{{ story.caption|default:'-' }}</div>
-                </div>
-                {% empty %}
-                <p class="market-subtle mb-0">{% trans "Aucune story recente" %}</p>
-                {% endfor %}
+        <div class="col-lg-7">
+            <article class="public-activity-card">
+                <header class="public-activity-header">
+                    <h4>{% trans "Dernieres stories" %}</h4>
+                </header>
+                <ul class="public-activity-list">
+                    {% for story in recent_stories %}
+                    <li class="public-activity-item">
+                        <div class="public-story-meta">
+                            <span class="public-chip">{{ story.created_at|date:'d/m H:i' }}</span>
+                            {% if story.ski_station %}<span class="public-chip">{{ story.ski_station.name }}</span>{% endif %}
+                            <span class="public-chip">{{ story.like_count }} ♥</span>
+                            <span class="public-chip">{{ story.comments_count }} 💬</span>
+                        </div>
+                        <p class="public-story-caption">{{ story.caption|default:'-' }}</p>
+                        <img src="data:image/jpeg;base64,{{ story.image|b64encode }}" alt="Story {{ display_name }}" class="public-story-thumb">
+                    </li>
+                    {% empty %}
+                    <li class="public-activity-item">
+                        <p class="public-empty-state">{% trans "Aucune story recente" %}</p>
+                    </li>
+                    {% endfor %}
+                </ul>
             </article>
         </div>
-        <div class="col-lg-6">
-            <article class="market-card p-3 h-100">
-                <h4 class="h5">{% trans "Derniers commentaires" %}</h4>
-                {% for comment in recent_comments %}
-                <div class="border-top pt-2 mt-2">
-                    <div class="small market-subtle">{{ comment.created_at|date:'d/m H:i' }}</div>
-                    <div>{{ comment.body }}</div>
-                </div>
-                {% empty %}
-                <p class="market-subtle mb-0">{% trans "Aucun commentaire recent" %}</p>
-                {% endfor %}
+
+        <div class="col-lg-5">
+            <article class="public-activity-card">
+                <header class="public-activity-header">
+                    <h4>{% trans "Derniers commentaires" %}</h4>
+                </header>
+                <ul class="public-activity-list">
+                    {% for comment in recent_comments %}
+                    <li class="public-activity-item">
+                        <div class="public-comment-meta">
+                            <span class="public-chip">{{ comment.created_at|date:'d/m H:i' }}</span>
+                            {% if comment.story and comment.story.ski_station %}<span class="public-chip">{{ comment.story.ski_station.name }}</span>{% endif %}
+                        </div>
+                        <p class="public-comment-body">{{ comment.body }}</p>
+                    </li>
+                    {% empty %}
+                    <li class="public-activity-item">
+                        <p class="public-empty-state">{% trans "Aucun commentaire recent" %}</p>
+                    </li>
+                    {% endfor %}
+                </ul>
             </article>
         </div>
     </section>
+
+    {% if not has_recent_activity %}
+    <section class="mt-3">
+        <p class="public-empty-state">{% trans "Ce profil n'a pas encore d'activite recente." %}</p>
+    </section>
+    {% endif %}
 </div>
 {% endblock %}

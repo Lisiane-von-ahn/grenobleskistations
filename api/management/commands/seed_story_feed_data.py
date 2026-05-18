@@ -7,6 +7,7 @@ from urllib.request import Request, urlopen
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 from PIL import Image, ImageDraw, ImageOps
 
@@ -164,6 +165,13 @@ class Command(BaseCommand):
         parser.add_argument("--messages", type=int, default=800, help="Number of messages to generate")
         parser.add_argument("--reset", action="store_true", help="Delete existing stories/likes/comments before seeding")
 
+    def _seeded_user_queryset(self):
+        # Keep reset safe: remove only accounts created by this seeder conventions.
+        return User.objects.filter(
+            Q(username__startswith="story_user_")
+            | Q(email__iendswith="@grenobleski.local")
+        )
+
     @transaction.atomic
     def handle(self, *args, **options):
         users_target = max(1, options["users"])
@@ -184,7 +192,11 @@ class Command(BaseCommand):
             SkiStoryLike.objects.all().delete()
             SkiStory.objects.all().delete()
             Message.objects.all().delete()
+            seed_users_qs = self._seeded_user_queryset()
+            seed_users_count = seed_users_qs.count()
+            seed_users_qs.delete()
             self.stdout.write(self.style.WARNING("Existing story feed data deleted."))
+            self.stdout.write(self.style.WARNING(f"Seed users deleted: {seed_users_count}"))
 
         story_image_cache = {}
         profile_image_cache = {}

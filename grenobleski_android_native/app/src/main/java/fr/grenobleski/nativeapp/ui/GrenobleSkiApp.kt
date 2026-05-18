@@ -1547,6 +1547,7 @@ private fun HomeTab(
 ) {
     val xpInLevel = state.xpPoints % 100
     val xpProgress = xpInLevel / 100f
+    val listState = rememberLazyListState()
     val latestMarketplaceItems = remember(state.marketplaceItems) {
         state.marketplaceItems.sortedByDescending { it.id }.take(4)
     }
@@ -1578,496 +1579,78 @@ private fun HomeTab(
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Image(
-                            painter = painterResource(id = R.drawable.logo),
-                            contentDescription = stringResource(id = R.string.app_name),
-                            modifier = Modifier
-                                .size(52.dp)
-                                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f), RoundedCornerShape(14.dp))
-                                .padding(6.dp),
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
-                            Text(
-                                text = stringResource(id = R.string.dashboard_welcome),
-                                        val preview = remember(story.imageBase64) { decodeBase64Image(story.imageBase64) }
-                                style = MaterialTheme.typography.labelLarge,
-                                            modifier = Modifier.width(220.dp),
-                                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
-                                            shape = RoundedCornerShape(16.dp),
-                            Text(
-                                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                                if (preview != null) {
-                                                    Image(
-                                                        bitmap = preview,
-                                                        contentDescription = null,
-                                                        contentScale = ContentScale.Crop,
-                                                        modifier = Modifier
-                                                            .fillMaxWidth()
-                                                            .height(128.dp)
-                                                            .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
-                                                    )
-                                                }
-                                                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                                    Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                                                    Text(story.userLabel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                                                    Text(
-                                                        text = story.caption.ifBlank { stringResource(id = R.string.story_no_caption) },
-                                                        style = MaterialTheme.typography.bodyMedium,
-                                                        fontWeight = FontWeight.Medium,
-                                                        maxLines = 3,
-                                                    )
-                                                    Text(
-                                                        text = "${story.stationName} • ${story.likeCount} ♥ • ${story.commentCount} 💬",
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(10.dp))
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Button(onClick = onOpenStories, modifier = Modifier.weight(1f)) {
-                                        Text(stringResource(id = R.string.stories))
-                                    }
-                                    OutlinedButton(onClick = onOpenCommunity, modifier = Modifier.weight(1f)) {
-                                        Text(stringResource(id = R.string.community_dashboard))
-                                    }
-                                }
+                    Text(
+                        text = stringResource(id = R.string.dashboard_welcome),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Text(
+                        text = state.session?.displayName.orEmpty(),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = stringResource(id = R.string.dashboard_subtitle_premium),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    LinearProgressIndicator(progress = { xpProgress }, modifier = Modifier.fillMaxWidth())
+                    Text(
+                        text = stringResource(id = R.string.gamification_next_level_hint, 100 - xpInLevel),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+
+        item {
+            Text(
+                text = stringResource(id = R.string.highlighted_stories),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                items(state.highlightedStoryItems) { story ->
+                    val preview = remember(story.imageBase64) { decodeBase64Image(story.imageBase64) }
+                    Card(modifier = Modifier.width(220.dp), shape = RoundedCornerShape(16.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            if (preview != null) {
+                                Image(
+                                    bitmap = preview,
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(128.dp)
+                                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
+                                )
                             }
-
-                            if (state.highlightedSkiNewsItems.isNotEmpty()) {
-                                item {
-                                    Text(
-                                        text = stringResource(id = R.string.highlighted_ski_news),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                        items(state.highlightedSkiNewsItems) { news ->
-                                            Card(
-                                                modifier = Modifier.width(280.dp),
-                                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f)),
-                                                shape = RoundedCornerShape(16.dp),
-                                            ) {
-                                                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                                    Text(
-                                                        text = news.title,
-                                                        style = MaterialTheme.typography.titleSmall,
-                                                        fontWeight = FontWeight.Bold,
-                                                        maxLines = 3,
-                                                    )
-                                                    Text(
-                                                        text = "${news.sourceName} • ${news.publishedAtLabel}",
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    )
-                                                    if (news.summary.isNotBlank()) {
-                                                        Text(news.summary, style = MaterialTheme.typography.bodySmall, maxLines = 3)
-                                                    }
-                                                    OutlinedButton(onClick = { onOpenUrl(news.link) }, modifier = Modifier.fillMaxWidth()) {
-                                                        Text(stringResource(id = R.string.open_news))
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            item {
-                                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    MetricCard(
-                                        title = stringResource(id = R.string.stations),
-                                        value = state.dashboardCounts.stations,
-                                        modifier = Modifier.weight(1f),
-                                        onClick = onOpenStations,
-                                    )
-                                    MetricCard(
-                                        title = stringResource(id = R.string.bus_lines),
-                                        value = state.dashboardCounts.busLines,
-                                        modifier = Modifier.weight(1f),
-                                        onClick = onOpenBusLines,
-                                    )
-                                }
-                            }
-
-                            item {
-                                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    MetricCard(
-                                        title = stringResource(id = R.string.services),
-                                        value = state.dashboardCounts.services,
-                                        modifier = Modifier.weight(1f),
-                                        onClick = onOpenServices,
-                                    )
-                                    MetricCard(
-                                        title = stringResource(id = R.string.marketplace),
-                                        value = state.dashboardCounts.marketplace,
-                                        modifier = Modifier.weight(1f),
-                                        onClick = onOpenMarketplace,
-                                    )
-                                }
-                            }
-
-                            item {
-                                Card(
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                    shape = RoundedCornerShape(16.dp),
-                                ) {
-                                    Column(
-                                        modifier = Modifier.padding(14.dp),
-                                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                                    ) {
-                                        Text(
-                                            text = stringResource(id = R.string.recent_activities),
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.SemiBold,
-                                        )
-                                        ActivityLine(stringResource(id = R.string.activity_market_updated, state.dashboardCounts.marketplace))
-                                        ActivityLine(stringResource(id = R.string.activity_instructors_ready, state.instructorItems.size))
-                                        ActivityLine(stringResource(id = R.string.activity_piste_reports, state.pisteItems.size))
-                                    }
-                                }
-                            }
-
-                            item {
-                                Card(
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                    shape = RoundedCornerShape(16.dp),
-                                ) {
-                                    Column(
-                                        modifier = Modifier.padding(14.dp),
-                                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically,
-                                        ) {
-                                            Text(
-                                                text = stringResource(id = R.string.home_latest_marketplace),
-                                                style = MaterialTheme.typography.titleMedium,
-                                                fontWeight = FontWeight.SemiBold,
-                                            )
-                                            TextButton(onClick = onOpenMarketplace) {
-                                                Text(text = stringResource(id = R.string.marketplace))
-                                            }
-                                        }
-
-                                        if (latestMarketplaceItems.isEmpty()) {
-                                            Text(
-                                                text = stringResource(id = R.string.empty_marketplace),
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        } else {
-                                            latestMarketplaceItems.forEach { item ->
-                                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                                    Text(
-                                                        text = item.title,
-                                                        style = MaterialTheme.typography.bodyMedium,
-                                                        fontWeight = FontWeight.Medium,
-                                                    )
-                                                    Text(
-                                                        text = "${item.city} • ${item.priceLabel}",
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    )
-                                                }
-                                            }
-                                        }
-
-                                        OutlinedButton(onClick = onOpenCarpool, modifier = Modifier.fillMaxWidth()) {
-                                            Text(text = stringResource(id = R.string.carpool))
-                                        }
-                                    }
-                                }
+                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(story.userLabel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                                Text(
+                                    text = story.caption.ifBlank { stringResource(id = R.string.story_no_caption) },
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    maxLines = 3,
+                                )
+                                Text(
+                                    text = "${story.stationName} • ${story.likeCount} ♥ • ${story.commentCount} 💬",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
                         }
                     }
-
-                    @Composable
-                    private fun StoriesTab(
-                        state: AppUiState,
-                        onStoriesSearchChange: (String) -> Unit,
-                        onStoriesStationFilterChange: (Int?) -> Unit,
-                        onApplyStoriesFilters: () -> Unit,
-                        onLoadMoreStories: () -> Unit,
-                        onToggleStoryLike: (Int, Boolean) -> Unit,
-                        onStoryComment: (Int, String) -> Unit,
-                        onOpenUserActivity: (Int) -> Unit,
-                        onAddFriend: (Int) -> Unit,
-                    ) {
-                        val listState = rememberLazyListState()
-                        val commentDrafts = remember { mutableStateMapOf<Int, String>() }
-                        val stationOptions = remember(state.stationItems) { state.stationItems.sortedBy { it.name } }
-
-                        LazyColumn(
-                            state = listState,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 14.dp),
-                            contentPadding = PaddingValues(vertical = 12.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            item {
-                                Card(
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                    shape = RoundedCornerShape(16.dp),
-                                ) {
-                                    Column(
-                                        modifier = Modifier.padding(12.dp),
-                                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                                    ) {
-                                        Text(
-                                            text = stringResource(id = R.string.story_filters),
-                                            style = MaterialTheme.typography.titleSmall,
-                                            fontWeight = FontWeight.SemiBold,
-                                        )
-                                        OutlinedTextField(
-                                            value = state.storiesSearchQuery,
-                                            onValueChange = onStoriesSearchChange,
-                                            label = { Text(stringResource(id = R.string.story_search)) },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            singleLine = true,
-                                        )
-                                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            item {
-                                                AssistChip(
-                                                    onClick = { onStoriesStationFilterChange(null) },
-                                                    label = { Text(stringResource(id = R.string.all_stations)) },
-                                                )
-                                            }
-                                            items(stationOptions.take(20)) { station ->
-                                                AssistChip(
-                                                    onClick = { onStoriesStationFilterChange(station.id) },
-                                                    label = { Text(station.name) },
-                                                )
-                                            }
-                                        }
-                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            Button(onClick = onApplyStoriesFilters, modifier = Modifier.weight(1f)) {
-                                                Text(stringResource(id = R.string.apply_filters))
-                                            }
-                                            OutlinedButton(
-                                                onClick = {
-                                                    onStoriesSearchChange("")
-                                                    onStoriesStationFilterChange(null)
-                                                    onApplyStoriesFilters()
-                                                },
-                                                modifier = Modifier.weight(1f),
-                                            ) {
-                                                Text(stringResource(id = R.string.clear_filters))
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            items(state.storyItems) { story ->
-                                val previewImage = remember(story.imageBase64) { decodeBase64Image(story.imageBase64) }
-                                Card(
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                    shape = RoundedCornerShape(16.dp),
-                                ) {
-                                    Column(
-                                        modifier = Modifier.padding(12.dp),
-                                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                                    ) {
-                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                            TextButton(onClick = { onOpenUserActivity(story.userId) }) {
-                                                Text(
-                                                    text = story.userLabel,
-                                                    style = MaterialTheme.typography.titleSmall,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                )
-                                            }
-                                            Text(
-                                                text = story.createdAtLabel,
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        }
-                                        Text(
-                                            text = "${story.stationName} • ${story.caption.ifBlank { stringResource(id = R.string.story_no_caption) }}",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                        )
-                                        if (previewImage != null) {
-                                            Image(
-                                                bitmap = previewImage,
-                                                contentDescription = null,
-                                                contentScale = ContentScale.Crop,
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .height(180.dp)
-                                                    .clip(RoundedCornerShape(12.dp)),
-                                            )
-                                        }
-                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            OutlinedButton(onClick = { onToggleStoryLike(story.id, story.likedByMe) }) {
-                                                Text(if (story.likedByMe) stringResource(id = R.string.unlike_story) else stringResource(id = R.string.like_story))
-                                            }
-                                            OutlinedButton(onClick = { onAddFriend(story.userId) }) {
-                                                Text(stringResource(id = R.string.add_friend))
-                                            }
-                                            Text(
-                                                text = "${story.likeCount} ♥  •  ${story.commentCount} 💬",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        }
-
-                                        if (story.recentComments.isNotEmpty()) {
-                                            story.recentComments.forEach { comment ->
-                                                Text(
-                                                    text = "${comment.userLabel}: ${comment.body}",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                )
-                                            }
-                                        }
-
-                                        val draft = commentDrafts[story.id].orEmpty()
-                                        OutlinedTextField(
-                                            value = draft,
-                                            onValueChange = { commentDrafts[story.id] = it },
-                                            label = { Text(stringResource(id = R.string.add_comment)) },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            singleLine = true,
-                                        )
-                                        Button(
-                                            onClick = {
-                                                onStoryComment(story.id, draft)
-                                                commentDrafts[story.id] = ""
-                                            },
-                                            modifier = Modifier.fillMaxWidth(),
-                                        ) {
-                                            Text(stringResource(id = R.string.post_comment))
-                                        }
-                                    }
-                                }
-                            }
-
-                            if (state.isStoriesLoadingMore) {
-                                item {
-                                    Text(
-                                        text = stringResource(id = R.string.loading_more_stories),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
-                        }
-
-                        LaunchedEffect(listState, state.storyItems.size, state.storiesHasNextPage, state.isStoriesLoadingMore) {
-                            snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
-                                .collect { index ->
-                                    val trigger = max(0, listState.layoutInfo.totalItemsCount - 3)
-                                    if (index >= trigger && state.storiesHasNextPage && !state.isStoriesLoadingMore) {
-                                        onLoadMoreStories()
-                                    }
-                                }
-                        }
-                    }
-
-                    @Composable
-                    private fun CommunityDashboardTab(state: AppUiState) {
-                        val stats = state.storyStats
-
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            item {
-                                Card(
-                                    shape = RoundedCornerShape(18.dp),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.68f)),
-                                ) {
-                                    Column(
-                                        modifier = Modifier.padding(16.dp),
-                                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                                    ) {
-                                        Text(stringResource(id = R.string.community_dashboard), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                                        Text("Vibe: ${stats.momentVibe}", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
-                                        Text("Active stories: ${stats.totalActiveStories}")
-                                        Text("Average fun score: ${"%.1f".format(stats.avgFunScore)}")
-                                    }
-                                }
-                            }
-
-                            item {
-                                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    Card(modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp)) {
-                                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                            Text("Crowd signals", fontWeight = FontWeight.SemiBold)
-                                            Text("${stats.crowdBreakdown.values.sum()} reports")
-                                        }
-                                    }
-                                    Card(modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp)) {
-                                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                            Text("Weather tags", fontWeight = FontWeight.SemiBold)
-                                            Text("${stats.weatherBreakdown.values.sum()} mentions")
-                                        }
-                                    }
-                                }
-                            }
-
-                            if (stats.crowdBreakdown.isNotEmpty()) {
-                                item {
-                                    Card(shape = RoundedCornerShape(16.dp)) {
-                                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                            Text("Crowd levels", fontWeight = FontWeight.SemiBold)
-                                            stats.crowdBreakdown.entries.sortedByDescending { it.value }.forEach { (key, value) ->
-                                                Text("$key: $value")
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            if (stats.weatherBreakdown.isNotEmpty()) {
-                                item {
-                                    Card(shape = RoundedCornerShape(16.dp)) {
-                                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                            Text("Weather", fontWeight = FontWeight.SemiBold)
-                                            stats.weatherBreakdown.entries.sortedByDescending { it.value }.forEach { (key, value) ->
-                                                Text("$key: $value")
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            if (state.highlightedStoryItems.isNotEmpty()) {
-                                item {
-                                    Text(text = stringResource(id = R.string.highlighted_stories), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                                }
-                                items(state.highlightedStoryItems.take(5)) { story ->
-                                    Card(shape = RoundedCornerShape(14.dp)) {
-                                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                            Text(story.userLabel, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
-                                            Text(story.caption.ifBlank { stringResource(id = R.string.story_no_caption) })
-                                            Text("${story.stationName} • ${story.likeCount} ♥ • ${story.commentCount} 💬", style = MaterialTheme.typography.labelSmall)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                                maxLines = 3,
-                            )
-                            Text(
-                                text = "${story.stationName} • ${story.likeCount} ♥ • ${story.commentCount} 💬",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onOpenStories, modifier = Modifier.weight(1f)) {
+                    Text(stringResource(id = R.string.stories))
+                }
+                OutlinedButton(onClick = onOpenCommunity, modifier = Modifier.weight(1f)) {
+                    Text(stringResource(id = R.string.community_dashboard))
                 }
             }
         }
@@ -2082,18 +1665,9 @@ private fun HomeTab(
                 Spacer(modifier = Modifier.height(8.dp))
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(state.highlightedSkiNewsItems) { news ->
-                        Card(
-                            modifier = Modifier.width(280.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f)),
-                            shape = RoundedCornerShape(16.dp),
-                        ) {
+                        Card(modifier = Modifier.width(280.dp), shape = RoundedCornerShape(16.dp)) {
                             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(
-                                    text = news.title,
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 3,
-                                )
+                                Text(news.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 3)
                                 Text(
                                     text = "${news.sourceName} • ${news.publishedAtLabel}",
                                     style = MaterialTheme.typography.labelSmall,
@@ -2113,22 +1687,65 @@ private fun HomeTab(
         }
 
         item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(16.dp),
-            ) {
-                Column(
-                    modifier = Modifier.padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Button(onClick = onOpenCommunity, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(id = R.string.open_community_dashboard))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                MetricCard(stringResource(id = R.string.stations), state.dashboardCounts.stations, modifier = Modifier.weight(1f), onClick = onOpenStations)
+                MetricCard(stringResource(id = R.string.bus_lines), state.dashboardCounts.busLines, modifier = Modifier.weight(1f), onClick = onOpenBusLines)
+            }
+        }
+
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                MetricCard(stringResource(id = R.string.services), state.dashboardCounts.services, modifier = Modifier.weight(1f), onClick = onOpenServices)
+                MetricCard(stringResource(id = R.string.marketplace), state.dashboardCounts.marketplace, modifier = Modifier.weight(1f), onClick = onOpenMarketplace)
+            }
+        }
+
+        item {
+            Card(shape = RoundedCornerShape(16.dp)) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(text = stringResource(id = R.string.home_latest_marketplace), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    if (latestMarketplaceItems.isEmpty()) {
+                        Text(text = stringResource(id = R.string.empty_marketplace), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else {
+                        latestMarketplaceItems.forEach { item ->
+                            Text("${item.title} • ${item.city} • ${item.priceLabel}", style = MaterialTheme.typography.bodySmall)
+                        }
                     }
-                    Text(
-                        text = stringResource(id = R.string.story_filters),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                    )
+                    OutlinedButton(onClick = onOpenCarpool, modifier = Modifier.fillMaxWidth()) {
+                        Text(text = stringResource(id = R.string.carpool))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StoriesTab(
+    state: AppUiState,
+    onStoriesSearchChange: (String) -> Unit,
+    onStoriesStationFilterChange: (Int?) -> Unit,
+    onApplyStoriesFilters: () -> Unit,
+    onLoadMoreStories: () -> Unit,
+    onToggleStoryLike: (Int, Boolean) -> Unit,
+    onStoryComment: (Int, String) -> Unit,
+    onOpenUserActivity: (Int) -> Unit,
+    onAddFriend: (Int) -> Unit,
+) {
+    val listState = rememberLazyListState()
+    val commentDrafts = remember { mutableStateMapOf<Int, String>() }
+    val stationOptions = remember(state.stationItems) { state.stationItems.sortedBy { it.name } }
+
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp),
+        contentPadding = PaddingValues(vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item {
+            Card(shape = RoundedCornerShape(16.dp)) {
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(text = stringResource(id = R.string.story_filters), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                     OutlinedTextField(
                         value = state.storiesSearchQuery,
                         onValueChange = onStoriesSearchChange,
@@ -2151,19 +1768,12 @@ private fun HomeTab(
                         }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = onApplyStoriesFilters, modifier = Modifier.weight(1f)) {
-                            Text(stringResource(id = R.string.apply_filters))
-                        }
-                        OutlinedButton(
-                            onClick = {
-                                onStoriesSearchChange("")
-                                onStoriesStationFilterChange(null)
-                                onApplyStoriesFilters()
-                            },
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Text(stringResource(id = R.string.clear_filters))
-                        }
+                        Button(onClick = onApplyStoriesFilters, modifier = Modifier.weight(1f)) { Text(stringResource(id = R.string.apply_filters)) }
+                        OutlinedButton(onClick = {
+                            onStoriesSearchChange("")
+                            onStoriesStationFilterChange(null)
+                            onApplyStoriesFilters()
+                        }, modifier = Modifier.weight(1f)) { Text(stringResource(id = R.string.clear_filters)) }
                     }
                 }
             }
@@ -2171,67 +1781,31 @@ private fun HomeTab(
 
         items(state.storyItems) { story ->
             val previewImage = remember(story.imageBase64) { decodeBase64Image(story.imageBase64) }
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(16.dp),
-            ) {
-                Column(
-                    modifier = Modifier.padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
+            Card(shape = RoundedCornerShape(16.dp)) {
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        TextButton(onClick = { onOpenUserActivity(story.userId) }) {
-                            Text(
-                                text = story.userLabel,
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                        }
-                        Text(
-                            text = story.createdAtLabel,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        TextButton(onClick = { onOpenUserActivity(story.userId) }) { Text(story.userLabel, fontWeight = FontWeight.SemiBold) }
+                        Text(story.createdAtLabel, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    Text(
-                        text = "${story.stationName} • ${story.caption.ifBlank { stringResource(id = R.string.story_no_caption) }}",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
+                    Text("${story.stationName} • ${story.caption.ifBlank { stringResource(id = R.string.story_no_caption) }}")
                     if (previewImage != null) {
                         Image(
                             bitmap = previewImage,
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(180.dp)
-                                .clip(RoundedCornerShape(12.dp)),
+                            modifier = Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(12.dp)),
                         )
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick = { onToggleStoryLike(story.id, story.likedByMe) }) {
                             Text(if (story.likedByMe) stringResource(id = R.string.unlike_story) else stringResource(id = R.string.like_story))
                         }
-                        OutlinedButton(onClick = { onAddFriend(story.userId) }) {
-                            Text(stringResource(id = R.string.add_friend))
-                        }
-                        Text(
-                            text = "${story.likeCount} ♥  •  ${story.commentCount} 💬",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        OutlinedButton(onClick = { onAddFriend(story.userId) }) { Text(stringResource(id = R.string.add_friend)) }
+                        Text("${story.likeCount} ♥ • ${story.commentCount} 💬", style = MaterialTheme.typography.bodySmall)
                     }
-
-                    if (story.recentComments.isNotEmpty()) {
-                        story.recentComments.forEach { comment ->
-                            Text(
-                                text = "${comment.userLabel}: ${comment.body}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+                    story.recentComments.forEach { comment ->
+                        Text("${comment.userLabel}: ${comment.body}", style = MaterialTheme.typography.bodySmall)
                     }
-
                     val draft = commentDrafts[story.id].orEmpty()
                     OutlinedTextField(
                         value = draft,
@@ -2240,13 +1814,10 @@ private fun HomeTab(
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                     )
-                    Button(
-                        onClick = {
-                            onStoryComment(story.id, draft)
-                            commentDrafts[story.id] = ""
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
+                    Button(onClick = {
+                        onStoryComment(story.id, draft)
+                        commentDrafts[story.id] = ""
+                    }, modifier = Modifier.fillMaxWidth()) {
                         Text(stringResource(id = R.string.post_comment))
                     }
                 }
@@ -2260,115 +1831,6 @@ private fun HomeTab(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            }
-        }
-
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                MetricCard(
-                    title = stringResource(id = R.string.stations),
-                    value = state.dashboardCounts.stations,
-                    modifier = Modifier.weight(1f),
-                    onClick = onOpenStations,
-                )
-                MetricCard(
-                    title = stringResource(id = R.string.bus_lines),
-                    value = state.dashboardCounts.busLines,
-                    modifier = Modifier.weight(1f),
-                    onClick = onOpenBusLines,
-                )
-            }
-        }
-
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                MetricCard(
-                    title = stringResource(id = R.string.services),
-                    value = state.dashboardCounts.services,
-                    modifier = Modifier.weight(1f),
-                    onClick = onOpenServices,
-                )
-                MetricCard(
-                    title = stringResource(id = R.string.marketplace),
-                    value = state.dashboardCounts.marketplace,
-                    modifier = Modifier.weight(1f),
-                    onClick = onOpenMarketplace,
-                )
-            }
-        }
-
-        item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(16.dp),
-            ) {
-                Column(
-                    modifier = Modifier.padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(
-                        text = stringResource(id = R.string.recent_activities),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    ActivityLine(stringResource(id = R.string.activity_market_updated, state.dashboardCounts.marketplace))
-                    ActivityLine(stringResource(id = R.string.activity_instructors_ready, state.instructorItems.size))
-                    ActivityLine(stringResource(id = R.string.activity_piste_reports, state.pisteItems.size))
-                }
-            }
-        }
-
-        item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(16.dp),
-            ) {
-                Column(
-                    modifier = Modifier.padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = stringResource(id = R.string.home_latest_marketplace),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        TextButton(onClick = onOpenMarketplace) {
-                            Text(text = stringResource(id = R.string.marketplace))
-                        }
-                    }
-
-                    if (latestMarketplaceItems.isEmpty()) {
-                        Text(
-                            text = stringResource(id = R.string.empty_marketplace),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    } else {
-                        latestMarketplaceItems.forEach { item ->
-                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Text(
-                                    text = item.title,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium,
-                                )
-                                Text(
-                                    text = "${item.city} • ${item.priceLabel}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                    }
-
-                    OutlinedButton(onClick = onOpenCarpool, modifier = Modifier.fillMaxWidth()) {
-                        Text(text = stringResource(id = R.string.carpool))
-                    }
-                }
             }
         }
     }
@@ -2387,60 +1849,32 @@ private fun HomeTab(
 @Composable
 private fun CommunityDashboardTab(state: AppUiState) {
     val stats = state.storyStats
-
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Text(
-                text = stringResource(id = R.string.community_dashboard),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-            )
-        }
-
-        item {
-            Card(shape = RoundedCornerShape(16.dp)) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
+            Card(
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.68f)),
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(stringResource(id = R.string.community_dashboard), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text("Vibe: ${stats.momentVibe}", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
                     Text("Active stories: ${stats.totalActiveStories}")
                     Text("Average fun score: ${"%.1f".format(stats.avgFunScore)}")
-                    Text("Current vibe: ${stats.momentVibe}")
                 }
             }
         }
-
-        if (stats.crowdBreakdown.isNotEmpty()) {
-            item {
-                Card(shape = RoundedCornerShape(16.dp)) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        Text("Crowd levels", fontWeight = FontWeight.SemiBold)
-                        stats.crowdBreakdown.entries.forEach { (key, value) ->
-                            Text("$key: $value")
-                        }
-                    }
-                }
-            }
-        }
-
-        if (stats.weatherBreakdown.isNotEmpty()) {
-            item {
-                Card(shape = RoundedCornerShape(16.dp)) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        Text("Weather", fontWeight = FontWeight.SemiBold)
-                        stats.weatherBreakdown.entries.forEach { (key, value) ->
-                            Text("$key: $value")
-                        }
+        if (state.highlightedStoryItems.isNotEmpty()) {
+            item { Text(text = stringResource(id = R.string.highlighted_stories), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold) }
+            items(state.highlightedStoryItems.take(5)) { story ->
+                Card(shape = RoundedCornerShape(14.dp)) {
+                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(story.userLabel, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+                        Text(story.caption.ifBlank { stringResource(id = R.string.story_no_caption) })
+                        Text("${story.stationName} • ${story.likeCount} ♥ • ${story.commentCount} 💬", style = MaterialTheme.typography.labelSmall)
                     }
                 }
             }

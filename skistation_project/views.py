@@ -1907,11 +1907,12 @@ def user_public_profile(request, user_id):
     recent_stories = list(
         SkiStory.objects.filter(user=target_user, expires_at__gt=timezone.now())
         .select_related('ski_station')
+        .annotate(like_count=Count('likes'), comments_count=Count('comments'))
         .order_by('-created_at')[:20]
     )
     recent_comments = list(
         SkiStoryComment.objects.filter(user=target_user)
-        .select_related('story')
+        .select_related('story', 'story__ski_station')
         .order_by('-created_at')[:20]
     )
 
@@ -1927,6 +1928,14 @@ def user_public_profile(request, user_id):
     avatar_base64 = base64.b64encode(profile.profile_picture).decode('utf-8') if profile and profile.profile_picture else None
     display_name = _story_user_label(target_user)
 
+    total_likes_received = (
+        SkiStoryLike.objects.filter(story__user=target_user)
+        .exclude(user=target_user)
+        .count()
+    )
+
+    has_recent_activity = bool(recent_stories or recent_comments)
+
     return render(
         request,
         'user_public_profile.html',
@@ -1939,8 +1948,10 @@ def user_public_profile(request, user_id):
             'comment_count': comment_count,
             'friend_count': friend_count,
             'public_messages_count': public_messages_count,
+            'total_likes_received': total_likes_received,
             'recent_stories': recent_stories,
             'recent_comments': recent_comments,
+            'has_recent_activity': has_recent_activity,
             'is_friend': is_friend,
             'is_authenticated': is_authenticated,
         },
