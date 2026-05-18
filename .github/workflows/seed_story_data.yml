@@ -104,15 +104,15 @@ jobs:
       - name: Show quick counts
         run: |
           python - <<'PY'
-import os
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'skistation_project.settings')
-import django
-django.setup()
-from api.models import SkiStory, SkiStoryLike, SkiStoryComment, Message
-from api.models import SkiNewsItem
-print('stories=', SkiStory.objects.count())
-print('likes=', SkiStoryLike.objects.count())
-print('comments=', SkiStoryComment.objects.count())
-print('messages=', Message.objects.count())
-print('news=', SkiNewsItem.objects.count())
-PY
+          import os
+          os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'skistation_project.settings')
+          import django
+          django.setup()
+          from api.models import SkiStory, SkiStoryLike, SkiStoryComment, Message
+          from api.models import SkiNewsItem
+          print('stories=', SkiStory.objects.count())
+          print('likes=', SkiStoryLike.objects.count())
+          print('comments=', SkiStoryComment.objects.count())
+          print('messages=', Message.objects.count())
+          print('news=', SkiNewsItem.objects.count())
+          PY
