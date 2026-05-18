@@ -66,7 +66,9 @@
     <string name="post_comment">Post comment</string>
     <string name="loading_more_stories">Loading more stories...</string>
     <string name="highlighted_ski_news">Highlighted ski news</string>
-    <string name="open_news">Open news</string>
+    <string name="open_news">Ouvrir l\'actualite</string>
+    <string name="station_rss_news">Actualites RSS de la station</string>
+    <string name="no_station_rss_news">Aucune actualite RSS disponible pour cette station pour le moment.</string>
     <string name="language_preference">Language preference</string>
     <string name="language_system">System</string>
     <string name="language_french">French</string>

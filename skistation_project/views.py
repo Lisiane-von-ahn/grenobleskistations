@@ -200,6 +200,21 @@ def _fetch_google_place_rating(station):
     }
 
 
+def _safe_news_link(news_item):
+    raw_link = (getattr(news_item, 'link', '') or '').strip()
+    if raw_link.startswith(('http://', 'https://')):
+        return raw_link
+    if raw_link.startswith('//'):
+        return f"https:{raw_link}"
+    if raw_link and not raw_link.startswith('/') and '.' in raw_link:
+        return f"https://{raw_link}"
+
+    query = (getattr(news_item, 'title', '') or '').strip()
+    source_name = (getattr(news_item, 'source_name', '') or '').strip()
+    fallback_query = ' '.join(part for part in [query, source_name, 'ski'] if part).strip() or 'actualite ski'
+    return f"https://www.google.com/search?q={quote_plus(fallback_query)}"
+
+
 def _build_circuit_breakdown(circuits_by_difficulty, total_pistes):
     difficulty_order = ['Débutant', 'Intermédiaire', 'Avancé']
     difficulty_styles = {
@@ -321,6 +336,7 @@ def home(request):
     )
 
     random_ski_stations = list(queryset.order_by('?'))
+    featured_stations = random_ski_stations[:5]
     nearest_stations = list(queryset.order_by('distanceFromGrenoble', 'name')[:5])
     map_stations = list(queryset.order_by('distanceFromGrenoble', 'name'))
 
@@ -354,6 +370,7 @@ def home(request):
         'index.html',
         {
             'ski_stations': random_ski_stations,
+            'featured_stations': featured_stations,
             'all': queryset,
             'nearest_stations': nearest_stations,
             'map_stations': map_stations,
@@ -476,6 +493,15 @@ def ski_station_detail(request, station_id):
     station_transit_url = f"https://www.google.com/maps/dir/?api=1&destination={destination}&travelmode=transit"
     station_driving_url = f"https://www.google.com/maps/dir/?api=1&destination={destination}&travelmode=driving"
     google_place_rating = _fetch_google_place_rating(ski_station)
+    station_news_items = list(
+        SkiNewsItem.objects.filter(ski_station=ski_station)
+        .order_by('-is_highlighted', '-published_at')[:8]
+    )
+    station_highlighted_news = [row for row in station_news_items if row.is_highlighted][:3]
+    for news in station_news_items:
+        news.safe_link = _safe_news_link(news)
+    for news in station_highlighted_news:
+        news.safe_link = _safe_news_link(news)
 
     context = {
         'station': ski_station,
@@ -501,6 +527,8 @@ def ski_station_detail(request, station_id):
         'piste_chart_ratings': json.dumps(chart_ratings),
         'piste_chart_crowd': json.dumps(chart_crowd),
         'google_place_rating': google_place_rating,
+        'station_news_items': station_news_items,
+        'station_highlighted_news': station_highlighted_news,
     }
 
     return render(request, 'details.html', context)
@@ -1687,6 +1715,10 @@ def ski_stories(request):
         .order_by('-is_highlighted', '-published_at')[:12]
     )
     highlighted_news = [item for item in news_items if item.is_highlighted][:4]
+    for news in news_items:
+        news.safe_link = _safe_news_link(news)
+    for news in highlighted_news:
+        news.safe_link = _safe_news_link(news)
 
     paginator = Paginator(active_stories, 24)
     stories_page_obj = paginator.get_page(1)

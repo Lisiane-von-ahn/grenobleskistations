@@ -2013,6 +2013,23 @@ private fun StationsTab(
     val stationDetails = selectedStation
     if (stationDetails != null) {
         val previewImage = remember(stationDetails.imageBase64) { decodeBase64Image(stationDetails.imageBase64) }
+        val stationNewsItems = remember(
+            stationDetails.id,
+            stationDetails.name,
+            state.skiNewsItems,
+            state.highlightedSkiNewsItems,
+        ) {
+            val stationName = stationDetails.name.trim()
+            val highlighted = state.highlightedSkiNewsItems
+                .filter { it.stationName.equals(stationName, ignoreCase = true) }
+            if (highlighted.isNotEmpty()) {
+                highlighted.take(3)
+            } else {
+                state.skiNewsItems
+                    .filter { it.stationName.equals(stationName, ignoreCase = true) }
+                    .take(3)
+            }
+        }
         Dialog(onDismissRequest = { selectedStation = null }) {
             Card(
                 shape = RoundedCornerShape(24.dp),
@@ -2111,6 +2128,48 @@ private fun StationsTab(
                                                 modifier = Modifier.fillMaxWidth(),
                                             ) {
                                                 Text(stringResource(id = R.string.open_camera))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            Text(
+                                text = stringResource(id = R.string.station_rss_news),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+
+                            if (stationNewsItems.isEmpty()) {
+                                Text(
+                                    text = stringResource(id = R.string.no_station_rss_news),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            } else {
+                                stationNewsItems.forEach { news ->
+                                    Card(
+                                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)),
+                                        shape = RoundedCornerShape(16.dp),
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(14.dp),
+                                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                                        ) {
+                                            Text(
+                                                text = "${news.sourceName} • ${news.publishedAtLabel}",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                            Text(news.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                                            if (news.summary.isNotBlank()) {
+                                                Text(news.summary, style = MaterialTheme.typography.bodySmall, maxLines = 3)
+                                            }
+                                            OutlinedButton(
+                                                onClick = { onOpenUrl(news.link) },
+                                                modifier = Modifier.fillMaxWidth(),
+                                            ) {
+                                                Text(stringResource(id = R.string.open_news))
                                             }
                                         }
                                     }

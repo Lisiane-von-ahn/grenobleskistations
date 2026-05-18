@@ -1,5 +1,6 @@
 import logging
 
+from django.http import Http404
 from django.utils.deprecation import MiddlewareMixin
 from django.shortcuts import redirect
 from django.urls import reverse
@@ -18,6 +19,10 @@ class ExceptionLoggingMiddleware:
         return self.get_response(request)
 
     def process_exception(self, request, exception):
+        # 404s are expected for stale/deleted resources and should not pollute error logs.
+        if isinstance(exception, Http404):
+            return None
+
         exception_logger.exception(
             "Unhandled exception path=%s method=%s user=%s ip=%s",
             request.path,

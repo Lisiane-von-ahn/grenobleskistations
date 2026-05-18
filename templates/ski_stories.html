@@ -110,7 +110,7 @@
                         {% endif %}
                         <div class="d-flex justify-content-between align-items-center">
                             <small style="opacity: 0.9;">{{ news.source_name }}{% if news.ski_station %} - {{ news.ski_station.name }}{% endif %}</small>
-                            <a href="{{ news.link }}" target="_blank" rel="noopener" class="btn btn-sm btn-light">{% trans "Lire" %}</a>
+                            <a href="{{ news.safe_link }}" target="_blank" rel="noopener" class="btn btn-sm btn-light">{% trans "Lire" %}</a>
                         </div>
                     </article>
                 </div>
@@ -127,7 +127,7 @@
                         {% if news.summary %}
                         <p class="small mb-2">{{ news.summary|truncatechars:125 }}</p>
                         {% endif %}
-                        <a href="{{ news.link }}" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm">{% trans "Ouvrir" %}</a>
+                        <a href="{{ news.safe_link }}" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm">{% trans "Ouvrir" %}</a>
                     </article>
                 </div>
                 {% empty %}

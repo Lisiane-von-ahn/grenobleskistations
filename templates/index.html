@@ -10,6 +10,53 @@
 {% block content %}
 
   <style>
+    .featured-stations-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+
+    .featured-station-card {
+      border-radius: 14px;
+      overflow: hidden;
+      background: #fff;
+      border: 1px solid rgba(13, 71, 121, 0.14);
+      box-shadow: 0 10px 24px rgba(15, 58, 99, 0.12);
+    }
+
+    .featured-station-card img {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .featured-station-body {
+      padding: 10px;
+    }
+
+    .featured-station-body h6 {
+      margin: 0 0 4px;
+      font-size: .95rem;
+    }
+
+    .featured-station-body small {
+      color: #556b7d;
+    }
+
+    @media (max-width: 991.98px) {
+      .featured-stations-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 575.98px) {
+      .featured-stations-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
     .station-summary-card {
       background: #fff;
       border-radius: 16px;
@@ -191,6 +238,31 @@
     {% endwith %}
   </section>
   <!-- ***** Main Banner Area End ***** -->
+
+  <div class="container mt-4">
+    <div class="section-heading mb-3">
+      <h2>{% trans "5 stations en evidence" %}</h2>
+      <p>{% trans "Selection aleatoire du jour autour de Grenoble." %}</p>
+    </div>
+    <div class="featured-stations-grid">
+      {% for station in featured_stations %}
+      <article class="featured-station-card">
+        {% if station.image %}
+        <img src="data:image/jpeg;base64,{{ station.image|b64encode }}" alt="{{ station.name }}">
+        {% else %}
+        <img src="{% static 'images/chamrousse.jpg' %}" alt="{{ station.name }}">
+        {% endif %}
+        <div class="featured-station-body">
+          <h6>{{ station.name }}</h6>
+          <small>{{ station.distanceFromGrenoble }} km · {{ station.altitude }} m</small>
+          <div class="mt-2">
+            <a href="{% url 'ski_station_detail' station.id %}" class="btn btn-sm btn-outline-primary">{% trans "Voir" %}</a>
+          </div>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
   
   <div class="visit-country">
     <div class="container">
