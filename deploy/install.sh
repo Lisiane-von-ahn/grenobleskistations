@@ -210,11 +210,41 @@ run_compose() {
     compose_files+=("-f" "docker-compose.letsencrypt.yml")
   fi
 
+  compose_up_with_retry() {
+    local attempts=8
+    for i in $(seq 1 "$attempts"); do
+      local log_file
+      log_file="$(mktemp)"
+      if docker compose "${compose_files[@]}" up -d --build >"$log_file" 2>&1; then
+        cat "$log_file"
+        rm -f "$log_file"
+        return 0
+      fi
+
+      cat "$log_file"
+      if grep -qi "removal of container .* is already in progress" "$log_file"; then
+        rm -f "$log_file"
+        echo "⚠️ Docker still removing previous container; waiting before retry (${i}/${attempts})..."
+        sleep 4
+        continue
+      fi
+
+      rm -f "$log_file"
+      return 1
+    done
+    return 1
+  }
+
   echo "🐳 Starting/updating stack"
-  if ! docker compose "${compose_files[@]}" up -d --build; then
+  if ! compose_up_with_retry; then
     echo "⚠️ compose up failed; trying clean restart"
     docker compose "${compose_files[@]}" down || true
-    docker compose "${compose_files[@]}" up -d --build
+    if ! compose_up_with_retry; then
+      echo "❌ compose up failed after retries"
+      docker compose "${compose_files[@]}" ps || true
+      docker compose "${compose_files[@]}" logs --tail=200 web || true
+      exit 1
+    fi
   fi
 
   echo "✅ Stack running"

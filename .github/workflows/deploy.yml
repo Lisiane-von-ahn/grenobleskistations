@@ -7,6 +7,10 @@ on:
       - master
   workflow_dispatch:
 
+concurrency:
+  group: grenobleski-deploy
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -34,6 +38,19 @@ jobs:
             git fetch --all
             git checkout "${{ github.ref_name }}"
             git reset --hard "origin/${{ github.ref_name }}"
+
+            echo "==> Waiting for Docker to finish pending removals"
+            for i in $(seq 1 30); do
+              if docker ps -a --format '{{.Names}} {{.State}}' | grep -qE '^grenobleski-web\s+removing$'; then
+                echo "grenobleski-web still removing (${i}/30)..."
+                sleep 2
+              else
+                break
+              fi
+            done
+
+            docker rm -f grenobleski-web 2>/dev/null || true
+            docker rm -f grenobleski-db 2>/dev/null || true
 
             if [ -f docker-compose.yml ]; then
               docker compose -f docker-compose.yml down --remove-orphans || true
