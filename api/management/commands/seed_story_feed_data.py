@@ -1,14 +1,39 @@
 import random
 from datetime import timedelta
 from io import BytesIO
+from urllib.error import URLError, HTTPError
+from urllib.request import Request, urlopen
 
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageOps
 
 from api.models import Message, SkiStation, SkiStory, SkiStoryComment, SkiStoryLike, UserProfile
+
+
+def _download_binary(url):
+    request = Request(url, headers={"User-Agent": "GrenobleSkiSeed/1.0"})
+    try:
+        with urlopen(request, timeout=7) as response:
+            return response.read()
+    except (URLError, HTTPError, TimeoutError, ValueError):
+        return None
+
+
+def _normalize_image(binary_payload, width, height, image_format='JPEG'):
+    if not binary_payload:
+        return None
+    try:
+        img = Image.open(BytesIO(binary_payload)).convert('RGB')
+        resampling = getattr(getattr(Image, 'Resampling', Image), 'LANCZOS', Image.LANCZOS)
+        img = ImageOps.fit(img, (width, height), method=resampling)
+        output = BytesIO()
+        img.save(output, format=image_format, quality=88)
+        return output.getvalue()
+    except Exception:
+        return None
 
 def _build_ski_avatar(seed_value):
     randomizer = random.Random(seed_value)
@@ -103,6 +128,29 @@ CROWD_POOL = [
     SkiStory.CROWD_WILD,
 ]
 
+# Demo-only internet photo pools for richer seeded content.
+STORY_IMAGE_URLS = [
+    "https://picsum.photos/id/1018/1200/800",
+    "https://picsum.photos/id/1015/1200/800",
+    "https://picsum.photos/id/1024/1200/800",
+    "https://picsum.photos/id/1036/1200/800",
+    "https://picsum.photos/id/1043/1200/800",
+    "https://picsum.photos/id/1059/1200/800",
+    "https://picsum.photos/id/1068/1200/800",
+    "https://picsum.photos/id/1074/1200/800",
+]
+
+PROFILE_IMAGE_URLS = [
+    "https://randomuser.me/api/portraits/men/12.jpg",
+    "https://randomuser.me/api/portraits/men/22.jpg",
+    "https://randomuser.me/api/portraits/men/33.jpg",
+    "https://randomuser.me/api/portraits/men/48.jpg",
+    "https://randomuser.me/api/portraits/women/10.jpg",
+    "https://randomuser.me/api/portraits/women/24.jpg",
+    "https://randomuser.me/api/portraits/women/31.jpg",
+    "https://randomuser.me/api/portraits/women/45.jpg",
+]
+
 
 class Command(BaseCommand):
     help = "Seed fake story feed data (users, stories, likes, comments)"
@@ -138,27 +186,63 @@ class Command(BaseCommand):
             Message.objects.all().delete()
             self.stdout.write(self.style.WARNING("Existing story feed data deleted."))
 
+        story_image_cache = {}
+        profile_image_cache = {}
+
         seeded_users = []
         for i in range(1, users_target + 1):
             first_name = FIRST_NAMES[(i - 1) % len(FIRST_NAMES)]
             last_name = LAST_NAMES[((i - 1) // len(FIRST_NAMES)) % len(LAST_NAMES)]
-            username = f"{first_name.lower()}.{last_name.lower()}{i:02d}"
+            base_username = f"{first_name.lower()}.{last_name.lower()}{i:02d}"
+            username = base_username
             email = f"{username}@grenobleski.local"
-            user, created = User.objects.get_or_create(
-                username=username,
-                defaults={
-                    "email": email,
-                    "first_name": first_name,
-                    "last_name": last_name,
-                },
-            )
+
+            legacy_username = f"story_user_{i:03d}"
+            legacy_user = User.objects.filter(username=legacy_username).first()
+
+            # Keep usernames unique when migrating legacy seed accounts.
+            if legacy_user is not None:
+                suffix = 1
+                while User.objects.filter(username=username).exclude(id=legacy_user.id).exists():
+                    suffix += 1
+                    username = f"{base_username}_{suffix}"
+                email = f"{username}@grenobleski.local"
+
+                created = False
+                user = legacy_user
+                user.username = username
+                user.email = email
+                user.first_name = first_name
+                user.last_name = last_name
+                user.save(update_fields=["username", "email", "first_name", "last_name"])
+            else:
+                suffix = 1
+                while User.objects.filter(username=username).exists():
+                    suffix += 1
+                    username = f"{base_username}_{suffix}"
+                email = f"{username}@grenobleski.local"
+
+                user, created = User.objects.get_or_create(
+                    username=username,
+                    defaults={
+                        "email": email,
+                        "first_name": first_name,
+                        "last_name": last_name,
+                    },
+                )
             if created:
                 user.set_password(password)
                 user.save(update_fields=["password"])
             profile, _ = UserProfile.objects.get_or_create(user=user)
             # Keep most users in public mode, some users with private-by-default messages.
             profile.messages_private_by_default = (i % 9 == 0)
-            profile.profile_picture = _build_ski_avatar(seed_value=i)
+
+            profile_url = PROFILE_IMAGE_URLS[(i - 1) % len(PROFILE_IMAGE_URLS)]
+            profile_picture = profile_image_cache.get(profile_url)
+            if profile_picture is None:
+                profile_picture = _normalize_image(_download_binary(profile_url), 256, 256, image_format='PNG')
+                profile_image_cache[profile_url] = profile_picture
+            profile.profile_picture = profile_picture or _build_ski_avatar(seed_value=i)
             profile.save(update_fields=["messages_private_by_default", "profile_picture"])
             seeded_users.append(user)
 
@@ -186,11 +270,20 @@ class Command(BaseCommand):
             snow_bonus = 15 if snow_depth >= 40 else (8 if snow_depth >= 15 else 0)
             fun_score = max(0, min(100, 45 + crowd_bonus + weather_bonus + temp_bonus + snow_bonus))
 
+            story_url = STORY_IMAGE_URLS[i % len(STORY_IMAGE_URLS)]
+            if story_url not in story_image_cache:
+                story_image_cache[story_url] = _normalize_image(_download_binary(story_url), 900, 560, image_format='JPEG')
+            story_image_binary = story_image_cache.get(story_url) or _build_story_image(
+                seed_value=i * 97 + author.id,
+                station_name=station.name,
+                weather=weather,
+            )
+
             story = SkiStory.objects.create(
                 user=author,
                 ski_station=station,
                 caption=caption,
-                image=_build_story_image(seed_value=i * 97 + author.id, station_name=station.name, weather=weather),
+                image=story_image_binary,
                 crowd_level=crowd,
                 weather_label=weather,
                 temperature_c=temperature_c,
@@ -198,6 +291,7 @@ class Command(BaseCommand):
                 fun_score=fun_score,
                 expires_at=expires_at,
             )
+
             SkiStory.objects.filter(id=story.id).update(created_at=created_at)
             story.created_at = created_at
             stories.append(story)

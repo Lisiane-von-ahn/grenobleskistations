@@ -5,6 +5,43 @@
 {% block title %}{% if LANGUAGE_CODE == 'en' %}Ski stories{% else %}Stories ski{% endif %}{% endblock %}
 
 {% block content %}
+<style>
+    .story-luxe-card {
+        border: 1px solid rgba(24, 72, 140, 0.16);
+        border-radius: 18px;
+        overflow: hidden;
+        background: linear-gradient(155deg, #ffffff 0%, #eef6ff 52%, #f8fbff 100%);
+        box-shadow: 0 16px 34px rgba(16, 53, 96, 0.10);
+        transition: transform .2s ease, box-shadow .2s ease;
+    }
+    .story-luxe-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 22px 42px rgba(16, 53, 96, 0.16);
+    }
+    .story-image-wrap {
+        position: relative;
+    }
+    .story-overlay {
+        position: absolute;
+        inset: auto 0 0 0;
+        padding: 10px 12px;
+        background: linear-gradient(180deg, rgba(8, 33, 70, 0) 0%, rgba(8, 33, 70, 0.78) 100%);
+        color: #f5fbff;
+        font-size: .8rem;
+    }
+    .like-chip-btn {
+        border: 0;
+        border-radius: 999px;
+        padding: 6px 12px;
+        font-weight: 700;
+        background: rgba(23, 94, 193, 0.12);
+        color: #0f4ea5;
+    }
+    .like-chip-btn.liked {
+        background: linear-gradient(135deg, #d21f5f 0%, #f14f81 100%);
+        color: #fff;
+    }
+</style>
 <div class="container py-4">
     <section class="premium-shell mb-4 p-3">
         <div class="premium-hero">
@@ -103,11 +140,16 @@
     </section>
 
     <section>
-        <div id="stories-grid" class="row g-3">
+        <div id="stories-grid" class="row g-3" data-authenticated="{% if user.is_authenticated %}1{% else %}0{% endif %}" data-csrf-token="{{ csrf_token }}">
             {% for story in stories %}
             <div class="col-lg-3 col-md-4 col-sm-6">
-                <article class="market-card p-2 h-100">
-                    <img src="data:image/jpeg;base64,{{ story.image|b64encode }}" alt="Story" class="market-image" style="height: 230px; object-fit: cover;">
+                <article class="story-luxe-card h-100" data-story-id="{{ story.id }}">
+                    <div class="story-image-wrap">
+                    <img src="data:image/jpeg;base64,{{ story.image|b64encode }}" alt="Story" class="market-image" style="height: 240px; object-fit: cover;">
+                    <div class="story-overlay">
+                        {% if story.ski_station %}{{ story.ski_station.name }} • {% endif %}{{ story.created_at|date:'d/m H:i' }}
+                    </div>
+                    </div>
                     <div class="p-2">
                         <div class="d-flex align-items-center gap-2 small">
                             {% if story.user.profile and story.user.profile.profile_picture %}
@@ -115,11 +157,15 @@
                             {% else %}
                             <span class="avatar" style="width: 24px; height: 24px; font-size: 11px;">🎿</span>
                             {% endif %}
-                            <a href="{% url 'user_public_profile' story.user.id %}" class="text-decoration-none"><strong>{{ story.user.username }}</strong></a>
+                            <a href="{% url 'user_public_profile' story.user.id %}" class="text-decoration-none"><strong>{{ story.user.first_name|default:story.user.username }} {{ story.user.last_name }}</strong></a>
                         </div>
-                        <div class="market-subtle small">{{ story.created_at|date:'d/m H:i' }}{% if story.ski_station %} - {{ story.ski_station.name }}{% endif %}</div>
                         {% if story.caption %}<p class="mb-0 small mt-1">{{ story.caption }}</p>{% endif %}
-                        <div class="small mt-1 market-subtle">{{ story.like_count|default:0 }} ♥ • {{ story.comment_count|default:0 }} 💬</div>
+                        <div class="d-flex align-items-center justify-content-between mt-2">
+                            <button class="like-chip-btn story-like-btn {% if story.id in liked_story_ids %}liked{% endif %}" type="button" data-story-id="{{ story.id }}">
+                                {% if story.id in liked_story_ids %}♥{% else %}♡{% endif %} <span class="story-like-count">{{ story.like_count|default:0 }}</span>
+                            </button>
+                            <div class="small market-subtle">{{ story.comment_count|default:0 }} 💬</div>
+                        </div>
 
                         {% if user.is_authenticated and user.id != story.user.id %}
                         <form method="post" action="{% url 'story_add_friend' user_id=story.user.id %}" class="mt-2">
@@ -134,7 +180,7 @@
                         {% endif %}
 
                         {% for c in story.comments.all|slice:':3' %}
-                        <div class="small mt-1"><strong>{{ c.user.username }}</strong>: {{ c.body }}</div>
+                        <div class="small mt-1"><strong>{{ c.user.first_name|default:c.user.username }}</strong>: {{ c.body }}</div>
                         {% endfor %}
 
                         {% if user.is_authenticated and user == story.user %}
@@ -165,9 +211,9 @@
 (() => {
     const sentinel = document.getElementById('stories-loading-sentinel');
     const grid = document.getElementById('stories-grid');
-    if (!sentinel || !grid) return;
-    const canInteract = sentinel.dataset.authenticated === '1';
-    const csrfToken = sentinel.dataset.csrfToken || '';
+    if (!grid) return;
+    const canInteract = (grid.dataset.authenticated || (sentinel ? sentinel.dataset.authenticated : '0')) === '1';
+    const csrfToken = grid.dataset.csrfToken || (sentinel ? sentinel.dataset.csrfToken : '') || '';
     const addFriendLabel = 'Ajouter en ami';
     const commentLabel = 'Commenter';
     const addCommentPlaceholder = 'Ajouter un commentaire';
@@ -209,9 +255,11 @@
                             ${avatar}
                             <a href="${story.profile_url}" class="text-decoration-none"><strong>${escapeHtml(story.user_label)}</strong></a>
                         </div>
-                        <div class="market-subtle small">${escapeHtml(story.created_at)}${story.station_name ? ' - ' + escapeHtml(story.station_name) : ''}</div>
                         ${story.caption ? `<p class="mb-0 small mt-1">${escapeHtml(story.caption)}</p>` : ''}
-                        <div class="small mt-1 market-subtle">${story.like_count} ♥ • ${story.comment_count} 💬</div>
+                        <div class="d-flex align-items-center justify-content-between mt-2">
+                            <button class="like-chip-btn story-like-btn ${story.liked_by_me ? 'liked' : ''}" type="button" data-story-id="${story.id}">${story.liked_by_me ? '♥' : '♡'} <span class="story-like-count">${story.like_count}</span></button>
+                            <div class="small market-subtle">${story.comment_count} 💬</div>
+                        </div>
                         ${friendForm}
                         ${commentForm}
                         ${comments}
@@ -235,24 +283,60 @@
             }
             nextPage = payload.next_page || null;
             if (!payload.has_next || !nextPage) {
-                sentinel.remove();
+                if (sentinel) sentinel.remove();
             }
         } catch (err) {
-            sentinel.textContent = 'Impossible de charger plus de stories.';
+            if (sentinel) sentinel.textContent = 'Impossible de charger plus de stories.';
         } finally {
             loading = false;
         }
     }
 
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-                loadMoreStories();
-            }
-        });
-    }, { rootMargin: '320px 0px' });
+    async function toggleLike(storyId, btn) {
+        if (!canInteract) {
+            window.location.href = '/login/?next=' + encodeURIComponent(window.location.pathname);
+            return;
+        }
+        try {
+            const response = await fetch(`/ski-stories/${storyId}/toggle-like/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
+            });
+            if (!response.ok) throw new Error('like_failed');
+            const payload = await response.json();
+            if (!payload.ok) throw new Error('like_failed');
+            btn.classList.toggle('liked', !!payload.liked);
+            const countNode = btn.querySelector('.story-like-count');
+            if (countNode) countNode.textContent = String(payload.like_count || 0);
+            btn.innerHTML = `${payload.liked ? '♥' : '♡'} <span class="story-like-count">${payload.like_count || 0}</span>`;
+        } catch (error) {
+            console.error(error);
+        }
+    }
 
-    observer.observe(sentinel);
+    grid.addEventListener('click', (event) => {
+        const button = event.target.closest('.story-like-btn');
+        if (!button) return;
+        event.preventDefault();
+        const storyId = Number(button.dataset.storyId || '0');
+        if (!storyId) return;
+        toggleLike(storyId, button);
+    });
+
+    if (sentinel) {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                    loadMoreStories();
+                }
+            });
+        }, { rootMargin: '320px 0px' });
+        observer.observe(sentinel);
+    }
 })();
 </script>
 {% endblock %}

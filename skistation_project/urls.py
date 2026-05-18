@@ -41,6 +41,7 @@ urlpatterns = [
    path('ski-stories/feed/', views.ski_stories_feed, name='ski_stories_feed'),
    path('ski-stories/<int:story_id>/delete/', views.delete_story, name='delete_story'),
    path('ski-stories/<int:story_id>/comment/', views.story_add_comment, name='story_add_comment'),
+   path('ski-stories/<int:story_id>/toggle-like/', views.story_toggle_like, name='story_toggle_like'),
    path('ski-stories/user/<int:user_id>/add-friend/', views.story_add_friend, name='story_add_friend'),
    path('ski-stories/user/<int:user_id>/remove-friend/', views.story_remove_friend, name='story_remove_friend'),
    path('users/<int:user_id>/', views.user_public_profile, name='user_public_profile'),

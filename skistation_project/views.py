@@ -21,6 +21,7 @@ from api.models import (
     SkiPartnerReport,
     SkiStory,
     SkiStoryComment,
+    SkiStoryLike,
     SkiNewsItem,
     UserProfile,
     UserFriend,
@@ -1689,6 +1690,13 @@ def ski_stories(request):
 
     paginator = Paginator(active_stories, 24)
     stories_page_obj = paginator.get_page(1)
+    liked_story_ids = set()
+    if request.user.is_authenticated:
+        visible_story_ids = [story.id for story in stories_page_obj.object_list]
+        if visible_story_ids:
+            liked_story_ids = set(
+                SkiStoryLike.objects.filter(user=request.user, story_id__in=visible_story_ids).values_list('story_id', flat=True)
+            )
 
     if request.method == 'POST':
         if not request.user.is_authenticated:
@@ -1733,6 +1741,7 @@ def ski_stories(request):
             'stories': stories_page_obj.object_list,
             'stories_has_next': stories_page_obj.has_next(),
             'stories_next_page': stories_page_obj.next_page_number() if stories_page_obj.has_next() else None,
+            'liked_story_ids': liked_story_ids,
             'stations': SkiStation.objects.order_by('name'),
             'news_items': news_items,
             'highlighted_news': highlighted_news,
@@ -1765,8 +1774,11 @@ def _serialize_story_for_web(story, request_user=None):
         )
 
     is_friend = False
+    is_liked = False
     if request_user and request_user.is_authenticated and request_user.id != story.user_id:
         is_friend = UserFriend.objects.filter(user=request_user, friend_id=story.user_id).exists()
+    if request_user and request_user.is_authenticated:
+        is_liked = SkiStoryLike.objects.filter(user=request_user, story_id=story.id).exists()
 
     return {
         'id': story.id,
@@ -1781,6 +1793,7 @@ def _serialize_story_for_web(story, request_user=None):
         'caption': story.caption or '',
         'like_count': int(getattr(story, 'like_count', 0) or 0),
         'comment_count': int(getattr(story, 'comment_count', 0) or 0),
+        'liked_by_me': is_liked,
         'recent_comments': comments,
         'is_mine': bool(request_user and request_user.is_authenticated and request_user.id == story.user_id),
         'is_friend': is_friend,
@@ -1833,6 +1846,24 @@ def story_add_comment(request, story_id):
     SkiStoryComment.objects.create(story=story, user=request.user, body=body[:300])
     messages.success(request, 'Commentaire ajoute.')
     return redirect('ski_stories')
+
+
+@login_required
+def story_toggle_like(request, story_id):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'method_not_allowed'}, status=405)
+
+    story = get_object_or_404(SkiStory, id=story_id, expires_at__gt=timezone.now())
+    existing = SkiStoryLike.objects.filter(story=story, user=request.user)
+    if existing.exists():
+        existing.delete()
+        liked = False
+    else:
+        SkiStoryLike.objects.create(story=story, user=request.user)
+        liked = True
+
+    like_count = SkiStoryLike.objects.filter(story=story).count()
+    return JsonResponse({'ok': True, 'liked': liked, 'like_count': like_count})
 
 
 @login_required

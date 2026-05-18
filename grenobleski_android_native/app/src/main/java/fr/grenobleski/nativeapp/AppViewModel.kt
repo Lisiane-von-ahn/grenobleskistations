@@ -448,6 +448,32 @@ class AppViewModel(
                     }
                 }
 
+                NativeTab.STORIES -> {
+                    val storiesResult = repository.fetchStoriesPage(
+                        token = session.token,
+                        page = 1,
+                        pageSize = 5,
+                        stationId = state.storiesStationFilterId,
+                        query = state.storiesSearchQuery,
+                    )
+                    if (storiesResult.isSuccess) {
+                        val page = storiesResult.getOrNull()!!
+                        val highlighted = page.items.sortedWith(
+                            compareByDescending<StoryItem> { it.likeCount + it.commentCount }
+                                .thenByDescending { it.createdAtRaw }
+                        ).take(5)
+                        state = state.copy(
+                            storyItems = page.items,
+                            highlightedStoryItems = highlighted,
+                            storiesPage = 1,
+                            storiesNextPage = page.nextPage,
+                            storiesHasNextPage = page.hasNextPage,
+                        )
+                    } else {
+                        state = state.copy(errorMessage = storiesResult.exceptionOrNull()?.message ?: "Unable to load stories")
+                    }
+                }
+
                 NativeTab.COMMUNITY -> {
                     val storiesResult = repository.fetchStoriesPage(
                         token = session.token,
@@ -1134,6 +1160,7 @@ class AppViewModel(
     private fun hasDataForTab(tab: NativeTab): Boolean {
         return when (tab) {
             NativeTab.HOME -> state.storyItems.isNotEmpty() || state.skiNewsItems.isNotEmpty()
+            NativeTab.STORIES -> state.storyItems.isNotEmpty()
             NativeTab.COMMUNITY -> state.storyItems.isNotEmpty() || state.skiNewsItems.isNotEmpty()
             NativeTab.STATIONS -> state.stationItems.isNotEmpty()
             NativeTab.BUS_LINES -> state.busLineItems.isNotEmpty()

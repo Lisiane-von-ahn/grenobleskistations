@@ -108,6 +108,7 @@ data class SkiNewsItem(
 
 enum class NativeTab {
     HOME,
+    STORIES,
     COMMUNITY,
     STATIONS,
     BUS_LINES,
