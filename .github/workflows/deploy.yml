@@ -42,13 +42,14 @@ jobs:
             echo "==> Waiting for Docker to finish pending removals"
             i=1
             while [ "$i" -le 30 ]; do
-              if docker ps -a --format '{{.Names}} {{.State}}' 2>/dev/null | grep -q '^grenobleski-web removing$'; then
+              container_state="$(docker inspect --format '{{.State.Status}}' grenobleski-web 2>/dev/null || echo missing)"
+              if [ "$container_state" = "removing" ]; then
                 echo "grenobleski-web still removing (${i}/30)..."
                 sleep 2
                 i=$((i + 1))
-              else
-                break
+                continue
               fi
+              break
             done
 
             docker rm -f grenobleski-web 2>/dev/null || true
