@@ -294,24 +294,87 @@ run_compose() {
     exit 1
   fi
 
-  echo "🌱 Running seed in configured PostgreSQL database"
-  local seed_ok=false
-  for i in $(seq 1 20); do
-    if docker compose "${compose_files[@]}" run --rm --no-deps --entrypoint "" web python /app/load_ski_stations.py; then
-      seed_ok=true
-      break
-    fi
-    echo "Seed attempt ${i}/20 failed, retrying in 5s..."
-    sleep 5
-  done
+  echo "🌱 Evaluating whether seed is needed"
+  local stations_count
+  stations_count="$(docker compose "${compose_files[@]}" run --rm --no-deps --entrypoint "" web python - <<'PY'
+import os
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'skistation_project.settings')
+import django
+django.setup()
+from api.models import SkiStation
+print(SkiStation.objects.count())
+PY
+  )"
+  stations_count="$(echo "${stations_count}" | tail -n1 | tr -d '\r')"
 
-  if [[ "${seed_ok}" != "true" ]]; then
-    echo "❌ Seed failed after retries"
-    docker compose "${compose_files[@]}" logs --tail=200 web || true
-    exit 1
+  if [[ "${stations_count}" =~ ^[0-9]+$ ]] && [[ "${stations_count}" -gt 0 ]]; then
+    echo "ℹ️ Seed skipped: SkiStation has ${stations_count} rows already."
+  else
+    echo "🌱 Running seed in configured PostgreSQL database (stations_count=${stations_count:-unknown})"
+    local seed_ok=false
+    for i in $(seq 1 20); do
+      if docker compose "${compose_files[@]}" run --rm --no-deps --entrypoint "" web python /app/load_ski_stations.py; then
+        seed_ok=true
+        break
+      fi
+      echo "Seed attempt ${i}/20 failed, retrying in 5s..."
+      sleep 5
+    done
+
+    if [[ "${seed_ok}" != "true" ]]; then
+      echo "❌ Seed failed after retries"
+      docker compose "${compose_files[@]}" logs --tail=200 web || true
+      exit 1
+    fi
+
+    echo "✅ Seed completed"
   fi
 
-  echo "✅ Seed completed"
+  echo "📰 Evaluating story/news demo seed"
+  local story_seed_force_raw
+  local story_seed_force
+  story_seed_force_raw="${STORY_SEED_FORCE:-false}"
+  story_seed_force="$(echo "${story_seed_force_raw}" | tr '[:upper:]' '[:lower:]')"
+  local story_count
+  story_count="$(docker compose "${compose_files[@]}" run --rm --no-deps --entrypoint "" web python - <<'PY'
+import os
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'skistation_project.settings')
+import django
+django.setup()
+from api.models import SkiStory
+print(SkiStory.objects.count())
+PY
+  )"
+  story_count="$(echo "${story_count}" | tail -n1 | tr -d '\r')"
+
+  if [[ "${story_seed_force}" != "true" ]] && [[ "${story_count}" =~ ^[0-9]+$ ]] && [[ "${story_count}" -gt 0 ]]; then
+    echo "ℹ️ Story demo seed skipped: SkiStory has ${story_count} rows already. Set STORY_SEED_FORCE=true to reseed."
+  else
+    if [[ "${story_seed_force}" == "true" ]]; then
+      echo "📰 STORY_SEED_FORCE=true -> forcing story demo reseed (stories_count=${story_count:-unknown})"
+    else
+      echo "📰 Running story demo seed bootstrap (stories_count=${story_count:-unknown})"
+    fi
+    if ! docker compose "${compose_files[@]}" run --rm --no-deps --entrypoint "" web \
+      python manage.py seed_story_feed_data \
+      --users "${STORY_SEED_USERS:-100}" \
+      --stories "${STORY_SEED_STORIES:-400}" \
+      --max-likes "${STORY_SEED_MAX_LIKES:-30}" \
+      --max-comments "${STORY_SEED_MAX_COMMENTS:-12}" \
+      --messages "${STORY_SEED_MESSAGES:-800}"; then
+      echo "⚠️ Story demo seed failed, continuing deployment."
+    else
+      echo "✅ Story demo seed completed"
+    fi
+  fi
+
+  echo "📰 Refreshing ski news RSS"
+  if ! docker compose "${compose_files[@]}" run --rm --no-deps --entrypoint "" web \
+    python manage.py fetch_ski_news_rss --sample-on-failure --max-items 80; then
+    echo "⚠️ Ski news RSS refresh failed, continuing deployment."
+  else
+    echo "✅ Ski news RSS refresh completed"
+  fi
 
   echo "⏳ Waiting for web container health"
   local web_container_id=""

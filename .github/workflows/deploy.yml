@@ -71,6 +71,12 @@ jobs:
             export WEB_ADS_SCRIPT_SRC="${{ secrets.WEB_ADS_SCRIPT_SRC }}"
             export WEB_ADS_CONTAINER_ID="${{ secrets.WEB_ADS_CONTAINER_ID }}"
             export ADS_TXT_CONTENT="${{ secrets.ADS_TXT_CONTENT }}"
+            export STORY_SEED_FORCE="${{ secrets.STORY_SEED_FORCE }}"
+            export STORY_SEED_USERS="${{ secrets.STORY_SEED_USERS }}"
+            export STORY_SEED_STORIES="${{ secrets.STORY_SEED_STORIES }}"
+            export STORY_SEED_MAX_LIKES="${{ secrets.STORY_SEED_MAX_LIKES }}"
+            export STORY_SEED_MAX_COMMENTS="${{ secrets.STORY_SEED_MAX_COMMENTS }}"
+            export STORY_SEED_MESSAGES="${{ secrets.STORY_SEED_MESSAGES }}"
 
             chmod +x deploy/install.sh
             export USE_INTERNAL_TRAEFIK=false
