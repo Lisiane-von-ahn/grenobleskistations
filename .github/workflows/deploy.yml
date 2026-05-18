@@ -40,10 +40,12 @@ jobs:
             git reset --hard "origin/${{ github.ref_name }}"
 
             echo "==> Waiting for Docker to finish pending removals"
-            for i in $(seq 1 30); do
-              if docker ps -a --format '{{.Names}} {{.State}}' | grep -qE '^grenobleski-web\s+removing$'; then
+            i=1
+            while [ "$i" -le 30 ]; do
+              if docker ps -a --format '{{.Names}} {{.State}}' 2>/dev/null | grep -q '^grenobleski-web removing$'; then
                 echo "grenobleski-web still removing (${i}/30)..."
                 sleep 2
+                i=$((i + 1))
               else
                 break
               fi
