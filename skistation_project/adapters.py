@@ -2,6 +2,7 @@ import logging
 
 from allauth.account.adapter import DefaultAccountAdapter
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
+from django.utils import translation
 
 
 logger = logging.getLogger('skistation.adapters')
@@ -18,6 +19,26 @@ class CustomAccountAdapter(DefaultAccountAdapter):
             user.save()
         logger.info("Saving account user with email-as-username user_email=%s", user.email)
         return user
+
+    def send_mail(self, template_prefix, email, context):
+        request = context.get('request')
+        language_code = translation.get_language()
+        if request is not None:
+            language_code = (
+                getattr(request, 'LANGUAGE_CODE', None)
+                or request.session.get('django_language')
+                or request.COOKIES.get('django_language')
+                or language_code
+            )
+
+        if language_code:
+            with translation.override(language_code):
+                return super().send_mail(template_prefix, email, context)
+        return super().send_mail(template_prefix, email, context)
+
+    def get_email_verification_redirect_url(self, email_address):
+        # Keep BI login separate: always redirect to the tenant login page after email verification.
+        return 'https://audeladedonnees.fr/tenant/login'
     
 
 class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):

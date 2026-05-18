@@ -28,7 +28,10 @@ from .models import (
     SkiPartnerReport,
     SkiStation,
     SkiStationCamera,
+    SkiNewsItem,
     SkiStory,
+    SkiStoryComment,
+    SkiStoryLike,
     SnowConditionUpdate,
     UserBadge,
     UserFriend,
@@ -172,6 +175,7 @@ class MessageSerializer(serializers.ModelSerializer):
             'recipient',
             'subject',
             'body',
+            'is_private',
             'created_at',
             'is_read',
             'sender_user',
@@ -230,7 +234,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserProfile
-        fields = ['id', 'user', 'profile_picture']
+        fields = ['id', 'user', 'profile_picture', 'organization_name', 'messages_private_by_default']
 
     def get_profile_picture(self, obj):
         return _encode_binary_field(obj.profile_picture)
@@ -360,6 +364,105 @@ class SkiStorySerializer(serializers.ModelSerializer):
     class Meta:
         model = SkiStory
         fields = '__all__'
+
+
+class SkiStoryCommentSerializer(serializers.ModelSerializer):
+    user_label = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SkiStoryComment
+        fields = ['id', 'story', 'user', 'user_label', 'body', 'created_at']
+        read_only_fields = ['story', 'user', 'created_at']
+
+    def get_user_label(self, obj):
+        return _display_name_for_user(obj.user)
+
+
+class SkiStoryFeedSerializer(serializers.ModelSerializer):
+    user_label = serializers.SerializerMethodField()
+    image_base64 = serializers.SerializerMethodField()
+    ski_station_name = serializers.SerializerMethodField()
+    like_count = serializers.SerializerMethodField()
+    comment_count = serializers.SerializerMethodField()
+    is_liked_by_me = serializers.SerializerMethodField()
+    recent_comments = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SkiStory
+        fields = [
+            'id',
+            'user',
+            'user_label',
+            'ski_station',
+            'ski_station_name',
+            'caption',
+            'image_base64',
+            'crowd_level',
+            'weather_label',
+            'temperature_c',
+            'snow_depth_cm',
+            'fun_score',
+            'created_at',
+            'expires_at',
+            'like_count',
+            'comment_count',
+            'is_liked_by_me',
+            'recent_comments',
+        ]
+
+    def get_user_label(self, obj):
+        return _display_name_for_user(obj.user)
+
+    def get_image_base64(self, obj):
+        return _encode_binary_field(obj.image)
+
+    def get_ski_station_name(self, obj):
+        return getattr(obj.ski_station, 'name', '') or ''
+
+    def get_like_count(self, obj):
+        if hasattr(obj, 'like_count'):
+            return int(obj.like_count or 0)
+        return obj.likes.count()
+
+    def get_comment_count(self, obj):
+        if hasattr(obj, 'comment_count'):
+            return int(obj.comment_count or 0)
+        return obj.comments.count()
+
+    def get_is_liked_by_me(self, obj):
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if not user or not user.is_authenticated:
+            return False
+        return SkiStoryLike.objects.filter(story=obj, user=user).exists()
+
+    def get_recent_comments(self, obj):
+        recent = obj.comments.select_related('user').order_by('-created_at')[:3]
+        return SkiStoryCommentSerializer(recent, many=True).data
+
+
+class SkiNewsItemSerializer(serializers.ModelSerializer):
+    station_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SkiNewsItem
+        fields = [
+            'id',
+            'title',
+            'summary',
+            'link',
+            'source_name',
+            'source_url',
+            'language',
+            'ski_station',
+            'station_name',
+            'image_url',
+            'published_at',
+            'is_highlighted',
+        ]
+
+    def get_station_name(self, obj):
+        return getattr(obj.ski_station, 'name', '') or ''
 
 
 class MarketplaceSavedFilterSerializer(serializers.ModelSerializer):

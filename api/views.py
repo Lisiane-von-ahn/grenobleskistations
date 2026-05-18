@@ -3,6 +3,7 @@ import os
 import base64
 import binascii
 import json
+from datetime import datetime, time
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -14,7 +15,8 @@ from django.core.cache import cache
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
-from django.db.models import Avg, Count, Q, Sum
+from django.db.models import Avg, Count, Exists, OuterRef, Q, Sum
+from django.utils.dateparse import parse_date, parse_datetime
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.authentication import SessionAuthentication, TokenAuthentication
@@ -27,6 +29,7 @@ from rest_framework.decorators import (
 )
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
 try:
@@ -63,7 +66,10 @@ from .models import (
     SkiPartnerReport,
     SkiStation,
     SkiStationCamera,
+    SkiNewsItem,
     SkiStory,
+    SkiStoryComment,
+    SkiStoryLike,
     SnowConditionUpdate,
     UserBadge,
     UserFriend,
@@ -90,7 +96,10 @@ from .serializers import (
     SkiPartnerReportSerializer,
     SkiStationSerializer,
     SkiStationCameraSerializer,
+    SkiNewsItemSerializer,
     SkiStorySerializer,
+    SkiStoryFeedSerializer,
+    SkiStoryCommentSerializer,
     SnowConditionUpdateSerializer,
     UserBadgeSerializer,
     UserFriendSerializer,
@@ -315,14 +324,34 @@ class MessageViewSet(viewsets.ModelViewSet):
         user = _current_authenticated_user(self)
         if user is None:
             return Message.objects.none()
-        return Message.objects.filter(Q(sender=user) | Q(recipient=user)).order_by('-created_at')
+        return Message.objects.filter(
+            Q(is_private=False) | Q(sender=user) | Q(recipient=user)
+        ).order_by('-created_at')
 
     def perform_create(self, serializer):
         sender = self.request.user
         recipient_id = self.request.data.get('recipient')
         if not recipient_id:
             raise ValidationError('recipient is required.')
-        serializer.save(sender=sender)
+        try:
+            recipient_id = int(recipient_id)
+        except (TypeError, ValueError):
+            raise ValidationError('recipient is invalid.')
+
+        if recipient_id <= 0:
+            raise ValidationError('recipient is invalid.')
+
+        if not User.objects.filter(id=recipient_id).exists():
+            raise ValidationError('recipient not found.')
+
+        profile, _ = UserProfile.objects.get_or_create(user=sender)
+        requested_private = self.request.data.get('is_private')
+        if requested_private is None:
+            is_private = bool(profile.messages_private_by_default)
+        else:
+            is_private = str(requested_private).strip().lower() in {'1', 'true', 'yes', 'on'}
+
+        serializer.save(sender=sender, is_private=is_private)
 
     @action(detail=False, methods=['post'], url_path='mark-read')
     def mark_read(self, request):
@@ -382,6 +411,83 @@ class UserViewSet(viewsets.ModelViewSet):
             return qs
 
         return qs
+
+    @action(detail=True, methods=['get'])
+    def activity(self, request, pk=None):
+        user = self.get_object()
+
+        profile = UserProfile.objects.filter(user=user).first()
+        friend_count = UserFriend.objects.filter(user=user).count()
+
+        recent_stories = (
+            SkiStory.objects
+            .filter(user=user)
+            .select_related('ski_station')
+            .order_by('-created_at')[:20]
+        )
+        recent_comments = (
+            SkiStoryComment.objects
+            .filter(user=user)
+            .select_related('story', 'story__ski_station')
+            .order_by('-created_at')[:30]
+        )
+        public_messages = (
+            Message.objects
+            .filter(sender=user, is_private=False)
+            .select_related('recipient')
+            .order_by('-created_at')[:30]
+        )
+
+        payload = {
+            'user': {
+                'id': user.id,
+                'display_name': _display_name_for_user(user),
+                'username': user.username,
+                'organization_name': getattr(profile, 'organization_name', '') or '',
+                'messages_private_by_default': bool(getattr(profile, 'messages_private_by_default', False)),
+            },
+            'stats': {
+                'stories_count': SkiStory.objects.filter(user=user).count(),
+                'comments_count': SkiStoryComment.objects.filter(user=user).count(),
+                'public_messages_count': Message.objects.filter(sender=user, is_private=False).count(),
+                'friends_count': friend_count,
+            },
+            'recent_stories': [
+                {
+                    'id': row.id,
+                    'caption': row.caption,
+                    'station_name': getattr(row.ski_station, 'name', '') or '',
+                    'created_at': row.created_at,
+                    'fun_score': row.fun_score,
+                    'crowd_level': row.crowd_level,
+                    'weather_label': row.weather_label,
+                }
+                for row in recent_stories
+            ],
+            'recent_comments': [
+                {
+                    'id': row.id,
+                    'body': row.body,
+                    'story_id': row.story_id,
+                    'story_caption': getattr(row.story, 'caption', ''),
+                    'story_station_name': getattr(getattr(row.story, 'ski_station', None), 'name', '') or '',
+                    'created_at': row.created_at,
+                }
+                for row in recent_comments
+            ],
+            'recent_public_messages': [
+                {
+                    'id': row.id,
+                    'subject': row.subject,
+                    'body': row.body,
+                    'recipient_id': row.recipient_id,
+                    'recipient_label': _display_name_for_user(row.recipient),
+                    'created_at': row.created_at,
+                }
+                for row in public_messages
+            ],
+        }
+        return Response(payload, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def register(self, request):
@@ -710,12 +816,246 @@ class SkiStoryViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = SkiStorySerializer
 
+    class FeedPagination(PageNumberPagination):
+        page_size = 5
+        page_size_query_param = 'page_size'
+        max_page_size = 20
+
+    pagination_class = FeedPagination
+
     def get_queryset(self):
         now = timezone.now()
         return SkiStory.objects.select_related('user', 'ski_station').filter(expires_at__gt=now)
 
+    def _compute_fun_score(self, crowd_level, weather_label, temperature_c, snow_depth_cm):
+        crowd_bonus = {
+            SkiStory.CROWD_QUIET: 15,
+            SkiStory.CROWD_NORMAL: 8,
+            SkiStory.CROWD_BUSY: 3,
+            SkiStory.CROWD_WILD: -3,
+        }.get(crowd_level or SkiStory.CROWD_NORMAL, 0)
+
+        weather = (weather_label or '').lower()
+        weather_bonus = 0
+        if any(tag in weather for tag in ['sun', 'clear', 'bluebird']):
+            weather_bonus += 14
+        elif any(tag in weather for tag in ['snow', 'powder']):
+            weather_bonus += 10
+        elif any(tag in weather for tag in ['fog', 'wind', 'storm', 'rain']):
+            weather_bonus -= 8
+
+        temp_bonus = 0
+        if temperature_c is not None:
+            if -8 <= temperature_c <= 2:
+                temp_bonus += 10
+            elif temperature_c > 8:
+                temp_bonus -= 4
+
+        snow_bonus = 0
+        if snow_depth_cm is not None:
+            if snow_depth_cm >= 40:
+                snow_bonus += 15
+            elif snow_depth_cm >= 15:
+                snow_bonus += 8
+
+        score = 45 + crowd_bonus + weather_bonus + temp_bonus + snow_bonus
+        return max(0, min(100, int(score)))
+
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        payload = self.request.data
+        crowd_level = (payload.get('crowd_level') or SkiStory.CROWD_NORMAL).strip().lower()
+        if crowd_level not in {choice[0] for choice in SkiStory.CROWD_CHOICES}:
+            crowd_level = SkiStory.CROWD_NORMAL
+
+        weather_label = (payload.get('weather_label') or '').strip()[:40]
+
+        try:
+            temperature_c = int(payload.get('temperature_c')) if payload.get('temperature_c') not in (None, '') else None
+        except (TypeError, ValueError):
+            temperature_c = None
+
+        try:
+            snow_depth_cm = int(payload.get('snow_depth_cm')) if payload.get('snow_depth_cm') not in (None, '') else None
+        except (TypeError, ValueError):
+            snow_depth_cm = None
+
+        fun_score = self._compute_fun_score(crowd_level, weather_label, temperature_c, snow_depth_cm)
+
+        serializer.save(
+            user=self.request.user,
+            crowd_level=crowd_level,
+            weather_label=weather_label,
+            temperature_c=temperature_c,
+            snow_depth_cm=snow_depth_cm,
+            fun_score=fun_score,
+        )
+
+    @action(detail=False, methods=['get'])
+    def feed(self, request):
+        now = timezone.now()
+        queryset = (
+            SkiStory.objects
+            .select_related('user', 'ski_station')
+            .filter(expires_at__gt=now)
+            .annotate(
+                like_count=Count('likes', distinct=True),
+                comment_count=Count('comments', distinct=True),
+                liked_by_me=Exists(
+                    SkiStoryLike.objects.filter(story_id=OuterRef('pk'), user=request.user)
+                ),
+            )
+            .order_by('-created_at')
+        )
+
+        station_id = request.query_params.get('ski_station')
+        if station_id and station_id.isdigit():
+            queryset = queryset.filter(ski_station_id=int(station_id))
+
+        user_id = request.query_params.get('user_id')
+        if user_id and user_id.isdigit():
+            queryset = queryset.filter(user_id=int(user_id))
+
+        q = (request.query_params.get('q') or '').strip()
+        if q:
+            queryset = queryset.filter(
+                Q(caption__icontains=q)
+                | Q(user__username__icontains=q)
+                | Q(user__first_name__icontains=q)
+                | Q(user__last_name__icontains=q)
+                | Q(ski_station__name__icontains=q)
+            )
+
+        date_from_raw = (request.query_params.get('date_from') or '').strip()
+        if date_from_raw:
+            parsed_dt = parse_datetime(date_from_raw)
+            if parsed_dt is None:
+                parsed_date = parse_date(date_from_raw)
+                if parsed_date is not None:
+                    parsed_dt = timezone.make_aware(datetime.combine(parsed_date, time.min))
+            if parsed_dt is not None:
+                queryset = queryset.filter(created_at__gte=parsed_dt)
+
+        date_to_raw = (request.query_params.get('date_to') or '').strip()
+        if date_to_raw:
+            parsed_dt = parse_datetime(date_to_raw)
+            if parsed_dt is None:
+                parsed_date = parse_date(date_to_raw)
+                if parsed_date is not None:
+                    parsed_dt = timezone.make_aware(datetime.combine(parsed_date, time.max))
+            if parsed_dt is not None:
+                queryset = queryset.filter(created_at__lte=parsed_dt)
+
+        highlighted = (request.query_params.get('highlighted') or '').strip().lower()
+        if highlighted in {'1', 'true', 'yes'}:
+            queryset = queryset.filter(Q(like_count__gte=3) | Q(comment_count__gte=2))
+
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        serializer = SkiStoryFeedSerializer(page, many=True, context={'request': request})
+        return paginator.get_paginated_response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def like(self, request, pk=None):
+        story = self.get_object()
+        _, created = SkiStoryLike.objects.get_or_create(story=story, user=request.user)
+        count = SkiStoryLike.objects.filter(story=story).count()
+        return Response({'liked': True, 'created': created, 'like_count': count}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'])
+    def unlike(self, request, pk=None):
+        story = self.get_object()
+        deleted, _ = SkiStoryLike.objects.filter(story=story, user=request.user).delete()
+        count = SkiStoryLike.objects.filter(story=story).count()
+        return Response({'liked': False, 'removed': deleted > 0, 'like_count': count}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'])
+    def comment(self, request, pk=None):
+        story = self.get_object()
+        body = (request.data.get('body') or '').strip()
+        if not body:
+            raise ValidationError('Comment body is required.')
+
+        comment = SkiStoryComment.objects.create(
+            story=story,
+            user=request.user,
+            body=body[:300],
+        )
+        payload = SkiStoryCommentSerializer(comment, context={'request': request}).data
+        return Response(payload, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=['get'])
+    def stats(self, request):
+        now = timezone.now()
+        stories = SkiStory.objects.filter(expires_at__gt=now)
+
+        total = stories.count()
+        if total == 0:
+            return Response(
+                {
+                    'total_active_stories': 0,
+                    'avg_fun_score': 0,
+                    'crowd_breakdown': {},
+                    'weather_breakdown': {},
+                    'moment_vibe': 'quiet',
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        crowd_rows = stories.values('crowd_level').annotate(count=Count('id')).order_by('-count')
+        weather_rows = stories.values('weather_label').annotate(count=Count('id')).order_by('-count')[:8]
+        avg_fun = stories.aggregate(avg=Avg('fun_score')).get('avg') or 0
+
+        crowd_breakdown = {row['crowd_level'] or 'unknown': int(row['count']) for row in crowd_rows}
+        weather_breakdown = {
+            (row['weather_label'] or 'unknown'): int(row['count'])
+            for row in weather_rows
+            if (row['weather_label'] or '').strip()
+        }
+
+        top_crowd = next(iter(crowd_breakdown.keys()), 'normal')
+        if avg_fun >= 75:
+            vibe = 'epic'
+        elif top_crowd == SkiStory.CROWD_WILD:
+            vibe = 'party'
+        elif top_crowd == SkiStory.CROWD_BUSY:
+            vibe = 'busy'
+        elif top_crowd == SkiStory.CROWD_QUIET:
+            vibe = 'chill'
+        else:
+            vibe = 'good'
+
+        return Response(
+            {
+                'total_active_stories': total,
+                'avg_fun_score': round(avg_fun, 1),
+                'crowd_breakdown': crowd_breakdown,
+                'weather_breakdown': weather_breakdown,
+                'moment_vibe': vibe,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class SkiNewsItemViewSet(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [AllowAny]
+    serializer_class = SkiNewsItemSerializer
+
+    def get_queryset(self):
+        queryset = SkiNewsItem.objects.select_related('ski_station').all()
+
+        language = (self.request.query_params.get('language') or '').strip().lower()
+        if language in {SkiNewsItem.LANG_FR, SkiNewsItem.LANG_EN}:
+            queryset = queryset.filter(language=language)
+
+        highlighted = (self.request.query_params.get('highlighted') or '').strip().lower()
+        if highlighted in {'1', 'true', 'yes'}:
+            queryset = queryset.filter(is_highlighted=True)
+
+        station_id = (self.request.query_params.get('ski_station') or '').strip()
+        if station_id.isdigit():
+            queryset = queryset.filter(ski_station_id=int(station_id))
+
+        return queryset[:80]
 
 
 class MarketplaceSavedFilterViewSet(viewsets.ModelViewSet):
@@ -903,6 +1243,7 @@ def _serialize_user(user):
         "username": user.username,
         "first_name": user.first_name,
         "last_name": user.last_name,
+        "messages_private_by_default": bool(profile and profile.messages_private_by_default),
         "has_profile_picture": bool(profile and profile.profile_picture),
         "profile_picture": _encode_binary_field(getattr(profile, "profile_picture", None)),
         "google_profile_picture_url": google_profile_picture_url,
@@ -1113,6 +1454,11 @@ def auth_profile_update_view(request):
         user.save(update_fields=updated_fields)
 
     profile, _ = UserProfile.objects.get_or_create(user=user)
+    if 'messages_private_by_default' in request.data:
+        raw_private_default = request.data.get('messages_private_by_default')
+        profile.messages_private_by_default = str(raw_private_default).strip().lower() in {'1', 'true', 'yes', 'on'}
+        profile.save(update_fields=['messages_private_by_default'])
+
     if 'clear_profile_picture' in request.data and request.data.get('clear_profile_picture'):
         profile.profile_picture = None
         profile.save(update_fields=['profile_picture'])

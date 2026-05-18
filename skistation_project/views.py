@@ -20,6 +20,7 @@ from api.models import (
     CarpoolReservation,
     SkiPartnerReport,
     SkiStory,
+    SkiNewsItem,
     UserProfile,
     UserFriend,
     InstructorProfile,
@@ -47,6 +48,7 @@ from .forms import (
     SnowConditionUpdateForm,
     InstructorProfileForm,
     InstructorServiceForm,
+    generate_unique_organization_name,
     get_marketplace_choices,
 )
 from allauth.socialaccount.providers.google.views import OAuth2LoginView
@@ -57,6 +59,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
 import base64
+from io import BytesIO
 from html import escape
 import json
 import os
@@ -65,6 +68,7 @@ from urllib.parse import quote_plus, urlencode
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 import re
+from PIL import Image, ImageDraw
 from django.utils.translation import check_for_language
 from django.utils import translation
 from django.utils.translation import gettext as _
@@ -119,6 +123,38 @@ def _send_platform_message(sender, recipient, subject, body):
         subject=(subject or 'Notification covoiturage')[:255],
         body=(body or '')[:4000],
     )
+
+
+def _build_ski_story_placeholder(caption, station_name):
+    img = Image.new('RGB', (900, 560), (18, 61, 115))
+    draw = ImageDraw.Draw(img)
+    draw.polygon([(0, 560), (0, 350), (320, 430), (900, 280), (900, 560)], fill=(244, 250, 255))
+    draw.polygon([(60, 330), (190, 250), (320, 340)], fill=(180, 214, 241))
+    draw.polygon([(350, 300), (570, 180), (860, 325)], fill=(162, 199, 232))
+    draw.rectangle((0, 480, 900, 560), fill=(10, 38, 74))
+    title = station_name or 'Ski Grenoble'
+    text = f"{title[:36]} | {(caption or 'Story ski')[:34]}"
+    draw.text((24, 512), text, fill=(237, 246, 255))
+    buffer = BytesIO()
+    img.save(buffer, format='PNG')
+    return buffer.getvalue()
+
+
+def _ensure_ski_profile_picture(user):
+    profile, _ = UserProfile.objects.get_or_create(user=user)
+    if profile.profile_picture:
+        return
+
+    img = Image.new('RGB', (128, 128), (20, 114, 177))
+    draw = ImageDraw.Draw(img)
+    draw.ellipse((12, 12, 116, 116), outline=(240, 250, 255), width=5)
+    draw.line((38, 92, 90, 92), fill=(255, 255, 255), width=5)
+    draw.line((45, 34, 83, 74), fill=(255, 255, 255), width=6)
+    draw.line((83, 34, 45, 74), fill=(255, 255, 255), width=6)
+    buffer = BytesIO()
+    img.save(buffer, format='PNG')
+    profile.profile_picture = buffer.getvalue()
+    profile.save(update_fields=['profile_picture'])
 
 
 def _fetch_google_place_rating(station):
@@ -786,6 +822,11 @@ def set_language_view(request):
         request.session[settings.LANGUAGE_COOKIE_NAME] = lang_code
         response.set_cookie(settings.LANGUAGE_COOKIE_NAME, lang_code)
     return response
+
+
+@require_GET
+def suggest_organization_name(request):
+    return JsonResponse({'organization_name': generate_unique_organization_name()})
 
 
 @login_required(login_url='account_login')
@@ -1627,27 +1668,45 @@ def ski_partner_publish(request):
 def ski_stories(request):
     now = timezone.now()
     active_stories = SkiStory.objects.filter(expires_at__gt=now).select_related('user', 'ski_station')
+    current_lang = (translation.get_language() or 'fr')[:2]
+    news_items = list(
+        SkiNewsItem.objects.select_related('ski_station')
+        .filter(Q(language=current_lang) | Q(language='fr'))
+        .order_by('-is_highlighted', '-published_at')[:12]
+    )
+    highlighted_news = [item for item in news_items if item.is_highlighted][:4]
 
     if request.method == 'POST':
         if not request.user.is_authenticated:
             return redirect('login')
 
+        _ensure_ski_profile_picture(request.user)
         caption = request.POST.get('caption', '').strip()
         station_post = request.POST.get('ski_station', '').strip() or None
         image_file = request.FILES.get('image_file')
 
+        station_obj = None
+        if station_post and station_post.isdigit():
+            station_obj = SkiStation.objects.filter(id=int(station_post)).first()
+
+        image_bytes = None
+
         if not image_file:
-            messages.error(request, 'Photo requise pour publier une story.')
+            image_bytes = _build_ski_story_placeholder(caption=caption, station_name=getattr(station_obj, 'name', ''))
+            messages.info(request, 'Aucune photo fournie: image ski par defaut generee.')
         elif not (getattr(image_file, 'content_type', '') or '').lower().startswith('image/'):
             messages.error(request, 'Le fichier doit etre une image.')
         elif getattr(image_file, 'size', 0) > 5 * 1024 * 1024:
             messages.error(request, 'Image trop volumineuse (max 5 Mo).')
         else:
+            image_bytes = image_file.read()
+
+        if image_bytes:
             SkiStory.objects.create(
                 user=request.user,
-                ski_station_id=int(station_post) if station_post and station_post.isdigit() else None,
+                ski_station=station_obj,
                 caption=caption[:180],
-                image=image_file.read(),
+                image=image_bytes,
                 expires_at=now + timedelta(hours=24),
             )
             messages.success(request, 'Story publiee pour 24h.')
@@ -1659,6 +1718,8 @@ def ski_stories(request):
         {
             'stories': active_stories[:120],
             'stations': SkiStation.objects.order_by('name'),
+            'news_items': news_items,
+            'highlighted_news': highlighted_news,
         },
     )
 

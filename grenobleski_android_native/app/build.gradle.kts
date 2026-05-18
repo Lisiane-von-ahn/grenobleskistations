@@ -19,12 +19,12 @@ val enableMobileAds = ((project.findProperty("ENABLE_MOBILE_ADS") as String?)
 
 android {
     namespace = "fr.grenobleski.nativeapp"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "fr.grenobleski.nativeapp"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 35
         // Use CI run number as versionCode when available, fallback to 1 for local builds.
         versionCode = (System.getenv("BUILD_NUMBER") ?: "1").toIntOrNull() ?: 1
         versionName = System.getenv("VERSION_NAME") ?: "1.0.0"
@@ -41,6 +41,7 @@ android {
             val keystorePath = System.getenv("KEYSTORE_PATH")
             if (keystorePath != null) {
                 storeFile = file(keystorePath)
+                storeType = System.getenv("KEYSTORE_TYPE") ?: "jks"
                 storePassword = System.getenv("KEY_STORE_PASSWORD") ?: ""
                 keyAlias = System.getenv("KEY_ALIAS") ?: ""
                 keyPassword = System.getenv("KEY_PASSWORD") ?: ""

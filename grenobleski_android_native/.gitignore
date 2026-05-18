@@ -4,3 +4,8 @@ local.properties
 **/build/
 .idea/
 *.iml
+
+# Local signing artifacts (never commit)
+signing/*.keystore
+signing/*.jks
+signing/*.env

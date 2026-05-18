@@ -15,6 +15,6 @@ class LanguageStore(context: Context) {
 
     private companion object {
         const val KEY_LANGUAGE = "app_language"
-        const val DEFAULT_LANGUAGE = "fr"
+        const val DEFAULT_LANGUAGE = "system"
     }
 }

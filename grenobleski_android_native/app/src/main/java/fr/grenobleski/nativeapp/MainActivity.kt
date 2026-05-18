@@ -22,6 +22,7 @@ class MainActivity : ComponentActivity() {
     private var mobileAdsEnabled by mutableStateOf(false)
     private var showAdsConsentPrompt by mutableStateOf(false)
     private lateinit var languageStore: LanguageStore
+    private var currentLanguage by mutableStateOf("system")
     private lateinit var adsConsentManager: AdsConsentManager
     private var appLovinInitialized = false
 
@@ -29,7 +30,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         languageStore = LanguageStore(this)
         adsConsentManager = AdsConsentManager(this)
-        applySavedLanguage(languageStore.loadLanguage())
+        currentLanguage = languageStore.loadLanguage()
+        applySavedLanguage(currentLanguage)
         pendingAuthUri = extractAuthUri(intent)
 
         adsConsentManager.syncPrivacyStateWithSdk()
@@ -56,6 +58,17 @@ class MainActivity : ComponentActivity() {
                         },
                         onOpenAdsPreferences = {
                             showAdsConsentPrompt = true
+                        },
+                        currentLanguage = currentLanguage,
+                        onLanguageChange = { selected ->
+                            val normalized = when (selected.lowercase()) {
+                                "fr" -> "fr"
+                                "en" -> "en"
+                                else -> "system"
+                            }
+                            currentLanguage = normalized
+                            languageStore.saveLanguage(normalized)
+                            applySavedLanguage(normalized)
                         },
                     )
                 }

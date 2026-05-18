@@ -43,8 +43,72 @@ data class DashboardCounts(
     val marketplace: Int = 0,
 )
 
+data class StoryCommentItem(
+    val id: Int,
+    val userLabel: String,
+    val body: String,
+    val createdAtLabel: String,
+)
+
+data class StoryItem(
+    val id: Int,
+    val userId: Int,
+    val userLabel: String,
+    val stationId: Int,
+    val stationName: String,
+    val caption: String,
+    val imageBase64: String,
+    val createdAtLabel: String,
+    val createdAtRaw: String,
+    val likeCount: Int,
+    val commentCount: Int,
+    val likedByMe: Boolean,
+    val recentComments: List<StoryCommentItem> = emptyList(),
+)
+
+data class StoryPage(
+    val items: List<StoryItem>,
+    val hasNextPage: Boolean,
+    val nextPage: Int?,
+)
+
+data class StoryStats(
+    val totalActiveStories: Int = 0,
+    val avgFunScore: Double = 0.0,
+    val momentVibe: String = "good",
+    val crowdBreakdown: Map<String, Int> = emptyMap(),
+    val weatherBreakdown: Map<String, Int> = emptyMap(),
+)
+
+data class UserActivitySummary(
+    val userId: Int,
+    val displayName: String,
+    val username: String,
+    val organizationName: String,
+    val storiesCount: Int,
+    val commentsCount: Int,
+    val publicMessagesCount: Int,
+    val friendsCount: Int,
+    val recentStoryCaptions: List<String> = emptyList(),
+    val recentComments: List<String> = emptyList(),
+)
+
+data class SkiNewsItem(
+    val id: Int,
+    val title: String,
+    val summary: String,
+    val link: String,
+    val sourceName: String,
+    val language: String,
+    val stationName: String,
+    val publishedAtLabel: String,
+    val publishedAtRaw: String,
+    val highlighted: Boolean,
+)
+
 enum class NativeTab {
     HOME,
+    COMMUNITY,
     STATIONS,
     BUS_LINES,
     SERVICES,

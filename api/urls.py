@@ -20,6 +20,7 @@ from .views import (
     SkiPartnerReportViewSet,
     SkiStationViewSet,
     SkiStationCameraViewSet,
+    SkiNewsItemViewSet,
     SkiStoryViewSet,
     SnowConditionUpdateViewSet,
     UserBadgeViewSet,
@@ -50,6 +51,7 @@ router.register(r'instructorreviews', InstructorReviewViewSet, basename='instruc
 router.register(r'skipartnerposts', SkiPartnerPostViewSet, basename='skipartnerposts')
 router.register(r'skipartnerreports', SkiPartnerReportViewSet, basename='skipartnerreports')
 router.register(r'skistories', SkiStoryViewSet, basename='skistories')
+router.register(r'ski-news', SkiNewsItemViewSet, basename='ski-news')
 router.register(r'marketplace-saved-filters', MarketplaceSavedFilterViewSet, basename='marketplace-saved-filters')
 router.register(r'marketplace-deals', MarketplaceDealViewSet, basename='marketplace-deals')
 router.register(r'marketplace-ratings', MarketplaceUserRatingViewSet, basename='marketplace-ratings')

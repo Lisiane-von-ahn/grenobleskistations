@@ -1,6 +1,7 @@
 from django import forms
 from django.utils.translation import gettext_lazy as _
 from django.utils.translation import get_language
+import random
 from api.models import (
     SkiMaterialListing,
     UserProfile,
@@ -14,6 +15,50 @@ from io import BytesIO
 from PIL import Image
 from django.contrib.auth import get_user_model
 from allauth.account.forms import LoginForm, SignupForm
+
+
+CONSTELLATION_NAMES = [
+    'Orion', 'Lyra', 'Cygnus', 'Pegasus', 'Andromeda', 'Cassiopeia', 'Perseus', 'Aquarius',
+    'Centaurus', 'Draco', 'Phoenix', 'Ursa', 'Aquila', 'Lupus',
+]
+
+STAR_NAMES = [
+    'Sirius', 'Vega', 'Rigel', 'Altair', 'Betelgeuse', 'Procyon', 'Deneb', 'Polaris',
+    'Aldebaran', 'Arcturus', 'Antares', 'Spica',
+]
+
+PLANET_NAMES = [
+    'Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune',
+]
+
+ORG_SUFFIXES = [
+    'Labs', 'Systems', 'Cloud', 'Dynamics', 'Ventures', 'Data',
+]
+
+
+def generate_unique_organization_name():
+    randomizer = random.SystemRandom()
+
+    for _ in range(120):
+        pattern = randomizer.choice([
+            '{constellation} {star} {suffix}',
+            '{planet} {constellation} {suffix}',
+            '{star} {planet} {suffix}',
+        ])
+        candidate = pattern.format(
+            constellation=randomizer.choice(CONSTELLATION_NAMES),
+            star=randomizer.choice(STAR_NAMES),
+            planet=randomizer.choice(PLANET_NAMES),
+            suffix=randomizer.choice(ORG_SUFFIXES),
+        )
+
+        if not UserProfile.objects.filter(organization_name__iexact=candidate).exists():
+            return candidate
+
+    while True:
+        fallback = f"{randomizer.choice(CONSTELLATION_NAMES)} {randomizer.choice(STAR_NAMES)} {randomizer.randrange(1000, 9999)}"
+        if not UserProfile.objects.filter(organization_name__iexact=fallback).exists():
+            return fallback
 
 
 
@@ -140,13 +185,18 @@ class CustomLoginForm(LoginForm):
 class CustomSignupForm(SignupForm):
     first_name = forms.CharField(max_length=150, required=False)
     last_name = forms.CharField(max_length=150, required=False)
+    organization_name = forms.CharField(max_length=120, required=False)
     accept_terms = forms.BooleanField(required=True)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for field_name in ('email', 'password1', 'password2', 'first_name', 'last_name'):
+        for field_name in ('email', 'password1', 'password2', 'first_name', 'last_name', 'organization_name'):
             if field_name in self.fields:
                 self.fields[field_name].widget.attrs.update({'class': 'form-control'})
+
+        if 'organization_name' in self.fields:
+            self.fields['organization_name'].widget.attrs.update({'id': 'id_organization_name'})
+            self.fields['organization_name'].label = _('Organization')
 
         if 'accept_terms' in self.fields:
             self.fields['accept_terms'].label = _(
@@ -161,6 +211,14 @@ class CustomSignupForm(SignupForm):
             )
         return accepted
 
+    def clean_organization_name(self):
+        value = (self.cleaned_data.get('organization_name') or '').strip()
+        if not value:
+            return value
+        if UserProfile.objects.filter(organization_name__iexact=value).exists():
+            raise forms.ValidationError(_('This organization name already exists.'))
+        return value
+
     def save(self, request):
         user = super().save(request)
         email = (user.email or '').strip().lower()
@@ -169,6 +227,14 @@ class CustomSignupForm(SignupForm):
         user.first_name = self.cleaned_data.get('first_name', '').strip()
         user.last_name = self.cleaned_data.get('last_name', '').strip()
         user.save(update_fields=['username', 'first_name', 'last_name'])
+
+        organization_name = (self.cleaned_data.get('organization_name') or '').strip()
+        if not organization_name:
+            organization_name = generate_unique_organization_name()
+
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        profile.organization_name = organization_name
+        profile.save(update_fields=['organization_name'])
         return user
 
 class UserRegistrationForm(forms.Form):

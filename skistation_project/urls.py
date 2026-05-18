@@ -20,6 +20,7 @@ schema_view = get_schema_view(
 urlpatterns = [
    path('i18n/', include('django.conf.urls.i18n')),
    path('set-language/', views.set_language_view, name='set_language_safe'),
+   path('accounts/organization-name/suggest/', views.suggest_organization_name, name='suggest_organization_name'),
    path('ads.txt', views.ads_txt, name='ads_txt'),
     path('admin/', admin.site.urls, name='admin2'),
     path('api/', include('api.urls')),

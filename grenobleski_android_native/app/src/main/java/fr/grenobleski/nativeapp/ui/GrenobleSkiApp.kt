@@ -85,6 +85,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -208,6 +209,8 @@ fun GrenobleSkiApp(
     onAcceptAdsConsent: (() -> Unit)? = null,
     onRejectAdsConsent: (() -> Unit)? = null,
     onOpenAdsPreferences: (() -> Unit)? = null,
+    currentLanguage: String = "system",
+    onLanguageChange: (String) -> Unit = {},
 ) {
     val localContext = androidx.compose.ui.platform.LocalContext.current
     val appContext = localContext.applicationContext
@@ -348,6 +351,16 @@ fun GrenobleSkiApp(
             onRejectCarpoolReservation = viewModel::rejectCarpoolReservation,
             onSubmitSellerRating = viewModel::submitSellerRating,
             onSubmitStationRating = viewModel::submitStationRating,
+            onStoriesSearchChange = viewModel::updateStoriesSearchQuery,
+            onStoriesStationFilterChange = viewModel::updateStoriesStationFilter,
+            onApplyStoriesFilters = viewModel::applyStoriesFilters,
+            onLoadMoreStories = viewModel::loadMoreStories,
+            onToggleStoryLike = viewModel::toggleStoryLike,
+            onStoryComment = viewModel::addStoryComment,
+            onOpenUserActivity = viewModel::openUserActivity,
+            onCloseUserActivity = viewModel::closeUserActivity,
+            currentLanguage = currentLanguage,
+            onLanguageChange = onLanguageChange,
         )
     }
 
@@ -657,6 +670,16 @@ private fun NativeShell(
     onRejectCarpoolReservation: (Int, Int) -> Unit,
     onSubmitSellerRating: (Int, Int, Int, String) -> Unit,
     onSubmitStationRating: (Int, Int, String) -> Unit,
+    onStoriesSearchChange: (String) -> Unit,
+    onStoriesStationFilterChange: (Int?) -> Unit,
+    onApplyStoriesFilters: () -> Unit,
+    onLoadMoreStories: () -> Unit,
+    onToggleStoryLike: (Int, Boolean) -> Unit,
+    onStoryComment: (Int, String) -> Unit,
+    onOpenUserActivity: (Int) -> Unit,
+    onCloseUserActivity: () -> Unit,
+    currentLanguage: String,
+    onLanguageChange: (String) -> Unit,
 ) {
     val localContext = androidx.compose.ui.platform.LocalContext.current
     var quickMenuOpen by remember { mutableStateOf(false) }
@@ -818,7 +841,18 @@ private fun NativeShell(
                     onOpenBusLines = { onSelectTab(NativeTab.BUS_LINES) },
                     onOpenServices = { onSelectTab(NativeTab.SERVICES) },
                     onOpenCarpool = { onSelectTab(NativeTab.PARTNERS) },
+                    onStoriesSearchChange = onStoriesSearchChange,
+                    onStoriesStationFilterChange = onStoriesStationFilterChange,
+                    onApplyStoriesFilters = onApplyStoriesFilters,
+                    onLoadMoreStories = onLoadMoreStories,
+                    onToggleStoryLike = onToggleStoryLike,
+                    onStoryComment = onStoryComment,
+                    onOpenUserActivity = onOpenUserActivity,
+                    onAddFriend = onAddFriend,
+                    onOpenCommunity = { onSelectTab(NativeTab.COMMUNITY) },
+                    onOpenUrl = { url -> openExternalUrl(localContext, url) },
                 )
+                NativeTab.COMMUNITY -> CommunityDashboardTab(state = state)
                 NativeTab.STATIONS -> StationsTab(
                     state = state,
                     onSubmitStationRating = onSubmitStationRating,
@@ -868,6 +902,8 @@ private fun NativeShell(
                     onConfirmNewPasswordChange = onConfirmNewPasswordChange,
                     onSaveProfile = onSaveProfile,
                     onChangePassword = onChangePassword,
+                    currentLanguage = currentLanguage,
+                    onLanguageChange = onLanguageChange,
                 )
             }
 
@@ -901,6 +937,12 @@ private fun NativeShell(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
+                    OutlinedButton(onClick = {
+                        moreMenuOpen = false
+                        onSelectTab(NativeTab.COMMUNITY)
+                    }, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(id = R.string.community_dashboard))
+                    }
                     OutlinedButton(onClick = {
                         moreMenuOpen = false
                         onSelectTab(NativeTab.STATIONS)
@@ -1333,6 +1375,36 @@ private fun NativeShell(
                 }
             }
         }
+
+        val selectedActivity = state.selectedUserActivity
+        if (selectedActivity != null) {
+            CenteredPanelDialog(
+                title = stringResource(id = R.string.user_public_activity),
+                onDismiss = onCloseUserActivity,
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(selectedActivity.displayName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("@${selectedActivity.username}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (selectedActivity.organizationName.isNotBlank()) {
+                        Text(selectedActivity.organizationName, style = MaterialTheme.typography.bodySmall)
+                    }
+                    Text("Stories: ${selectedActivity.storiesCount} • Comments: ${selectedActivity.commentsCount}")
+                    Text("Public messages: ${selectedActivity.publicMessagesCount} • Friends: ${selectedActivity.friendsCount}")
+                    if (selectedActivity.recentStoryCaptions.isNotEmpty()) {
+                        Text(stringResource(id = R.string.recent_stories), fontWeight = FontWeight.SemiBold)
+                        selectedActivity.recentStoryCaptions.take(5).forEach { caption ->
+                            Text("• $caption", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    if (selectedActivity.recentComments.isNotEmpty()) {
+                        Text(stringResource(id = R.string.recent_comments), fontWeight = FontWeight.SemiBold)
+                        selectedActivity.recentComments.take(5).forEach { body ->
+                            Text("• $body", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1447,21 +1519,28 @@ private fun HomeTab(
     onOpenBusLines: () -> Unit,
     onOpenServices: () -> Unit,
     onOpenCarpool: () -> Unit,
+    onStoriesSearchChange: (String) -> Unit,
+    onStoriesStationFilterChange: (Int?) -> Unit,
+    onApplyStoriesFilters: () -> Unit,
+    onLoadMoreStories: () -> Unit,
+    onToggleStoryLike: (Int, Boolean) -> Unit,
+    onStoryComment: (Int, String) -> Unit,
+    onOpenUserActivity: (Int) -> Unit,
+    onAddFriend: (Int) -> Unit,
+    onOpenCommunity: () -> Unit,
+    onOpenUrl: (String) -> Unit,
 ) {
     val xpInLevel = state.xpPoints % 100
     val xpProgress = xpInLevel / 100f
-
-    val stories = listOf(
-        stringResource(id = R.string.story_powder_alert),
-        stringResource(id = R.string.story_last_minute_deals),
-        stringResource(id = R.string.story_bus_live_updates),
-        stringResource(id = R.string.story_local_guides),
-    )
+    val listState = rememberLazyListState()
+    val commentDrafts = remember { mutableStateMapOf<Int, String>() }
+    val stationOptions = remember(state.stationItems) { state.stationItems.sortedBy { it.name } }
     val latestMarketplaceItems = remember(state.marketplaceItems) {
         state.marketplaceItems.sortedByDescending { it.id }.take(4)
     }
 
     LazyColumn(
+        state = listState,
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 14.dp),
@@ -1553,23 +1632,225 @@ private fun HomeTab(
 
         item {
             Text(
-                text = stringResource(id = R.string.stories),
+                text = stringResource(id = R.string.highlighted_stories),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
             Spacer(modifier = Modifier.height(8.dp))
             LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                items(stories) { story ->
+                items(state.highlightedStoryItems) { story ->
                     Card(
                         modifier = Modifier.width(172.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)),
                     ) {
                         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                            Text(story, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                            Text(story.userLabel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                            Text(
+                                text = story.caption.ifBlank { stringResource(id = R.string.story_no_caption) },
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 3,
+                            )
+                            Text(
+                                text = "${story.stationName} • ${story.likeCount} ♥ • ${story.commentCount} 💬",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
                     }
                 }
+            }
+        }
+
+        if (state.highlightedSkiNewsItems.isNotEmpty()) {
+            item {
+                Text(
+                    text = stringResource(id = R.string.highlighted_ski_news),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    items(state.highlightedSkiNewsItems) { news ->
+                        Card(
+                            modifier = Modifier.width(280.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f)),
+                            shape = RoundedCornerShape(16.dp),
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(
+                                    text = news.title,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 3,
+                                )
+                                Text(
+                                    text = "${news.sourceName} • ${news.publishedAtLabel}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                if (news.summary.isNotBlank()) {
+                                    Text(news.summary, style = MaterialTheme.typography.bodySmall, maxLines = 3)
+                                }
+                                OutlinedButton(onClick = { onOpenUrl(news.link) }, modifier = Modifier.fillMaxWidth()) {
+                                    Text(stringResource(id = R.string.open_news))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(16.dp),
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Button(onClick = onOpenCommunity, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(id = R.string.open_community_dashboard))
+                    }
+                    Text(
+                        text = stringResource(id = R.string.story_filters),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    OutlinedTextField(
+                        value = state.storiesSearchQuery,
+                        onValueChange = onStoriesSearchChange,
+                        label = { Text(stringResource(id = R.string.story_search)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                    )
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        item {
+                            AssistChip(
+                                onClick = { onStoriesStationFilterChange(null) },
+                                label = { Text(stringResource(id = R.string.all_stations)) },
+                            )
+                        }
+                        items(stationOptions.take(20)) { station ->
+                            AssistChip(
+                                onClick = { onStoriesStationFilterChange(station.id) },
+                                label = { Text(station.name) },
+                            )
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = onApplyStoriesFilters, modifier = Modifier.weight(1f)) {
+                            Text(stringResource(id = R.string.apply_filters))
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                onStoriesSearchChange("")
+                                onStoriesStationFilterChange(null)
+                                onApplyStoriesFilters()
+                            },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(stringResource(id = R.string.clear_filters))
+                        }
+                    }
+                }
+            }
+        }
+
+        items(state.storyItems) { story ->
+            val previewImage = remember(story.imageBase64) { decodeBase64Image(story.imageBase64) }
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(16.dp),
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        TextButton(onClick = { onOpenUserActivity(story.userId) }) {
+                            Text(
+                                text = story.userLabel,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                        Text(
+                            text = story.createdAtLabel,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Text(
+                        text = "${story.stationName} • ${story.caption.ifBlank { stringResource(id = R.string.story_no_caption) }}",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    if (previewImage != null) {
+                        Image(
+                            bitmap = previewImage,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(180.dp)
+                                .clip(RoundedCornerShape(12.dp)),
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { onToggleStoryLike(story.id, story.likedByMe) }) {
+                            Text(if (story.likedByMe) stringResource(id = R.string.unlike_story) else stringResource(id = R.string.like_story))
+                        }
+                        OutlinedButton(onClick = { onAddFriend(story.userId) }) {
+                            Text(stringResource(id = R.string.add_friend))
+                        }
+                        Text(
+                            text = "${story.likeCount} ♥  •  ${story.commentCount} 💬",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+
+                    if (story.recentComments.isNotEmpty()) {
+                        story.recentComments.forEach { comment ->
+                            Text(
+                                text = "${comment.userLabel}: ${comment.body}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+
+                    val draft = commentDrafts[story.id].orEmpty()
+                    OutlinedTextField(
+                        value = draft,
+                        onValueChange = { commentDrafts[story.id] = it },
+                        label = { Text(stringResource(id = R.string.add_comment)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                    )
+                    Button(
+                        onClick = {
+                            onStoryComment(story.id, draft)
+                            commentDrafts[story.id] = ""
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(id = R.string.post_comment))
+                    }
+                }
+            }
+        }
+
+        if (state.isStoriesLoadingMore) {
+            item {
+                Text(
+                    text = stringResource(id = R.string.loading_more_stories),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
 
@@ -1677,6 +1958,80 @@ private fun HomeTab(
 
                     OutlinedButton(onClick = onOpenCarpool, modifier = Modifier.fillMaxWidth()) {
                         Text(text = stringResource(id = R.string.carpool))
+                    }
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(listState, state.storyItems.size, state.storiesHasNextPage, state.isStoriesLoadingMore) {
+        snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
+            .collect { index ->
+                val trigger = max(0, listState.layoutInfo.totalItemsCount - 3)
+                if (index >= trigger && state.storiesHasNextPage && !state.isStoriesLoadingMore) {
+                    onLoadMoreStories()
+                }
+            }
+    }
+}
+
+@Composable
+private fun CommunityDashboardTab(state: AppUiState) {
+    val stats = state.storyStats
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item {
+            Text(
+                text = stringResource(id = R.string.community_dashboard),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+
+        item {
+            Card(shape = RoundedCornerShape(16.dp)) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text("Active stories: ${stats.totalActiveStories}")
+                    Text("Average fun score: ${"%.1f".format(stats.avgFunScore)}")
+                    Text("Current vibe: ${stats.momentVibe}")
+                }
+            }
+        }
+
+        if (stats.crowdBreakdown.isNotEmpty()) {
+            item {
+                Card(shape = RoundedCornerShape(16.dp)) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Text("Crowd levels", fontWeight = FontWeight.SemiBold)
+                        stats.crowdBreakdown.entries.forEach { (key, value) ->
+                            Text("$key: $value")
+                        }
+                    }
+                }
+            }
+        }
+
+        if (stats.weatherBreakdown.isNotEmpty()) {
+            item {
+                Card(shape = RoundedCornerShape(16.dp)) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Text("Weather", fontWeight = FontWeight.SemiBold)
+                        stats.weatherBreakdown.entries.forEach { (key, value) ->
+                            Text("$key: $value")
+                        }
                     }
                 }
             }
@@ -4004,6 +4359,8 @@ private fun ProfileTab(
     onConfirmNewPasswordChange: (String) -> Unit,
     onSaveProfile: () -> Unit,
     onChangePassword: () -> Unit,
+    currentLanguage: String,
+    onLanguageChange: (String) -> Unit,
 ) {
     val profile = state.profileInfo
     if (profile == null) {
@@ -4030,6 +4387,35 @@ private fun ProfileTab(
                         if (profile.username.isNotBlank()) {
                             Text("@${profile.username}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
+                    }
+                }
+            }
+        }
+
+        item {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = stringResource(id = R.string.language_preference),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChipButton(
+                            label = stringResource(id = R.string.language_system),
+                            selected = currentLanguage.lowercase() !in setOf("fr", "en"),
+                            onClick = { onLanguageChange("system") },
+                        )
+                        FilterChipButton(
+                            label = stringResource(id = R.string.language_french),
+                            selected = currentLanguage.lowercase() == "fr",
+                            onClick = { onLanguageChange("fr") },
+                        )
+                        FilterChipButton(
+                            label = stringResource(id = R.string.language_english),
+                            selected = currentLanguage.lowercase() == "en",
+                            onClick = { onLanguageChange("en") },
+                        )
                     }
                 }
             }
@@ -4488,6 +4874,7 @@ private fun PartnersTab(
 private fun tabTitle(tab: NativeTab): String {
     return when (tab) {
         NativeTab.HOME -> stringResource(id = R.string.nav_home)
+        NativeTab.COMMUNITY -> stringResource(id = R.string.community_dashboard)
         NativeTab.STATIONS -> stringResource(id = R.string.stations)
         NativeTab.BUS_LINES -> stringResource(id = R.string.bus_lines)
         NativeTab.SERVICES -> stringResource(id = R.string.services)

@@ -8,7 +8,7 @@ from unittest.mock import patch
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
-from .models import SkiMaterialListing, Message
+from .models import SkiMaterialListing, Message, SkiNewsItem
 
 
 class MarketplaceFlowTests(TestCase):
@@ -206,3 +206,39 @@ class ApiMobileBridgeRoutesTests(TestCase):
 		self.assertIn('email=mobile%40example.com', content)
 		self.assertIn('name=Mobile+User', content)
 		self.assertIn('Open the app', content)
+
+
+class ApiSkiNewsTests(TestCase):
+	def setUp(self):
+		self.client = APIClient()
+		SkiNewsItem.objects.create(
+			title='Neige fraiche en Isere',
+			summary='Bonnes conditions de neige.',
+			link='https://example.com/fr-news',
+			source_name='Example FR',
+			language='fr',
+			is_highlighted=True,
+		)
+		SkiNewsItem.objects.create(
+			title='Fresh snow near Grenoble',
+			summary='Ski resorts update.',
+			link='https://example.com/en-news',
+			source_name='Example EN',
+			language='en',
+			is_highlighted=False,
+		)
+
+	def test_ski_news_endpoint_public(self):
+		response = self.client.get('/api/ski-news/')
+		self.assertEqual(response.status_code, 200)
+		self.assertGreaterEqual(len(response.data), 2)
+
+	def test_ski_news_language_filter(self):
+		response = self.client.get('/api/ski-news/?language=en')
+		self.assertEqual(response.status_code, 200)
+		self.assertTrue(all(item.get('language') == 'en' for item in response.data))
+
+	def test_ski_news_highlighted_filter(self):
+		response = self.client.get('/api/ski-news/?highlighted=true')
+		self.assertEqual(response.status_code, 200)
+		self.assertTrue(all(item.get('is_highlighted') is True for item in response.data))

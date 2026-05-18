@@ -184,9 +184,9 @@ jobs:
           echo "📋 Migration Plan:"
           cat /tmp/migration_plan.txt
 
-      - name: 'Ensure latest carpool migration is applied'
+      - name: 'Ensure latest API migration is applied'
         run: |
-          python manage.py showmigrations api | grep "\[X\] 0038_carpool_reservation_approval_flow"
+          python manage.py showmigrations api | grep "\[X\] 0042_skinewsitem"
 
       - name: 'Summary'
         if: success()

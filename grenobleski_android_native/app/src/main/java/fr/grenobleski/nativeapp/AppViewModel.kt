@@ -18,8 +18,12 @@ import fr.grenobleski.nativeapp.data.model.NativeTab
 import fr.grenobleski.nativeapp.data.model.PisteItem
 import fr.grenobleski.nativeapp.data.model.ProfileInfo
 import fr.grenobleski.nativeapp.data.model.ServiceStoreItem
+import fr.grenobleski.nativeapp.data.model.SkiNewsItem
 import fr.grenobleski.nativeapp.data.model.SkiPartnerItem
 import fr.grenobleski.nativeapp.data.model.StationItem
+import fr.grenobleski.nativeapp.data.model.StoryItem
+import fr.grenobleski.nativeapp.data.model.StoryStats
+import fr.grenobleski.nativeapp.data.model.UserActivitySummary
 import fr.grenobleski.nativeapp.data.model.UserSession
 import fr.grenobleski.nativeapp.data.session.SessionStore
 import kotlinx.coroutines.launch
@@ -38,6 +42,18 @@ data class AppUiState(
     val selectedTab: NativeTab = NativeTab.HOME,
     val isTabLoading: Boolean = false,
     val dashboardCounts: DashboardCounts = DashboardCounts(),
+    val storyItems: List<StoryItem> = emptyList(),
+    val highlightedStoryItems: List<StoryItem> = emptyList(),
+    val skiNewsItems: List<SkiNewsItem> = emptyList(),
+    val highlightedSkiNewsItems: List<SkiNewsItem> = emptyList(),
+    val storyStats: StoryStats = StoryStats(),
+    val selectedUserActivity: UserActivitySummary? = null,
+    val isUserActivityLoading: Boolean = false,
+    val storiesPage: Int = 1,
+    val storiesHasNextPage: Boolean = true,
+    val isStoriesLoadingMore: Boolean = false,
+    val storiesStationFilterId: Int? = null,
+    val storiesSearchQuery: String = "",
     val stationItems: List<StationItem> = emptyList(),
     val busLineItems: List<BusLineItem> = emptyList(),
     val serviceStoreItems: List<ServiceStoreItem> = emptyList(),
@@ -401,10 +417,62 @@ class AppViewModel(
             when (tab) {
                 NativeTab.HOME -> {
                     val result = repository.fetchDashboardCounts(session.token)
+                    val storiesResult = repository.fetchStoriesPage(
+                        token = session.token,
+                        page = 1,
+                        pageSize = 5,
+                        stationId = state.storiesStationFilterId,
+                        query = state.storiesSearchQuery,
+                    )
+                    val newsResult = repository.fetchSkiNews(session.token)
                     if (result.isSuccess) {
-                        state = state.copy(dashboardCounts = result.getOrNull()!!)
+                        val page = storiesResult.getOrNull()
+                        val stories = page?.items ?: state.storyItems
+                        val highlighted = stories.sortedWith(
+                            compareByDescending<StoryItem> { it.likeCount + it.commentCount }
+                                .thenByDescending { it.createdAtRaw }
+                        ).take(5)
+                        state = state.copy(
+                            dashboardCounts = result.getOrNull()!!,
+                            storyItems = stories,
+                            highlightedStoryItems = highlighted,
+                            skiNewsItems = newsResult.getOrDefault(state.skiNewsItems),
+                            highlightedSkiNewsItems = newsResult.getOrDefault(state.skiNewsItems).filter { it.highlighted }.take(5),
+                            storiesPage = 1,
+                            storiesHasNextPage = page?.hasNextPage ?: false,
+                        )
                     } else {
                         state = state.copy(errorMessage = result.exceptionOrNull()?.message ?: "Unable to refresh")
+                    }
+                }
+
+                NativeTab.COMMUNITY -> {
+                    val storiesResult = repository.fetchStoriesPage(
+                        token = session.token,
+                        page = 1,
+                        pageSize = 5,
+                        stationId = state.storiesStationFilterId,
+                        query = state.storiesSearchQuery,
+                    )
+                    val statsResult = repository.fetchStoryStats(session.token)
+                    val newsResult = repository.fetchSkiNews(session.token)
+                    if (storiesResult.isSuccess) {
+                        val page = storiesResult.getOrNull()!!
+                        val highlighted = page.items.sortedWith(
+                            compareByDescending<StoryItem> { it.likeCount + it.commentCount }
+                                .thenByDescending { it.createdAtRaw }
+                        ).take(5)
+                        state = state.copy(
+                            storyItems = page.items,
+                            highlightedStoryItems = highlighted,
+                            storiesPage = 1,
+                            storiesHasNextPage = page.hasNextPage,
+                            skiNewsItems = newsResult.getOrDefault(state.skiNewsItems),
+                            highlightedSkiNewsItems = newsResult.getOrDefault(state.skiNewsItems).filter { it.highlighted }.take(5),
+                            storyStats = statsResult.getOrDefault(state.storyStats),
+                        )
+                    } else {
+                        state = state.copy(errorMessage = storiesResult.exceptionOrNull()?.message ?: "Unable to load community")
                     }
                 }
 
@@ -504,6 +572,173 @@ class AppViewModel(
 
     fun refreshDashboard() {
         refreshCurrentTab()
+    }
+
+    fun updateStoriesSearchQuery(value: String) {
+        state = state.copy(storiesSearchQuery = value)
+    }
+
+    fun updateStoriesStationFilter(stationId: Int?) {
+        state = state.copy(storiesStationFilterId = stationId)
+    }
+
+    fun applyStoriesFilters() {
+        val session = state.session ?: return
+        viewModelScope.launch {
+            state = state.copy(isTabLoading = true, errorMessage = null)
+            val result = repository.fetchStoriesPage(
+                token = session.token,
+                page = 1,
+                pageSize = 5,
+                stationId = state.storiesStationFilterId,
+                query = state.storiesSearchQuery,
+            )
+            if (result.isSuccess) {
+                val page = result.getOrNull()!!
+                val highlighted = page.items.sortedWith(
+                    compareByDescending<StoryItem> { it.likeCount + it.commentCount }
+                        .thenByDescending { it.createdAtRaw }
+                ).take(5)
+                state = state.copy(
+                    storyItems = page.items,
+                    highlightedStoryItems = highlighted,
+                    storiesPage = 1,
+                    storiesHasNextPage = page.hasNextPage,
+                    isTabLoading = false,
+                )
+            } else {
+                state = state.copy(
+                    isTabLoading = false,
+                    errorMessage = result.exceptionOrNull()?.message ?: "Unable to filter stories",
+                )
+            }
+        }
+    }
+
+    fun loadMoreStories() {
+        val session = state.session ?: return
+        if (state.isStoriesLoadingMore || !state.storiesHasNextPage) return
+        val nextPage = state.storiesPage + 1
+
+        viewModelScope.launch {
+            state = state.copy(isStoriesLoadingMore = true, errorMessage = null)
+            val result = repository.fetchStoriesPage(
+                token = session.token,
+                page = nextPage,
+                pageSize = 5,
+                stationId = state.storiesStationFilterId,
+                query = state.storiesSearchQuery,
+            )
+            if (result.isSuccess) {
+                val page = result.getOrNull()!!
+                val merged = (state.storyItems + page.items).distinctBy { it.id }
+                val highlighted = merged.sortedWith(
+                    compareByDescending<StoryItem> { it.likeCount + it.commentCount }
+                        .thenByDescending { it.createdAtRaw }
+                ).take(5)
+                state = state.copy(
+                    storyItems = merged,
+                    highlightedStoryItems = highlighted,
+                    storiesPage = nextPage,
+                    storiesHasNextPage = page.hasNextPage,
+                    isStoriesLoadingMore = false,
+                )
+            } else {
+                state = state.copy(
+                    isStoriesLoadingMore = false,
+                    errorMessage = result.exceptionOrNull()?.message ?: "Unable to load more stories",
+                )
+            }
+        }
+    }
+
+    fun toggleStoryLike(storyId: Int, currentlyLiked: Boolean) {
+        val session = state.session ?: return
+        if (storyId <= 0) return
+
+        viewModelScope.launch {
+            val result = if (currentlyLiked) {
+                repository.unlikeStory(session.token, storyId)
+            } else {
+                repository.likeStory(session.token, storyId)
+            }
+            if (result.isSuccess) {
+                val updated = state.storyItems.map { item ->
+                    if (item.id != storyId) item
+                    else {
+                        val newLiked = !currentlyLiked
+                        val newLikeCount = if (newLiked) item.likeCount + 1 else (item.likeCount - 1).coerceAtLeast(0)
+                        item.copy(likeCount = newLikeCount, likedByMe = newLiked)
+                    }
+                }
+                val highlighted = updated.sortedWith(
+                    compareByDescending<StoryItem> { it.likeCount + it.commentCount }
+                        .thenByDescending { it.createdAtRaw }
+                ).take(5)
+                state = state.copy(storyItems = updated, highlightedStoryItems = highlighted)
+            } else {
+                state = state.copy(errorMessage = result.exceptionOrNull()?.message ?: "Unable to update like")
+            }
+        }
+    }
+
+    fun addStoryComment(storyId: Int, body: String) {
+        val session = state.session ?: return
+        if (storyId <= 0) return
+        if (body.trim().isBlank()) {
+            state = state.copy(errorMessage = "Comment cannot be empty.")
+            return
+        }
+
+        viewModelScope.launch {
+            val result = repository.commentStory(session.token, storyId, body)
+            if (result.isSuccess) {
+                val refreshed = repository.fetchStoriesPage(
+                    token = session.token,
+                    page = 1,
+                    pageSize = maxOf(5, state.storyItems.size.coerceAtLeast(5)),
+                    stationId = state.storiesStationFilterId,
+                    query = state.storiesSearchQuery,
+                ).getOrNull()
+                if (refreshed != null) {
+                    val highlighted = refreshed.items.sortedWith(
+                        compareByDescending<StoryItem> { it.likeCount + it.commentCount }
+                            .thenByDescending { it.createdAtRaw }
+                    ).take(5)
+                    state = state.copy(
+                        storyItems = refreshed.items,
+                        highlightedStoryItems = highlighted,
+                        statusMessage = "Comment added.",
+                    )
+                }
+            } else {
+                state = state.copy(errorMessage = result.exceptionOrNull()?.message ?: "Unable to comment")
+            }
+        }
+    }
+
+    fun openUserActivity(userId: Int) {
+        val session = state.session ?: return
+        if (userId <= 0) return
+        viewModelScope.launch {
+            state = state.copy(isUserActivityLoading = true, errorMessage = null)
+            val result = repository.fetchUserActivity(session.token, userId)
+            if (result.isSuccess) {
+                state = state.copy(
+                    isUserActivityLoading = false,
+                    selectedUserActivity = result.getOrNull(),
+                )
+            } else {
+                state = state.copy(
+                    isUserActivityLoading = false,
+                    errorMessage = result.exceptionOrNull()?.message ?: "Unable to load user profile",
+                )
+            }
+        }
+    }
+
+    fun closeUserActivity() {
+        state = state.copy(selectedUserActivity = null, isUserActivityLoading = false)
     }
 
     fun logout() {
@@ -893,7 +1128,8 @@ class AppViewModel(
 
     private fun hasDataForTab(tab: NativeTab): Boolean {
         return when (tab) {
-            NativeTab.HOME -> true
+            NativeTab.HOME -> state.storyItems.isNotEmpty() || state.skiNewsItems.isNotEmpty()
+            NativeTab.COMMUNITY -> state.storyItems.isNotEmpty() || state.skiNewsItems.isNotEmpty()
             NativeTab.STATIONS -> state.stationItems.isNotEmpty()
             NativeTab.BUS_LINES -> state.busLineItems.isNotEmpty()
             NativeTab.SERVICES -> state.serviceStoreItems.isNotEmpty()
@@ -918,6 +1154,31 @@ class AppViewModel(
             val dashboardCounts = repository.fetchDashboardCounts(session.token).getOrElse {
                 firstError = firstError ?: (it.message ?: "Unable to load dashboard")
                 current.dashboardCounts
+            }
+
+            val storyPage = repository.fetchStoriesPage(
+                token = session.token,
+                page = 1,
+                pageSize = 5,
+                stationId = current.storiesStationFilterId,
+                query = current.storiesSearchQuery,
+            ).getOrElse {
+                firstError = firstError ?: (it.message ?: "Unable to load stories")
+                fr.grenobleski.nativeapp.data.model.StoryPage(
+                    items = current.storyItems,
+                    hasNextPage = current.storiesHasNextPage,
+                    nextPage = null,
+                )
+            }
+
+            val storyStats = repository.fetchStoryStats(session.token).getOrElse {
+                firstError = firstError ?: (it.message ?: "Unable to load community stats")
+                current.storyStats
+            }
+
+            val skiNewsItems = repository.fetchSkiNews(session.token).getOrElse {
+                firstError = firstError ?: (it.message ?: "Unable to load ski news")
+                current.skiNewsItems
             }
 
             val stationItems = repository.fetchStationItems(session.token).getOrElse {
@@ -976,6 +1237,16 @@ class AppViewModel(
             state = state.copy(
                 isTabLoading = false,
                 dashboardCounts = dashboardCounts,
+                storyItems = storyPage.items,
+                highlightedStoryItems = storyPage.items.sortedWith(
+                    compareByDescending<StoryItem> { it.likeCount + it.commentCount }
+                        .thenByDescending { it.createdAtRaw }
+                ).take(5),
+                skiNewsItems = skiNewsItems,
+                highlightedSkiNewsItems = skiNewsItems.filter { it.highlighted }.take(5),
+                storyStats = storyStats,
+                storiesPage = 1,
+                storiesHasNextPage = storyPage.hasNextPage,
                 stationItems = stationItems,
                 busLineItems = busLineItems,
                 serviceStoreItems = serviceStoreItems,

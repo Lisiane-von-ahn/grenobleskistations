@@ -16,6 +16,7 @@ from .models import (
     UserProfile,
     SkiMaterialListing,
     SkiMaterialImage,
+    SkiNewsItem,
 )
 
 class SkiStationForm(forms.ModelForm):
@@ -112,3 +113,4 @@ admin.site.register(Message)
 admin.site.register(UserProfile)
 admin.site.register(SkiMaterialListing)
 admin.site.register(SkiMaterialImage)
+admin.site.register(SkiNewsItem)

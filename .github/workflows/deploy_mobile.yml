@@ -9,12 +9,8 @@ on:
 
 jobs:
   build-android:
-    name: Build & sign Android APK
+    name: Build, Sign & Deploy Android
     runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: grenobleski_android_native
 
     steps:
       - name: Checkout
@@ -25,6 +21,11 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
       - name: Cache Gradle packages
         uses: actions/cache@v4
@@ -40,10 +41,22 @@ jobs:
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > "$RUNNER_TEMP/release.keystore"
 
-      - name: Make gradlew executable
-        run: chmod +x gradlew
+      - name: Write Google Play service account JSON
+        run: |
+          printf '%s' "${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}" > "$RUNNER_TEMP/play-service-account.json"
+
+      - name: Install Python dependencies for Play scripts
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r scripts/requirements-google-play.txt
+
+      - name: Make scripts executable
+        run: |
+          chmod +x grenobleski_android_native/gradlew
+          chmod +x scripts/deploy_google_play.sh
 
       - name: Build release APK & AAB
+        working-directory: grenobleski_android_native
         env:
           KEYSTORE_PATH: ${{ runner.temp }}/release.keystore
           KEY_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
@@ -54,6 +67,19 @@ jobs:
         run: |
           ./gradlew assembleRelease --no-daemon
           ./gradlew bundleRelease --no-daemon
+
+      - name: Validate Play deploy preflight
+        env:
+          GOOGLE_PLAY_VALIDATE_ONLY: "true"
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ runner.temp }}/play-service-account.json
+          GOOGLE_PLAY_AAB_PATH: ${{ github.workspace }}/grenobleski_android_native/app/build/outputs/bundle/release/app-release.aab
+          ANDROID_SIGNING_KEYSTORE_PATH: ${{ runner.temp }}/release.keystore
+          ANDROID_SIGNING_STORE_PASS: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_SIGNING_KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          GOOGLE_PLAY_PACKAGE_NAME: fr.grenobleski.nativeapp
+          GOOGLE_PLAY_TRACK: internal
+        run: ./scripts/deploy_google_play.sh
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -71,15 +97,21 @@ jobs:
 
       - name: Deploy to Google Play Store (Internal Testing)
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-        uses: r0adkll/upload-google-play@v1
-        with:
-          serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
-          packageName: fr.grenobleski.nativeapp
-          releaseFiles: grenobleski_android_native/app/build/outputs/bundle/release/app-release.aab
-          track: internal
-          status: completed
-          changesNotSentForReview: true
-          releaseName: "v1.${{ github.run_number }}.0 - ${{ github.event.head_commit.message }}"
+        env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ runner.temp }}/play-service-account.json
+          GOOGLE_PLAY_AAB_PATH: ${{ github.workspace }}/grenobleski_android_native/app/build/outputs/bundle/release/app-release.aab
+          GOOGLE_PLAY_PACKAGE_NAME: fr.grenobleski.nativeapp
+          GOOGLE_PLAY_TRACK: internal
+          GOOGLE_PLAY_RELEASE_STATUS: completed
+          GOOGLE_PLAY_ROLLOUT_PERCENTAGE: "100"
+          GOOGLE_PLAY_BUILD_NUMBER: ${{ github.run_number }}
+          GOOGLE_PLAY_VERSION_NAME: 1.${{ github.run_number }}.0
+          GOOGLE_PLAY_CHANGES_NOT_SENT_FOR_REVIEW: "true"
+          ANDROID_SIGNING_KEYSTORE_PATH: ${{ runner.temp }}/release.keystore
+          ANDROID_SIGNING_STORE_PASS: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_SIGNING_KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./scripts/deploy_google_play.sh
 
       - name: Create GitHub Release
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'

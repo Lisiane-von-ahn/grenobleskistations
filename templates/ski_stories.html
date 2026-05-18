@@ -2,54 +2,105 @@
 {% load i18n %}
 {% load base64_filters %}
 
-{% block title %}Stories ski{% endblock %}
+{% block title %}{% if LANGUAGE_CODE == 'en' %}Ski stories{% else %}Stories ski{% endif %}{% endblock %}
 
 {% block content %}
 <div class="container py-4">
     <section class="premium-shell mb-4 p-3">
         <div class="premium-hero">
             <span class="premium-kicker">Stories</span>
-            <h2 class="premium-title h3 mb-1">Stories ski (24h)</h2>
-            <p class="premium-subtitle">Partagez rapidement les conditions, l'ambiance et vos spots du jour.</p>
+            <h2 class="premium-title h3 mb-1">{% if LANGUAGE_CODE == 'en' %}Ski stories (24h){% else %}Stories ski (24h){% endif %}</h2>
+            <p class="premium-subtitle">{% if LANGUAGE_CODE == 'en' %}Share slope conditions, vibe and your favorite spots quickly.{% else %}Partagez rapidement les conditions, l'ambiance et vos spots du jour.{% endif %}</p>
         </div>
     </section>
 
     {% if user.is_authenticated %}
     <section class="market-search-panel mb-4 premium-panel">
-        <h4 class="mb-3">Publier une story</h4>
+        <h4 class="mb-3">{% if LANGUAGE_CODE == 'en' %}Post a story{% else %}Publier une story{% endif %}</h4>
         <form method="post" enctype="multipart/form-data" class="row g-3">
             {% csrf_token %}
             <div class="col-lg-4">
-                <label class="form-label">Photo</label>
+                <label class="form-label">{% if LANGUAGE_CODE == 'en' %}Photo{% else %}Photo{% endif %}</label>
                 <input type="file" name="image_file" accept="image/*" class="form-control" required>
             </div>
             <div class="col-lg-4">
-                <label class="form-label">Station</label>
+                <label class="form-label">{% if LANGUAGE_CODE == 'en' %}Resort{% else %}Station{% endif %}</label>
                 <select name="ski_station" class="form-control">
-                    <option value="">Pas de station</option>
+                    <option value="">{% if LANGUAGE_CODE == 'en' %}No resort{% else %}Pas de station{% endif %}</option>
                     {% for station in stations %}
                     <option value="{{ station.id }}">{{ station.name }}</option>
                     {% endfor %}
                 </select>
             </div>
             <div class="col-lg-4">
-                <label class="form-label">Legende</label>
-                <input type="text" name="caption" maxlength="180" class="form-control" placeholder="Poudreuse top ce matin !">
+                <label class="form-label">{% if LANGUAGE_CODE == 'en' %}Caption{% else %}Legende{% endif %}</label>
+                <input type="text" name="caption" maxlength="180" class="form-control" placeholder="{% if LANGUAGE_CODE == 'en' %}Great powder this morning!{% else %}Poudreuse top ce matin !{% endif %}">
             </div>
             <div class="col-12">
-                <small class="market-subtle">Formats acceptes: JPG, PNG, WEBP - max 5 Mo. Expiration automatique en 24h.</small>
+                <small class="market-subtle">{% if LANGUAGE_CODE == 'en' %}Accepted formats: JPG, PNG, WEBP - max 5 MB. Auto-expiration after 24h.{% else %}Formats acceptes: JPG, PNG, WEBP - max 5 Mo. Expiration automatique en 24h.{% endif %}</small>
             </div>
             <div class="col-12 d-flex gap-2">
-                <button type="submit" class="btn btn-primary">Publier ma story</button>
-                <a href="{% url 'ski_partners' %}" class="btn btn-outline-secondary">Retour partenaires</a>
+                <button type="submit" class="btn btn-primary">{% if LANGUAGE_CODE == 'en' %}Publish story{% else %}Publier ma story{% endif %}</button>
+                <a href="{% url 'ski_partners' %}" class="btn btn-outline-secondary">{% if LANGUAGE_CODE == 'en' %}Back to partners{% else %}Retour partenaires{% endif %}</a>
             </div>
         </form>
     </section>
     {% else %}
     <section class="market-search-panel mb-4 premium-panel">
-        <a href="{% url 'login' %}" class="btn btn-primary">Se connecter pour publier une story</a>
+        <a href="{% url 'login' %}" class="btn btn-primary">{% if LANGUAGE_CODE == 'en' %}Sign in to publish a story{% else %}Se connecter pour publier une story{% endif %}</a>
     </section>
     {% endif %}
+
+    <section class="mb-4">
+        <div class="premium-panel p-3">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                <h4 class="mb-0">{% trans "Actualites ski pres de Grenoble" %}</h4>
+                <small class="market-subtle">RSS FR/EN</small>
+            </div>
+
+            {% if highlighted_news %}
+            <div class="row g-3 mb-3">
+                {% for news in highlighted_news %}
+                <div class="col-lg-6">
+                    <article class="social-post-card p-3 h-100" style="background: linear-gradient(140deg, #0f8ca2 0%, #1d5f9e 55%, #2d3f8e 100%); color: #f6fbff; border: 0;">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="premium-kicker" style="margin-bottom: 0;">{% trans "A la une" %}</span>
+                            <small style="opacity: 0.85;">{{ news.published_at|date:'d/m H:i' }}</small>
+                        </div>
+                        <h5 class="mb-2" style="color: #ffffff;">{{ news.title }}</h5>
+                        {% if news.summary %}
+                        <p class="mb-2" style="color: rgba(239,248,255,0.95);">{{ news.summary|truncatechars:170 }}</p>
+                        {% endif %}
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small style="opacity: 0.9;">{{ news.source_name }}{% if news.ski_station %} - {{ news.ski_station.name }}{% endif %}</small>
+                            <a href="{{ news.link }}" target="_blank" rel="noopener" class="btn btn-sm btn-light">{% trans "Lire" %}</a>
+                        </div>
+                    </article>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="row g-3">
+                {% for news in news_items %}
+                <div class="col-lg-4 col-md-6">
+                    <article class="market-card p-3 h-100">
+                        <div class="market-subtle small mb-1">{{ news.source_name }} - {{ news.published_at|date:'d/m H:i' }}</div>
+                        <h6 class="mb-2">{{ news.title|truncatechars:92 }}</h6>
+                        {% if news.summary %}
+                        <p class="small mb-2">{{ news.summary|truncatechars:125 }}</p>
+                        {% endif %}
+                        <a href="{{ news.link }}" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm">{% trans "Ouvrir" %}</a>
+                    </article>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <p class="market-subtle mb-0">{% trans "Aucune actualite disponible pour le moment." %}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
 
     <section>
         <div class="row g-3">
@@ -58,7 +109,14 @@
                 <article class="market-card p-2 h-100">
                     <img src="data:image/jpeg;base64,{{ story.image|b64encode }}" alt="Story" class="market-image" style="height: 230px; object-fit: cover;">
                     <div class="p-2">
-                        <div class="small"><strong>{{ story.user.username }}</strong></div>
+                        <div class="d-flex align-items-center gap-2 small">
+                            {% if story.user.profile and story.user.profile.profile_picture %}
+                            <img src="data:image/png;base64,{{ story.user.profile.profile_picture|b64encode }}" alt="{{ story.user.username }}" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;">
+                            {% else %}
+                            <span class="avatar" style="width: 24px; height: 24px; font-size: 11px;">🎿</span>
+                            {% endif %}
+                            <strong>{{ story.user.username }}</strong>
+                        </div>
                         <div class="market-subtle small">{{ story.created_at|date:'d/m H:i' }}{% if story.ski_station %} - {{ story.ski_station.name }}{% endif %}</div>
                         {% if story.caption %}<p class="mb-0 small mt-1">{{ story.caption }}</p>{% endif %}
                         {% if user.is_authenticated and user == story.user %}

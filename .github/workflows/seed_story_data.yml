@@ -1,0 +1,118 @@
+name: Seed Story Demo Data
+
+on:
+  workflow_dispatch:
+    inputs:
+      users:
+        description: "Number of users"
+        required: false
+        default: "100"
+      stories:
+        description: "Number of stories"
+        required: false
+        default: "400"
+      max_likes:
+        description: "Max likes per story"
+        required: false
+        default: "30"
+      max_comments:
+        description: "Max comments per story"
+        required: false
+        default: "12"
+      messages:
+        description: "Number of messages"
+        required: false
+        default: "800"
+      reset:
+        description: "Delete existing seeds first"
+        required: false
+        default: "true"
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: grenobleski_seed
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    env:
+      DEBUG: "True"
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/grenobleski_seed"
+      SECRET_KEY: "seed-story-workflow-secret"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install system dependencies
+        run: |
+          bash scripts/github-django-ci.sh install-system-deps
+
+      - name: Install Python dependencies
+        run: |
+          bash scripts/github-django-ci.sh install-python-deps
+
+      - name: Wait for PostgreSQL
+        run: |
+          bash scripts/github-django-ci.sh wait-postgres
+
+      - name: Recreate DB and migrate
+        run: |
+          bash scripts/github-django-ci.sh recreate-db
+          bash scripts/github-django-ci.sh migrate
+
+      - name: Seed stations baseline
+        run: |
+          bash scripts/github-django-ci.sh seed
+
+      - name: Reset and seed story demo data
+        run: |
+          RESET_FLAG=""
+          if [[ "${{ github.event.inputs.reset }}" == "true" ]]; then
+            RESET_FLAG="--reset"
+          fi
+          python manage.py seed_story_feed_data \
+            --users "${{ github.event.inputs.users }}" \
+            --stories "${{ github.event.inputs.stories }}" \
+            --max-likes "${{ github.event.inputs.max_likes }}" \
+            --max-comments "${{ github.event.inputs.max_comments }}" \
+            --messages "${{ github.event.inputs.messages }}" \
+            $RESET_FLAG
+
+      - name: Fetch ski news RSS
+        run: |
+          python manage.py fetch_ski_news_rss --sample-on-failure --max-items 80
+
+      - name: Show quick counts
+        run: |
+          python - <<'PY'
+import os
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'skistation_project.settings')
+import django
+django.setup()
+from api.models import SkiStory, SkiStoryLike, SkiStoryComment, Message
+from api.models import SkiNewsItem
+print('stories=', SkiStory.objects.count())
+print('likes=', SkiStoryLike.objects.count())
+print('comments=', SkiStoryComment.objects.count())
+print('messages=', Message.objects.count())
+print('news=', SkiNewsItem.objects.count())
+PY

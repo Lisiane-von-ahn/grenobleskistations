@@ -64,9 +64,9 @@ jobs:
         run: |
           bash scripts/github-django-ci.sh migrate
 
-      - name: Verify latest carpool migration is applied
+      - name: Verify latest API migration is applied
         run: |
-          python manage.py showmigrations api | grep "\[X\] 0038_carpool_reservation_approval_flow"
+          python manage.py showmigrations api | grep "\[X\] 0042_skinewsitem"
 
       - name: Seed stations and related data
         run: |

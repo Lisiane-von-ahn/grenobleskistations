@@ -261,6 +261,7 @@ class Message(models.Model):
     recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_messages')
     subject = models.CharField(max_length=255)
     body = models.TextField()
+    is_private = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
 
@@ -377,10 +378,27 @@ class SkiPartnerReport(models.Model):
 
 
 class SkiStory(models.Model):
+    CROWD_QUIET = 'quiet'
+    CROWD_NORMAL = 'normal'
+    CROWD_BUSY = 'busy'
+    CROWD_WILD = 'wild'
+
+    CROWD_CHOICES = [
+        (CROWD_QUIET, 'Quiet'),
+        (CROWD_NORMAL, 'Normal'),
+        (CROWD_BUSY, 'Busy'),
+        (CROWD_WILD, 'Wild'),
+    ]
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ski_stories')
     ski_station = models.ForeignKey(SkiStation, on_delete=models.SET_NULL, null=True, blank=True, related_name='ski_stories')
     caption = models.CharField(max_length=180, blank=True)
     image = models.BinaryField()
+    crowd_level = models.CharField(max_length=12, choices=CROWD_CHOICES, default=CROWD_NORMAL)
+    weather_label = models.CharField(max_length=40, blank=True)
+    temperature_c = models.IntegerField(null=True, blank=True)
+    snow_depth_cm = models.IntegerField(null=True, blank=True)
+    fun_score = models.PositiveSmallIntegerField(default=50)
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField(default=story_default_expiration)
 
@@ -389,6 +407,62 @@ class SkiStory(models.Model):
 
     def __str__(self):
         return f"Story {self.user.username} #{self.id}"
+
+
+class SkiStoryLike(models.Model):
+    story = models.ForeignKey(SkiStory, on_delete=models.CASCADE, related_name='likes')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='liked_ski_stories')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(fields=['story', 'user'], name='uniq_story_like_per_user'),
+        ]
+
+    def __str__(self):
+        return f"Like story#{self.story_id} by user#{self.user_id}"
+
+
+class SkiStoryComment(models.Model):
+    story = models.ForeignKey(SkiStory, on_delete=models.CASCADE, related_name='comments')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='story_comments')
+    body = models.CharField(max_length=300)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Comment story#{self.story_id} by user#{self.user_id}"
+
+
+class SkiNewsItem(models.Model):
+    LANG_FR = 'fr'
+    LANG_EN = 'en'
+    LANG_CHOICES = [
+        (LANG_FR, 'Francais'),
+        (LANG_EN, 'English'),
+    ]
+
+    title = models.CharField(max_length=255)
+    summary = models.TextField(blank=True)
+    link = models.URLField(unique=True)
+    source_name = models.CharField(max_length=120, blank=True)
+    source_url = models.URLField(blank=True)
+    language = models.CharField(max_length=2, choices=LANG_CHOICES, default=LANG_FR)
+    ski_station = models.ForeignKey(SkiStation, on_delete=models.SET_NULL, null=True, blank=True, related_name='news_items')
+    image_url = models.URLField(blank=True)
+    published_at = models.DateTimeField(default=timezone.now)
+    is_highlighted = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-is_highlighted', '-published_at', '-id']
+
+    def __str__(self):
+        return f"News: {self.title[:60]}"
 
 
 class MarketplaceDeal(models.Model):
@@ -434,6 +508,8 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile", null=True)
     profile_picture = models.BinaryField(null=True, blank=True)
     force_password_reset = models.BooleanField(default=False)
+    organization_name = models.CharField(max_length=120, null=True, blank=True, unique=True)
+    messages_private_by_default = models.BooleanField(default=False)
 
     def __str__(self):
         return f'{self.user.username} Profile'

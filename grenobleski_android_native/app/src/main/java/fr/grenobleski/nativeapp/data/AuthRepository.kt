@@ -17,9 +17,15 @@ import fr.grenobleski.nativeapp.data.model.PisteItem
 import fr.grenobleski.nativeapp.data.model.ProfileInfo
 import fr.grenobleski.nativeapp.data.model.RegisterRequest
 import fr.grenobleski.nativeapp.data.model.ServiceStoreItem
+import fr.grenobleski.nativeapp.data.model.SkiNewsItem
 import fr.grenobleski.nativeapp.data.model.SkiPartnerItem
 import fr.grenobleski.nativeapp.data.model.StationCameraItem
 import fr.grenobleski.nativeapp.data.model.StationItem
+import fr.grenobleski.nativeapp.data.model.StoryCommentItem
+import fr.grenobleski.nativeapp.data.model.StoryItem
+import fr.grenobleski.nativeapp.data.model.StoryPage
+import fr.grenobleski.nativeapp.data.model.StoryStats
+import fr.grenobleski.nativeapp.data.model.UserActivitySummary
 import fr.grenobleski.nativeapp.data.model.UserSession
 import fr.grenobleski.nativeapp.data.network.GrenobleSkiApiService
 import kotlinx.coroutines.Dispatchers
@@ -30,13 +36,15 @@ import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 
 class AuthRepository(
     private val service: GrenobleSkiApiService,
     private val siteBaseUrl: String,
 ) {
     private val normalizedBaseUrl = siteBaseUrl.trimEnd('/')
-    private val dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm", Locale.FRANCE)
+    private val dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm", Locale.getDefault())
 
     suspend fun login(email: String, password: String): Result<UserSession> = withContext(Dispatchers.IO) {
         val endpoints = listOf("/api/auth/login/", "/api/login/")
@@ -116,6 +124,225 @@ class AuthRepository(
         )
 
         Result.success(counts)
+    }
+
+    suspend fun fetchStoriesPage(
+        token: String,
+        page: Int,
+        pageSize: Int = 5,
+        stationId: Int? = null,
+        query: String = "",
+    ): Result<StoryPage> = withContext(Dispatchers.IO) {
+        val authHeader = "Token $token"
+        val safePage = page.coerceAtLeast(1)
+        val safePageSize = pageSize.coerceIn(1, 20)
+        val sb = StringBuilder("/api/skistories/feed/?page=$safePage&page_size=$safePageSize")
+        if (stationId != null && stationId > 0) {
+            sb.append("&ski_station=").append(stationId)
+        }
+        if (query.isNotBlank()) {
+            sb.append("&q=").append(java.net.URLEncoder.encode(query.trim(), StandardCharsets.UTF_8.toString()))
+        }
+
+        val payload = fetchPayload(sb.toString(), authHeader)
+            ?: return@withContext Result.failure(IllegalStateException("Unable to load stories."))
+
+        if (!payload.isJsonObject) {
+            return@withContext Result.failure(IllegalStateException("Invalid stories payload."))
+        }
+
+        val root = payload.asJsonObject
+        val results = extractObjectList(payload)
+        val items = results.map { obj ->
+            val recentComments = obj.arrayObjects("recent_comments").map { c ->
+                StoryCommentItem(
+                    id = c.intOrZero("id"),
+                    userLabel = c.stringOrBlank("user_label").ifBlank { "User" },
+                    body = c.stringOrBlank("body"),
+                    createdAtLabel = formatServerDateTime(c.stringOrBlank("created_at")),
+                )
+            }
+
+            StoryItem(
+                id = obj.intOrZero("id"),
+                userId = obj.intOrZero("user", "user_id"),
+                userLabel = obj.stringOrBlank("user_label").ifBlank { "User" },
+                stationId = obj.intOrZero("ski_station", "ski_station_id"),
+                stationName = obj.stringOrBlank("ski_station_name").ifBlank { "-" },
+                caption = obj.stringOrBlank("caption"),
+                imageBase64 = obj.stringOrBlank("image_base64", "image"),
+                createdAtLabel = formatServerDateTime(obj.stringOrBlank("created_at")),
+                createdAtRaw = obj.stringOrBlank("created_at"),
+                likeCount = obj.intOrZero("like_count"),
+                commentCount = obj.intOrZero("comment_count"),
+                likedByMe = obj.boolOrFalse("is_liked_by_me"),
+                recentComments = recentComments,
+            )
+        }
+
+        val nextRaw = root.stringOrBlank("next")
+        val nextPage = parsePageFromUrl(nextRaw)
+        Result.success(
+            StoryPage(
+                items = items,
+                hasNextPage = nextRaw.isNotBlank(),
+                nextPage = nextPage,
+            )
+        )
+    }
+
+    suspend fun likeStory(token: String, storyId: Int): Result<Unit> = withContext(Dispatchers.IO) {
+        if (storyId <= 0) {
+            return@withContext Result.failure(IllegalStateException("Invalid story id."))
+        }
+        val authHeader = "Token $token"
+        val response = runCatching {
+            service.postResource(
+                url = "$normalizedBaseUrl/api/skistories/$storyId/like/",
+                authHeader = authHeader,
+                payload = emptyMap(),
+            )
+        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to like story."))
+
+        if (!response.isSuccessful) {
+            val bodyText = response.errorBody()?.string().orEmpty()
+            return@withContext Result.failure(IllegalStateException(extractApiErrorMessage(bodyText, "Unable to like story.")))
+        }
+        Result.success(Unit)
+    }
+
+    suspend fun unlikeStory(token: String, storyId: Int): Result<Unit> = withContext(Dispatchers.IO) {
+        if (storyId <= 0) {
+            return@withContext Result.failure(IllegalStateException("Invalid story id."))
+        }
+        val authHeader = "Token $token"
+        val response = runCatching {
+            service.postResource(
+                url = "$normalizedBaseUrl/api/skistories/$storyId/unlike/",
+                authHeader = authHeader,
+                payload = emptyMap(),
+            )
+        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to unlike story."))
+
+        if (!response.isSuccessful) {
+            val bodyText = response.errorBody()?.string().orEmpty()
+            return@withContext Result.failure(IllegalStateException(extractApiErrorMessage(bodyText, "Unable to unlike story.")))
+        }
+        Result.success(Unit)
+    }
+
+    suspend fun commentStory(token: String, storyId: Int, body: String): Result<Unit> = withContext(Dispatchers.IO) {
+        if (storyId <= 0) {
+            return@withContext Result.failure(IllegalStateException("Invalid story id."))
+        }
+        if (body.isBlank()) {
+            return@withContext Result.failure(IllegalStateException("Comment cannot be empty."))
+        }
+        val authHeader = "Token $token"
+        val response = runCatching {
+            service.postResource(
+                url = "$normalizedBaseUrl/api/skistories/$storyId/comment/",
+                authHeader = authHeader,
+                payload = mapOf("body" to body.trim()),
+            )
+        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to comment story."))
+
+        if (!response.isSuccessful) {
+            val bodyText = response.errorBody()?.string().orEmpty()
+            return@withContext Result.failure(IllegalStateException(extractApiErrorMessage(bodyText, "Unable to comment story.")))
+        }
+        Result.success(Unit)
+    }
+
+    suspend fun fetchStoryStats(token: String): Result<StoryStats> = withContext(Dispatchers.IO) {
+        val authHeader = "Token $token"
+        val payload = fetchPayload("/api/skistories/stats/", authHeader)
+            ?: return@withContext Result.failure(IllegalStateException("Unable to load story stats."))
+        if (!payload.isJsonObject) {
+            return@withContext Result.failure(IllegalStateException("Invalid story stats payload."))
+        }
+        val obj = payload.asJsonObject
+        val crowd = mutableMapOf<String, Int>()
+        obj.getAsJsonObject("crowd_breakdown")?.entrySet()?.forEach { entry ->
+            crowd[entry.key] = runCatching { entry.value.asInt }.getOrDefault(0)
+        }
+        val weather = mutableMapOf<String, Int>()
+        obj.getAsJsonObject("weather_breakdown")?.entrySet()?.forEach { entry ->
+            weather[entry.key] = runCatching { entry.value.asInt }.getOrDefault(0)
+        }
+
+        Result.success(
+            StoryStats(
+                totalActiveStories = obj.intOrZero("total_active_stories"),
+                avgFunScore = obj.doubleOrNull("avg_fun_score") ?: 0.0,
+                momentVibe = obj.stringOrBlank("moment_vibe").ifBlank { "good" },
+                crowdBreakdown = crowd,
+                weatherBreakdown = weather,
+            )
+        )
+    }
+
+    suspend fun fetchSkiNews(token: String, highlightedOnly: Boolean = false): Result<List<SkiNewsItem>> = withContext(Dispatchers.IO) {
+        val authHeader = "Token $token"
+        val language = if (Locale.getDefault().language.lowercase().startsWith("en")) "en" else "fr"
+        val endpoint = if (highlightedOnly) {
+            "/api/ski-news/?language=$language&highlighted=true"
+        } else {
+            "/api/ski-news/?language=$language"
+        }
+
+        val payload = fetchPayload(endpoint, authHeader)
+            ?: return@withContext Result.failure(IllegalStateException("Unable to load ski news."))
+
+        val items = extractObjectList(payload).map { obj ->
+            SkiNewsItem(
+                id = obj.intOrZero("id"),
+                title = obj.stringOrBlank("title"),
+                summary = obj.stringOrBlank("summary"),
+                link = obj.stringOrBlank("link"),
+                sourceName = obj.stringOrBlank("source_name").ifBlank { "News" },
+                language = obj.stringOrBlank("language").ifBlank { language },
+                stationName = obj.stringOrBlank("station_name"),
+                publishedAtLabel = formatServerDateTime(obj.stringOrBlank("published_at")),
+                publishedAtRaw = obj.stringOrBlank("published_at"),
+                highlighted = obj.boolOrFalse("is_highlighted"),
+            )
+        }.filter { it.title.isNotBlank() && it.link.isNotBlank() }
+
+        Result.success(items)
+    }
+
+    suspend fun fetchUserActivity(token: String, userId: Int): Result<UserActivitySummary> = withContext(Dispatchers.IO) {
+        if (userId <= 0) {
+            return@withContext Result.failure(IllegalStateException("Invalid user id."))
+        }
+        val authHeader = "Token $token"
+        val payload = fetchPayload("/api/userview/$userId/activity/", authHeader)
+            ?: return@withContext Result.failure(IllegalStateException("Unable to load user activity."))
+        if (!payload.isJsonObject) {
+            return@withContext Result.failure(IllegalStateException("Invalid user activity payload."))
+        }
+        val root = payload.asJsonObject
+        val userObj = root.getAsJsonObject("user")
+        val statsObj = root.getAsJsonObject("stats")
+
+        val recentStoryCaptions = root.arrayObjects("recent_stories").map { it.stringOrBlank("caption") }.filter { it.isNotBlank() }
+        val recentComments = root.arrayObjects("recent_comments").map { it.stringOrBlank("body") }.filter { it.isNotBlank() }
+
+        Result.success(
+            UserActivitySummary(
+                userId = userObj?.intOrZero("id") ?: userId,
+                displayName = userObj?.stringOrBlank("display_name").orEmpty().ifBlank { "User #$userId" },
+                username = userObj?.stringOrBlank("username").orEmpty(),
+                organizationName = userObj?.stringOrBlank("organization_name").orEmpty(),
+                storiesCount = statsObj?.intOrZero("stories_count") ?: 0,
+                commentsCount = statsObj?.intOrZero("comments_count") ?: 0,
+                publicMessagesCount = statsObj?.intOrZero("public_messages_count") ?: 0,
+                friendsCount = statsObj?.intOrZero("friends_count") ?: 0,
+                recentStoryCaptions = recentStoryCaptions,
+                recentComments = recentComments,
+            )
+        )
     }
 
     suspend fun fetchStationItems(token: String): Result<List<StationItem>> = withContext(Dispatchers.IO) {
@@ -1016,6 +1243,20 @@ class AuthRepository(
         }
 
         return emptyList()
+    }
+
+    private fun parsePageFromUrl(url: String): Int? {
+        if (url.isBlank()) return null
+        val query = url.substringAfter('?', missingDelimiterValue = "")
+        if (query.isBlank()) return null
+        val pageRaw = query
+            .split('&')
+            .firstOrNull { it.startsWith("page=") }
+            ?.substringAfter('=', "")
+            ?.trim()
+            ?: return null
+        val decoded = runCatching { URLDecoder.decode(pageRaw, StandardCharsets.UTF_8.toString()) }.getOrDefault(pageRaw)
+        return decoded.toIntOrNull()
     }
 
     private fun JsonObject.stringOrBlank(vararg keys: String): String {

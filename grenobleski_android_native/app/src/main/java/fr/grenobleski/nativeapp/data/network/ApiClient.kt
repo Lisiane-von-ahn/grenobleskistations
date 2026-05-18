@@ -4,6 +4,7 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.util.Locale
 
 object GrenobleSkiApiClient {
     fun createService(baseUrl: String): GrenobleSkiApiService {
@@ -12,6 +13,13 @@ object GrenobleSkiApiClient {
         }
 
         val client = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val language = if (Locale.getDefault().language.lowercase().startsWith("en")) "en" else "fr"
+                val request = chain.request().newBuilder()
+                    .header("Accept-Language", language)
+                    .build()
+                chain.proceed(request)
+            }
             .addInterceptor(logging)
             .build()
 
