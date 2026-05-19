@@ -77,6 +77,8 @@
     <string name="story_local_guides">Moniteurs et guides locaux en ligne</string>
     <string name="dashboard_welcome">Bon retour</string>
     <string name="dashboard_subtitle_premium">Votre tableau de bord montagne premium: stories, activite et marketplace en direct.</string>
+    <string name="home_signature_title">Ski Grenoble</string>
+    <string name="home_signature_subtitle">Edition alpine classique</string>
     <string name="recent_activities">Activites recentes</string>
     <string name="home_latest_marketplace">Derniers articles Marketplace</string>
     <string name="activity_market_updated">%1$d annonces marketplace mises a jour</string>

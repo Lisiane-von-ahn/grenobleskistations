@@ -104,6 +104,50 @@
             display: inline-block;
             margin-right: 6px;
         }
+        .premium-aside-card {
+            background: linear-gradient(150deg, #ffffff 0%, #f6f9ff 100%);
+            border: 1px solid #e7eefc;
+        }
+        .premium-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.3rem 0.65rem;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            background: #edf3ff;
+            color: #1f3f8b;
+            font-weight: 600;
+        }
+        .bus-line-card {
+            border: 1px solid #e8edf5;
+            border-radius: 12px;
+            padding: 0.9rem;
+            background: #fff;
+        }
+        .media-tabs {
+            padding: 0.5rem;
+            border-bottom: 1px solid #e8edf5;
+            gap: 0.5rem;
+            background: linear-gradient(180deg, #fafcff 0%, #f3f7ff 100%);
+        }
+        .media-tabs .nav-link {
+            border: 0;
+            border-radius: 999px;
+            font-weight: 600;
+            color: #3f4f67;
+            padding: 0.5rem 0.9rem;
+        }
+        .media-tabs .nav-link.active {
+            background: #0d6efd;
+            color: #fff;
+        }
+        .camera-card {
+            border: 1px solid #e8edf5;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+        }
 
         @media (max-width: 991.98px) {
             .station-hero-image {
@@ -274,30 +318,35 @@
                     </div>
 
                     {% if google_place_rating and google_place_rating.rating %}
-                    <div class="card section-card p-4 mb-4">
+                    <div class="card section-card premium-aside-card p-4 mb-4">
                         <h5 class="mb-2">{% trans "Avis Google (station)" %}</h5>
                         <div class="d-flex align-items-center justify-content-between mb-2">
                             <div>
                                 <div class="fs-4 fw-bold text-warning">{{ google_place_rating.rating|floatformat:1 }}/5</div>
-                                <small class="text-muted">{{ google_place_rating.review_count }} avis</small>
+                                <small class="text-muted">{% blocktrans count counter=google_place_rating.review_count %}{{ counter }} avis{% plural %}{{ counter }} avis{% endblocktrans %}</small>
                             </div>
                             {% if google_place_rating.maps_url %}
-                            <a class="btn btn-sm btn-outline-primary" href="{{ google_place_rating.maps_url }}" target="_blank" rel="noopener">Voir sur Google Maps</a>
+                            <a class="btn btn-sm btn-outline-primary" href="{{ google_place_rating.maps_url }}" target="_blank" rel="noopener">{% trans "Voir sur Google Maps" %}</a>
                             {% endif %}
                         </div>
-                        <small class="text-muted">{{ google_place_rating.name }}</small>
+                        <div class="d-flex flex-wrap gap-2 mt-2">
+                            <span class="premium-chip"><i class="bi bi-star-fill"></i> {% trans "Source vérifiée" %}</span>
+                            <span class="premium-chip"><i class="bi bi-geo-alt-fill"></i> {{ google_place_rating.name }}</span>
+                        </div>
                     </div>
                     {% endif %}
 
-                    <div class="card section-card p-4">
+                    <div class="card section-card premium-aside-card p-4">
                         <h5 class="mb-3">{% trans "Lignes de bus vers la station" %}</h5>
                         {% for bus_line in bus_lines %}
-                            <div class="border rounded p-3 mb-2">
-                                <strong><i class="fas fa-bus"></i> {{ bus_line.bus_number }}</strong><br>
-                                <small><i class="fas fa-map-marker-alt"></i> {% trans "Départ:" %} {{ bus_line.departure_stop }}</small><br>
-                                <small><i class="fas fa-map-signs"></i> {% trans "Arrivée:" %} {{ bus_line.arrival_stop }}</small><br>
-                                <small><i class="fas fa-clock"></i> {% trans "Fréquence:" %} {{ bus_line.frequency }}</small><br>
-                                <small><i class="fas fa-hourglass-half"></i> {% trans "Trajet:" %} {{ bus_line.travel_time }}</small><br>
+                            <div class="bus-line-card mb-2">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <strong><i class="fas fa-bus"></i> {{ bus_line.bus_number }}</strong>
+                                    <span class="premium-chip"><i class="fas fa-clock"></i> {{ bus_line.frequency }}</span>
+                                </div>
+                                <small class="d-block"><i class="fas fa-map-marker-alt"></i> {% trans "Départ:" %} {{ bus_line.departure_stop }}</small>
+                                <small class="d-block"><i class="fas fa-map-signs"></i> {% trans "Arrivée:" %} {{ bus_line.arrival_stop }}</small>
+                                <small class="d-block"><i class="fas fa-hourglass-half"></i> {% trans "Trajet:" %} {{ bus_line.travel_time }}</small>
                                 <a href="{% url 'bus_line_detail' bus_line.id %}" class="btn btn-sm btn-outline-primary mt-2">{% trans "Voir l'itinéraire" %}</a>
                             </div>
                         {% empty %}
@@ -307,8 +356,12 @@
                 </div>
 
                 <div class="col-lg-12">
-                    <div class="card section-card p-3">
-                        <h5 class="mb-3">{% trans "Carte de localisation" %}</h5>
+                    <div class="card section-card premium-aside-card p-3">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                            <h5 class="mb-0">{% trans "Carte de localisation" %}</h5>
+                            <span class="premium-chip"><i class="bi bi-layers"></i> {% trans "Calques interactifs" %}</span>
+                        </div>
+                        <p class="small text-muted mb-3">{% trans "Explorez les pistes et équipements autour de la station en temps réel." %}</p>
                         <div id="ski-map" style="height: 450px; border-radius: 12px;"></div>
                     </div>
                 </div>
@@ -316,7 +369,7 @@
                 <!-- Caméras et Cartes de Pistes -->
                 <div class="col-lg-12">
                     <div class="card section-card p-0">
-                        <div class="nav nav-tabs" id="mediaTabs" role="tablist">
+                        <div class="nav nav-tabs media-tabs" id="mediaTabs" role="tablist">
                             {% if station.cameras.all %}
                             <button class="nav-link active" id="cameras-tab" data-bs-toggle="tab" data-bs-target="#cameras" type="button" role="tab">
                                 <i class="bi bi-camera-video"></i> {% trans "Caméras en direct" %} <span class="badge bg-primary">{{ station.cameras.count }}</span>
@@ -335,7 +388,7 @@
                                 <div class="row g-3">
                                     {% for camera in station.cameras.all %}
                                     <div class="col-md-6 col-lg-4">
-                                        <div class="card h-100 border-light shadow-sm">
+                                        <div class="card h-100 camera-card">
                                             {% if camera.thumbnail_url %}
                                             <a href="{{ camera.camera_url }}" target="_blank" rel="noopener" class="d-block bg-dark ratio ratio-16x9 overflow-hidden">
                                                 <img src="{{ camera.thumbnail_url }}" class="img-fluid object-fit-cover" alt="{{ camera.name }}" style="object-fit: cover;">
@@ -411,7 +464,7 @@
         <div class="container">
             <div class="row">
                 <div class="col-lg-12 mb-4">
-                    <div class="card p-4 shadow-sm">
+                    <div class="card section-card premium-aside-card p-4 shadow-sm">
                         <h4 class="mb-3">{% trans "État coopératif des pistes (dernières minutes/heures)" %}</h4>
                         <div class="mb-3">
                             {% if piste_average_rating %}
@@ -422,7 +475,7 @@
                                             {% if forloop.counter <= piste_average_rating_rounded %}★{% else %}☆{% endif %}
                                         {% endfor %}
                                     </span>
-                                    <small class="text-muted">({{ piste_report_count }} {% trans "avis" %})</small>
+                                    <small class="text-muted">({% blocktrans count counter=piste_report_count %}{{ counter }} avis{% plural %}{{ counter }} avis{% endblocktrans %})</small>
                                 </div>
                             {% else %}
                                 <span class="badge badge-secondary">{% trans "Pas encore de note piste" %}</span>
@@ -730,19 +783,19 @@
         var pistesLayer = L.layerGroup().addTo(map);
 
         L.control.layers(null, {
-            'Amenities': amenitiesLayer,
-            'Pistes OSM': pistesLayer
+            '{% trans "Équipements" %}': amenitiesLayer,
+            '{% trans "Pistes OSM" %}': pistesLayer
         }, { collapsed: true }).addTo(map);
 
         const mapLegend = L.control({ position: 'bottomright' });
         mapLegend.onAdd = function() {
             var div = L.DomUtil.create('div', 'map-legend');
             div.innerHTML = [
-                '<strong>Overlays</strong>',
-                '<div><span class="dot" style="background:#16a34a;"></span>Parking</div>',
-                '<div><span class="dot" style="background:#0369a1;"></span>Toilets</div>',
-                '<div><span class="dot" style="background:#f59e0b;"></span>Food</div>',
-                '<div><span class="dot" style="background:#dc2626;"></span>Piste line</div>'
+                '<strong>{% trans "Calques" %}</strong>',
+                '<div><span class="dot" style="background:#16a34a;"></span>{% trans "Parking" %}</div>',
+                '<div><span class="dot" style="background:#0369a1;"></span>{% trans "Toilettes" %}</div>',
+                '<div><span class="dot" style="background:#f59e0b;"></span>{% trans "Restauration" %}</div>',
+                '<div><span class="dot" style="background:#dc2626;"></span>{% trans "Tracé piste" %}</div>'
             ].join('');
             return div;
         };
@@ -766,13 +819,13 @@
                         fillOpacity: 0.9,
                         weight: 1
                     });
-                    markerCircle.bindPopup('<strong>' + amenityName + '</strong><br>Amenity: ' + el.tags.amenity);
+                    markerCircle.bindPopup('<strong>' + amenityName + '</strong><br>{% trans "Équipement" %}: ' + el.tags.amenity);
                     markerCircle.addTo(amenitiesLayer);
                 }
 
                 if (el.type === 'way' && el.geometry && el.geometry.length > 1 && el.tags && el.tags['piste:type'] === 'downhill') {
                     var points = el.geometry.map(function(g) { return [g.lat, g.lon]; });
-                    var pisteName = el.tags.name || el.tags.ref || 'Piste';
+                    var pisteName = el.tags.name || el.tags.ref || '{% trans "Piste" %}';
                     var line = L.polyline(points, {
                         color: '#dc2626',
                         weight: 2.2,
@@ -802,8 +855,9 @@
 
         loadOverpassLayers();
     
-        var apiKey = '{{ WEATHER_API_KEY }}';  
-        var weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${stationLat}&lon=${stationLng}&appid=${apiKey}&units=metric`;
+        var apiKey = '{{ WEATHER_API_KEY }}';
+        var weatherLang = '{{ LANGUAGE_CODE|default:"fr"|escapejs }}';
+        var weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${stationLat}&lon=${stationLng}&appid=${apiKey}&units=metric&lang=${encodeURIComponent(weatherLang)}`;
 
         // Map weather descriptions to icons
         const weatherIcons = {

@@ -43,6 +43,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
@@ -56,6 +57,7 @@ import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.Terrain
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.AssistChip
@@ -64,6 +66,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -75,7 +78,6 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -86,6 +88,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -187,6 +190,13 @@ private data class BottomNavItem(
     val action: BottomNavAction,
     val labelRes: Int,
     val icon: ImageVector,
+)
+
+private data class MoreMenuAction(
+    val label: String,
+    val shortLabel: String,
+    val icon: ImageVector,
+    val action: () -> Unit,
 )
 
 private data class ChatThreadSummary(
@@ -688,7 +698,6 @@ private fun NativeShell(
     onLanguageChange: (String) -> Unit,
 ) {
     val localContext = androidx.compose.ui.platform.LocalContext.current
-    var quickMenuOpen by remember { mutableStateOf(false) }
     var moreMenuOpen by remember { mutableStateOf(false) }
     var publishDialogOpen by remember { mutableStateOf(false) }
     var publishPartnerDialogOpen by remember { mutableStateOf(false) }
@@ -760,39 +769,23 @@ private fun NativeShell(
             )
         },
         floatingActionButton = {
-            if (state.selectedTab != NativeTab.MESSAGES) {
-                Column(
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    if (quickMenuOpen) {
-                        SmallFloatingActionButton(onClick = { onSelectTab(NativeTab.STORIES) }) {
-                            Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = stringResource(id = R.string.stories))
-                        }
-                        SmallFloatingActionButton(onClick = { onSelectTab(NativeTab.STATIONS) }) {
-                            Icon(Icons.Filled.Terrain, contentDescription = stringResource(id = R.string.stations))
-                        }
-                        SmallFloatingActionButton(onClick = { onSelectTab(NativeTab.MARKETPLACE) }) {
-                            Icon(Icons.Filled.LocalOffer, contentDescription = stringResource(id = R.string.marketplace))
-                        }
-                        SmallFloatingActionButton(onClick = { onSelectTab(NativeTab.PARTNERS) }) {
-                            Icon(Icons.Filled.School, contentDescription = stringResource(id = R.string.adventure_partners))
-                        }
-                        SmallFloatingActionButton(onClick = { onSelectTab(NativeTab.MESSAGES) }) {
-                            Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = stringResource(id = R.string.messages))
-                        }
-                        SmallFloatingActionButton(onClick = { onSelectTab(NativeTab.PROFILE) }) {
-                            Icon(Icons.Filled.Person, contentDescription = stringResource(id = R.string.profile))
-                        }
-                    }
-
-                    FloatingActionButton(onClick = { quickMenuOpen = !quickMenuOpen }) {
-                        if (quickMenuOpen) {
-                            Icon(Icons.Filled.Close, contentDescription = stringResource(id = R.string.close_menu))
-                        } else {
-                            Icon(Icons.Filled.Add, contentDescription = stringResource(id = R.string.open_quick_menu))
-                        }
-                    }
+            when (state.selectedTab) {
+                NativeTab.MARKETPLACE -> {
+                    ExtendedFloatingActionButton(
+                        onClick = { publishDialogOpen = true },
+                        icon = { Icon(Icons.Filled.Add, contentDescription = stringResource(id = R.string.publish_article)) },
+                        text = { Text(stringResource(id = R.string.publish_article)) },
+                    )
+                }
+                NativeTab.PARTNERS -> {
+                    ExtendedFloatingActionButton(
+                        onClick = { publishPartnerDialogOpen = true },
+                        icon = { Icon(Icons.Filled.Add, contentDescription = stringResource(id = R.string.publish_partner_post)) },
+                        text = { Text(stringResource(id = R.string.publish_partner_post)) },
+                    )
+                }
+                else -> {
+                    // Keep other tabs visually clean: navigation is available from bottom bar + More panel.
                 }
             }
         },
@@ -946,98 +939,180 @@ private fun NativeShell(
                 title = stringResource(id = R.string.nav_more),
                 onDismiss = { moreMenuOpen = false },
             ) {
+                var compactMoreMode by rememberSaveable { mutableStateOf(true) }
+                var exploreExpanded by rememberSaveable { mutableStateOf(true) }
+                var createExpanded by rememberSaveable { mutableStateOf(true) }
+                var accountExpanded by rememberSaveable { mutableStateOf(false) }
+
+                val exploreActions = listOf(
+                    MoreMenuAction(
+                        label = stringResource(id = R.string.community_dashboard),
+                        shortLabel = stringResource(id = R.string.menu_short_community),
+                        icon = Icons.AutoMirrored.Filled.TrendingUp,
+                        action = { onSelectTab(NativeTab.COMMUNITY) },
+                    ),
+                    MoreMenuAction(
+                        label = stringResource(id = R.string.stories),
+                        shortLabel = stringResource(id = R.string.menu_short_stories),
+                        icon = Icons.AutoMirrored.Filled.TrendingUp,
+                        action = { onSelectTab(NativeTab.STORIES) },
+                    ),
+                    MoreMenuAction(
+                        label = stringResource(id = R.string.stations),
+                        shortLabel = stringResource(id = R.string.menu_short_stations),
+                        icon = Icons.Filled.Terrain,
+                        action = { onSelectTab(NativeTab.STATIONS) },
+                    ),
+                    MoreMenuAction(
+                        label = stringResource(id = R.string.bus_lines),
+                        shortLabel = stringResource(id = R.string.menu_short_bus),
+                        icon = Icons.Filled.Terrain,
+                        action = { onSelectTab(NativeTab.BUS_LINES) },
+                    ),
+                    MoreMenuAction(
+                        label = stringResource(id = R.string.services),
+                        shortLabel = stringResource(id = R.string.menu_short_services),
+                        icon = Icons.Filled.Storefront,
+                        action = { onSelectTab(NativeTab.SERVICES) },
+                    ),
+                    MoreMenuAction(
+                        label = stringResource(id = R.string.piste_status),
+                        shortLabel = stringResource(id = R.string.menu_short_pistes),
+                        icon = Icons.Filled.Terrain,
+                        action = { onSelectTab(NativeTab.PISTES) },
+                    ),
+                    MoreMenuAction(
+                        label = stringResource(id = R.string.instructors),
+                        shortLabel = stringResource(id = R.string.menu_short_instructors),
+                        icon = Icons.Filled.School,
+                        action = { onSelectTab(NativeTab.INSTRUCTORS) },
+                    ),
+                    MoreMenuAction(
+                        label = stringResource(id = R.string.adventure_partners),
+                        shortLabel = stringResource(id = R.string.menu_short_partners),
+                        icon = Icons.Filled.School,
+                        action = { onSelectTab(NativeTab.PARTNERS) },
+                    ),
+                )
+                val createActions = listOf(
+                    MoreMenuAction(
+                        label = stringResource(id = R.string.publish_article),
+                        shortLabel = stringResource(id = R.string.menu_short_article),
+                        icon = Icons.Filled.LocalOffer,
+                        action = { publishDialogOpen = true },
+                    ),
+                    MoreMenuAction(
+                        label = stringResource(id = R.string.publish_partner_post),
+                        shortLabel = stringResource(id = R.string.menu_short_partner_post),
+                        icon = Icons.Filled.School,
+                        action = { publishPartnerDialogOpen = true },
+                    ),
+                )
+                val accountActions = buildList<MoreMenuAction> {
+                    add(
+                        MoreMenuAction(
+                            label = stringResource(id = R.string.profile),
+                            shortLabel = stringResource(id = R.string.menu_short_profile),
+                            icon = Icons.Filled.Person,
+                            action = { onSelectTab(NativeTab.PROFILE) },
+                        )
+                    )
+                    add(
+                        MoreMenuAction(
+                            label = stringResource(id = R.string.terms),
+                            shortLabel = stringResource(id = R.string.menu_short_terms),
+                            icon = Icons.Filled.MoreHoriz,
+                            action = { openExternalUrl(localContext, "$siteBase/terms/") },
+                        )
+                    )
+                    add(
+                        MoreMenuAction(
+                            label = stringResource(id = R.string.privacy),
+                            shortLabel = stringResource(id = R.string.menu_short_privacy),
+                            icon = Icons.Filled.MoreHoriz,
+                            action = { openExternalUrl(localContext, "$siteBase/privacy/") },
+                        )
+                    )
+                    if (onOpenAdsPreferences != null) {
+                        add(
+                            MoreMenuAction(
+                                label = stringResource(id = R.string.ad_preferences),
+                                shortLabel = stringResource(id = R.string.menu_short_ads),
+                                icon = Icons.Filled.MoreHoriz,
+                                action = { onOpenAdsPreferences.invoke() },
+                            )
+                        )
+                    }
+                }
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 420.dp)
+                        .heightIn(max = 500.dp)
                         .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    OutlinedButton(onClick = {
-                        moreMenuOpen = false
-                        onSelectTab(NativeTab.COMMUNITY)
-                    }, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(id = R.string.community_dashboard))
+                    OutlinedButton(
+                        onClick = { compactMoreMode = !compactMoreMode },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(
+                            imageVector = if (compactMoreMode) Icons.Filled.CheckCircle else Icons.Filled.MoreHoriz,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            if (compactMoreMode) {
+                                stringResource(id = R.string.menu_compact_on)
+                            } else {
+                                stringResource(id = R.string.menu_compact_off)
+                            }
+                        )
                     }
-                    OutlinedButton(onClick = {
-                        moreMenuOpen = false
-                        onSelectTab(NativeTab.STORIES)
-                    }, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(id = R.string.stories))
+
+                    CollapsibleMoreSection(
+                        title = stringResource(id = R.string.menu_explore),
+                        expanded = exploreExpanded,
+                        onToggle = { exploreExpanded = !exploreExpanded },
+                    ) {
+                        MoreActionsGrid(
+                            actions = exploreActions,
+                            compactMode = compactMoreMode,
+                            onActionClick = { action ->
+                                moreMenuOpen = false
+                                action.action()
+                            },
+                        )
                     }
-                    OutlinedButton(onClick = {
-                        moreMenuOpen = false
-                        onSelectTab(NativeTab.STATIONS)
-                    }, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(id = R.string.stations))
+
+                    CollapsibleMoreSection(
+                        title = stringResource(id = R.string.menu_create),
+                        expanded = createExpanded,
+                        onToggle = { createExpanded = !createExpanded },
+                    ) {
+                        MoreActionsGrid(
+                            actions = createActions,
+                            compactMode = compactMoreMode,
+                            onActionClick = { action ->
+                                moreMenuOpen = false
+                                action.action()
+                            },
+                        )
                     }
-                    OutlinedButton(onClick = {
-                        moreMenuOpen = false
-                        onSelectTab(NativeTab.BUS_LINES)
-                    }, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(id = R.string.bus_lines))
-                    }
-                    OutlinedButton(onClick = {
-                        moreMenuOpen = false
-                        onSelectTab(NativeTab.SERVICES)
-                    }, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(id = R.string.services))
-                    }
-                    OutlinedButton(onClick = {
-                        moreMenuOpen = false
-                        onSelectTab(NativeTab.PROFILE)
-                    }, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(id = R.string.profile))
-                    }
-                    OutlinedButton(onClick = {
-                        moreMenuOpen = false
-                        onSelectTab(NativeTab.INSTRUCTORS)
-                    }, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(id = R.string.instructors))
-                    }
-                    OutlinedButton(onClick = {
-                        moreMenuOpen = false
-                        onSelectTab(NativeTab.PARTNERS)
-                    }, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(id = R.string.adventure_partners))
-                    }
-                    OutlinedButton(onClick = {
-                        moreMenuOpen = false
-                        onSelectTab(NativeTab.PISTES)
-                    }, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(id = R.string.piste_status))
-                    }
-                    OutlinedButton(onClick = {
-                        moreMenuOpen = false
-                        publishDialogOpen = true
-                    }, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(id = R.string.publish_article))
-                    }
-                    OutlinedButton(onClick = {
-                        moreMenuOpen = false
-                        publishPartnerDialogOpen = true
-                    }, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(id = R.string.publish_partner_post))
-                    }
-                    OutlinedButton(onClick = {
-                        moreMenuOpen = false
-                        openExternalUrl(localContext, "$siteBase/terms/")
-                    }, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(id = R.string.terms))
-                    }
-                    OutlinedButton(onClick = {
-                        moreMenuOpen = false
-                        openExternalUrl(localContext, "$siteBase/privacy/")
-                    }, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(id = R.string.privacy))
-                    }
-                    if (onOpenAdsPreferences != null) {
-                        OutlinedButton(onClick = {
-                            moreMenuOpen = false
-                            onOpenAdsPreferences.invoke()
-                        }, modifier = Modifier.fillMaxWidth()) {
-                            Text(stringResource(id = R.string.ad_preferences))
-                        }
+
+                    CollapsibleMoreSection(
+                        title = stringResource(id = R.string.menu_account),
+                        expanded = accountExpanded,
+                        onToggle = { accountExpanded = !accountExpanded },
+                    ) {
+                        MoreActionsGrid(
+                            actions = accountActions,
+                            compactMode = compactMoreMode,
+                            onActionClick = { action ->
+                                moreMenuOpen = false
+                                action.action()
+                            },
+                        )
                     }
 
                     OutlinedButton(
@@ -1588,6 +1663,43 @@ private fun HomeTab(
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(58.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(MaterialTheme.colorScheme.surface)
+                                .border(
+                                    width = 1.dp,
+                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+                                    shape = RoundedCornerShape(14.dp),
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.logo),
+                                contentDescription = stringResource(id = R.string.app_name),
+                                modifier = Modifier.size(38.dp),
+                            )
+                        }
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                text = stringResource(id = R.string.home_signature_title),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Text(
+                                text = stringResource(id = R.string.home_signature_subtitle),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+
                     Text(
                         text = stringResource(id = R.string.dashboard_welcome),
                         style = MaterialTheme.typography.labelLarge,
@@ -4520,6 +4632,75 @@ private fun FilterChipButton(
         Button(onClick = onClick) { Text(label) }
     } else {
         OutlinedButton(onClick = onClick) { Text(label) }
+    }
+}
+
+@Composable
+private fun CollapsibleMoreSection(
+    title: String,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedButton(onClick = onToggle, modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(title, style = MaterialTheme.typography.labelLarge)
+                Icon(
+                    imageVector = if (expanded) Icons.Filled.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                )
+            }
+        }
+        if (expanded) {
+            content()
+        }
+    }
+}
+
+@Composable
+private fun MoreActionsGrid(
+    actions: List<MoreMenuAction>,
+    compactMode: Boolean,
+    onActionClick: (MoreMenuAction) -> Unit,
+) {
+    actions.chunked(2).forEach { rowItems ->
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            rowItems.forEach { action ->
+                OutlinedButton(
+                    onClick = { onActionClick(action) },
+                    modifier = Modifier.weight(1f),
+                ) {
+                    if (compactMode) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Icon(imageVector = action.icon, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Text(action.shortLabel, maxLines = 1)
+                        }
+                    } else {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(imageVector = action.icon, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Text(action.label, maxLines = 1)
+                        }
+                    }
+                }
+            }
+            if (rowItems.size == 1) {
+                Spacer(modifier = Modifier.weight(1f))
+            }
+        }
     }
 }
 
