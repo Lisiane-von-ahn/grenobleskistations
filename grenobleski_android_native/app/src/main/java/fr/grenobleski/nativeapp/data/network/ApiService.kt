@@ -4,6 +4,7 @@ import com.google.gson.JsonElement
 import fr.grenobleski.nativeapp.data.model.LoginRequest
 import fr.grenobleski.nativeapp.data.model.LoginResponse
 import fr.grenobleski.nativeapp.data.model.RegisterRequest
+import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -32,12 +33,25 @@ interface GrenobleSkiApiService {
         @Header("Authorization") authHeader: String,
     ): Response<JsonElement>
 
+    @GET
+    suspend fun listResourceRaw(
+        @Url url: String,
+        @Header("Authorization") authHeader: String,
+    ): Response<ResponseBody>
+
     @POST
     suspend fun postResource(
         @Url url: String,
         @Header("Authorization") authHeader: String,
         @Body payload: Map<String, @JvmSuppressWildcards Any>,
     ): Response<JsonElement>
+
+    @POST
+    suspend fun postResourceRaw(
+        @Url url: String,
+        @Header("Authorization") authHeader: String,
+        @Body payload: Map<String, @JvmSuppressWildcards Any>,
+    ): Response<ResponseBody>
 
     @PATCH
     suspend fun patchResource(

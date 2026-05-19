@@ -3,6 +3,8 @@ package fr.grenobleski.nativeapp.data
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import com.google.gson.stream.JsonReader
+import com.google.gson.stream.JsonToken
 import fr.grenobleski.nativeapp.data.model.DashboardCounts
 import fr.grenobleski.nativeapp.data.model.BusLineItem
 import fr.grenobleski.nativeapp.data.model.CarpoolPendingReservation
@@ -12,6 +14,7 @@ import fr.grenobleski.nativeapp.data.model.FriendInvitation
 import fr.grenobleski.nativeapp.data.model.InstructorItem
 import fr.grenobleski.nativeapp.data.model.LoginRequest
 import fr.grenobleski.nativeapp.data.model.LoginResponse
+import fr.grenobleski.nativeapp.data.model.MarketplacePage
 import fr.grenobleski.nativeapp.data.model.MarketplaceItem
 import fr.grenobleski.nativeapp.data.model.MessageItem
 import fr.grenobleski.nativeapp.data.model.PisteItem
@@ -39,11 +42,18 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
+import okhttp3.ResponseBody
 
 class AuthRepository(
     private val service: GrenobleSkiApiService,
     private val siteBaseUrl: String,
 ) {
+    private data class MarketplaceParseResult(
+        val items: List<MarketplaceItem>,
+        val hasNextPage: Boolean,
+        val nextPage: Int?,
+    )
+
     private val normalizedBaseUrl = siteBaseUrl.trimEnd('/')
     private val dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm", Locale.getDefault())
 
@@ -435,10 +445,28 @@ class AuthRepository(
         Result.success(items)
     }
 
-    suspend fun fetchMarketplaceItems(token: String): Result<List<MarketplaceItem>> = withContext(Dispatchers.IO) {
+    suspend fun fetchMarketplaceItems(
+        token: String,
+        page: Int = 1,
+        pageSize: Int = 18,
+    ): Result<MarketplacePage> = withContext(Dispatchers.IO) {
         val authHeader = "Token $token"
-        val payload = fetchPayloadFromCandidates(listOf("/api/skimaterial/", "/api/skimaterial"), authHeader)
-            ?: return@withContext Result.success(emptyList())
+        val safePage = page.coerceAtLeast(1)
+        val safePageSize = pageSize.coerceIn(6, 24)
+        val rawBody = fetchRawBodyFromCandidates(
+            paths = listOf(
+                "/api/skimaterial/?page=$safePage&page_size=$safePageSize",
+                "/api/skimaterial/",
+                "/api/skimaterial",
+            ),
+            authHeader = authHeader,
+        ) ?: return@withContext Result.success(
+            MarketplacePage(
+                items = emptyList(),
+                hasNextPage = false,
+                nextPage = null,
+            )
+        )
 
         val materialLabels = mapOf(
             "ski" to "Materiel ski",
@@ -460,33 +488,14 @@ class AuthRepository(
             "service" to "Prestation",
         )
 
-        val items = extractObjectList(payload).map { obj ->
-            val sellerId = obj.intOrZero("user", "user_id")
-            val imageGalleryBase64 = buildList {
-                val coverImage = obj.stringOrBlank("image")
-                if (coverImage.isNotBlank()) add(coverImage)
-                addAll(obj.arrayObjectStrings("images", "image"))
-            }.distinct()
-            val previewImageBase64 = imageGalleryBase64.firstOrNull().orEmpty()
-            val materialType = obj.stringOrBlank("material_type").lowercase()
-            val transactionType = obj.stringOrBlank("transaction_type").lowercase()
-            MarketplaceItem(
-                id = obj.intOrZero("id"),
-                title = obj.stringOrBlank("title", "material_type").ifBlank { "Annonce #${obj.intOrZero("id")}" },
-                description = obj.stringOrBlank("description").ifBlank { "Aucune description." },
-                city = obj.stringOrBlank("city").ifBlank { "-" },
-                priceLabel = obj.stringOrBlank("price").ifBlank { "-" },
-                conditionLabel = obj.stringOrBlank("condition").ifBlank { "-" },
-                materialTypeLabel = materialLabels[materialType] ?: materialType.ifBlank { "Autre" },
-                transactionTypeLabel = transactionLabels[transactionType] ?: transactionType.ifBlank { "-" },
-                sellerId = sellerId,
-                sellerLabel = if (sellerId > 0) "Vendeur #$sellerId" else "Vendeur",
-                postedAtLabel = formatServerDateTime(obj.stringOrBlank("posted_at", "created_at")),
-                previewImageBase64 = previewImageBase64,
-                imageGalleryBase64 = imageGalleryBase64,
+        val parsed = parseMarketplaceItemsStreaming(rawBody, materialLabels, transactionLabels)
+        Result.success(
+            MarketplacePage(
+                items = parsed.items,
+                hasNextPage = parsed.hasNextPage,
+                nextPage = parsed.nextPage,
             )
-        }
-        Result.success(items)
+        )
     }
 
     suspend fun fetchInstructorItems(token: String): Result<List<InstructorItem>> = withContext(Dispatchers.IO) {
@@ -719,61 +728,210 @@ class AuthRepository(
 
     suspend fun fetchMessageItems(token: String): Result<List<MessageItem>> = withContext(Dispatchers.IO) {
         val authHeader = "Token $token"
-        val candidates = listOf("/api/messages/", "/api/messages")
+        val rawBody = fetchRawBodyFromCandidates(
+            paths = listOf(
+                "/api/messages/?page=1&page_size=60",
+                "/api/messages/",
+                "/api/messages",
+            ),
+            authHeader = authHeader,
+        )
 
-        for (path in candidates) {
-            val response = runCatching {
-                service.listResource("$normalizedBaseUrl$path", authHeader)
-            }.getOrNull() ?: continue
-
-            if (!response.isSuccessful) {
-                if (response.code() in listOf(404, 405)) {
-                    continue
-                }
-                // Non-fatal for now: keep native UI usable even if this endpoint is flaky in some deployments.
-                return@withContext Result.success(emptyList())
-            }
-
-            val payload = response.body()
-            val items = extractObjectList(payload).map { obj ->
-                val senderObj = obj.get("sender")?.takeIf { it.isJsonObject }?.asJsonObject
-                val senderRichObj = obj.get("sender_user")?.takeIf { it.isJsonObject }?.asJsonObject
-                val recipientObj = obj.get("recipient")?.takeIf { it.isJsonObject }?.asJsonObject
-                val recipientRichObj = obj.get("recipient_user")?.takeIf { it.isJsonObject }?.asJsonObject
-
-                val senderPayload = senderRichObj ?: senderObj
-                val recipientPayload = recipientRichObj ?: recipientObj
-
-                val senderId = senderPayload?.intOrZero("id") ?: obj.intOrZero("sender", "sender_id")
-                val recipientId = recipientPayload?.intOrZero("id") ?: obj.intOrZero("recipient", "recipient_id")
-
-                val senderLabel = senderPayload?.stringOrBlank("display_name", "username", "email").orEmpty()
-                    .ifBlank { obj.stringOrBlank("sender_username", "sender_name") }
-                    .ifBlank { "Utilisateur" }
-                val recipientLabel = recipientPayload?.stringOrBlank("display_name", "username", "email").orEmpty()
-                    .ifBlank { obj.stringOrBlank("recipient_username", "recipient_name") }
-                    .ifBlank { "Utilisateur" }
-
-                MessageItem(
-                    id = obj.intOrZero("id"),
-                    senderId = senderId,
-                    recipientId = recipientId,
-                    senderLabel = senderLabel,
-                    recipientLabel = recipientLabel,
-                    senderPhotoBase64 = senderPayload?.stringOrBlank("profile_picture").orEmpty(),
-                    senderPhotoUrl = senderPayload?.stringOrBlank("google_profile_picture_url").orEmpty(),
-                    recipientPhotoBase64 = recipientPayload?.stringOrBlank("profile_picture").orEmpty(),
-                    recipientPhotoUrl = recipientPayload?.stringOrBlank("google_profile_picture_url").orEmpty(),
-                    body = obj.stringOrBlank("body", "message", "content").ifBlank { "-" },
-                    createdAtLabel = formatServerDateTime(obj.stringOrBlank("created_at", "timestamp")),
-                    isRead = obj.boolOrFalse("is_read"),
-                )
-            }
-            return@withContext Result.success(items)
+        if (rawBody != null) {
+            return@withContext Result.success(parseMessageItemsStreaming(rawBody))
         }
 
         // Endpoint unavailable in this deployment; do not break the whole native experience.
         Result.success(emptyList())
+    }
+
+    private fun parseMessageItemsStreaming(rawBody: ResponseBody): List<MessageItem> {
+        rawBody.use { body ->
+            body.charStream().use { stream ->
+                JsonReader(stream).use { reader ->
+                    return parseMessageRoot(reader)
+                }
+            }
+        }
+    }
+
+    private fun parseMessageRoot(reader: JsonReader): List<MessageItem> {
+        return when (reader.peek()) {
+            JsonToken.BEGIN_ARRAY -> parseMessageArray(reader)
+            JsonToken.BEGIN_OBJECT -> {
+                val items = mutableListOf<MessageItem>()
+                reader.beginObject()
+                while (reader.hasNext()) {
+                    when (reader.nextName()) {
+                        "results" -> items.addAll(parseMessageArray(reader))
+                        else -> reader.skipValue()
+                    }
+                }
+                reader.endObject()
+                items
+            }
+            else -> {
+                reader.skipValue()
+                emptyList()
+            }
+        }
+    }
+
+    private data class ParsedUserSummary(
+        val id: Int,
+        val label: String,
+        val photoBase64: String,
+        val photoUrl: String,
+    )
+
+    private fun parseMessageArray(reader: JsonReader): List<MessageItem> {
+        val items = mutableListOf<MessageItem>()
+        reader.beginArray()
+        while (reader.hasNext()) {
+            if (items.size >= 250) {
+                reader.skipValue()
+                continue
+            }
+            items.add(parseMessageItem(reader))
+        }
+        reader.endArray()
+        return items
+    }
+
+    private fun parseMessageItem(reader: JsonReader): MessageItem {
+        var id = 0
+        var senderId = 0
+        var recipientId = 0
+        var senderLabel = ""
+        var recipientLabel = ""
+        var senderPhotoBase64 = ""
+        var senderPhotoUrl = ""
+        var recipientPhotoBase64 = ""
+        var recipientPhotoUrl = ""
+        var body = ""
+        var createdAt = ""
+        var isRead = false
+
+        reader.beginObject()
+        while (reader.hasNext()) {
+            when (reader.nextName()) {
+                "id" -> id = nextIntSafely(reader)
+                "sender", "sender_user" -> {
+                    val parsed = parseUserSummarySafely(reader)
+                    if (senderId <= 0) senderId = parsed.id
+                    if (senderLabel.isBlank()) senderLabel = parsed.label
+                    if (senderPhotoBase64.isBlank()) senderPhotoBase64 = parsed.photoBase64
+                    if (senderPhotoUrl.isBlank()) senderPhotoUrl = parsed.photoUrl
+                }
+                "recipient", "recipient_user" -> {
+                    val parsed = parseUserSummarySafely(reader)
+                    if (recipientId <= 0) recipientId = parsed.id
+                    if (recipientLabel.isBlank()) recipientLabel = parsed.label
+                    if (recipientPhotoBase64.isBlank()) recipientPhotoBase64 = parsed.photoBase64
+                    if (recipientPhotoUrl.isBlank()) recipientPhotoUrl = parsed.photoUrl
+                }
+                "sender_id" -> {
+                    if (senderId <= 0) {
+                        senderId = nextIntSafely(reader)
+                    } else {
+                        reader.skipValue()
+                    }
+                }
+                "recipient_id" -> {
+                    if (recipientId <= 0) {
+                        recipientId = nextIntSafely(reader)
+                    } else {
+                        reader.skipValue()
+                    }
+                }
+                "sender_username", "sender_name" -> {
+                    if (senderLabel.isBlank()) senderLabel = nextStringSafely(reader) else reader.skipValue()
+                }
+                "recipient_username", "recipient_name" -> {
+                    if (recipientLabel.isBlank()) recipientLabel = nextStringSafely(reader) else reader.skipValue()
+                }
+                "body", "message", "content" -> {
+                    if (body.isBlank()) body = nextStringSafely(reader) else reader.skipValue()
+                }
+                "created_at", "timestamp" -> {
+                    if (createdAt.isBlank()) createdAt = nextStringSafely(reader) else reader.skipValue()
+                }
+                "is_read" -> isRead = nextBooleanSafely(reader)
+                else -> reader.skipValue()
+            }
+        }
+        reader.endObject()
+
+        return MessageItem(
+            id = id,
+            senderId = senderId,
+            recipientId = recipientId,
+            senderLabel = senderLabel.ifBlank { "Utilisateur" },
+            recipientLabel = recipientLabel.ifBlank { "Utilisateur" },
+            senderPhotoBase64 = senderPhotoBase64,
+            senderPhotoUrl = senderPhotoUrl,
+            recipientPhotoBase64 = recipientPhotoBase64,
+            recipientPhotoUrl = recipientPhotoUrl,
+            body = body.ifBlank { "-" },
+            createdAtLabel = formatServerDateTime(createdAt),
+            isRead = isRead,
+        )
+    }
+
+    private fun parseUserSummarySafely(reader: JsonReader): ParsedUserSummary {
+        return when (reader.peek()) {
+            JsonToken.BEGIN_OBJECT -> {
+                var id = 0
+                var label = ""
+                var photoBase64 = ""
+                var photoUrl = ""
+                reader.beginObject()
+                while (reader.hasNext()) {
+                    when (reader.nextName()) {
+                        "id" -> id = nextIntSafely(reader)
+                        "display_name", "username", "email" -> if (label.isBlank()) label = nextStringSafely(reader) else reader.skipValue()
+                        "google_profile_picture_url" -> if (photoUrl.isBlank()) photoUrl = nextStringSafely(reader) else reader.skipValue()
+                        // Skip heavy binary avatars in message payloads to keep chat stable on low-memory devices.
+                        "profile_picture" -> reader.skipValue()
+                        else -> reader.skipValue()
+                    }
+                }
+                reader.endObject()
+                ParsedUserSummary(id = id, label = label, photoBase64 = photoBase64, photoUrl = photoUrl)
+            }
+            JsonToken.NUMBER, JsonToken.STRING -> ParsedUserSummary(
+                id = nextIntSafely(reader),
+                label = "",
+                photoBase64 = "",
+                photoUrl = "",
+            )
+            JsonToken.NULL -> {
+                reader.nextNull()
+                ParsedUserSummary(0, "", "", "")
+            }
+            else -> {
+                reader.skipValue()
+                ParsedUserSummary(0, "", "", "")
+            }
+        }
+    }
+
+    private fun nextBooleanSafely(reader: JsonReader): Boolean {
+        return when (reader.peek()) {
+            JsonToken.NULL -> {
+                reader.nextNull()
+                false
+            }
+            JsonToken.BOOLEAN -> reader.nextBoolean()
+            JsonToken.NUMBER, JsonToken.STRING -> {
+                val normalized = nextStringSafely(reader).trim().lowercase()
+                normalized == "1" || normalized == "true" || normalized == "yes"
+            }
+            else -> {
+                reader.skipValue()
+                false
+            }
+        }
     }
 
     suspend fun fetchProfileInfo(token: String): Result<ProfileInfo> = withContext(Dispatchers.IO) {
@@ -815,27 +973,102 @@ class AuthRepository(
 
     suspend fun fetchChatUsers(token: String): Result<List<ChatUserOption>> = withContext(Dispatchers.IO) {
         val authHeader = "Token $token"
-        val payload = fetchPayloadFromCandidates(listOf("/api/userview/", "/api/userview"), authHeader)
-            ?: return@withContext Result.success(emptyList())
+        val rawBody = fetchRawBodyFromCandidates(
+            paths = listOf("/api/userview/?page=1&page_size=120", "/api/userview/", "/api/userview"),
+            authHeader = authHeader,
+        ) ?: return@withContext Result.success(emptyList())
 
-        val users = extractObjectList(payload).mapNotNull { obj ->
-            val id = obj.intOrZero("id")
-            if (id <= 0) return@mapNotNull null
-            val label = listOf(
-                obj.stringOrBlank("first_name"),
-                obj.stringOrBlank("last_name"),
-            ).filter { it.isNotBlank() }.joinToString(" ")
-                .ifBlank { obj.stringOrBlank("display_name", "username", "email") }
-                .ifBlank { "Utilisateur #$id" }
+        Result.success(parseChatUsersStreaming(rawBody))
+    }
 
-            ChatUserOption(
-                id = id,
-                label = label,
-                photoBase64 = obj.stringOrBlank("profile_picture"),
-                photoUrl = obj.stringOrBlank("google_profile_picture_url"),
-            )
+    private fun parseChatUsersStreaming(rawBody: ResponseBody): List<ChatUserOption> {
+        rawBody.use { body ->
+            body.charStream().use { stream ->
+                JsonReader(stream).use { reader ->
+                    return parseChatUsersRoot(reader)
+                }
+            }
         }
-        Result.success(users)
+    }
+
+    private fun parseChatUsersRoot(reader: JsonReader): List<ChatUserOption> {
+        return when (reader.peek()) {
+            JsonToken.BEGIN_ARRAY -> parseChatUsersArray(reader)
+            JsonToken.BEGIN_OBJECT -> {
+                val users = mutableListOf<ChatUserOption>()
+                reader.beginObject()
+                while (reader.hasNext()) {
+                    when (reader.nextName()) {
+                        "results" -> users.addAll(parseChatUsersArray(reader))
+                        else -> reader.skipValue()
+                    }
+                }
+                reader.endObject()
+                users
+            }
+            else -> {
+                reader.skipValue()
+                emptyList()
+            }
+        }
+    }
+
+    private fun parseChatUsersArray(reader: JsonReader): List<ChatUserOption> {
+        val users = mutableListOf<ChatUserOption>()
+        reader.beginArray()
+        while (reader.hasNext()) {
+            if (users.size >= 500) {
+                reader.skipValue()
+                continue
+            }
+            parseChatUser(reader)?.let { users.add(it) }
+        }
+        reader.endArray()
+        return users
+    }
+
+    private fun parseChatUser(reader: JsonReader): ChatUserOption? {
+        var id = 0
+        var firstName = ""
+        var lastName = ""
+        var displayName = ""
+        var username = ""
+        var email = ""
+        var photoUrl = ""
+
+        reader.beginObject()
+        while (reader.hasNext()) {
+            when (reader.nextName()) {
+                "id" -> id = nextIntSafely(reader)
+                "first_name" -> firstName = nextStringSafely(reader)
+                "last_name" -> lastName = nextStringSafely(reader)
+                "display_name" -> displayName = nextStringSafely(reader)
+                "username" -> username = nextStringSafely(reader)
+                "email" -> email = nextStringSafely(reader)
+                "google_profile_picture_url" -> photoUrl = nextStringSafely(reader)
+                // Skip heavy inline avatar blobs from directory payload.
+                "profile_picture" -> reader.skipValue()
+                else -> reader.skipValue()
+            }
+        }
+        reader.endObject()
+
+        if (id <= 0) return null
+
+        val label = listOf(firstName, lastName)
+            .filter { it.isNotBlank() }
+            .joinToString(" ")
+            .ifBlank { displayName }
+            .ifBlank { username }
+            .ifBlank { email }
+            .ifBlank { "Utilisateur #$id" }
+
+        return ChatUserOption(
+            id = id,
+            label = label,
+            photoBase64 = "",
+            photoUrl = photoUrl,
+        )
     }
 
     suspend fun fetchFriendLinks(token: String): Result<List<FriendLink>> = withContext(Dispatchers.IO) {
@@ -1093,7 +1326,7 @@ class AuthRepository(
     ): Result<Unit> = withContext(Dispatchers.IO) {
         val authHeader = "Token $token"
         val response = runCatching {
-            service.postResource(
+            service.postResourceRaw(
                 url = "$normalizedBaseUrl/api/messages/",
                 authHeader = authHeader,
                 payload = mapOf(
@@ -1108,6 +1341,8 @@ class AuthRepository(
             val bodyText = response.errorBody()?.string().orEmpty().ifBlank { "Unable to send message." }
             return@withContext Result.failure(IllegalStateException(bodyText))
         }
+
+        response.body()?.close()
 
         Result.success(Unit)
     }
@@ -1298,6 +1533,292 @@ class AuthRepository(
             return null
         }
         return response.body()
+    }
+
+    private suspend fun fetchRawBodyFromCandidates(paths: List<String>, authHeader: String): ResponseBody? {
+        for (path in paths) {
+            val response = service.listResourceRaw("$normalizedBaseUrl$path", authHeader)
+            if (!response.isSuccessful) {
+                continue
+            }
+            val body = response.body()
+            if (body != null) {
+                return body
+            }
+        }
+        return null
+    }
+
+    private fun parseMarketplaceItemsStreaming(
+        rawBody: ResponseBody,
+        materialLabels: Map<String, String>,
+        transactionLabels: Map<String, String>,
+    ): MarketplaceParseResult {
+        rawBody.use { body ->
+            body.charStream().use { stream ->
+                JsonReader(stream).use { reader ->
+                    return parseMarketplaceRoot(reader, materialLabels, transactionLabels)
+                }
+            }
+        }
+    }
+
+    private fun parseMarketplaceRoot(
+        reader: JsonReader,
+        materialLabels: Map<String, String>,
+        transactionLabels: Map<String, String>,
+    ): MarketplaceParseResult {
+        return when (reader.peek()) {
+            JsonToken.BEGIN_ARRAY -> MarketplaceParseResult(
+                items = parseMarketplaceArray(reader, materialLabels, transactionLabels),
+                hasNextPage = false,
+                nextPage = null,
+            )
+            JsonToken.BEGIN_OBJECT -> {
+                val items = mutableListOf<MarketplaceItem>()
+                var nextRaw = ""
+                reader.beginObject()
+                while (reader.hasNext()) {
+                    when (reader.nextName()) {
+                        "results" -> items.addAll(parseMarketplaceArray(reader, materialLabels, transactionLabels))
+                        "next" -> nextRaw = nextStringSafely(reader)
+                        else -> reader.skipValue()
+                    }
+                }
+                reader.endObject()
+                MarketplaceParseResult(
+                    items = items,
+                    hasNextPage = nextRaw.isNotBlank(),
+                    nextPage = parsePageFromUrl(nextRaw),
+                )
+            }
+            else -> {
+                reader.skipValue()
+                MarketplaceParseResult(
+                    items = emptyList(),
+                    hasNextPage = false,
+                    nextPage = null,
+                )
+            }
+        }
+    }
+
+    private fun parseMarketplaceArray(
+        reader: JsonReader,
+        materialLabels: Map<String, String>,
+        transactionLabels: Map<String, String>,
+    ): List<MarketplaceItem> {
+        val items = mutableListOf<MarketplaceItem>()
+        reader.beginArray()
+        while (reader.hasNext()) {
+            if (items.size >= 300) {
+                reader.skipValue()
+                continue
+            }
+            items.add(parseMarketplaceItem(reader, materialLabels, transactionLabels))
+        }
+        reader.endArray()
+        return items
+    }
+
+    private fun parseMarketplaceItem(
+        reader: JsonReader,
+        materialLabels: Map<String, String>,
+        transactionLabels: Map<String, String>,
+    ): MarketplaceItem {
+        val maxPreviewChars = 550_000
+        val maxGalleryChars = 320_000
+        val maxGalleryItems = 4
+        var id = 0
+        var title = ""
+        var description = ""
+        var city = ""
+        var price = ""
+        var condition = ""
+        var materialType = ""
+        var transactionType = ""
+        var sellerId = 0
+        var postedAt = ""
+        var previewImage = ""
+        val galleryImages = mutableListOf<String>()
+
+        reader.beginObject()
+        while (reader.hasNext()) {
+            when (reader.nextName()) {
+                "id" -> id = nextIntSafely(reader)
+                "title" -> title = nextStringSafely(reader)
+                "description" -> description = nextStringSafely(reader)
+                "city" -> city = nextStringSafely(reader)
+                "price" -> price = nextStringSafely(reader)
+                "condition" -> condition = nextStringSafely(reader)
+                "material_type" -> materialType = nextStringSafely(reader)
+                "transaction_type" -> transactionType = nextStringSafely(reader)
+                "user_id" -> sellerId = nextIntSafely(reader)
+                "user" -> sellerId = nextUserIdSafely(reader)
+                "posted_at", "created_at" -> {
+                    if (postedAt.isBlank()) {
+                        postedAt = nextStringSafely(reader)
+                    } else {
+                        reader.skipValue()
+                    }
+                }
+                "preview_image", "preview_image_base64", "thumbnail", "thumbnail_url" -> {
+                    if (previewImage.isBlank()) {
+                        previewImage = nextStringWithMaxLength(reader, maxPreviewChars)
+                    } else {
+                        reader.skipValue()
+                    }
+                }
+                "image", "image_base64", "image_url", "url" -> {
+                    if (previewImage.isBlank()) {
+                        previewImage = nextStringWithMaxLength(reader, maxPreviewChars)
+                    } else {
+                        reader.skipValue()
+                    }
+                }
+                "images" -> parseImageArray(reader, galleryImages, maxGalleryItems, maxGalleryChars)
+                else -> reader.skipValue()
+            }
+        }
+        reader.endObject()
+
+        if (previewImage.isBlank()) {
+            previewImage = galleryImages.firstOrNull().orEmpty()
+        }
+
+        val materialTypeKey = materialType.lowercase()
+        val transactionTypeKey = transactionType.lowercase()
+        return MarketplaceItem(
+            id = id,
+            title = title.ifBlank { if (materialType.isNotBlank()) materialType else "Annonce #$id" },
+            description = description.ifBlank { "Aucune description." },
+            city = city.ifBlank { "-" },
+            priceLabel = price.ifBlank { "-" },
+            conditionLabel = condition.ifBlank { "-" },
+            materialTypeLabel = materialLabels[materialTypeKey] ?: materialType.ifBlank { "Autre" },
+            transactionTypeLabel = transactionLabels[transactionTypeKey] ?: transactionType.ifBlank { "-" },
+            sellerId = sellerId,
+            sellerLabel = if (sellerId > 0) "Vendeur #$sellerId" else "Vendeur",
+            postedAtLabel = formatServerDateTime(postedAt),
+            previewImageBase64 = previewImage,
+            imageGalleryBase64 = galleryImages,
+        )
+    }
+
+    private fun parseImageArray(
+        reader: JsonReader,
+        target: MutableList<String>,
+        maxItems: Int,
+        maxChars: Int,
+    ) {
+        if (reader.peek() != JsonToken.BEGIN_ARRAY) {
+            reader.skipValue()
+            return
+        }
+
+        reader.beginArray()
+        while (reader.hasNext()) {
+            if (target.size >= maxItems) {
+                reader.skipValue()
+                continue
+            }
+            val value = nextImageValueSafely(reader, maxChars)
+            if (value.isNotBlank()) {
+                target.add(value)
+            }
+        }
+        reader.endArray()
+    }
+
+    private fun nextImageValueSafely(reader: JsonReader, maxChars: Int): String {
+        return when (reader.peek()) {
+            JsonToken.BEGIN_OBJECT -> {
+                var value = ""
+                reader.beginObject()
+                while (reader.hasNext()) {
+                    when (reader.nextName()) {
+                        "image", "image_base64", "preview_image", "preview_image_base64", "image_url", "url", "thumbnail", "thumbnail_url" -> {
+                            if (value.isBlank()) {
+                                value = nextStringWithMaxLength(reader, maxChars)
+                            } else {
+                                reader.skipValue()
+                            }
+                        }
+                        else -> reader.skipValue()
+                    }
+                }
+                reader.endObject()
+                value
+            }
+            JsonToken.STRING, JsonToken.NUMBER, JsonToken.BOOLEAN, JsonToken.NULL -> nextStringWithMaxLength(reader, maxChars)
+            else -> {
+                reader.skipValue()
+                ""
+            }
+        }
+    }
+
+    private fun nextUserIdSafely(reader: JsonReader): Int {
+        return when (reader.peek()) {
+            JsonToken.BEGIN_OBJECT -> {
+                var id = 0
+                reader.beginObject()
+                while (reader.hasNext()) {
+                    when (reader.nextName()) {
+                        "id" -> id = nextIntSafely(reader)
+                        else -> reader.skipValue()
+                    }
+                }
+                reader.endObject()
+                id
+            }
+            JsonToken.NULL -> {
+                reader.nextNull()
+                0
+            }
+            JsonToken.NUMBER, JsonToken.STRING -> nextIntSafely(reader)
+            else -> {
+                reader.skipValue()
+                0
+            }
+        }
+    }
+
+    private fun nextStringWithMaxLength(reader: JsonReader, maxChars: Int): String {
+        val value = nextStringSafely(reader)
+        if (value.length <= maxChars) {
+            return value
+        }
+        return ""
+    }
+
+    private fun nextStringSafely(reader: JsonReader): String {
+        return when (reader.peek()) {
+            JsonToken.NULL -> {
+                reader.nextNull()
+                ""
+            }
+            JsonToken.STRING -> reader.nextString()
+            JsonToken.NUMBER, JsonToken.BOOLEAN -> reader.nextString()
+            else -> {
+                reader.skipValue()
+                ""
+            }
+        }
+    }
+
+    private fun nextIntSafely(reader: JsonReader): Int {
+        return when (reader.peek()) {
+            JsonToken.NULL -> {
+                reader.nextNull()
+                0
+            }
+            JsonToken.NUMBER, JsonToken.STRING -> nextStringSafely(reader).toIntOrNull() ?: 0
+            else -> {
+                reader.skipValue()
+                0
+            }
+        }
     }
 
     private fun parseCount(payload: JsonElement?): Int {

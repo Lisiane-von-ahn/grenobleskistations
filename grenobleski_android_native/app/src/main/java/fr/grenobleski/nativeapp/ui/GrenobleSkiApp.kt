@@ -3,8 +3,10 @@ package fr.grenobleski.nativeapp.ui
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.net.Uri
 import android.util.Base64
+import android.util.LruCache
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -13,6 +15,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.Image
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -58,6 +66,8 @@ import androidx.compose.material.icons.filled.Terrain
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.AssistChip
@@ -84,6 +94,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -124,6 +135,7 @@ import fr.grenobleski.nativeapp.data.session.SessionStore
 import fr.grenobleski.nativeapp.ui.components.MetricCard
 import java.net.HttpURLConnection
 import java.net.URL
+import java.time.LocalTime
 import android.graphics.BitmapFactory
 import androidx.compose.ui.window.Dialog
 import kotlinx.coroutines.Dispatchers
@@ -133,6 +145,22 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.max
 import kotlin.math.min
+
+private object MarketplaceBitmapCache {
+    // Keep a bounded in-memory bitmap cache to avoid repetitive decode spikes.
+    private val maxKb = 16 * 1024
+    private val cache = object : LruCache<String, Bitmap>(maxKb) {
+        override fun sizeOf(key: String, value: Bitmap): Int {
+            return value.byteCount / 1024
+        }
+    }
+
+    fun get(key: String): Bitmap? = cache.get(key)
+
+    fun put(key: String, bitmap: Bitmap) {
+        cache.put(key, bitmap)
+    }
+}
 
 private val MOBILE_AUTH_COMPLETE_CANDIDATES = listOf(
     "/api/mobile/auth/complete/",
@@ -368,6 +396,7 @@ fun GrenobleSkiApp(
             onStoriesStationFilterChange = viewModel::updateStoriesStationFilter,
             onApplyStoriesFilters = viewModel::applyStoriesFilters,
             onLoadMoreStories = viewModel::loadMoreStories,
+            onLoadMoreMarketplace = viewModel::loadMoreMarketplace,
             onToggleStoryLike = viewModel::toggleStoryLike,
             onStoryComment = viewModel::addStoryComment,
             onOpenUserActivity = viewModel::openUserActivity,
@@ -690,6 +719,7 @@ private fun NativeShell(
     onStoriesStationFilterChange: (Int?) -> Unit,
     onApplyStoriesFilters: () -> Unit,
     onLoadMoreStories: () -> Unit,
+    onLoadMoreMarketplace: () -> Unit,
     onToggleStoryLike: (Int, Boolean) -> Unit,
     onStoryComment: (Int, String) -> Unit,
     onOpenUserActivity: (Int) -> Unit,
@@ -871,9 +901,11 @@ private fun NativeShell(
                 )
                 NativeTab.MARKETPLACE -> MarketplaceTab(
                     state = state,
+                    siteBase = siteBase,
                     onPrepareMessageToSeller = onPrepareMessageToSeller,
                     onSubmitSellerRating = onSubmitSellerRating,
                     onOpenPublishMarketplace = { publishDialogOpen = true },
+                    onLoadMoreMarketplace = onLoadMoreMarketplace,
                 )
                 NativeTab.PARTNERS -> PartnersTab(
                     state = state,
@@ -1970,34 +2002,202 @@ private fun StoriesTab(
 @Composable
 private fun CommunityDashboardTab(state: AppUiState) {
     val stats = state.storyStats
+    var compactMode by rememberSaveable { mutableStateOf(false) }
+    val isNightMood = remember {
+        val hour = LocalTime.now().hour
+        hour < 7 || hour >= 19
+    }
+    val moodGradient = if (isNightMood) {
+        Brush.horizontalGradient(
+            listOf(
+                Color(0xFF1B2A4A),
+                Color(0xFF243B64),
+            )
+        )
+    } else {
+        Brush.horizontalGradient(
+            listOf(
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.14f),
+            )
+        )
+    }
+    val moodLabel = if (isNightMood) {
+        stringResource(id = R.string.community_mood_night)
+    } else {
+        stringResource(id = R.string.community_mood_day)
+    }
+
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 14.dp),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
             Card(
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.68f)),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(stringResource(id = R.string.community_dashboard), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text("Vibe: ${stats.momentVibe}", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
-                    Text("Active stories: ${stats.totalActiveStories}")
-                    Text("Average fun score: ${"%.1f".format(stats.avgFunScore)}")
+                Column(
+                    modifier = Modifier
+                        .animateContentSize()
+                        .fillMaxWidth()
+                        .background(moodGradient)
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Text(
+                        stringResource(id = R.string.community_dashboard),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = moodLabel,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (isNightMood) Color(0xFFE2E8F0) else MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    AnimatedVisibility(
+                        visible = !compactMode,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically(),
+                    ) {
+                        Text(
+                            text = stringResource(id = R.string.community_live_summary),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    OutlinedButton(
+                        onClick = { compactMode = !compactMode },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = if (compactMode) {
+                                stringResource(id = R.string.community_switch_detailed)
+                            } else {
+                                stringResource(id = R.string.community_switch_compact)
+                            }
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        CommunityStatPill(
+                            label = stringResource(id = R.string.community_vibe_label),
+                            value = stats.momentVibe,
+                            icon = Icons.AutoMirrored.Filled.TrendingUp,
+                            modifier = Modifier.weight(1f),
+                        )
+                        CommunityStatPill(
+                            label = stringResource(id = R.string.community_active_stories),
+                            value = stats.totalActiveStories.toString(),
+                            icon = Icons.Filled.CheckCircle,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    CommunityStatPill(
+                        label = stringResource(id = R.string.community_avg_fun_score),
+                        value = String.format("%.1f", stats.avgFunScore),
+                        icon = Icons.Filled.LocalOffer,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             }
         }
         if (state.highlightedStoryItems.isNotEmpty()) {
-            item { Text(text = stringResource(id = R.string.highlighted_stories), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold) }
+            item {
+                Text(
+                    text = stringResource(id = R.string.community_trending_stories),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
             items(state.highlightedStoryItems.take(5)) { story ->
-                Card(shape = RoundedCornerShape(14.dp)) {
-                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(story.userLabel, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
-                        Text(story.caption.ifBlank { stringResource(id = R.string.story_no_caption) })
-                        Text("${story.stationName} • ${story.likeCount} ♥ • ${story.commentCount} 💬", style = MaterialTheme.typography.labelSmall)
+                val preview = remember(story.imageBase64) { decodeBase64Image(story.imageBase64) }
+                Card(
+                    modifier = Modifier.animateContentSize(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (preview != null && !compactMode) {
+                            Image(
+                                bitmap = preview,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(150.dp),
+                            )
+                        }
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Text(story.userLabel, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+                            AnimatedVisibility(
+                                visible = !compactMode,
+                                enter = fadeIn() + expandVertically(),
+                                exit = fadeOut() + shrinkVertically(),
+                            ) {
+                                Text(
+                                    story.caption.ifBlank { stringResource(id = R.string.story_no_caption) },
+                                    maxLines = 2,
+                                )
+                            }
+                            Text(
+                                text = stringResource(
+                                    id = R.string.community_story_meta,
+                                    story.stationName,
+                                    story.likeCount,
+                                    story.commentCount,
+                                ),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CommunityStatPill(
+    label: String,
+    value: String,
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp),
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
             }
         }
     }
@@ -2666,9 +2866,11 @@ private fun ServicesTab(
 @Composable
 private fun MarketplaceTab(
     state: AppUiState,
+    siteBase: String,
     onPrepareMessageToSeller: (Int, String) -> Unit,
     onSubmitSellerRating: (Int, Int, Int, String) -> Unit,
     onOpenPublishMarketplace: () -> Unit,
+    onLoadMoreMarketplace: () -> Unit,
 ) {
     var selectedItem by remember { mutableStateOf<fr.grenobleski.nativeapp.data.model.MarketplaceItem?>(null) }
     var rateSellerDialogItem by remember { mutableStateOf<fr.grenobleski.nativeapp.data.model.MarketplaceItem?>(null) }
@@ -2679,6 +2881,8 @@ private fun MarketplaceTab(
     var selectedCondition by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("") }
     var selectedOfferType by remember { mutableStateOf("") }
+    var filtersExpanded by rememberSaveable { mutableStateOf(false) }
+    var selectedSort by rememberSaveable { mutableStateOf("new") }
     val availableCities = remember(state.marketplaceItems) {
         (state.marketplaceItems.map { it.city }.filter { it.isNotBlank() && it != "-" } + RHONE_ALPES_CITIES)
             .distinct()
@@ -2703,14 +2907,45 @@ private fun MarketplaceTab(
             matchesQuery && matchesCity && matchesCondition && matchesCategory && matchesOfferType
         }
     }
+
+    val activeFilterCount = remember(searchQuery, selectedCity, selectedCondition, selectedCategory, selectedOfferType) {
+        listOf(searchQuery, selectedCity, selectedCondition, selectedCategory, selectedOfferType).count { it.isNotBlank() }
+    }
+
+    fun parsePriceValue(priceLabel: String): Double {
+        val normalized = priceLabel
+            .replace("€", "")
+            .replace(" ", "")
+            .replace(",", ".")
+        val firstNumber = """-?\d+(?:\.\d+)?""".toRegex().find(normalized)?.value
+        return firstNumber?.toDoubleOrNull() ?: Double.MAX_VALUE
+    }
+
+    val sortedItems = remember(filteredItems, selectedSort) {
+        when (selectedSort) {
+            "price_asc" -> filteredItems.sortedBy { parsePriceValue(it.priceLabel) }
+            "price_desc" -> filteredItems.sortedByDescending { parsePriceValue(it.priceLabel) }
+            else -> filteredItems.sortedByDescending { it.id }
+        }
+    }
+
     val listState = rememberLazyListState()
-    val visibleCount = rememberProgressiveItemCount(
-        totalCount = filteredItems.size,
-        batchSize = 12,
-        listState = listState,
-        firstDataIndex = 1,
-    )
-    val visibleItems = remember(filteredItems, visibleCount) { filteredItems.take(visibleCount) }
+    val shouldLoadMore = remember(state.marketplaceHasNextPage, state.isMarketplaceLoadingMore, sortedItems.size) {
+        derivedStateOf {
+            if (!state.marketplaceHasNextPage || state.isMarketplaceLoadingMore || sortedItems.isEmpty()) {
+                return@derivedStateOf false
+            }
+            val totalItems = listState.layoutInfo.totalItemsCount
+            val lastVisibleIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            totalItems > 0 && lastVisibleIndex >= totalItems - 4
+        }
+    }
+
+    LaunchedEffect(shouldLoadMore.value) {
+        if (shouldLoadMore.value) {
+            onLoadMoreMarketplace()
+        }
+    }
 
     if (state.marketplaceItems.isEmpty()) {
         EmptyTabMessage(text = stringResource(id = R.string.empty_marketplace))
@@ -2724,6 +2959,37 @@ private fun MarketplaceTab(
     ) {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.32f)),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = stringResource(id = R.string.showing_results, sortedItems.size, state.marketplaceItems.size),
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                        if (activeFilterCount > 0) {
+                            TextButton(
+                                onClick = {
+                                    searchQuery = ""
+                                    selectedCity = ""
+                                    selectedCondition = ""
+                                    selectedCategory = ""
+                                    selectedOfferType = ""
+                                },
+                            ) {
+                                Text(stringResource(id = R.string.marketplace_clear_filters))
+                            }
+                        }
+                    }
+                }
+
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
@@ -2750,6 +3016,43 @@ private fun MarketplaceTab(
                         Text(stringResource(id = R.string.add_article), fontSize = 12.sp)
                     }
                 }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChipButton(
+                        label = stringResource(id = R.string.market_sort_newest),
+                        selected = selectedSort == "new",
+                        onClick = { selectedSort = "new" },
+                    )
+                    SortIconToggleButton(
+                        icon = Icons.Filled.ArrowUpward,
+                        contentDescription = stringResource(id = R.string.market_sort_price_low),
+                        selected = selectedSort == "price_asc",
+                        onClick = { selectedSort = "price_asc" },
+                    )
+                    SortIconToggleButton(
+                        icon = Icons.Filled.ArrowDownward,
+                        contentDescription = stringResource(id = R.string.market_sort_price_high),
+                        selected = selectedSort == "price_desc",
+                        onClick = { selectedSort = "price_desc" },
+                    )
+                }
+                OutlinedButton(
+                    onClick = { filtersExpanded = !filtersExpanded },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        if (filtersExpanded) {
+                            stringResource(id = R.string.marketplace_hide_advanced_filters)
+                        } else {
+                            stringResource(id = R.string.marketplace_show_advanced_filters)
+                        }
+                    )
+                }
+                AnimatedVisibility(
+                    visible = filtersExpanded,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically(),
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth(),
@@ -2830,25 +3133,32 @@ private fun MarketplaceTab(
                         )
                     }
                 }
-                Text(
-                    text = stringResource(id = R.string.showing_results, filteredItems.size, state.marketplaceItems.size),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                    }
+                }
             }
         }
 
-        if (filteredItems.isEmpty()) {
+        if (sortedItems.isEmpty()) {
             item {
                 EmptyTabMessage(text = stringResource(id = R.string.no_results))
             }
         }
 
-        items(visibleItems) { listing ->
-            val previewImage = remember(listing.imageGalleryBase64, listing.previewImageBase64) {
-                val gallery = listing.imageGalleryBase64.mapNotNull(::decodeBase64Image)
-                gallery.firstOrNull() ?: decodeBase64Image(listing.previewImageBase64)
+        items(sortedItems) { listing ->
+            val previewSourceRaw = if (listing.previewImageBase64.isNotBlank()) {
+                listing.previewImageBase64
+            } else {
+                listing.imageGalleryBase64.firstOrNull().orEmpty()
             }
+            val previewSource = remember(previewSourceRaw, siteBase) {
+                normalizeMarketplaceImageSource(previewSourceRaw, siteBase)
+            }
+            val previewImage = rememberMarketplaceImage(
+                source = previewSource,
+                cacheKey = "market:${listing.id}:preview",
+                reqWidth = 960,
+                reqHeight = 640,
+            )
 
             Card(
                 modifier = Modifier
@@ -2912,6 +3222,26 @@ private fun MarketplaceTab(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 2,
                         )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            MarketplaceMiniStat(
+                                icon = "📍",
+                                value = listing.city,
+                                modifier = Modifier.weight(1f),
+                            )
+                            MarketplaceMiniStat(
+                                icon = "🕒",
+                                value = if (listing.postedAtLabel.isNotBlank()) listing.postedAtLabel else "-",
+                                modifier = Modifier.weight(1f),
+                            )
+                            MarketplaceMiniStat(
+                                icon = "🖼",
+                                value = stringResource(
+                                    id = R.string.marketplace_stat_photos,
+                                    max(1, listing.imageGalleryBase64.size),
+                                ),
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -2926,7 +3256,23 @@ private fun MarketplaceTab(
                                 )
                             }
                         }
-                        Text(listing.sellerLabel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Text(listing.sellerLabel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                            Icon(
+                                imageVector = Icons.Filled.CheckCircle,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(14.dp),
+                            )
+                            Text(
+                                text = stringResource(id = R.string.marketplace_seller_trust_badge),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             FilterChipButton(
                                 label = listing.materialTypeLabel,
@@ -2952,7 +3298,7 @@ private fun MarketplaceTab(
             }
         }
 
-        if (visibleItems.size < filteredItems.size) {
+        if (state.isMarketplaceLoadingMore) {
             item {
                 Text(
                     text = stringResource(id = R.string.loading_more),
@@ -2966,11 +3312,18 @@ private fun MarketplaceTab(
 
     val details = selectedItem
     if (details != null) {
-        val galleryImages = remember(details.imageGalleryBase64, details.previewImageBase64) {
-            val decoded = details.imageGalleryBase64.mapNotNull(::decodeBase64Image)
-            decoded.ifEmpty {
-                listOfNotNull(decodeBase64Image(details.previewImageBase64))
-            }
+        val gallerySources = remember(details.id, details.imageGalleryBase64, details.previewImageBase64, siteBase) {
+            details.imageGalleryBase64.ifEmpty {
+                if (details.previewImageBase64.isNotBlank()) listOf(details.previewImageBase64) else emptyList()
+            }.map { raw -> normalizeMarketplaceImageSource(raw, siteBase) }
+        }
+        val galleryImages = gallerySources.mapIndexedNotNull { index, value ->
+            rememberMarketplaceImage(
+                source = value,
+                cacheKey = "market:${details.id}:gallery:$index",
+                reqWidth = 1280,
+                reqHeight = 960,
+            )
         }
         var selectedImageIndex by remember(details.id) { mutableStateOf(0) }
         val selectedImage = galleryImages.getOrNull(selectedImageIndex)
@@ -3195,6 +3548,38 @@ private fun MarketplaceTab(
                 }
             }
         }
+    }
+}
+
+private fun normalizeMarketplaceImageSource(source: String, siteBase: String): String {
+    if (source.isBlank()) return ""
+    if (source.startsWith("http://", ignoreCase = true) || source.startsWith("https://", ignoreCase = true)) {
+        return source
+    }
+    if (source.startsWith("/")) {
+        return siteBase.trimEnd('/') + source
+    }
+    return source
+}
+
+@Composable
+private fun MarketplaceMiniStat(
+    icon: String,
+    value: String,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(10.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)),
+    ) {
+        Text(
+            text = "$icon $value",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+            maxLines = 1,
+        )
     }
 }
 
@@ -4636,6 +5021,34 @@ private fun FilterChipButton(
 }
 
 @Composable
+private fun SortIconToggleButton(
+    icon: ImageVector,
+    contentDescription: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val buttonModifier = Modifier
+        .height(40.dp)
+        .width(64.dp)
+
+    if (selected) {
+        Button(onClick = onClick, modifier = buttonModifier, contentPadding = PaddingValues(0.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(imageVector = Icons.Filled.LocalOffer, contentDescription = null, modifier = Modifier.size(14.dp))
+                Icon(imageVector = icon, contentDescription = contentDescription, modifier = Modifier.size(16.dp))
+            }
+        }
+    } else {
+        OutlinedButton(onClick = onClick, modifier = buttonModifier, contentPadding = PaddingValues(0.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(imageVector = Icons.Filled.LocalOffer, contentDescription = null, modifier = Modifier.size(14.dp))
+                Icon(imageVector = icon, contentDescription = contentDescription, modifier = Modifier.size(16.dp))
+            }
+        }
+    }
+}
+
+@Composable
 private fun CollapsibleMoreSection(
     title: String,
     expanded: Boolean,
@@ -5061,28 +5474,137 @@ private fun tabTitle(tab: NativeTab): String {
 }
 
 private fun decodeBase64Image(data: String): ImageBitmap? {
+    return decodeBase64ImageCached(
+        data = data,
+        cacheKey = "generic:${data.hashCode()}",
+        reqWidth = 960,
+        reqHeight = 640,
+    )
+}
+
+@Composable
+private fun rememberMarketplaceImage(
+    source: String,
+    cacheKey: String,
+    reqWidth: Int,
+    reqHeight: Int,
+): ImageBitmap? {
+    if (source.isBlank()) return null
+
+    val isRemote = source.startsWith("http://", ignoreCase = true) || source.startsWith("https://", ignoreCase = true)
+    if (!isRemote) {
+        return remember(source, cacheKey, reqWidth, reqHeight) {
+            decodeBase64ImageCached(
+                data = source,
+                cacheKey = cacheKey,
+                reqWidth = reqWidth,
+                reqHeight = reqHeight,
+            )
+        }
+    }
+
+    var remoteImage by remember(source) { mutableStateOf<ImageBitmap?>(null) }
+    LaunchedEffect(source) {
+        remoteImage = loadImageFromUrl(source)
+    }
+    return remoteImage
+}
+
+private fun decodeBase64ImageCached(
+    data: String,
+    cacheKey: String,
+    reqWidth: Int,
+    reqHeight: Int,
+): ImageBitmap? {
     if (data.isBlank()) return null
+
+    MarketplaceBitmapCache.get(cacheKey)?.let { cached ->
+        return cached.asImageBitmap()
+    }
+
     return try {
         val bytes = Base64.decode(data, Base64.DEFAULT)
-        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+        val bitmap = decodeSampledBitmap(bytes, reqWidth, reqHeight) ?: return null
+        MarketplaceBitmapCache.put(cacheKey, bitmap)
+        bitmap.asImageBitmap()
     } catch (_: Exception) {
         null
     }
+}
+
+private fun decodeSampledBitmap(bytes: ByteArray, reqWidth: Int, reqHeight: Int): Bitmap? {
+    val safeWidth = reqWidth.coerceAtLeast(200)
+    val safeHeight = reqHeight.coerceAtLeast(200)
+
+    val bounds = BitmapFactory.Options().apply {
+        inJustDecodeBounds = true
+    }
+    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+
+    val options = BitmapFactory.Options().apply {
+        inSampleSize = calculateInSampleSize(bounds, safeWidth, safeHeight)
+        inPreferredConfig = Bitmap.Config.RGB_565
+        inDither = true
+    }
+    return BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
+}
+
+private fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+    val height = options.outHeight
+    val width = options.outWidth
+    var inSampleSize = 1
+
+    if (height > reqHeight || width > reqWidth) {
+        val halfHeight = height / 2
+        val halfWidth = width / 2
+        while (halfHeight / inSampleSize >= reqHeight && halfWidth / inSampleSize >= reqWidth) {
+            inSampleSize *= 2
+        }
+    }
+
+    return inSampleSize.coerceAtLeast(1)
 }
 
 private suspend fun loadImageFromUrl(url: String): ImageBitmap? {
     if (url.isBlank()) return null
     return withContext(Dispatchers.IO) {
         try {
-            val connection = (URL(url).openConnection() as HttpURLConnection).apply {
+            val requestWidth = 960
+            val requestHeight = 640
+
+            val boundsConnection = (URL(url).openConnection() as HttpURLConnection).apply {
                 requestMethod = "GET"
-                connectTimeout = 4000
-                readTimeout = 4000
+                connectTimeout = 5000
+                readTimeout = 5000
+                doInput = true
+                setRequestProperty("User-Agent", "GrenobleSkiAndroid")
             }
-            connection.inputStream.use { stream ->
-                BitmapFactory.decodeStream(stream)?.asImageBitmap()
+
+            val bounds = BitmapFactory.Options().apply {
+                inJustDecodeBounds = true
+            }
+            boundsConnection.inputStream.use { stream ->
+                BitmapFactory.decodeStream(stream, null, bounds)
+            }
+            boundsConnection.disconnect()
+
+            val decodeConnection = (URL(url).openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = 5000
+                readTimeout = 5000
+                doInput = true
+                setRequestProperty("User-Agent", "GrenobleSkiAndroid")
+            }
+
+            val options = BitmapFactory.Options().apply {
+                inSampleSize = calculateInSampleSize(bounds, requestWidth, requestHeight)
+                inPreferredConfig = Bitmap.Config.RGB_565
+                inDither = true
+            }
+            decodeConnection.inputStream.use { stream ->
+                BitmapFactory.decodeStream(stream, null, options)?.asImageBitmap()
             }.also {
-                connection.disconnect()
+                decodeConnection.disconnect()
             }
         } catch (_: Exception) {
             null

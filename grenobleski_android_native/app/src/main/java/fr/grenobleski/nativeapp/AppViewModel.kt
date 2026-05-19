@@ -62,6 +62,10 @@ data class AppUiState(
     val favoriteBusLineIds: Set<Int> = emptySet(),
     val favoriteServiceIds: Set<Int> = emptySet(),
     val marketplaceItems: List<MarketplaceItem> = emptyList(),
+    val marketplacePage: Int = 1,
+    val marketplaceNextPage: Int? = 2,
+    val marketplaceHasNextPage: Boolean = true,
+    val isMarketplaceLoadingMore: Boolean = false,
     val partnerItems: List<SkiPartnerItem> = emptyList(),
     val instructorItems: List<InstructorItem> = emptyList(),
     val pisteItems: List<PisteItem> = emptyList(),
@@ -105,6 +109,7 @@ class AppViewModel(
     private val sessionStore: SessionStore,
 ) : ViewModel() {
     companion object {
+        private const val MARKETPLACE_PAGE_SIZE = 18
         private const val XP_SEND_MESSAGE = 5
         private const val XP_PUBLISH_MARKET = 20
         private const val XP_PUBLISH_PARTNER = 20
@@ -617,9 +622,19 @@ class AppViewModel(
                 }
 
                 NativeTab.MARKETPLACE -> {
-                    val result = repository.fetchMarketplaceItems(session.token)
+                    val result = repository.fetchMarketplaceItems(
+                        token = session.token,
+                        page = 1,
+                        pageSize = MARKETPLACE_PAGE_SIZE,
+                    )
                     if (result.isSuccess) {
-                        state = state.copy(marketplaceItems = result.getOrNull()!!)
+                        val page = result.getOrNull()!!
+                        state = state.copy(
+                            marketplaceItems = page.items,
+                            marketplacePage = 1,
+                            marketplaceHasNextPage = page.hasNextPage,
+                            marketplaceNextPage = page.nextPage ?: if (page.hasNextPage) 2 else null,
+                        )
                     } else {
                         state = state.copy(errorMessage = result.exceptionOrNull()?.message ?: "Unable to load marketplace")
                     }
@@ -764,6 +779,37 @@ class AppViewModel(
                 state = state.copy(
                     isStoriesLoadingMore = false,
                     errorMessage = result.exceptionOrNull()?.message ?: "Unable to load more stories",
+                )
+            }
+        }
+    }
+
+    fun loadMoreMarketplace() {
+        val session = state.session ?: return
+        if (state.isMarketplaceLoadingMore || !state.marketplaceHasNextPage) return
+        val nextPage = state.marketplaceNextPage ?: (state.marketplacePage + 1)
+
+        viewModelScope.launch {
+            state = state.copy(isMarketplaceLoadingMore = true, errorMessage = null)
+            val result = repository.fetchMarketplaceItems(
+                token = session.token,
+                page = nextPage,
+                pageSize = MARKETPLACE_PAGE_SIZE,
+            )
+            if (result.isSuccess) {
+                val page = result.getOrNull()!!
+                val merged = (state.marketplaceItems + page.items).distinctBy { it.id }
+                state = state.copy(
+                    marketplaceItems = merged,
+                    marketplacePage = nextPage,
+                    marketplaceHasNextPage = page.hasNextPage,
+                    marketplaceNextPage = page.nextPage ?: if (page.hasNextPage) nextPage + 1 else null,
+                    isMarketplaceLoadingMore = false,
+                )
+            } else {
+                state = state.copy(
+                    isMarketplaceLoadingMore = false,
+                    errorMessage = result.exceptionOrNull()?.message ?: "Unable to load more marketplace listings",
                 )
             }
         }
@@ -935,7 +981,11 @@ class AppViewModel(
             if (result.isSuccess) {
                 state = state.copy(isSendingMessage = false, messageDraftBody = "", statusMessage = null)
                 repository.addFriend(session.token, recipientId)
-                refreshMessagesData(session, preserveSelection = recipientId)
+                refreshMessagesData(
+                    session = session,
+                    preserveSelection = recipientId,
+                    refreshUsersAndFriends = false,
+                )
                 awardXp(XP_SEND_MESSAGE, "Message envoye")
             } else {
                 val msg = result.exceptionOrNull()?.message ?: "Unable to send message"
@@ -1314,9 +1364,17 @@ class AppViewModel(
                 current.serviceStoreItems
             }
 
-            val marketplaceItems = repository.fetchMarketplaceItems(session.token).getOrElse {
+            val marketplacePage = repository.fetchMarketplaceItems(
+                token = session.token,
+                page = 1,
+                pageSize = MARKETPLACE_PAGE_SIZE,
+            ).getOrElse {
                 firstError = firstError ?: (it.message ?: "Unable to load marketplace")
-                current.marketplaceItems
+                fr.grenobleski.nativeapp.data.model.MarketplacePage(
+                    items = current.marketplaceItems,
+                    hasNextPage = current.marketplaceHasNextPage,
+                    nextPage = current.marketplaceNextPage,
+                )
             }
 
             val partnerItems = repository.fetchPartnerItems(session.token).getOrElse {
@@ -1372,7 +1430,11 @@ class AppViewModel(
                 stationItems = stationItems,
                 busLineItems = busLineItems,
                 serviceStoreItems = serviceStoreItems,
-                marketplaceItems = marketplaceItems,
+                marketplaceItems = marketplacePage.items,
+                marketplacePage = 1,
+                marketplaceHasNextPage = marketplacePage.hasNextPage,
+                marketplaceNextPage = marketplacePage.nextPage ?: if (marketplacePage.hasNextPage) 2 else null,
+                isMarketplaceLoadingMore = false,
                 partnerItems = partnerItems,
                 instructorItems = instructorItems,
                 pisteItems = pisteItems,
@@ -1389,11 +1451,27 @@ class AppViewModel(
         }
     }
 
-    private suspend fun refreshMessagesData(session: UserSession, preserveSelection: Int?) {
+    private suspend fun refreshMessagesData(
+        session: UserSession,
+        preserveSelection: Int?,
+        refreshUsersAndFriends: Boolean = true,
+    ) {
         val messages = repository.fetchMessageItems(session.token).getOrElse { state.messageItems }
-        val users = repository.fetchChatUsers(session.token).getOrElse { state.chatUsers }
-        val links = repository.fetchFriendLinks(session.token).getOrElse { state.friendLinks }
-        val invitations = repository.fetchFriendInvitations(session.token).getOrElse { state.friendInvitations }
+        val users = if (refreshUsersAndFriends) {
+            repository.fetchChatUsers(session.token).getOrElse { state.chatUsers }
+        } else {
+            state.chatUsers
+        }
+        val links = if (refreshUsersAndFriends) {
+            repository.fetchFriendLinks(session.token).getOrElse { state.friendLinks }
+        } else {
+            state.friendLinks
+        }
+        val invitations = if (refreshUsersAndFriends) {
+            repository.fetchFriendInvitations(session.token).getOrElse { state.friendInvitations }
+        } else {
+            state.friendInvitations
+        }
 
         state = state.copy(
             messageItems = messages,

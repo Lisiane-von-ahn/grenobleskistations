@@ -186,6 +186,12 @@ data class MarketplaceItem(
     val imageGalleryBase64: List<String> = emptyList(),
 )
 
+data class MarketplacePage(
+    val items: List<MarketplaceItem>,
+    val hasNextPage: Boolean,
+    val nextPage: Int? = null,
+)
+
 data class SkiPartnerItem(
     val id: Int,
     val organizerId: Int,

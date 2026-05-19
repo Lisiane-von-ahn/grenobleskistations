@@ -278,9 +278,28 @@ class SkiCircuitViewSet(viewsets.ModelViewSet):
     queryset = SkiCircuit.objects.all()
     serializer_class = SkiCircuitSerializer
 
+
+class MobileMarketplacePagination(PageNumberPagination):
+    page_size = 18
+    page_size_query_param = 'page_size'
+    max_page_size = 24
+
+
+class MobileMessagesPagination(PageNumberPagination):
+    page_size = 60
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
+class MobileUsersPagination(PageNumberPagination):
+    page_size = 120
+    page_size_query_param = 'page_size'
+    max_page_size = 200
+
 class SkiMaterialListingViewSet(viewsets.ModelViewSet):
     queryset = SkiMaterialListing.objects.all()
     serializer_class = SkiMaterialListingSerializer
+    pagination_class = MobileMarketplacePagination
 
     def perform_create(self, serializer):
         user_id = self.request.data.get('user')
@@ -326,6 +345,7 @@ class SkiMaterialListingViewSet(viewsets.ModelViewSet):
 class MessageViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = MessageSerializer
+    pagination_class = MobileMessagesPagination
 
     def get_queryset(self):
         user = _current_authenticated_user(self)
@@ -399,6 +419,7 @@ class UserViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    pagination_class = MobileUsersPagination
 
     def get_queryset(self):
         qs = User.objects.all().order_by('-date_joined')
