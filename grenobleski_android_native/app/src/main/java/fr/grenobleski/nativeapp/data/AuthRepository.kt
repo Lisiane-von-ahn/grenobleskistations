@@ -8,6 +8,7 @@ import fr.grenobleski.nativeapp.data.model.BusLineItem
 import fr.grenobleski.nativeapp.data.model.CarpoolPendingReservation
 import fr.grenobleski.nativeapp.data.model.ChatUserOption
 import fr.grenobleski.nativeapp.data.model.FriendLink
+import fr.grenobleski.nativeapp.data.model.FriendInvitation
 import fr.grenobleski.nativeapp.data.model.InstructorItem
 import fr.grenobleski.nativeapp.data.model.LoginRequest
 import fr.grenobleski.nativeapp.data.model.LoginResponse
@@ -302,6 +303,7 @@ class AuthRepository(
                 link = obj.stringOrBlank("link"),
                 sourceName = obj.stringOrBlank("source_name").ifBlank { "News" },
                 language = obj.stringOrBlank("language").ifBlank { language },
+                stationId = obj.intOrZero("ski_station", "ski_station_id").takeIf { it > 0 },
                 stationName = obj.stringOrBlank("station_name"),
                 publishedAtLabel = formatServerDateTime(obj.stringOrBlank("published_at")),
                 publishedAtRaw = obj.stringOrBlank("published_at"),
@@ -853,7 +855,31 @@ class AuthRepository(
         Result.success(links)
     }
 
-    suspend fun addFriend(token: String, friendId: Int): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun fetchFriendInvitations(token: String): Result<List<FriendInvitation>> = withContext(Dispatchers.IO) {
+        val authHeader = "Token $token"
+        val payload = fetchPayloadFromCandidates(listOf("/api/friend-invitations/", "/api/friend-invitations"), authHeader)
+            ?: return@withContext Result.success(emptyList())
+
+        val invitations = extractObjectList(payload).mapNotNull { obj ->
+            val id = obj.intOrZero("id")
+            val fromUserId = obj.intOrZero("from_user")
+            val toUserId = obj.intOrZero("to_user")
+            val status = obj.stringOrBlank("status")
+            if (id <= 0 || fromUserId <= 0 || toUserId <= 0 || status.isBlank()) {
+                null
+            } else {
+                FriendInvitation(
+                    id = id,
+                    fromUserId = fromUserId,
+                    toUserId = toUserId,
+                    status = status,
+                )
+            }
+        }
+        Result.success(invitations)
+    }
+
+    suspend fun addFriend(token: String, friendId: Int): Result<String> = withContext(Dispatchers.IO) {
         if (friendId <= 0) {
             return@withContext Result.failure(IllegalStateException("Invalid friend id."))
         }
@@ -868,6 +894,73 @@ class AuthRepository(
 
         if (!response.isSuccessful) {
             val bodyText = response.errorBody()?.string().orEmpty().ifBlank { "Unable to add friend." }
+            return@withContext Result.failure(IllegalStateException(bodyText))
+        }
+
+        val statusValue = runCatching {
+            response.body()?.takeIf { it.isJsonObject }?.asJsonObject?.stringOrBlank("status")
+        }.getOrNull().orEmpty().ifBlank { "sent" }
+
+        Result.success(statusValue)
+    }
+
+    suspend fun acceptFriendInvitation(token: String, invitationId: Int): Result<Unit> = withContext(Dispatchers.IO) {
+        if (invitationId <= 0) {
+            return@withContext Result.failure(IllegalStateException("Invalid invitation id."))
+        }
+        val authHeader = "Token $token"
+        val response = runCatching {
+            service.postResource(
+                url = "$normalizedBaseUrl/api/friend-invitations/$invitationId/accept/",
+                authHeader = authHeader,
+                payload = emptyMap(),
+            )
+        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to accept invitation."))
+
+        if (!response.isSuccessful) {
+            val bodyText = response.errorBody()?.string().orEmpty().ifBlank { "Unable to accept invitation." }
+            return@withContext Result.failure(IllegalStateException(bodyText))
+        }
+
+        Result.success(Unit)
+    }
+
+    suspend fun declineFriendInvitation(token: String, invitationId: Int): Result<Unit> = withContext(Dispatchers.IO) {
+        if (invitationId <= 0) {
+            return@withContext Result.failure(IllegalStateException("Invalid invitation id."))
+        }
+        val authHeader = "Token $token"
+        val response = runCatching {
+            service.postResource(
+                url = "$normalizedBaseUrl/api/friend-invitations/$invitationId/decline/",
+                authHeader = authHeader,
+                payload = emptyMap(),
+            )
+        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to decline invitation."))
+
+        if (!response.isSuccessful) {
+            val bodyText = response.errorBody()?.string().orEmpty().ifBlank { "Unable to decline invitation." }
+            return@withContext Result.failure(IllegalStateException(bodyText))
+        }
+
+        Result.success(Unit)
+    }
+
+    suspend fun cancelFriendInvitation(token: String, invitationId: Int): Result<Unit> = withContext(Dispatchers.IO) {
+        if (invitationId <= 0) {
+            return@withContext Result.failure(IllegalStateException("Invalid invitation id."))
+        }
+        val authHeader = "Token $token"
+        val response = runCatching {
+            service.postResource(
+                url = "$normalizedBaseUrl/api/friend-invitations/$invitationId/cancel/",
+                authHeader = authHeader,
+                payload = emptyMap(),
+            )
+        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to cancel invitation."))
+
+        if (!response.isSuccessful) {
+            val bodyText = response.errorBody()?.string().orEmpty().ifBlank { "Unable to cancel invitation." }
             return@withContext Result.failure(IllegalStateException(bodyText))
         }
 

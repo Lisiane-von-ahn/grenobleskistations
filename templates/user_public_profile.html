@@ -274,10 +274,25 @@
                     {% csrf_token %}
                     <button type="submit" class="btn btn-outline-danger">{% trans "Retirer ami" %}</button>
                 </form>
+                {% elif incoming_pending %}
+                <form method="post" action="{% url 'story_add_friend' user_id=target_user.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary">{% trans "Accepter l'invitation" %}</button>
+                </form>
+                <form method="post" action="{% url 'story_decline_friend_invitation' user_id=target_user.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-secondary">{% trans "Refuser" %}</button>
+                </form>
+                {% elif outgoing_pending %}
+                <span class="btn btn-outline-secondary disabled">{% trans "Invitation en attente" %}</span>
+                <form method="post" action="{% url 'story_cancel_friend_invitation' user_id=target_user.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-danger">{% trans "Annuler l'invitation" %}</button>
+                </form>
                 {% else %}
                 <form method="post" action="{% url 'story_add_friend' user_id=target_user.id %}">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-primary">{% trans "Ajouter en ami" %}</button>
+                    <button type="submit" class="btn btn-primary">{% trans "Inviter en ami" %}</button>
                 </form>
                 {% endif %}
                 <a href="{% url 'messages' %}?user={{ target_user.id }}" class="btn btn-outline-secondary">{% trans "Envoyer un message" %}</a>

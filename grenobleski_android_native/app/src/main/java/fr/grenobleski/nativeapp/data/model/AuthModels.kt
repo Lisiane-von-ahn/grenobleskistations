@@ -100,6 +100,7 @@ data class SkiNewsItem(
     val link: String,
     val sourceName: String,
     val language: String,
+    val stationId: Int?,
     val stationName: String,
     val publishedAtLabel: String,
     val publishedAtRaw: String,
@@ -278,4 +279,11 @@ data class ChatUserOption(
 data class FriendLink(
     val id: Int,
     val friendId: Int,
+)
+
+data class FriendInvitation(
+    val id: Int,
+    val fromUserId: Int,
+    val toUserId: Int,
+    val status: String,
 )

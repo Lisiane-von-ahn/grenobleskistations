@@ -24,6 +24,7 @@ from .views import (
     SkiStoryViewSet,
     SnowConditionUpdateViewSet,
     UserBadgeViewSet,
+    FriendInvitationViewSet,
     UserFriendViewSet,
     UserGameStatsViewSet,
     UserProfileViewSet,
@@ -56,6 +57,7 @@ router.register(r'marketplace-saved-filters', MarketplaceSavedFilterViewSet, bas
 router.register(r'marketplace-deals', MarketplaceDealViewSet, basename='marketplace-deals')
 router.register(r'marketplace-ratings', MarketplaceUserRatingViewSet, basename='marketplace-ratings')
 router.register(r'userfriends', UserFriendViewSet, basename='userfriends')
+router.register(r'friend-invitations', FriendInvitationViewSet, basename='friend-invitations')
 router.register(r'gamification/game-stats', UserGameStatsViewSet, basename='game-stats')
 router.register(r'gamification/points', GamificationPointsViewSet, basename='points')
 router.register(r'gamification/badges', GamificationBadgeViewSet, basename='badges')

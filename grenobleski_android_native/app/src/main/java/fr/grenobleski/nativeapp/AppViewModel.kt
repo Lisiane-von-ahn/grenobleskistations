@@ -11,6 +11,7 @@ import fr.grenobleski.nativeapp.data.model.DashboardCounts
 import fr.grenobleski.nativeapp.data.model.BusLineItem
 import fr.grenobleski.nativeapp.data.model.ChatUserOption
 import fr.grenobleski.nativeapp.data.model.FriendLink
+import fr.grenobleski.nativeapp.data.model.FriendInvitation
 import fr.grenobleski.nativeapp.data.model.InstructorItem
 import fr.grenobleski.nativeapp.data.model.MarketplaceItem
 import fr.grenobleski.nativeapp.data.model.MessageItem
@@ -67,6 +68,7 @@ data class AppUiState(
     val messageItems: List<MessageItem> = emptyList(),
     val chatUsers: List<ChatUserOption> = emptyList(),
     val friendLinks: List<FriendLink> = emptyList(),
+    val friendInvitations: List<FriendInvitation> = emptyList(),
     val messageRecipientId: Int? = null,
     val messageDraftBody: String = "",
     val isSendingMessage: Boolean = false,
@@ -359,8 +361,15 @@ class AppViewModel(
             state = state.copy(errorMessage = null, statusMessage = null)
             val result = repository.addFriend(session.token, friendId)
             if (result.isSuccess) {
+                val inviteStatus = result.getOrNull().orEmpty()
                 refreshMessagesData(session, preserveSelection = friendId)
-                state = state.copy(statusMessage = "Contact ajoute a votre liste.")
+                val message = when (inviteStatus) {
+                    "accepted" -> "Invitation acceptee. Vous etes maintenant amis."
+                    "already_friends" -> "Vous etes deja amis."
+                    "pending" -> "Invitation deja en attente."
+                    else -> "Invitation envoyee."
+                }
+                state = state.copy(statusMessage = message)
             } else {
                 val message = result.exceptionOrNull()?.message ?: "Unable to add friend"
                 state = state.copy(errorMessage = message)
@@ -387,6 +396,81 @@ class AppViewModel(
                 state = state.copy(messageRecipientId = newRecipient, statusMessage = "Contact retire.")
             } else {
                 val message = result.exceptionOrNull()?.message ?: "Unable to remove friend"
+                state = state.copy(errorMessage = message)
+            }
+        }
+    }
+
+    fun acceptFriendInvitation(friendId: Int) {
+        val session = state.session ?: return
+        if (friendId <= 0) return
+
+        val invitation = state.friendInvitations.firstOrNull {
+            it.fromUserId == friendId && it.toUserId == (state.profileInfo?.userId ?: state.session?.userId ?: -1) && it.status == "pending"
+        }
+        if (invitation == null) {
+            state = state.copy(errorMessage = "Invitation introuvable.")
+            return
+        }
+
+        viewModelScope.launch {
+            state = state.copy(errorMessage = null, statusMessage = null)
+            val result = repository.acceptFriendInvitation(session.token, invitation.id)
+            if (result.isSuccess) {
+                refreshMessagesData(session, preserveSelection = friendId)
+                state = state.copy(statusMessage = "Invitation acceptee.")
+            } else {
+                val message = result.exceptionOrNull()?.message ?: "Unable to accept invitation"
+                state = state.copy(errorMessage = message)
+            }
+        }
+    }
+
+    fun declineFriendInvitation(friendId: Int) {
+        val session = state.session ?: return
+        if (friendId <= 0) return
+
+        val invitation = state.friendInvitations.firstOrNull {
+            it.fromUserId == friendId && it.toUserId == (state.profileInfo?.userId ?: state.session?.userId ?: -1) && it.status == "pending"
+        }
+        if (invitation == null) {
+            state = state.copy(errorMessage = "Invitation introuvable.")
+            return
+        }
+
+        viewModelScope.launch {
+            state = state.copy(errorMessage = null, statusMessage = null)
+            val result = repository.declineFriendInvitation(session.token, invitation.id)
+            if (result.isSuccess) {
+                refreshMessagesData(session, preserveSelection = state.messageRecipientId)
+                state = state.copy(statusMessage = "Invitation refusee.")
+            } else {
+                val message = result.exceptionOrNull()?.message ?: "Unable to decline invitation"
+                state = state.copy(errorMessage = message)
+            }
+        }
+    }
+
+    fun cancelFriendInvitation(friendId: Int) {
+        val session = state.session ?: return
+        if (friendId <= 0) return
+
+        val invitation = state.friendInvitations.firstOrNull {
+            it.toUserId == friendId && it.fromUserId == (state.profileInfo?.userId ?: state.session?.userId ?: -1) && it.status == "pending"
+        }
+        if (invitation == null) {
+            state = state.copy(errorMessage = "Invitation introuvable.")
+            return
+        }
+
+        viewModelScope.launch {
+            state = state.copy(errorMessage = null, statusMessage = null)
+            val result = repository.cancelFriendInvitation(session.token, invitation.id)
+            if (result.isSuccess) {
+                refreshMessagesData(session, preserveSelection = state.messageRecipientId)
+                state = state.copy(statusMessage = "Invitation annulee.")
+            } else {
+                val message = result.exceptionOrNull()?.message ?: "Unable to cancel invitation"
                 state = state.copy(errorMessage = message)
             }
         }
@@ -572,11 +656,13 @@ class AppViewModel(
                     val result = repository.fetchMessageItems(session.token)
                     val usersResult = repository.fetchChatUsers(session.token)
                     val friendsResult = repository.fetchFriendLinks(session.token)
+                    val invitationsResult = repository.fetchFriendInvitations(session.token)
                     if (result.isSuccess) {
                         state = state.copy(
                             messageItems = result.getOrNull()!!,
                             chatUsers = usersResult.getOrDefault(state.chatUsers),
                             friendLinks = friendsResult.getOrDefault(state.friendLinks),
+                            friendInvitations = invitationsResult.getOrDefault(state.friendInvitations),
                         )
                     } else {
                         state = state.copy(errorMessage = result.exceptionOrNull()?.message ?: "Unable to load messages")
@@ -1261,6 +1347,10 @@ class AppViewModel(
                 current.friendLinks
             }
 
+            val friendInvitations = repository.fetchFriendInvitations(session.token).getOrElse {
+                current.friendInvitations
+            }
+
             val profileInfo = repository.fetchProfileInfo(session.token).getOrElse {
                 firstError = firstError ?: (it.message ?: "Unable to load profile")
                 current.profileInfo
@@ -1289,6 +1379,7 @@ class AppViewModel(
                 messageItems = messageItems,
                 chatUsers = chatUsers,
                 friendLinks = friendLinks,
+                friendInvitations = friendInvitations,
                 profileInfo = profileInfo,
                 // Avoid noisy global errors at startup; errors are surfaced on explicit tab refresh/actions.
                 errorMessage = null,
@@ -1302,11 +1393,13 @@ class AppViewModel(
         val messages = repository.fetchMessageItems(session.token).getOrElse { state.messageItems }
         val users = repository.fetchChatUsers(session.token).getOrElse { state.chatUsers }
         val links = repository.fetchFriendLinks(session.token).getOrElse { state.friendLinks }
+        val invitations = repository.fetchFriendInvitations(session.token).getOrElse { state.friendInvitations }
 
         state = state.copy(
             messageItems = messages,
             chatUsers = users,
             friendLinks = links,
+            friendInvitations = invitations,
             messageRecipientId = preserveSelection,
         )
     }

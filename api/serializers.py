@@ -33,6 +33,7 @@ from .models import (
     SkiStoryComment,
     SkiStoryLike,
     SnowConditionUpdate,
+    FriendInvitation,
     UserBadge,
     UserFriend,
     UserGameStats,
@@ -488,6 +489,32 @@ class UserFriendSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserFriend
         fields = '__all__'
+
+
+class FriendInvitationSerializer(serializers.ModelSerializer):
+    from_user_label = serializers.SerializerMethodField()
+    to_user_label = serializers.SerializerMethodField()
+
+    class Meta:
+        model = FriendInvitation
+        fields = [
+            'id',
+            'from_user',
+            'to_user',
+            'status',
+            'created_at',
+            'updated_at',
+            'responded_at',
+            'from_user_label',
+            'to_user_label',
+        ]
+        read_only_fields = ['status', 'created_at', 'updated_at', 'responded_at']
+
+    def get_from_user_label(self, obj):
+        return _display_name_for_user(obj.from_user)
+
+    def get_to_user_label(self, obj):
+        return _display_name_for_user(obj.to_user)
 
 
 class GamificationPointsSerializer(serializers.ModelSerializer):

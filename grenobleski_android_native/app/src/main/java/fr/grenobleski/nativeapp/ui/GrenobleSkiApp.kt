@@ -319,6 +319,9 @@ fun GrenobleSkiApp(
             onSelectMessageRecipient = viewModel::selectMessageRecipient,
             onAddFriend = viewModel::addFriend,
             onRemoveFriend = viewModel::removeFriend,
+            onAcceptFriendInvitation = viewModel::acceptFriendInvitation,
+            onDeclineFriendInvitation = viewModel::declineFriendInvitation,
+            onCancelFriendInvitation = viewModel::cancelFriendInvitation,
             onMessageBodyChange = viewModel::updateMessageDraftBody,
             onSendMessage = viewModel::sendMessageDraft,
             onProfileFirstNameChange = viewModel::updateProfileEditFirstName,
@@ -638,6 +641,9 @@ private fun NativeShell(
     onSelectMessageRecipient: (Int) -> Unit,
     onAddFriend: (Int) -> Unit,
     onRemoveFriend: (Int) -> Unit,
+    onAcceptFriendInvitation: (Int) -> Unit,
+    onDeclineFriendInvitation: (Int) -> Unit,
+    onCancelFriendInvitation: (Int) -> Unit,
     onMessageBodyChange: (String) -> Unit,
     onSendMessage: () -> Unit,
     onProfileFirstNameChange: (String) -> Unit,
@@ -896,6 +902,9 @@ private fun NativeShell(
                     onSelectRecipient = onSelectMessageRecipient,
                     onAddFriend = onAddFriend,
                     onRemoveFriend = onRemoveFriend,
+                    onAcceptFriendInvitation = onAcceptFriendInvitation,
+                    onDeclineFriendInvitation = onDeclineFriendInvitation,
+                    onCancelFriendInvitation = onCancelFriendInvitation,
                     onBodyChange = onMessageBodyChange,
                     onSend = onSendMessage,
                 )
@@ -2019,14 +2028,20 @@ private fun StationsTab(
             state.skiNewsItems,
             state.highlightedSkiNewsItems,
         ) {
-            val stationName = stationDetails.name.trim()
+            val stationName = stationDetails.name.trim().lowercase()
             val highlighted = state.highlightedSkiNewsItems
-                .filter { it.stationName.equals(stationName, ignoreCase = true) }
+                .filter {
+                    it.stationId == stationDetails.id ||
+                        it.stationName.trim().lowercase() == stationName
+                }
             if (highlighted.isNotEmpty()) {
                 highlighted.take(3)
             } else {
                 state.skiNewsItems
-                    .filter { it.stationName.equals(stationName, ignoreCase = true) }
+                    .filter {
+                        it.stationId == stationDetails.id ||
+                            it.stationName.trim().lowercase() == stationName
+                    }
                     .take(3)
             }
         }
@@ -3726,6 +3741,9 @@ private fun MessagesTab(
     onSelectRecipient: (Int) -> Unit,
     onAddFriend: (Int) -> Unit,
     onRemoveFriend: (Int) -> Unit,
+    onAcceptFriendInvitation: (Int) -> Unit,
+    onDeclineFriendInvitation: (Int) -> Unit,
+    onCancelFriendInvitation: (Int) -> Unit,
     onBodyChange: (String) -> Unit,
     onSend: () -> Unit,
 ) {
@@ -3733,12 +3751,22 @@ private fun MessagesTab(
     var chatSearch by remember { mutableStateOf("") }
     var addFriendDialogOpen by remember { mutableStateOf(false) }
     var addFriendSearch by remember { mutableStateOf("") }
+    val currentUserId = state.profileInfo?.userId?.takeIf { it > 0 } ?: state.session?.userId ?: 0
     val friendIds = remember(state.friendLinks) { state.friendLinks.map { it.friendId }.toSet() }
+    val incomingInvitationFromIds = remember(state.friendInvitations, currentUserId) {
+        state.friendInvitations.filter { it.status == "pending" && it.toUserId == currentUserId }.map { it.fromUserId }.toSet()
+    }
+    val outgoingInvitationToIds = remember(state.friendInvitations, currentUserId) {
+        state.friendInvitations.filter { it.status == "pending" && it.fromUserId == currentUserId }.map { it.toUserId }.toSet()
+    }
 
-    val threadSummaries = remember(state.messageItems, state.chatUsers, myUserId) {
+    val threadSummaries = remember(state.messageItems, myUserId) {
         val map = linkedMapOf<Int, ChatThreadSummary>()
 
         state.messageItems.forEach { item ->
+            if (myUserId > 0 && item.senderId != myUserId && item.recipientId != myUserId) {
+                return@forEach
+            }
             val outgoing = myUserId > 0 && item.senderId == myUserId
             val otherId = if (outgoing) item.recipientId else item.senderId
             if (otherId <= 0 || otherId == myUserId) return@forEach
@@ -3764,42 +3792,40 @@ private fun MessagesTab(
             }
         }
 
-        state.chatUsers.forEach { user ->
-            if (user.id <= 0 || user.id == myUserId) return@forEach
-            val existing = map[user.id]
-            if (existing == null) {
-                map[user.id] = ChatThreadSummary(
-                    userId = user.id,
-                    label = user.label,
-                    photoBase64 = user.photoBase64,
-                    photoUrl = user.photoUrl,
-                    lastMessage = "",
-                    lastDateLabel = "",
-                    unreadCount = 0,
-                )
-            } else if (existing.photoBase64.isBlank() && existing.photoUrl.isBlank()) {
-                map[user.id] = existing.copy(
-                    label = existing.label.ifBlank { user.label },
-                    photoBase64 = user.photoBase64,
-                    photoUrl = user.photoUrl,
-                )
+        map.values.toList()
+    }
+
+    val chatUsersById = remember(state.chatUsers) { state.chatUsers.associateBy { it.id } }
+
+    val friendThreads = remember(state.friendLinks, threadSummaries, chatUsersById) {
+        state.friendLinks.mapNotNull { link ->
+            val friendId = link.friendId
+            if (friendId <= 0) {
+                null
+            } else {
+                threadSummaries.firstOrNull { it.userId == friendId } ?: run {
+                    val fallback = chatUsersById[friendId]
+                    ChatThreadSummary(
+                        userId = friendId,
+                        label = fallback?.label ?: "Utilisateur #$friendId",
+                        photoBase64 = fallback?.photoBase64.orEmpty(),
+                        photoUrl = fallback?.photoUrl.orEmpty(),
+                        lastMessage = "",
+                        lastDateLabel = "",
+                        unreadCount = 0,
+                    )
+                }
             }
         }
-
-        map.values.toList()
     }
 
     val conversationThreads = remember(threadSummaries) {
         threadSummaries.filter { it.lastMessage.isNotBlank() }
     }
 
-    val pinnedFriendThreads = remember(threadSummaries, friendIds) {
-        threadSummaries.filter { friendIds.contains(it.userId) && it.lastMessage.isBlank() }
-    }
-
-    val contactThreads = remember(conversationThreads, pinnedFriendThreads) {
+    val contactThreads = remember(conversationThreads, friendThreads) {
         val ordered = conversationThreads.toMutableList()
-        pinnedFriendThreads.forEach { candidate ->
+        friendThreads.forEach { candidate ->
             if (ordered.none { it.userId == candidate.userId }) {
                 ordered.add(candidate)
             }
@@ -3837,10 +3863,12 @@ private fun MessagesTab(
         }
     }
 
-    val recipientOptions = remember(state.chatUsers, addFriendSearch, myUserId, friendIds) {
+    val recipientOptions = remember(state.chatUsers, addFriendSearch, myUserId, friendIds, incomingInvitationFromIds, outgoingInvitationToIds) {
         state.chatUsers.filter { option ->
             option.id != myUserId &&
                 !friendIds.contains(option.id) &&
+                !incomingInvitationFromIds.contains(option.id) &&
+                !outgoingInvitationToIds.contains(option.id) &&
                 (addFriendSearch.length >= 2 && option.label.contains(addFriendSearch, ignoreCase = true))
         }
     }
@@ -3881,6 +3909,40 @@ private fun MessagesTab(
                     Button(onClick = { addFriendDialogOpen = true }, modifier = Modifier.fillMaxWidth()) {
                         Text(stringResource(id = R.string.add_friend))
                     }
+                    if (friendThreads.isNotEmpty()) {
+                        Text(
+                            text = stringResource(id = R.string.friends_list_title),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(friendThreads) { friend ->
+                                OutlinedButton(
+                                    onClick = {
+                                        onSelectRecipient(friend.userId)
+                                        showThreadView = true
+                                    }
+                                ) {
+                                    Text(friend.label, maxLines = 1)
+                                }
+                            }
+                        }
+                    }
+                    val incomingInvites = state.chatUsers.filter { incomingInvitationFromIds.contains(it.id) }
+                    if (incomingInvites.isNotEmpty()) {
+                        Text(
+                            text = stringResource(id = R.string.invites_received_title),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(incomingInvites) { inviteUser ->
+                                OutlinedButton(onClick = { onAcceptFriendInvitation(inviteUser.id) }) {
+                                    Text(inviteUser.label, maxLines = 1)
+                                }
+                            }
+                        }
+                    }
                     Text(
                         text = stringResource(id = R.string.conversations),
                         style = MaterialTheme.typography.labelLarge,
@@ -3902,6 +3964,8 @@ private fun MessagesTab(
                     items(filteredThreads) { thread ->
                         val selected = thread.userId == selectedRecipientId
                         val isFriend = friendIds.contains(thread.userId)
+                        val hasIncomingInvitation = incomingInvitationFromIds.contains(thread.userId)
+                        val hasOutgoingInvitation = outgoingInvitationToIds.contains(thread.userId)
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -3968,6 +4032,17 @@ private fun MessagesTab(
                                         TextButton(onClick = { onRemoveFriend(thread.userId) }) {
                                             Text(stringResource(id = R.string.remove_friend))
                                         }
+                                    } else if (hasIncomingInvitation) {
+                                        TextButton(onClick = { onAcceptFriendInvitation(thread.userId) }) {
+                                            Text(stringResource(id = R.string.accept_invite))
+                                        }
+                                        TextButton(onClick = { onDeclineFriendInvitation(thread.userId) }) {
+                                            Text(stringResource(id = R.string.decline_invite))
+                                        }
+                                    } else if (hasOutgoingInvitation) {
+                                        TextButton(onClick = { onCancelFriendInvitation(thread.userId) }) {
+                                            Text(stringResource(id = R.string.cancel_invite))
+                                        }
                                     } else if (thread.lastMessage.isNotBlank()) {
                                         Text(
                                             text = stringResource(id = R.string.new_contact_label),
@@ -4022,8 +4097,22 @@ private fun MessagesTab(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    TextButton(onClick = { addFriendDialogOpen = true }) {
-                        Text(stringResource(id = R.string.add_friend))
+                    val selectedUserId = selectedThread?.userId
+                    val selectedIsFriend = selectedUserId != null && friendIds.contains(selectedUserId)
+                    val selectedIncomingInvitation = selectedUserId != null && incomingInvitationFromIds.contains(selectedUserId)
+                    val selectedOutgoingInvitation = selectedUserId != null && outgoingInvitationToIds.contains(selectedUserId)
+                    if (selectedUserId != null && !selectedIsFriend && !selectedIncomingInvitation && !selectedOutgoingInvitation) {
+                        TextButton(onClick = { onAddFriend(selectedUserId) }) {
+                            Text(stringResource(id = R.string.add_friend))
+                        }
+                    } else if (selectedIncomingInvitation && selectedUserId != null) {
+                        TextButton(onClick = { onAcceptFriendInvitation(selectedUserId) }) {
+                            Text(stringResource(id = R.string.accept_invite))
+                        }
+                    } else if (selectedOutgoingInvitation && selectedUserId != null) {
+                        TextButton(onClick = { onCancelFriendInvitation(selectedUserId) }) {
+                            Text(stringResource(id = R.string.cancel_invite))
+                        }
                     }
                 }
             }

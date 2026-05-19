@@ -71,6 +71,7 @@ from .models import (
     SkiStoryComment,
     SkiStoryLike,
     SnowConditionUpdate,
+    FriendInvitation,
     UserBadge,
     UserFriend,
     UserGameStats,
@@ -103,6 +104,7 @@ from .serializers import (
     SnowConditionUpdateSerializer,
     UserBadgeSerializer,
     UserFriendSerializer,
+    FriendInvitationSerializer,
     UserGameStatsSerializer,
     UserProfileSerializer,
     UserSerializer,
@@ -138,6 +140,11 @@ def _send_platform_message(sender, recipient, subject, body):
         subject=(subject or 'Notification covoiturage')[:255],
         body=(body or '')[:4000],
     )
+
+
+def _ensure_bidirectional_friendship(user_a, user_b):
+    UserFriend.objects.get_or_create(user=user_a, friend=user_b)
+    UserFriend.objects.get_or_create(user=user_b, friend=user_a)
 
 
 def _decode_base64_binary(value):
@@ -1124,16 +1131,45 @@ class UserFriendViewSet(viewsets.ModelViewSet):
             return UserFriend.objects.none()
         return UserFriend.objects.select_related('user', 'friend').filter(user=user)
 
-    def perform_create(self, serializer):
-        friend = serializer.validated_data.get('friend')
-        user = self.request.user
-        if friend is None:
+    def create(self, request, *args, **kwargs):
+        friend_id = request.data.get('friend')
+        try:
+            friend_id = int(friend_id)
+        except (TypeError, ValueError):
             raise ValidationError('friend is required.')
-        if friend.id == user.id:
+
+        user = request.user
+        friend = User.objects.filter(id=friend_id).exclude(id=user.id).first()
+        if friend is None:
             raise ValidationError('Cannot add yourself as friend.')
 
-        UserFriend.objects.get_or_create(user=user, friend=friend)
-        UserFriend.objects.get_or_create(user=friend, friend=user)
+        if UserFriend.objects.filter(user=user, friend=friend).exists():
+            return Response({'status': 'already_friends'}, status=status.HTTP_200_OK)
+
+        incoming = FriendInvitation.objects.filter(
+            from_user=friend,
+            to_user=user,
+            status=FriendInvitation.STATUS_PENDING,
+        ).first()
+        if incoming:
+            incoming.status = FriendInvitation.STATUS_ACCEPTED
+            incoming.responded_at = timezone.now()
+            incoming.save(update_fields=['status', 'responded_at', 'updated_at'])
+            _ensure_bidirectional_friendship(user, friend)
+            return Response({'status': 'accepted'}, status=status.HTTP_200_OK)
+
+        outgoing = FriendInvitation.objects.filter(from_user=user, to_user=friend).order_by('-created_at').first()
+        if outgoing and outgoing.status == FriendInvitation.STATUS_PENDING:
+            return Response({'status': 'pending'}, status=status.HTTP_200_OK)
+
+        if outgoing and outgoing.status in [FriendInvitation.STATUS_DECLINED, FriendInvitation.STATUS_CANCELLED]:
+            outgoing.status = FriendInvitation.STATUS_PENDING
+            outgoing.responded_at = None
+            outgoing.save(update_fields=['status', 'responded_at', 'updated_at'])
+        else:
+            FriendInvitation.objects.create(from_user=user, to_user=friend, status=FriendInvitation.STATUS_PENDING)
+
+        return Response({'status': 'sent'}, status=status.HTTP_201_CREATED)
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -1176,6 +1212,102 @@ class UserGameStatsViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = self.get_serializer(stats, many=True)
         return Response(serializer.data)
 
+
+class FriendInvitationViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = FriendInvitationSerializer
+
+    def get_queryset(self):
+        user = _current_authenticated_user(self)
+        if user is None:
+            return FriendInvitation.objects.none()
+        return FriendInvitation.objects.select_related('from_user', 'to_user').filter(
+            Q(from_user=user) | Q(to_user=user)
+        )
+
+    def create(self, request, *args, **kwargs):
+        to_user_id = request.data.get('to_user') or request.data.get('friend')
+        try:
+            to_user_id = int(to_user_id)
+        except (TypeError, ValueError):
+            raise ValidationError('to_user is required.')
+
+        user = request.user
+        target = User.objects.filter(id=to_user_id).exclude(id=user.id).first()
+        if target is None:
+            raise ValidationError('Invalid target user.')
+
+        if UserFriend.objects.filter(user=user, friend=target).exists():
+            return Response({'status': 'already_friends'}, status=status.HTTP_200_OK)
+
+        incoming = FriendInvitation.objects.filter(
+            from_user=target,
+            to_user=user,
+            status=FriendInvitation.STATUS_PENDING,
+        ).first()
+        if incoming:
+            incoming.status = FriendInvitation.STATUS_ACCEPTED
+            incoming.responded_at = timezone.now()
+            incoming.save(update_fields=['status', 'responded_at', 'updated_at'])
+            _ensure_bidirectional_friendship(user, target)
+            serializer = self.get_serializer(incoming)
+            return Response({'status': 'accepted', 'invitation': serializer.data}, status=status.HTTP_200_OK)
+
+        existing = FriendInvitation.objects.filter(from_user=user, to_user=target).order_by('-created_at').first()
+        if existing and existing.status == FriendInvitation.STATUS_PENDING:
+            serializer = self.get_serializer(existing)
+            return Response({'status': 'pending', 'invitation': serializer.data}, status=status.HTTP_200_OK)
+
+        if existing and existing.status in [FriendInvitation.STATUS_DECLINED, FriendInvitation.STATUS_CANCELLED]:
+            existing.status = FriendInvitation.STATUS_PENDING
+            existing.responded_at = None
+            existing.save(update_fields=['status', 'responded_at', 'updated_at'])
+            invitation = existing
+        else:
+            invitation = FriendInvitation.objects.create(from_user=user, to_user=target, status=FriendInvitation.STATUS_PENDING)
+
+        serializer = self.get_serializer(invitation)
+        return Response({'status': 'sent', 'invitation': serializer.data}, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'])
+    def accept(self, request, pk=None):
+        invitation = self.get_object()
+        if invitation.to_user_id != request.user.id:
+            return Response({'detail': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
+        if invitation.status != FriendInvitation.STATUS_PENDING:
+            return Response({'detail': 'Invitation is not pending.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        invitation.status = FriendInvitation.STATUS_ACCEPTED
+        invitation.responded_at = timezone.now()
+        invitation.save(update_fields=['status', 'responded_at', 'updated_at'])
+        _ensure_bidirectional_friendship(invitation.from_user, invitation.to_user)
+        return Response({'status': 'accepted'})
+
+    @action(detail=True, methods=['post'])
+    def decline(self, request, pk=None):
+        invitation = self.get_object()
+        if invitation.to_user_id != request.user.id:
+            return Response({'detail': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
+        if invitation.status != FriendInvitation.STATUS_PENDING:
+            return Response({'detail': 'Invitation is not pending.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        invitation.status = FriendInvitation.STATUS_DECLINED
+        invitation.responded_at = timezone.now()
+        invitation.save(update_fields=['status', 'responded_at', 'updated_at'])
+        return Response({'status': 'declined'})
+
+    @action(detail=True, methods=['post'])
+    def cancel(self, request, pk=None):
+        invitation = self.get_object()
+        if invitation.from_user_id != request.user.id:
+            return Response({'detail': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
+        if invitation.status != FriendInvitation.STATUS_PENDING:
+            return Response({'detail': 'Invitation is not pending.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        invitation.status = FriendInvitation.STATUS_CANCELLED
+        invitation.responded_at = timezone.now()
+        invitation.save(update_fields=['status', 'responded_at', 'updated_at'])
+        return Response({'status': 'cancelled'})
 
 class GamificationPointsViewSet(viewsets.ReadOnlyModelViewSet):
     """View earned points history - read only"""

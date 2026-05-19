@@ -170,6 +170,8 @@
                                 <div class="small text-muted">@{{ item.user.username }}</div>
                                 </div>
                                 {% if item.is_friend %}<span class="badge bg-success">Ami</span>{% endif %}
+                                {% if item.incoming_pending %}<span class="badge bg-warning text-dark">Invitation recue</span>{% endif %}
+                                {% if item.outgoing_pending %}<span class="badge bg-secondary">Invitation envoyee</span>{% endif %}
                             </div>
                             <div class="d-flex align-items-center gap-1">
                                 {% if item.unread_count %}<span class="badge bg-primary">{{ item.unread_count }}</span>{% endif %}
@@ -202,10 +204,17 @@
                                     <div class="small text-muted">@{{ item.user.username }}</div>
                                     </div>
                                     {% if item.is_friend %}<span class="badge bg-success">Ami</span>{% endif %}
+                                    {% if item.incoming_pending %}<span class="badge bg-warning text-dark">Invitation recue</span>{% endif %}
+                                    {% if item.outgoing_pending %}<span class="badge bg-secondary">Invitation envoyee</span>{% endif %}
                                 </div>
                                 <div class="d-flex gap-2">
                                     <a class="btn btn-sm btn-primary" href="{% url 'messages' %}?user={{ item.user.id }}">Chat</a>
-                                    {% if not item.is_friend %}
+                                    {% if item.incoming_pending %}
+                                    <button class="btn btn-sm btn-success add-friend-btn" data-id="{{ item.user.id }}">Accepter</button>
+                                    <button class="btn btn-sm btn-outline-secondary decline-friend-btn" data-id="{{ item.user.id }}">Refuser</button>
+                                    {% elif item.outgoing_pending %}
+                                    <button class="btn btn-sm btn-outline-danger cancel-friend-btn" data-id="{{ item.user.id }}">Annuler</button>
+                                    {% elif not item.is_friend %}
                                     <button class="btn btn-sm btn-outline-secondary add-friend-btn" data-id="{{ item.user.id }}">Ajouter</button>
                                     {% endif %}
                                 </div>
@@ -234,6 +243,13 @@
                             </div>
                             {% if selected_is_friend %}
                             <button class="btn btn-sm btn-outline-danger" id="remove-friend-btn" data-id="{{ selected_recipient.id }}">Retirer ami</button>
+                            {% elif selected_incoming_pending %}
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-success add-friend-btn" data-id="{{ selected_recipient.id }}">Accepter</button>
+                                <button class="btn btn-sm btn-outline-secondary decline-friend-btn" data-id="{{ selected_recipient.id }}">Refuser</button>
+                            </div>
+                            {% elif selected_outgoing_pending %}
+                            <button class="btn btn-sm btn-outline-danger cancel-friend-btn" data-id="{{ selected_recipient.id }}">Annuler invitation</button>
                             {% endif %}
                         </div>
                         {% else %}
@@ -309,7 +325,16 @@
 
                 popup.innerHTML = items.map(function (item) {
                 var friendTag = item.is_friend ? '<span class="badge bg-success">Ami</span>' : '';
-                var addBtn = item.is_friend ? '' : '<button class="btn btn-sm btn-outline-secondary add-friend-btn" data-id="' + item.id + '">Ajouter ami</button>';
+                var incomingTag = item.incoming_pending ? '<span class="badge bg-warning text-dark">Invitation recue</span>' : '';
+                var outgoingTag = item.outgoing_pending ? '<span class="badge bg-secondary">Invitation envoyee</span>' : '';
+                var actionBtns = '';
+                if (item.incoming_pending) {
+                    actionBtns = '<button class="btn btn-sm btn-success add-friend-btn" data-id="' + item.id + '">Accepter</button><button class="btn btn-sm btn-outline-secondary decline-friend-btn" data-id="' + item.id + '">Refuser</button>';
+                } else if (item.outgoing_pending) {
+                    actionBtns = '<button class="btn btn-sm btn-outline-danger cancel-friend-btn" data-id="' + item.id + '">Annuler</button>';
+                } else if (!item.is_friend) {
+                    actionBtns = '<button class="btn btn-sm btn-outline-secondary add-friend-btn" data-id="' + item.id + '">Inviter en ami</button>';
+                }
                 var avatar = item.avatar_base64
                     ? '<img class="chat-avatar" src="data:image/png;base64,' + item.avatar_base64 + '" alt="' + item.display_name + '">'
                     : (item.avatar_url
@@ -319,7 +344,7 @@
                     '<div class="chat-search-item">' +
                     '  <div class="d-flex justify-content-between align-items-start gap-2">' +
                     '    <div class="d-flex align-items-center gap-2">' + avatar + '<div><strong>' + item.display_name + '</strong><div class="small text-muted">@' + item.username + '</div></div></div>' +
-                    '    <div class="d-flex gap-2 align-items-center">' + friendTag + '<a class="btn btn-sm btn-primary" href="' + baseMessagesUrl + '?user=' + item.id + '">Chat</a>' + addBtn + '</div>' +
+                        '    <div class="d-flex gap-2 align-items-center">' + friendTag + incomingTag + outgoingTag + '<a class="btn btn-sm btn-primary" href="' + baseMessagesUrl + '?user=' + item.id + '">Chat</a>' + actionBtns + '</div>' +
                     '  </div>' +
                     '</div>';
             }).join('');
@@ -355,6 +380,7 @@
             var btn = event.target.closest('.add-friend-btn');
             if (!btn) return;
             event.preventDefault();
+            event.stopPropagation();
 
             var formData = new FormData();
             formData.append('friend_id', btn.getAttribute('data-id'));
@@ -370,7 +396,57 @@
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
                     if (data.ok) {
-                        btn.outerHTML = '<span class="badge bg-success">Ami</span>';
+                        window.location.reload();
+                    }
+                });
+        });
+
+        popup.addEventListener('click', function (event) {
+            var btn = event.target.closest('.decline-friend-btn');
+            if (!btn) return;
+            event.preventDefault();
+            event.stopPropagation();
+
+            var formData = new FormData();
+            formData.append('friend_id', btn.getAttribute('data-id'));
+
+            fetch('{% url "messages_decline_friend" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.ok) {
+                        window.location.reload();
+                    }
+                });
+        });
+
+        popup.addEventListener('click', function (event) {
+            var btn = event.target.closest('.cancel-friend-btn');
+            if (!btn) return;
+            event.preventDefault();
+            event.stopPropagation();
+
+            var formData = new FormData();
+            formData.append('friend_id', btn.getAttribute('data-id'));
+
+            fetch('{% url "messages_cancel_friend_invitation" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.ok) {
+                        window.location.reload();
                     }
                 });
         });
@@ -382,6 +458,50 @@
             var formData = new FormData();
             formData.append('friend_id', removeBtn.getAttribute('data-id'));
             fetch('{% url "messages_remove_friend" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.ok) {
+                        window.location.reload();
+                    }
+                });
+        });
+
+        document.addEventListener('click', function (event) {
+            var declineBtn = event.target.closest('.decline-friend-btn');
+            if (!declineBtn) return;
+
+            var formData = new FormData();
+            formData.append('friend_id', declineBtn.getAttribute('data-id'));
+            fetch('{% url "messages_decline_friend" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.ok) {
+                        window.location.reload();
+                    }
+                });
+        });
+
+        document.addEventListener('click', function (event) {
+            var cancelBtn = event.target.closest('.cancel-friend-btn');
+            if (!cancelBtn) return;
+
+            var formData = new FormData();
+            formData.append('friend_id', cancelBtn.getAttribute('data-id'));
+            fetch('{% url "messages_cancel_friend_invitation" %}', {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': getCsrfToken(),

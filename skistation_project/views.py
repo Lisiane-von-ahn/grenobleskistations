@@ -25,6 +25,7 @@ from api.models import (
     SkiNewsItem,
     UserProfile,
     UserFriend,
+    FriendInvitation,
     InstructorProfile,
     InstructorService,
 )
@@ -1898,6 +1899,67 @@ def story_toggle_like(request, story_id):
     return JsonResponse({'ok': True, 'liked': liked, 'like_count': like_count})
 
 
+def _ensure_bidirectional_friendship(user_a, user_b):
+    UserFriend.objects.get_or_create(user=user_a, friend=user_b)
+    UserFriend.objects.get_or_create(user=user_b, friend=user_a)
+
+
+def _friendship_state(current_user, target_user):
+    state = {
+        'is_friend': False,
+        'incoming_pending': False,
+        'outgoing_pending': False,
+    }
+    if not current_user or not current_user.is_authenticated or current_user.id == target_user.id:
+        return state
+
+    state['is_friend'] = UserFriend.objects.filter(user=current_user, friend=target_user).exists()
+    if state['is_friend']:
+        return state
+
+    state['incoming_pending'] = FriendInvitation.objects.filter(
+        from_user=target_user,
+        to_user=current_user,
+        status=FriendInvitation.STATUS_PENDING,
+    ).exists()
+    state['outgoing_pending'] = FriendInvitation.objects.filter(
+        from_user=current_user,
+        to_user=target_user,
+        status=FriendInvitation.STATUS_PENDING,
+    ).exists()
+    return state
+
+
+def _send_or_accept_friend_invitation(current_user, target_user):
+    if UserFriend.objects.filter(user=current_user, friend=target_user).exists():
+        return 'already_friends'
+
+    incoming = FriendInvitation.objects.filter(
+        from_user=target_user,
+        to_user=current_user,
+        status=FriendInvitation.STATUS_PENDING,
+    ).first()
+    if incoming:
+        incoming.status = FriendInvitation.STATUS_ACCEPTED
+        incoming.responded_at = timezone.now()
+        incoming.save(update_fields=['status', 'responded_at', 'updated_at'])
+        _ensure_bidirectional_friendship(current_user, target_user)
+        return 'accepted'
+
+    outgoing = FriendInvitation.objects.filter(from_user=current_user, to_user=target_user).order_by('-created_at').first()
+    if outgoing and outgoing.status == FriendInvitation.STATUS_PENDING:
+        return 'pending'
+
+    if outgoing and outgoing.status in [FriendInvitation.STATUS_DECLINED, FriendInvitation.STATUS_CANCELLED]:
+        outgoing.status = FriendInvitation.STATUS_PENDING
+        outgoing.responded_at = None
+        outgoing.save(update_fields=['status', 'responded_at', 'updated_at'])
+    else:
+        FriendInvitation.objects.create(from_user=current_user, to_user=target_user, status=FriendInvitation.STATUS_PENDING)
+
+    return 'sent'
+
+
 @login_required
 def story_add_friend(request, user_id):
     if request.method != 'POST':
@@ -1909,9 +1971,15 @@ def story_add_friend(request, user_id):
         messages.error(request, 'Utilisateur invalide.')
         return redirect('ski_stories')
 
-    UserFriend.objects.get_or_create(user=request.user, friend=friend)
-    UserFriend.objects.get_or_create(user=friend, friend=request.user)
-    messages.success(request, 'Ami ajoute.')
+    status_value = _send_or_accept_friend_invitation(request.user, friend)
+    if status_value == 'accepted':
+        messages.success(request, 'Invitation acceptee. Vous etes maintenant amis.')
+    elif status_value == 'sent':
+        messages.success(request, 'Invitation envoyee.')
+    elif status_value == 'pending':
+        messages.info(request, 'Invitation deja en attente.')
+    else:
+        messages.info(request, 'Vous etes deja amis.')
     return redirect('ski_stories')
 
 
@@ -1929,6 +1997,58 @@ def story_remove_friend(request, user_id):
     UserFriend.objects.filter(user=request.user, friend=friend).delete()
     UserFriend.objects.filter(user=friend, friend=request.user).delete()
     messages.success(request, 'Ami retire.')
+    return redirect('user_public_profile', user_id=user_id)
+
+
+@login_required
+def story_decline_friend_invitation(request, user_id):
+    if request.method != 'POST':
+        messages.error(request, 'Methode non autorisee.')
+        return redirect('user_public_profile', user_id=user_id)
+
+    friend = User.objects.filter(id=user_id).exclude(id=request.user.id).first()
+    if not friend:
+        messages.error(request, 'Utilisateur invalide.')
+        return redirect('ski_stories')
+
+    invitation = FriendInvitation.objects.filter(
+        from_user=friend,
+        to_user=request.user,
+        status=FriendInvitation.STATUS_PENDING,
+    ).first()
+    if invitation:
+        invitation.status = FriendInvitation.STATUS_DECLINED
+        invitation.responded_at = timezone.now()
+        invitation.save(update_fields=['status', 'responded_at', 'updated_at'])
+        messages.success(request, 'Invitation refusee.')
+    else:
+        messages.info(request, 'Aucune invitation en attente.')
+    return redirect('user_public_profile', user_id=user_id)
+
+
+@login_required
+def story_cancel_friend_invitation(request, user_id):
+    if request.method != 'POST':
+        messages.error(request, 'Methode non autorisee.')
+        return redirect('user_public_profile', user_id=user_id)
+
+    friend = User.objects.filter(id=user_id).exclude(id=request.user.id).first()
+    if not friend:
+        messages.error(request, 'Utilisateur invalide.')
+        return redirect('ski_stories')
+
+    invitation = FriendInvitation.objects.filter(
+        from_user=request.user,
+        to_user=friend,
+        status=FriendInvitation.STATUS_PENDING,
+    ).first()
+    if invitation:
+        invitation.status = FriendInvitation.STATUS_CANCELLED
+        invitation.responded_at = timezone.now()
+        invitation.save(update_fields=['status', 'responded_at', 'updated_at'])
+        messages.success(request, 'Invitation annulee.')
+    else:
+        messages.info(request, 'Aucune invitation en attente.')
     return redirect('user_public_profile', user_id=user_id)
 
 
@@ -1953,9 +2073,7 @@ def user_public_profile(request, user_id):
     friend_count = UserFriend.objects.filter(user=target_user).count()
     public_messages_count = Message.objects.filter(sender=target_user, is_private=False).count()
     is_authenticated = bool(request.user and request.user.is_authenticated)
-    is_friend = False
-    if is_authenticated and request.user.id != target_user.id:
-        is_friend = UserFriend.objects.filter(user=request.user, friend=target_user).exists()
+    relation_state = _friendship_state(request.user, target_user)
 
     avatar_base64 = base64.b64encode(profile.profile_picture).decode('utf-8') if profile and profile.profile_picture else None
     display_name = _story_user_label(target_user)
@@ -1984,7 +2102,9 @@ def user_public_profile(request, user_id):
             'recent_stories': recent_stories,
             'recent_comments': recent_comments,
             'has_recent_activity': has_recent_activity,
-            'is_friend': is_friend,
+            'is_friend': relation_state['is_friend'],
+            'incoming_pending': relation_state['incoming_pending'],
+            'outgoing_pending': relation_state['outgoing_pending'],
             'is_authenticated': is_authenticated,
         },
     )
@@ -2110,6 +2230,18 @@ def messages_view(request):
             flattened_ids.add(row.recipient_id)
 
     friend_ids = set(UserFriend.objects.filter(user=request.user).values_list('friend_id', flat=True))
+    outgoing_invite_ids = set(
+        FriendInvitation.objects.filter(
+            from_user=request.user,
+            status=FriendInvitation.STATUS_PENDING,
+        ).values_list('to_user_id', flat=True)
+    )
+    incoming_invite_ids = set(
+        FriendInvitation.objects.filter(
+            to_user=request.user,
+            status=FriendInvitation.STATUS_PENDING,
+        ).values_list('from_user_id', flat=True)
+    )
     flattened_ids |= friend_ids
 
     if selected_recipient:
@@ -2135,6 +2267,8 @@ def messages_view(request):
             'last_message': last_message,
             'unread_count': unread_for_contact,
             'is_friend': user_id in friend_ids,
+            'incoming_pending': user_id in incoming_invite_ids,
+            'outgoing_pending': user_id in outgoing_invite_ids,
             **_avatar_payload(contact),
         })
 
@@ -2147,6 +2281,8 @@ def messages_view(request):
         selected_recipient = contacts[0]['user']
 
     selected_is_friend = bool(selected_recipient and selected_recipient.id in friend_ids)
+    selected_incoming_pending = bool(selected_recipient and selected_recipient.id in incoming_invite_ids)
+    selected_outgoing_pending = bool(selected_recipient and selected_recipient.id in outgoing_invite_ids)
 
     conversation_messages = []
     if selected_recipient:
@@ -2196,7 +2332,13 @@ def messages_view(request):
     for user_id in suggestion_ids:
         user = suggestions_map.get(user_id)
         if user:
-            suggestions.append({'user': user, 'is_friend': user_id in friend_ids, **_avatar_payload(user)})
+            suggestions.append({
+                'user': user,
+                'is_friend': user_id in friend_ids,
+                'incoming_pending': user_id in incoming_invite_ids,
+                'outgoing_pending': user_id in outgoing_invite_ids,
+                **_avatar_payload(user),
+            })
 
     selected_recipient_context = _avatar_payload(selected_recipient) if selected_recipient else None
 
@@ -2210,6 +2352,8 @@ def messages_view(request):
         'context_listing': listing,
         'conversation_messages': conversation_messages,
         'selected_is_friend': selected_is_friend,
+        'selected_incoming_pending': selected_incoming_pending,
+        'selected_outgoing_pending': selected_outgoing_pending,
         'suggestions': suggestions,
     })
 
@@ -2221,6 +2365,18 @@ def messages_user_search(request):
         return JsonResponse({'results': []})
 
     friend_ids = set(UserFriend.objects.filter(user=request.user).values_list('friend_id', flat=True))
+    outgoing_invite_ids = set(
+        FriendInvitation.objects.filter(
+            from_user=request.user,
+            status=FriendInvitation.STATUS_PENDING,
+        ).values_list('to_user_id', flat=True)
+    )
+    incoming_invite_ids = set(
+        FriendInvitation.objects.filter(
+            to_user=request.user,
+            status=FriendInvitation.STATUS_PENDING,
+        ).values_list('from_user_id', flat=True)
+    )
     users = (
         User.objects.exclude(id=request.user.id)
         .filter(
@@ -2251,6 +2407,8 @@ def messages_user_search(request):
                 'username': user.username,
                 'display_name': display_name,
                 'is_friend': user.id in friend_ids,
+                'incoming_pending': user.id in incoming_invite_ids,
+                'outgoing_pending': user.id in outgoing_invite_ids,
                 'avatar_base64': avatar_base64,
                 'avatar_url': avatar_url,
             }
@@ -2268,9 +2426,8 @@ def messages_add_friend(request):
     if not friend:
         return JsonResponse({'ok': False, 'error': 'invalid_friend'}, status=400)
 
-    UserFriend.objects.get_or_create(user=request.user, friend=friend)
-    UserFriend.objects.get_or_create(user=friend, friend=request.user)
-    return JsonResponse({'ok': True})
+    status_value = _send_or_accept_friend_invitation(request.user, friend)
+    return JsonResponse({'ok': True, 'status': status_value})
 
 
 @login_required
@@ -2285,6 +2442,54 @@ def messages_remove_friend(request):
 
     UserFriend.objects.filter(user=request.user, friend=friend).delete()
     UserFriend.objects.filter(user=friend, friend=request.user).delete()
+    return JsonResponse({'ok': True})
+
+
+@login_required
+def messages_decline_friend(request):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'method_not_allowed'}, status=405)
+
+    friend_id = (request.POST.get('friend_id') or '').strip()
+    friend = User.objects.filter(id=friend_id).exclude(id=request.user.id).first()
+    if not friend:
+        return JsonResponse({'ok': False, 'error': 'invalid_friend'}, status=400)
+
+    invitation = FriendInvitation.objects.filter(
+        from_user=friend,
+        to_user=request.user,
+        status=FriendInvitation.STATUS_PENDING,
+    ).first()
+    if not invitation:
+        return JsonResponse({'ok': False, 'error': 'no_pending_invitation'}, status=400)
+
+    invitation.status = FriendInvitation.STATUS_DECLINED
+    invitation.responded_at = timezone.now()
+    invitation.save(update_fields=['status', 'responded_at', 'updated_at'])
+    return JsonResponse({'ok': True})
+
+
+@login_required
+def messages_cancel_friend_invitation(request):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'method_not_allowed'}, status=405)
+
+    friend_id = (request.POST.get('friend_id') or '').strip()
+    friend = User.objects.filter(id=friend_id).exclude(id=request.user.id).first()
+    if not friend:
+        return JsonResponse({'ok': False, 'error': 'invalid_friend'}, status=400)
+
+    invitation = FriendInvitation.objects.filter(
+        from_user=request.user,
+        to_user=friend,
+        status=FriendInvitation.STATUS_PENDING,
+    ).first()
+    if not invitation:
+        return JsonResponse({'ok': False, 'error': 'no_pending_invitation'}, status=400)
+
+    invitation.status = FriendInvitation.STATUS_CANCELLED
+    invitation.responded_at = timezone.now()
+    invitation.save(update_fields=['status', 'responded_at', 'updated_at'])
     return JsonResponse({'ok': True})
 
 def getMessagesAndCount(request):

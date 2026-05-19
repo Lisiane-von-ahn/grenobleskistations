@@ -191,6 +191,8 @@
     <string name="no_photo_available">No photo available</string>
     <string name="choose_recipient">Choose recipient</string>
     <string name="search_contacts">Search contacts</string>
+    <string name="friends_list_title">Liste d\'amis</string>
+    <string name="invites_received_title">Invitations recues</string>
     <string name="conversations">Conversations</string>
     <string name="new_contact_label">New contact</string>
     <string name="choose_contact_first">Choose a contact to view conversation history.</string>
@@ -223,6 +225,9 @@
     <string name="submit_rating">Submit rating</string>
     <string name="add_friend">Add friend</string>
     <string name="remove_friend">Remove</string>
+    <string name="accept_invite">Accepter</string>
+    <string name="decline_invite">Refuser</string>
+    <string name="cancel_invite">Annuler</string>
     <string name="friends">Friends</string>
     <string name="search_users_to_add">Search user to add</string>
     <string name="type_min_two_chars">Type at least 2 characters to search.</string>

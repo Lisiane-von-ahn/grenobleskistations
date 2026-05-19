@@ -581,6 +581,40 @@ class UserFriend(models.Model):
         return f"{self.user.username} -> {self.friend.username}"
 
 
+class FriendInvitation(models.Model):
+    STATUS_PENDING = 'pending'
+    STATUS_ACCEPTED = 'accepted'
+    STATUS_DECLINED = 'declined'
+    STATUS_CANCELLED = 'cancelled'
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_ACCEPTED, 'Accepted'),
+        (STATUS_DECLINED, 'Declined'),
+        (STATUS_CANCELLED, 'Cancelled'),
+    ]
+
+    from_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_friend_invitations')
+    to_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_friend_invitations')
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    responded_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(fields=['from_user', 'to_user', 'status'], name='uniq_friend_invitation_state'),
+        ]
+        indexes = [
+            models.Index(fields=['to_user', 'status', '-created_at']),
+            models.Index(fields=['from_user', 'status', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.from_user.username} -> {self.to_user.username} ({self.status})"
+
+
 class GamificationPoints(models.Model):
     """Track earned points for various activities"""
     ACTIVITY_CHOICES = [
