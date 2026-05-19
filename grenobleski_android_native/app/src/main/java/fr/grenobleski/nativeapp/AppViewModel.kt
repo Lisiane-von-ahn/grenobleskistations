@@ -28,6 +28,7 @@ import fr.grenobleski.nativeapp.data.model.UserActivitySummary
 import fr.grenobleski.nativeapp.data.model.UserSession
 import fr.grenobleski.nativeapp.data.session.SessionStore
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 data class AppUiState(
     val email: String = "",
@@ -979,7 +980,32 @@ class AppViewModel(
             )
 
             if (result.isSuccess) {
-                state = state.copy(isSendingMessage = false, messageDraftBody = "", statusMessage = null)
+                val senderId = state.profileInfo?.userId?.takeIf { it > 0 } ?: session.userId
+                val senderLabel = state.profileInfo?.displayName?.ifBlank { session.displayName } ?: session.displayName
+                val recipient = state.chatUsers.firstOrNull { it.id == recipientId }
+                val optimisticIdSeed = abs(System.currentTimeMillis().toInt()).coerceAtLeast(1)
+                val optimisticMessage = MessageItem(
+                    id = -optimisticIdSeed,
+                    senderId = senderId,
+                    recipientId = recipientId,
+                    senderLabel = senderLabel.ifBlank { "Moi" },
+                    recipientLabel = recipient?.label ?: "Utilisateur #$recipientId",
+                    senderPhotoBase64 = state.profileInfo?.profilePictureBase64.orEmpty(),
+                    senderPhotoUrl = state.profileInfo?.googleProfilePictureUrl.orEmpty(),
+                    recipientPhotoBase64 = recipient?.photoBase64.orEmpty(),
+                    recipientPhotoUrl = recipient?.photoUrl.orEmpty(),
+                    body = body,
+                    createdAtLabel = "maintenant",
+                    isRead = true,
+                )
+
+                state = state.copy(
+                    isSendingMessage = false,
+                    messageDraftBody = "",
+                    statusMessage = null,
+                    // Keep newest-first ordering aligned with server payload.
+                    messageItems = listOf(optimisticMessage) + state.messageItems,
+                )
                 repository.addFriend(session.token, recipientId)
                 refreshMessagesData(
                     session = session,
@@ -1457,6 +1483,15 @@ class AppViewModel(
         refreshUsersAndFriends: Boolean = true,
     ) {
         val messages = repository.fetchMessageItems(session.token).getOrElse { state.messageItems }
+        val pendingLocalMessages = state.messageItems.filter { it.id < 0 }
+        val mergedMessages = (messages + pendingLocalMessages)
+            .distinctBy { item ->
+                if (item.id > 0) {
+                    "id:${item.id}"
+                } else {
+                    "tmp:${item.senderId}:${item.recipientId}:${item.body.trim()}"
+                }
+            }
         val users = if (refreshUsersAndFriends) {
             repository.fetchChatUsers(session.token).getOrElse { state.chatUsers }
         } else {
@@ -1474,7 +1509,7 @@ class AppViewModel(
         }
 
         state = state.copy(
-            messageItems = messages,
+            messageItems = mergedMessages,
             chatUsers = users,
             friendLinks = links,
             friendInvitations = invitations,

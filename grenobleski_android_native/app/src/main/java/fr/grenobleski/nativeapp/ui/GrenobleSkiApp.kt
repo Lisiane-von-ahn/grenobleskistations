@@ -1737,11 +1737,23 @@ private fun HomeTab(
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
                     )
-                    Text(
-                        text = state.session?.displayName.orEmpty(),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        UserAvatar(
+                            displayName = state.profileInfo?.displayName?.ifBlank { state.session?.displayName.orEmpty() }
+                                ?: state.session?.displayName.orEmpty(),
+                            photoBase64 = state.profileInfo?.profilePictureBase64.orEmpty(),
+                            photoUrl = state.profileInfo?.googleProfilePictureUrl.orEmpty(),
+                            size = 40.dp,
+                        )
+                        Text(
+                            text = state.session?.displayName.orEmpty(),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
                     Text(
                         text = stringResource(id = R.string.dashboard_subtitle_premium),
                         style = MaterialTheme.typography.bodyMedium,
@@ -3258,8 +3270,14 @@ private fun MarketplaceTab(
                         }
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
+                            UserAvatar(
+                                displayName = listing.sellerLabel,
+                                photoBase64 = listing.sellerPhotoBase64,
+                                photoUrl = listing.sellerPhotoUrl,
+                                size = 28.dp,
+                            )
                             Text(listing.sellerLabel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                             Icon(
                                 imageVector = Icons.Filled.CheckCircle,
@@ -3417,7 +3435,18 @@ private fun MarketplaceTab(
                         }
 
                         Text("${stringResource(id = R.string.city)}: ${details.city}")
-                        Text("${stringResource(id = R.string.seller)}: ${details.sellerLabel}")
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            UserAvatar(
+                                displayName = details.sellerLabel,
+                                photoBase64 = details.sellerPhotoBase64,
+                                photoUrl = details.sellerPhotoUrl,
+                                size = 30.dp,
+                            )
+                            Text("${stringResource(id = R.string.seller)}: ${details.sellerLabel}")
+                        }
                         if (details.postedAtLabel.isNotBlank()) {
                             Text("${stringResource(id = R.string.posted_at)}: ${details.postedAtLabel}")
                         }
@@ -4628,10 +4657,36 @@ private fun MessagesTab(
                     ) {
                         items(orderedMessages) { item ->
                             val mine = myUserId > 0 && item.senderId == myUserId
+                            val avatarName = if (mine) {
+                                state.profileInfo?.displayName?.ifBlank { stringResource(id = R.string.you) }
+                                    ?: stringResource(id = R.string.you)
+                            } else {
+                                item.senderLabel
+                            }
+                            val avatarBase64 = if (mine) {
+                                state.profileInfo?.profilePictureBase64.orEmpty()
+                            } else {
+                                item.senderPhotoBase64
+                            }
+                            val avatarUrl = if (mine) {
+                                state.profileInfo?.googleProfilePictureUrl.orEmpty()
+                            } else {
+                                item.senderPhotoUrl
+                            }
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start,
+                                verticalAlignment = Alignment.Bottom,
                             ) {
+                                if (!mine) {
+                                    UserAvatar(
+                                        displayName = avatarName,
+                                        photoBase64 = avatarBase64,
+                                        photoUrl = avatarUrl,
+                                        size = 30.dp,
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                }
                                 Box(
                                     modifier = Modifier
                                         .widthIn(max = 300.dp)
@@ -4668,6 +4723,15 @@ private fun MessagesTab(
                                             }
                                         }
                                     }
+                                }
+                                if (mine) {
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    UserAvatar(
+                                        displayName = avatarName,
+                                        photoBase64 = avatarBase64,
+                                        photoUrl = avatarUrl,
+                                        size = 30.dp,
+                                    )
                                 }
                             }
                         }
@@ -5518,18 +5582,37 @@ private fun decodeBase64ImageCached(
 ): ImageBitmap? {
     if (data.isBlank()) return null
 
+    val normalizedData = normalizeBase64Payload(data)
+    if (normalizedData.isBlank()) return null
+
     MarketplaceBitmapCache.get(cacheKey)?.let { cached ->
         return cached.asImageBitmap()
     }
 
     return try {
-        val bytes = Base64.decode(data, Base64.DEFAULT)
+        val bytes = try {
+            Base64.decode(normalizedData, Base64.DEFAULT)
+        } catch (_: IllegalArgumentException) {
+            Base64.decode(normalizedData, Base64.URL_SAFE or Base64.NO_WRAP)
+        }
         val bitmap = decodeSampledBitmap(bytes, reqWidth, reqHeight) ?: return null
         MarketplaceBitmapCache.put(cacheKey, bitmap)
         bitmap.asImageBitmap()
     } catch (_: Exception) {
         null
     }
+}
+
+private fun normalizeBase64Payload(raw: String): String {
+    val trimmed = raw.trim()
+    if (trimmed.isBlank()) return ""
+    if (trimmed.startsWith("data:", ignoreCase = true)) {
+        val commaIndex = trimmed.indexOf(',')
+        if (commaIndex >= 0 && commaIndex + 1 < trimmed.length) {
+            return trimmed.substring(commaIndex + 1).trim()
+        }
+    }
+    return trimmed
 }
 
 private fun decodeSampledBitmap(bytes: ByteArray, reqWidth: Int, reqHeight: Int): Bitmap? {

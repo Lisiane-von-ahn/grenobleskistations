@@ -799,6 +799,7 @@ class AuthRepository(
     }
 
     private fun parseMessageItem(reader: JsonReader): MessageItem {
+        val maxAvatarChars = 180_000
         var id = 0
         var senderId = 0
         var recipientId = 0
@@ -850,6 +851,18 @@ class AuthRepository(
                 "recipient_username", "recipient_name" -> {
                     if (recipientLabel.isBlank()) recipientLabel = nextStringSafely(reader) else reader.skipValue()
                 }
+                "sender_photo", "sender_profile_picture", "sender_photo_base64" -> {
+                    if (senderPhotoBase64.isBlank()) senderPhotoBase64 = nextStringWithMaxLength(reader, maxAvatarChars) else reader.skipValue()
+                }
+                "sender_photo_url", "sender_google_profile_picture_url" -> {
+                    if (senderPhotoUrl.isBlank()) senderPhotoUrl = nextStringSafely(reader) else reader.skipValue()
+                }
+                "recipient_photo", "recipient_profile_picture", "recipient_photo_base64" -> {
+                    if (recipientPhotoBase64.isBlank()) recipientPhotoBase64 = nextStringWithMaxLength(reader, maxAvatarChars) else reader.skipValue()
+                }
+                "recipient_photo_url", "recipient_google_profile_picture_url" -> {
+                    if (recipientPhotoUrl.isBlank()) recipientPhotoUrl = nextStringSafely(reader) else reader.skipValue()
+                }
                 "body", "message", "content" -> {
                     if (body.isBlank()) body = nextStringSafely(reader) else reader.skipValue()
                 }
@@ -879,6 +892,7 @@ class AuthRepository(
     }
 
     private fun parseUserSummarySafely(reader: JsonReader): ParsedUserSummary {
+        val maxAvatarChars = 180_000
         return when (reader.peek()) {
             JsonToken.BEGIN_OBJECT -> {
                 var id = 0
@@ -891,8 +905,13 @@ class AuthRepository(
                         "id" -> id = nextIntSafely(reader)
                         "display_name", "username", "email" -> if (label.isBlank()) label = nextStringSafely(reader) else reader.skipValue()
                         "google_profile_picture_url" -> if (photoUrl.isBlank()) photoUrl = nextStringSafely(reader) else reader.skipValue()
-                        // Skip heavy binary avatars in message payloads to keep chat stable on low-memory devices.
-                        "profile_picture" -> reader.skipValue()
+                        "profile_picture", "photo", "photo_base64" -> {
+                            if (photoBase64.isBlank()) {
+                                photoBase64 = nextStringWithMaxLength(reader, maxAvatarChars)
+                            } else {
+                                reader.skipValue()
+                            }
+                        }
                         else -> reader.skipValue()
                     }
                 }
@@ -1028,12 +1047,14 @@ class AuthRepository(
     }
 
     private fun parseChatUser(reader: JsonReader): ChatUserOption? {
+        val maxAvatarChars = 180_000
         var id = 0
         var firstName = ""
         var lastName = ""
         var displayName = ""
         var username = ""
         var email = ""
+        var photoBase64 = ""
         var photoUrl = ""
 
         reader.beginObject()
@@ -1046,8 +1067,7 @@ class AuthRepository(
                 "username" -> username = nextStringSafely(reader)
                 "email" -> email = nextStringSafely(reader)
                 "google_profile_picture_url" -> photoUrl = nextStringSafely(reader)
-                // Skip heavy inline avatar blobs from directory payload.
-                "profile_picture" -> reader.skipValue()
+                "profile_picture", "photo", "photo_base64" -> photoBase64 = nextStringWithMaxLength(reader, maxAvatarChars)
                 else -> reader.skipValue()
             }
         }
@@ -1066,7 +1086,7 @@ class AuthRepository(
         return ChatUserOption(
             id = id,
             label = label,
-            photoBase64 = "",
+            photoBase64 = photoBase64,
             photoUrl = photoUrl,
         )
     }
@@ -1626,9 +1646,10 @@ class AuthRepository(
         materialLabels: Map<String, String>,
         transactionLabels: Map<String, String>,
     ): MarketplaceItem {
-        val maxPreviewChars = 550_000
-        val maxGalleryChars = 320_000
-        val maxGalleryItems = 4
+        // Keep only a small number of image references but allow real-world base64 sizes.
+        val maxPreviewChars = 4_000_000
+        val maxGalleryChars = 4_000_000
+        val maxGalleryItems = 2
         var id = 0
         var title = ""
         var description = ""
@@ -1638,6 +1659,9 @@ class AuthRepository(
         var materialType = ""
         var transactionType = ""
         var sellerId = 0
+        var sellerLabel = ""
+        var sellerPhotoBase64 = ""
+        var sellerPhotoUrl = ""
         var postedAt = ""
         var previewImage = ""
         val galleryImages = mutableListOf<String>()
@@ -1654,7 +1678,20 @@ class AuthRepository(
                 "material_type" -> materialType = nextStringSafely(reader)
                 "transaction_type" -> transactionType = nextStringSafely(reader)
                 "user_id" -> sellerId = nextIntSafely(reader)
-                "user" -> sellerId = nextUserIdSafely(reader)
+                "user" -> {
+                    val parsed = parseMarketplaceSellerSummary(reader)
+                    if (sellerId <= 0) sellerId = parsed.id
+                    if (sellerLabel.isBlank()) sellerLabel = parsed.label
+                    if (sellerPhotoBase64.isBlank()) sellerPhotoBase64 = parsed.photoBase64
+                    if (sellerPhotoUrl.isBlank()) sellerPhotoUrl = parsed.photoUrl
+                }
+                "seller_info" -> {
+                    val parsed = parseMarketplaceSellerSummary(reader)
+                    if (sellerId <= 0) sellerId = parsed.id
+                    if (sellerLabel.isBlank()) sellerLabel = parsed.label
+                    if (sellerPhotoBase64.isBlank()) sellerPhotoBase64 = parsed.photoBase64
+                    if (sellerPhotoUrl.isBlank()) sellerPhotoUrl = parsed.photoUrl
+                }
                 "posted_at", "created_at" -> {
                     if (postedAt.isBlank()) {
                         postedAt = nextStringSafely(reader)
@@ -1662,7 +1699,7 @@ class AuthRepository(
                         reader.skipValue()
                     }
                 }
-                "preview_image", "preview_image_base64", "thumbnail", "thumbnail_url" -> {
+                "preview_image", "preview_image_base64", "thumbnail", "thumbnail_url", "photo", "photo_base64" -> {
                     if (previewImage.isBlank()) {
                         previewImage = nextStringWithMaxLength(reader, maxPreviewChars)
                     } else {
@@ -1698,11 +1735,57 @@ class AuthRepository(
             materialTypeLabel = materialLabels[materialTypeKey] ?: materialType.ifBlank { "Autre" },
             transactionTypeLabel = transactionLabels[transactionTypeKey] ?: transactionType.ifBlank { "-" },
             sellerId = sellerId,
-            sellerLabel = if (sellerId > 0) "Vendeur #$sellerId" else "Vendeur",
+            sellerLabel = sellerLabel.ifBlank { if (sellerId > 0) "Vendeur #$sellerId" else "Vendeur" },
+            sellerPhotoBase64 = sellerPhotoBase64,
+            sellerPhotoUrl = sellerPhotoUrl,
             postedAtLabel = formatServerDateTime(postedAt),
             previewImageBase64 = previewImage,
             imageGalleryBase64 = galleryImages,
         )
+    }
+
+    private data class ParsedMarketplaceSellerSummary(
+        val id: Int,
+        val label: String,
+        val photoBase64: String,
+        val photoUrl: String,
+    )
+
+    private fun parseMarketplaceSellerSummary(reader: JsonReader): ParsedMarketplaceSellerSummary {
+        return when (reader.peek()) {
+            JsonToken.BEGIN_OBJECT -> {
+                var id = 0
+                var label = ""
+                var photoBase64 = ""
+                var photoUrl = ""
+                reader.beginObject()
+                while (reader.hasNext()) {
+                    when (reader.nextName()) {
+                        "id" -> id = nextIntSafely(reader)
+                        "display_name", "username", "email", "name" -> if (label.isBlank()) label = nextStringSafely(reader) else reader.skipValue()
+                        "google_profile_picture_url", "photo_url", "avatar_url" -> if (photoUrl.isBlank()) photoUrl = nextStringWithMaxLength(reader, 2_000) else reader.skipValue()
+                        "profile_picture", "photo", "avatar", "image_base64" -> if (photoBase64.isBlank()) photoBase64 = nextStringWithMaxLength(reader, 900_000) else reader.skipValue()
+                        else -> reader.skipValue()
+                    }
+                }
+                reader.endObject()
+                ParsedMarketplaceSellerSummary(id = id, label = label, photoBase64 = photoBase64, photoUrl = photoUrl)
+            }
+            JsonToken.NUMBER, JsonToken.STRING -> ParsedMarketplaceSellerSummary(
+                id = nextIntSafely(reader),
+                label = "",
+                photoBase64 = "",
+                photoUrl = "",
+            )
+            JsonToken.NULL -> {
+                reader.nextNull()
+                ParsedMarketplaceSellerSummary(0, "", "", "")
+            }
+            else -> {
+                reader.skipValue()
+                ParsedMarketplaceSellerSummary(0, "", "", "")
+            }
+        }
     }
 
     private fun parseImageArray(

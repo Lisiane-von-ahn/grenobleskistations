@@ -181,6 +181,8 @@ data class MarketplaceItem(
     val transactionTypeLabel: String,
     val sellerId: Int,
     val sellerLabel: String,
+    val sellerPhotoBase64: String = "",
+    val sellerPhotoUrl: String = "",
     val postedAtLabel: String,
     val previewImageBase64: String,
     val imageGalleryBase64: List<String> = emptyList(),
