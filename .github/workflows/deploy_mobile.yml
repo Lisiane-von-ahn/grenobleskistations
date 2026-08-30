@@ -1,5 +1,8 @@
 name: Deploy GrenobleSki Android
 
+permissions:
+  contents: write
+
 on:
   push:
     branches:
