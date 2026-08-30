@@ -108,7 +108,7 @@ jobs:
           GOOGLE_PLAY_ROLLOUT_PERCENTAGE: "100"
           GOOGLE_PLAY_BUILD_NUMBER: ${{ github.run_number }}
           GOOGLE_PLAY_VERSION_NAME: 1.${{ github.run_number }}.0
-          GOOGLE_PLAY_CHANGES_NOT_SENT_FOR_REVIEW: "true"
+          GOOGLE_PLAY_CHANGES_NOT_SENT_FOR_REVIEW: "false"
           ANDROID_SIGNING_KEYSTORE_PATH: ${{ runner.temp }}/release.keystore
           ANDROID_SIGNING_STORE_PASS: ${{ secrets.ANDROID_STORE_PASSWORD }}
           ANDROID_SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
