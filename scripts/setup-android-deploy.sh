@@ -49,7 +49,7 @@ echo -e "  ${BLUE}ANDROID_KEYSTORE_BASE64${NC} - Base64 encoded keystore"
 echo -e "  ${BLUE}ANDROID_STORE_PASSWORD${NC} - Keystore password"
 echo -e "  ${BLUE}ANDROID_KEY_ALIAS${NC} - Key alias"
 echo -e "  ${BLUE}ANDROID_KEY_PASSWORD${NC} - Key password (often same as store)"
-echo -e "  ${BLUE}PLAY_STORE_SERVICE_ACCOUNT_JSON${NC} - Service account JSON (BASE64)"
+echo -e "  ${BLUE}PLAY_STORE_SERVICE_ACCOUNT_JSON${NC} - Service account JSON"
 
 # Step 4: Help encode keystore
 echo ""
@@ -102,17 +102,11 @@ echo "   2. Select 'github-actions-deploy'"
 echo "   3. Keys → Add Key → Create new Key → JSON"
 echo "   4. Download the JSON file"
 echo ""
-echo "E. Encode and add to GitHub:"
+echo "E. Add the downloaded JSON key to GitHub:"
 echo ""
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    echo -e "${BLUE}  base64 < ~/Downloads/github-actions-deploy-key.json | pbcopy${NC}"
-else
-    echo -e "${BLUE}  base64 ~/Downloads/github-actions-deploy-key.json${NC}"
-fi
-echo ""
-echo "   Then add to GitHub Secrets:"
+echo "   Then add the file's raw JSON content to GitHub Secrets:"
 echo "   - Name: PLAY_STORE_SERVICE_ACCOUNT_JSON"
-echo "   - Value: [paste base64 from above]"
+echo "   - Value: [paste the complete JSON content]"
 
 # Step 6: Verify app in Play Console
 echo ""
