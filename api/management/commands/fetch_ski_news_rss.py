@@ -9,7 +9,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
 
-from api.models import SkiNewsItem, SkiStation
+from api.models import SkiNewsItem, SkiStation, StationOfficialSource
 
 RSS_FEEDS = [
     {
@@ -78,6 +78,7 @@ class Command(BaseCommand):
         parser.add_argument('--max-items', type=int, default=80)
         parser.add_argument('--days', type=int, default=10)
         parser.add_argument('--sample-on-failure', action='store_true')
+        parser.add_argument('--official-only', action='store_true')
 
     @transaction.atomic
     def handle(self, *args, **options):
@@ -94,14 +95,20 @@ class Command(BaseCommand):
         fetched_count = 0
         skipped_too_long = 0
         touched_links = set()
+        official_sources = list(StationOfficialSource.objects.select_related('ski_station').filter(is_active=True, source_type=StationOfficialSource.TYPE_RSS))
+        feeds = [] if options['official_only'] else list(RSS_FEEDS)
+        feeds.extend({'url': source.url, 'language': source.language, 'source_name': source.name, 'station': source.ski_station, 'source': source} for source in official_sources)
 
-        for feed in RSS_FEEDS:
+        for feed in feeds:
             req = Request(feed['url'], headers={'User-Agent': 'GrenobleSkiNewsBot/1.0'})
             try:
                 with urlopen(req, timeout=8) as resp:
                     raw_xml = resp.read()
             except (HTTPError, URLError, TimeoutError) as exc:
                 self.stdout.write(self.style.WARNING(f"RSS fetch failed for {feed['url']}: {exc}"))
+                if feed.get('source'):
+                    feed['source'].last_error = str(exc)[:300]
+                    feed['source'].save(update_fields=['last_error'])
                 continue
 
             try:
@@ -109,6 +116,11 @@ class Command(BaseCommand):
             except ET.ParseError as exc:
                 self.stdout.write(self.style.WARNING(f"Invalid XML feed {feed['url']}: {exc}"))
                 continue
+
+            if feed.get('source'):
+                feed['source'].last_synced_at = now
+                feed['source'].last_error = ''
+                feed['source'].save(update_fields=['last_synced_at', 'last_error'])
 
             for item in root.findall('.//item'):
                 title = (item.findtext('title') or '').strip()
@@ -127,7 +139,7 @@ class Command(BaseCommand):
                 if pub_date < min_published:
                     continue
 
-                station = _station_for_text(stations, f"{title} {description}")
+                station = feed.get('station') or _station_for_text(stations, f"{title} {description}")
                 terms = HIGHLIGHT_TERMS.get(feed['language'], [])
                 haystack = f"{title} {description}".lower()
                 is_highlighted = any(term in haystack for term in terms) or station is not None

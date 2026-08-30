@@ -76,6 +76,12 @@
     <string name="post_comment">Post comment</string>
     <string name="loading_more_stories">Loading more stories...</string>
     <string name="highlighted_ski_news">Highlighted ski news</string>
+    <string name="ski_news">Ski news</string>
+    <string name="menu_short_news">News</string>
+    <string name="featured_stations">Discover the mountains</string>
+    <string name="alpine_hero_caption">Your next Alpine escape</string>
+    <string name="view_all_news">View all station news</string>
+    <string name="ski_news_intro">Fresh updates from the RSS feeds of the ski stations around Grenoble.</string>
     <string name="open_news">Ouvrir l\'actualite</string>
     <string name="station_rss_news">Actualites RSS de la station</string>
     <string name="no_station_rss_news">Aucune actualite RSS disponible pour cette station pour le moment.</string>

@@ -538,6 +538,19 @@ class AppViewModel(
                     }
                 }
 
+                NativeTab.NEWS -> {
+                    val result = repository.fetchSkiNews(session.token)
+                    if (result.isSuccess) {
+                        val news = result.getOrNull().orEmpty()
+                        state = state.copy(
+                            skiNewsItems = news,
+                            highlightedSkiNewsItems = news.filter { it.highlighted }.take(5),
+                        )
+                    } else {
+                        state = state.copy(errorMessage = result.exceptionOrNull()?.message ?: "Unable to load ski news")
+                    }
+                }
+
                 NativeTab.STORIES -> {
                     val storiesResult = repository.fetchStoriesPage(
                         token = session.token,
@@ -1322,6 +1335,7 @@ class AppViewModel(
     private fun hasDataForTab(tab: NativeTab): Boolean {
         return when (tab) {
             NativeTab.HOME -> state.storyItems.isNotEmpty() || state.skiNewsItems.isNotEmpty()
+            NativeTab.NEWS -> state.skiNewsItems.isNotEmpty()
             NativeTab.STORIES -> state.storyItems.isNotEmpty()
             NativeTab.COMMUNITY -> state.storyItems.isNotEmpty() || state.skiNewsItems.isNotEmpty()
             NativeTab.STATIONS -> state.stationItems.isNotEmpty()

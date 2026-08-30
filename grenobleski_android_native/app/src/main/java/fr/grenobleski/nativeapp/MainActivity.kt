@@ -11,7 +11,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.material3.Surface
 import androidx.core.os.LocaleListCompat
-import com.applovin.sdk.AppLovinSdk
+import com.google.android.gms.ads.MobileAds
 import fr.grenobleski.nativeapp.ads.AdsConsentManager
 import fr.grenobleski.nativeapp.data.session.LanguageStore
 import fr.grenobleski.nativeapp.ui.GrenobleSkiApp
@@ -24,7 +24,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var languageStore: LanguageStore
     private var currentLanguage by mutableStateOf("system")
     private lateinit var adsConsentManager: AdsConsentManager
-    private var appLovinInitialized = false
+    private var mobileAdsInitialized = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,7 +34,6 @@ class MainActivity : ComponentActivity() {
         applySavedLanguage(currentLanguage)
         pendingAuthUri = extractAuthUri(intent)
 
-        adsConsentManager.syncPrivacyStateWithSdk()
         showAdsConsentPrompt = BuildConfig.ENABLE_MOBILE_ADS && adsConsentManager.shouldPromptConsent()
         refreshMobileAdsState()
 
@@ -111,15 +110,14 @@ class MainActivity : ComponentActivity() {
         val canEnableAds =
             BuildConfig.ENABLE_MOBILE_ADS &&
             adsConsentManager.canRequestAds() &&
-            BuildConfig.APPLOVIN_SDK_KEY.isNotBlank() &&
-            BuildConfig.APPLOVIN_BANNER_AD_UNIT_ID.isNotBlank()
+            BuildConfig.ADMOB_BANNER_AD_UNIT_ID.isNotBlank()
 
         mobileAdsEnabled = canEnableAds
-        if (canEnableAds && !appLovinInitialized) {
-            val sdk = AppLovinSdk.getInstance(this)
-            sdk.mediationProvider = "max"
-            sdk.initializeSdk {}
-            appLovinInitialized = true
+        if (canEnableAds && !mobileAdsInitialized) {
+            Thread {
+                MobileAds.initialize(applicationContext) {}
+            }.start()
+            mobileAdsInitialized = true
         }
     }
 }

@@ -47,6 +47,21 @@ services:
       timeout: 5s
       retries: 10
 
+  news-sync:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c 'python manage.py seed_official_station_sources; while true; do python manage.py fetch_ski_news_rss --max-items 80; python manage.py verify_station_cameras; sleep $${NEWS_SYNC_INTERVAL_SECONDS:-1800}; done'
+
 volumes:
   postgres_data:
   static_volume:

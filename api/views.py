@@ -28,7 +28,7 @@ from rest_framework.decorators import (
     permission_classes,
 )
 from rest_framework.exceptions import ValidationError
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
@@ -66,6 +66,9 @@ from .models import (
     SkiPartnerReport,
     SkiStation,
     SkiStationCamera,
+    StationLiveStatus,
+    StationOfficialSource,
+    ModerationReport,
     SkiNewsItem,
     SkiStory,
     SkiStoryComment,
@@ -97,6 +100,9 @@ from .serializers import (
     SkiPartnerReportSerializer,
     SkiStationSerializer,
     SkiStationCameraSerializer,
+    StationLiveStatusSerializer,
+    StationOfficialSourceSerializer,
+    ModerationReportSerializer,
     SkiNewsItemSerializer,
     SkiStorySerializer,
     SkiStoryFeedSerializer,
@@ -217,6 +223,11 @@ class SkiStationViewSet(viewsets.ModelViewSet):
         results = []
 
         for station in stations:
+            live_status = getattr(station, 'live_status', None)
+            webcam_verified_at = max(
+                (camera.last_verified_at for camera in station.cameras.filter(is_active=True) if camera.last_verified_at),
+                default=None,
+            )
             latest_report = PisteConditionReport.objects.filter(ski_station=station).order_by("-created_at").first()
             latest_snow = SnowConditionUpdate.objects.filter(ski_station=station).order_by("-created_at").first()
             latest_crowd = CrowdStatusUpdate.objects.filter(ski_station=station).order_by("-created_at").first()
@@ -246,6 +257,14 @@ class SkiStationViewSet(viewsets.ModelViewSet):
                     "temperature_c": weather.get("temperature_c"),
                     "feels_like_c": weather.get("feels_like_c"),
                     "snow_depth_cm": getattr(latest_snow, "snow_depth_cm", None) or weather.get("snow_cm"),
+                    "lifts_open": getattr(live_status, "lifts_open", None),
+                    "lifts_total": getattr(live_status, "lifts_total", None),
+                    "pistes_open": getattr(live_status, "pistes_open", None),
+                    "pistes_total": getattr(live_status, "pistes_total", None),
+                    "snow_fall_24h_cm": getattr(live_status, "snow_fall_24h_cm", None),
+                    "operator_weather": getattr(live_status, "weather_summary", ""),
+                    "operator_observed_at": live_status.observed_at.isoformat() if live_status else "",
+                    "webcam_last_verified_at": webcam_verified_at.isoformat() if webcam_verified_at else "",
                     "crowd_label": crowd_labels.get(getattr(latest_crowd, "crowd_level", ""), "normal"),
                     "rating_avg": round(avg_rating, 1) if avg_rating is not None else None,
                     "latest_comment": getattr(latest_report, "comment", "") or "",
@@ -254,6 +273,25 @@ class SkiStationViewSet(viewsets.ModelViewSet):
             )
 
         return Response(results, status=status.HTTP_200_OK)
+
+
+class StationLiveStatusViewSet(viewsets.ModelViewSet):
+    queryset = StationLiveStatus.objects.select_related('ski_station').all()
+    serializer_class = StationLiveStatusSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.request.method in ('GET', 'HEAD', 'OPTIONS'):
+            return [AllowAny()]
+        return [IsAdminUser()]
+
+
+class StationOfficialSourceViewSet(viewsets.ModelViewSet):
+    queryset = StationOfficialSource.objects.select_related('ski_station').all()
+    serializer_class = StationOfficialSourceSerializer
+
+    def get_permissions(self):
+        return [AllowAny()] if self.request.method in ('GET', 'HEAD', 'OPTIONS') else [IsAdminUser()]
 
 class BusLineViewSet(viewsets.ModelViewSet):
     queryset = BusLine.objects.all()
@@ -414,6 +452,47 @@ class UserProfileViewSet(viewsets.ModelViewSet):
         profile = UserProfile.objects.get(user=request.user)
         serializer = self.get_serializer(profile)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['patch', 'post'])
+    def onboarding(self, request):
+        profile, _ = UserProfile.objects.get_or_create(user=request.user)
+        serializer = self.get_serializer(profile, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(onboarding_completed=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def recommendations(self, request):
+        profile, _ = UserProfile.objects.get_or_create(user=request.user)
+        favourites = set(profile.favorite_stations.values_list('id', flat=True))
+        stations = SkiStation.objects.select_related('live_status').all()
+        cards = []
+        for station in stations:
+            live = getattr(station, 'live_status', None)
+            score = 40 + (25 if station.id in favourites else 0)
+            score += min(20, max(0, 20 - int(station.distanceFromGrenoble or 0) // 5))
+            if live:
+                if live.lifts_open is not None and live.lifts_total:
+                    score += int(20 * live.lifts_open / live.lifts_total)
+                score += min(15, int(live.snow_depth_cm or 0) // 10)
+            if profile.daily_budget_eur and profile.daily_budget_eur < 45:
+                score += 4 if int(station.distanceFromGrenoble or 0) < 50 else -4
+            cards.append({'station_id': station.id, 'station_name': station.name, 'score': min(score, 100), 'reason': 'Favourite with strong live conditions' if station.id in favourites else 'Good conditions and proximity'})
+        cards.sort(key=lambda item: item['score'], reverse=True)
+        return Response({'profile_complete': profile.onboarding_completed, 'recommendations': cards[:5]})
+
+
+class ModerationReportViewSet(viewsets.ModelViewSet):
+    serializer_class = ModerationReportSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        if self.request.user.is_staff:
+            return ModerationReport.objects.select_related('reporter').all()
+        return ModerationReport.objects.filter(reporter=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(reporter=self.request.user)
 
 class UserViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
@@ -1775,4 +1854,3 @@ def overpass_nearby_view(request):
     }
     cache.set(cache_key, result, timeout=60 * 15)
     return Response(result)
-

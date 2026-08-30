@@ -20,6 +20,9 @@ from .views import (
     SkiPartnerReportViewSet,
     SkiStationViewSet,
     SkiStationCameraViewSet,
+    StationLiveStatusViewSet,
+    StationOfficialSourceViewSet,
+    ModerationReportViewSet,
     SkiNewsItemViewSet,
     SkiStoryViewSet,
     SnowConditionUpdateViewSet,
@@ -38,6 +41,9 @@ router = DefaultRouter()
 router.register(r'skistations', SkiStationViewSet)
 router.register(r'buslines', BusLineViewSet)
 router.register(r'cameras', SkiStationCameraViewSet, basename='cameras')
+router.register(r'live-statuses', StationLiveStatusViewSet, basename='live-statuses')
+router.register(r'official-sources', StationOfficialSourceViewSet, basename='official-sources')
+router.register(r'moderation-reports', ModerationReportViewSet, basename='moderation-reports')
 router.register(r'servicestores', ServiceStoreViewSet)
 router.register(r'skicircuits', SkiCircuitViewSet)
 router.register(r'skimaterial', SkiMaterialListingViewSet)
@@ -95,4 +101,3 @@ urlpatterns = [
         name='api-mobile-token-login-noslash',
     ),
 ] + router.urls
-

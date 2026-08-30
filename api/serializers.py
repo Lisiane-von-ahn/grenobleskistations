@@ -28,6 +28,9 @@ from .models import (
     SkiPartnerReport,
     SkiStation,
     SkiStationCamera,
+    StationLiveStatus,
+    StationOfficialSource,
+    ModerationReport,
     SkiNewsItem,
     SkiStory,
     SkiStoryComment,
@@ -71,6 +74,7 @@ def _display_name_for_user(user):
 class SkiStationSerializer(serializers.ModelSerializer):
     cameras = serializers.SerializerMethodField()
     bus_lines = serializers.SerializerMethodField()
+    live_status = serializers.SerializerMethodField()
 
     class Meta:
         model = SkiStation
@@ -84,6 +88,10 @@ class SkiStationSerializer(serializers.ModelSerializer):
         bus_lines = obj.bus_lines.all()
         return BusLineSerializer(bus_lines, many=True).data
 
+    def get_live_status(self, obj):
+        status = getattr(obj, 'live_status', None)
+        return StationLiveStatusSerializer(status).data if status else None
+
 class BusLineSerializer(serializers.ModelSerializer):
     class Meta:
         model = BusLine
@@ -94,6 +102,23 @@ class SkiStationCameraSerializer(serializers.ModelSerializer):
         model = SkiStationCamera
         fields = '__all__'
         read_only_fields = ['created_at', 'updated_at']
+
+class StationLiveStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StationLiveStatus
+        fields = '__all__'
+
+class StationOfficialSourceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StationOfficialSource
+        fields = '__all__'
+        read_only_fields = ['last_synced_at', 'last_error']
+
+class ModerationReportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ModerationReport
+        fields = '__all__'
+        read_only_fields = ['reporter', 'status', 'moderator_note', 'created_at', 'reviewed_at']
 
 class ServiceStoreSerializer(serializers.ModelSerializer):
     class Meta:
@@ -235,7 +260,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserProfile
-        fields = ['id', 'user', 'profile_picture', 'organization_name', 'messages_private_by_default']
+        fields = ['id', 'user', 'profile_picture', 'organization_name', 'messages_private_by_default', 'favorite_stations', 'skiing_level', 'transport_preferences', 'daily_budget_eur', 'seeking_carpool', 'onboarding_completed']
 
     def get_profile_picture(self, obj):
         return _encode_binary_field(obj.profile_picture)

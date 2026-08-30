@@ -1,7 +1,6 @@
 package fr.grenobleski.nativeapp.ads
 
 import android.content.Context
-import com.applovin.sdk.AppLovinPrivacySettings
 
 class AdsConsentManager(context: Context) {
     private val appContext = context.applicationContext
@@ -11,10 +10,6 @@ class AdsConsentManager(context: Context) {
         UNKNOWN,
         ACCEPTED,
         REJECTED,
-    }
-
-    fun syncPrivacyStateWithSdk() {
-        AppLovinPrivacySettings.setHasUserConsent(currentStatus() == Status.ACCEPTED, appContext)
     }
 
     fun currentStatus(): Status {
@@ -36,7 +31,6 @@ class AdsConsentManager(context: Context) {
 
     private fun setStatus(status: Status) {
         prefs.edit().putString(KEY_ADS_CONSENT, status.name).apply()
-        AppLovinPrivacySettings.setHasUserConsent(status == Status.ACCEPTED, appContext)
     }
 
     companion object {

@@ -59,6 +59,7 @@ class ApiAuthTests(TestCase):
 				'password': 'StrongPass123!',
 				'first_name': 'New',
 				'last_name': 'User',
+				'accept_terms': True,
 			},
 			format='json',
 		)

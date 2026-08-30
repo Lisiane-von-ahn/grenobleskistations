@@ -10,7 +10,6 @@ import android.util.LruCache
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.widget.FrameLayout
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.browser.customtabs.CustomTabsIntent
@@ -120,8 +119,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.applovin.mediation.MaxAdFormat
-import com.applovin.mediation.ads.MaxAdView
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.AdSize
+import com.google.android.gms.ads.AdView
 import fr.grenobleski.nativeapp.AppUiState
 import fr.grenobleski.nativeapp.AppViewModel
 import fr.grenobleski.nativeapp.AppViewModelFactory
@@ -346,7 +346,7 @@ fun GrenobleSkiApp(
             state = state,
             siteBase = siteBase,
             showMobileAds = adsEnabled,
-            adBannerUnitId = BuildConfig.APPLOVIN_BANNER_AD_UNIT_ID,
+            adBannerUnitId = BuildConfig.ADMOB_BANNER_AD_UNIT_ID,
             onOpenAdsPreferences = onOpenAdsPreferences,
             onDismissError = viewModel::clearError,
             onDismissStatus = viewModel::clearStatusMessage,
@@ -869,12 +869,17 @@ private fun NativeShell(
                 NativeTab.HOME -> HomeTab(
                     state = state,
                     onOpenStations = { onSelectTab(NativeTab.STATIONS) },
+                    onOpenNews = { onSelectTab(NativeTab.NEWS) },
                     onOpenMarketplace = { onSelectTab(NativeTab.MARKETPLACE) },
                     onOpenBusLines = { onSelectTab(NativeTab.BUS_LINES) },
                     onOpenServices = { onSelectTab(NativeTab.SERVICES) },
                     onOpenCarpool = { onSelectTab(NativeTab.PARTNERS) },
                     onOpenStories = { onSelectTab(NativeTab.STORIES) },
                     onOpenCommunity = { onSelectTab(NativeTab.COMMUNITY) },
+                    onOpenUrl = { url -> openExternalUrl(localContext, url) },
+                )
+                NativeTab.NEWS -> SkiNewsTab(
+                    state = state,
                     onOpenUrl = { url -> openExternalUrl(localContext, url) },
                 )
                 NativeTab.STORIES -> StoriesTab(
@@ -982,6 +987,12 @@ private fun NativeShell(
                         shortLabel = stringResource(id = R.string.menu_short_community),
                         icon = Icons.AutoMirrored.Filled.TrendingUp,
                         action = { onSelectTab(NativeTab.COMMUNITY) },
+                    ),
+                    MoreMenuAction(
+                        label = stringResource(id = R.string.ski_news),
+                        shortLabel = stringResource(id = R.string.menu_short_news),
+                        icon = Icons.AutoMirrored.Filled.TrendingUp,
+                        action = { onSelectTab(NativeTab.NEWS) },
                     ),
                     MoreMenuAction(
                         label = stringResource(id = R.string.stories),
@@ -1628,24 +1639,21 @@ private fun CenteredAlertPopup(
 
 @Composable
 private fun MobileBannerAd(adUnitId: String) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val density = context.resources.displayMetrics.density
+    val widthDp = (context.resources.displayMetrics.widthPixels / density).toInt()
     AndroidView(
         modifier = Modifier
             .fillMaxWidth()
-            .height(50.dp),
-        factory = { context ->
-            val activity = context as? Activity
-            if (activity == null) {
-                FrameLayout(context)
-            } else {
-                MaxAdView(adUnitId, MaxAdFormat.BANNER, activity).apply {
-                    layoutParams = FrameLayout.LayoutParams(
-                        FrameLayout.LayoutParams.MATCH_PARENT,
-                        FrameLayout.LayoutParams.WRAP_CONTENT,
-                    )
-                    loadAd()
-                }
+            .height(60.dp),
+        factory = {
+            AdView(context).apply {
+                this.adUnitId = adUnitId
+                setAdSize(AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(context, widthDp))
+                loadAd(AdRequest.Builder().build())
             }
         },
+        onRelease = { it.destroy() },
     )
 }
 
@@ -1653,6 +1661,7 @@ private fun MobileBannerAd(adUnitId: String) {
 private fun HomeTab(
     state: AppUiState,
     onOpenStations: () -> Unit,
+    onOpenNews: () -> Unit,
     onOpenMarketplace: () -> Unit,
     onOpenBusLines: () -> Unit,
     onOpenServices: () -> Unit,
@@ -1667,6 +1676,7 @@ private fun HomeTab(
     val latestMarketplaceItems = remember(state.marketplaceItems) {
         state.marketplaceItems.sortedByDescending { it.id }.take(4)
     }
+    val featuredStations = remember(state.stationItems) { state.stationItems.take(8) }
 
     LazyColumn(
         state = listState,
@@ -1771,6 +1781,25 @@ private fun HomeTab(
 
         item {
             Text(
+                text = stringResource(id = R.string.featured_stations),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            if (featuredStations.isEmpty()) {
+                AlpineEmptyHero()
+            } else {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(featuredStations) { station ->
+                        StationPhotoCard(station = station, onClick = onOpenStations)
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+        }
+
+        item {
+            Text(
                 text = stringResource(id = R.string.highlighted_stories),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
@@ -1848,6 +1877,9 @@ private fun HomeTab(
                         }
                     }
                 }
+                TextButton(onClick = onOpenNews, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(id = R.string.view_all_news))
+                }
             }
         }
 
@@ -1878,6 +1910,117 @@ private fun HomeTab(
                     }
                     OutlinedButton(onClick = onOpenCarpool, modifier = Modifier.fillMaxWidth()) {
                         Text(text = stringResource(id = R.string.carpool))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AlpineEmptyHero() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(154.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(Brush.linearGradient(listOf(Color(0xFF113C5A), Color(0xFF54A9C6)))),
+        contentAlignment = Alignment.BottomStart,
+    ) {
+        Text(
+            text = stringResource(id = R.string.alpine_hero_caption),
+            modifier = Modifier.padding(18.dp),
+            color = Color.White,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+@Composable
+private fun StationPhotoCard(
+    station: fr.grenobleski.nativeapp.data.model.StationItem,
+    onClick: () -> Unit,
+) {
+    val image = remember(station.imageBase64) { decodeBase64Image(station.imageBase64) }
+    Card(
+        modifier = Modifier
+            .width(252.dp)
+            .height(174.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(20.dp),
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (image != null) {
+                Image(
+                    bitmap = image,
+                    contentDescription = station.name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                Box(
+                    modifier = Modifier.fillMaxSize().background(
+                        Brush.linearGradient(listOf(Color(0xFF173B58), Color(0xFF71C5D9)))
+                    )
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xD9001726))))
+                    .padding(14.dp),
+            ) {
+                Column {
+                    Text(station.name, color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        text = "${station.altitudeLabel} m  •  ${station.distanceLabel} km",
+                        color = Color.White.copy(alpha = 0.9f),
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SkiNewsTab(state: AppUiState, onOpenUrl: (String) -> Unit) {
+    var selectedStation by rememberSaveable { mutableStateOf<String?>(null) }
+    val stations = remember(state.skiNewsItems) {
+        state.skiNewsItems.map { it.stationName.trim() }.filter { it.isNotBlank() }.distinct().sorted()
+    }
+    val news = remember(state.skiNewsItems, selectedStation) {
+        state.skiNewsItems
+            .filter { selectedStation == null || it.stationName.equals(selectedStation, ignoreCase = true) }
+            .sortedByDescending { it.publishedAtRaw }
+    }
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(14.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item {
+            Text(stringResource(id = R.string.ski_news_intro), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(modifier = Modifier.height(10.dp))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                item { AssistChip(onClick = { selectedStation = null }, label = { Text(stringResource(id = R.string.all_stations)) }) }
+                items(stations) { station ->
+                    AssistChip(onClick = { selectedStation = station }, label = { Text(station) })
+                }
+            }
+        }
+        if (news.isEmpty()) item { EmptyTabMessage(text = stringResource(id = R.string.no_station_rss_news)) }
+        items(news) { newsItem ->
+            Card(shape = RoundedCornerShape(18.dp)) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(newsItem.stationName.ifBlank { stringResource(id = R.string.all_stations) }, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                    Text(newsItem.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("${newsItem.sourceName} • ${newsItem.publishedAtLabel}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (newsItem.summary.isNotBlank()) Text(newsItem.summary, style = MaterialTheme.typography.bodyMedium, maxLines = 4)
+                    OutlinedButton(onClick = { onOpenUrl(newsItem.link) }, modifier = Modifier.fillMaxWidth(), enabled = newsItem.link.isNotBlank()) {
+                        Text(stringResource(id = R.string.open_news))
                     }
                 }
             }
@@ -5523,6 +5666,7 @@ private fun PartnersTab(
 private fun tabTitle(tab: NativeTab): String {
     return when (tab) {
         NativeTab.HOME -> stringResource(id = R.string.nav_home)
+        NativeTab.NEWS -> stringResource(id = R.string.ski_news)
         NativeTab.STORIES -> stringResource(id = R.string.stories)
         NativeTab.COMMUNITY -> stringResource(id = R.string.community_dashboard)
         NativeTab.STATIONS -> stringResource(id = R.string.stations)

@@ -45,6 +45,9 @@ class BusLine(models.Model):
     first_departure = models.TimeField(null=True, blank=True)
     last_departure = models.TimeField(null=True, blank=True)
     notes = models.TextField(null=True, blank=True, help_text="Additional notes about the bus line")
+    next_departure_at = models.DateTimeField(null=True, blank=True, help_text="Next verified departure, supplied by the operator feed")
+    live_status = models.CharField(max_length=120, blank=True)
+    live_updated_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ['bus_number']
@@ -510,6 +513,12 @@ class UserProfile(models.Model):
     force_password_reset = models.BooleanField(default=False)
     organization_name = models.CharField(max_length=120, null=True, blank=True, unique=True)
     messages_private_by_default = models.BooleanField(default=False)
+    favorite_stations = models.ManyToManyField(SkiStation, blank=True, related_name='favoured_by_profiles')
+    skiing_level = models.CharField(max_length=16, choices=SkiPartnerPost.LEVEL_CHOICES, default=SkiPartnerPost.LEVEL_INTERMEDIATE)
+    transport_preferences = models.JSONField(default=list, blank=True)
+    daily_budget_eur = models.PositiveIntegerField(null=True, blank=True)
+    seeking_carpool = models.BooleanField(default=False)
+    onboarding_completed = models.BooleanField(default=False)
 
     def __str__(self):
         return f'{self.user.username} Profile'
@@ -555,12 +564,74 @@ class SkiStationCamera(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    last_verified_at = models.DateTimeField(null=True, blank=True)
+    last_snapshot_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ['name']
 
     def __str__(self):
         return f"{self.ski_station.name} - {self.name}"
+
+
+class StationLiveStatus(models.Model):
+    """Operator-supplied conditions; timestamps make stale data visible to clients."""
+    ski_station = models.OneToOneField(SkiStation, on_delete=models.CASCADE, related_name='live_status')
+    lifts_open = models.PositiveSmallIntegerField(null=True, blank=True)
+    lifts_total = models.PositiveSmallIntegerField(null=True, blank=True)
+    pistes_open = models.PositiveSmallIntegerField(null=True, blank=True)
+    pistes_total = models.PositiveSmallIntegerField(null=True, blank=True)
+    snow_depth_cm = models.PositiveSmallIntegerField(null=True, blank=True)
+    snow_fall_24h_cm = models.PositiveSmallIntegerField(null=True, blank=True)
+    weather_summary = models.CharField(max_length=120, blank=True)
+    temperature_c = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    source_url = models.URLField(blank=True)
+    observed_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-observed_at']
+
+
+class StationOfficialSource(models.Model):
+    TYPE_RSS = 'rss'
+    TYPE_PAGE = 'page'
+    TYPE_CHOICES = [(TYPE_RSS, 'RSS/Atom'), (TYPE_PAGE, 'Official page')]
+    ski_station = models.ForeignKey(SkiStation, on_delete=models.CASCADE, related_name='official_sources')
+    name = models.CharField(max_length=120)
+    url = models.URLField()
+    source_type = models.CharField(max_length=8, choices=TYPE_CHOICES, default=TYPE_RSS)
+    language = models.CharField(max_length=2, choices=SkiNewsItem.LANG_CHOICES, default=SkiNewsItem.LANG_FR)
+    is_active = models.BooleanField(default=True)
+    last_synced_at = models.DateTimeField(null=True, blank=True)
+    last_error = models.CharField(max_length=300, blank=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['ski_station', 'url'], name='uniq_station_official_source')]
+
+
+class ModerationReport(models.Model):
+    TARGET_STORY = 'story'
+    TARGET_LISTING = 'listing'
+    TARGET_PARTNER = 'partner'
+    TARGET_MESSAGE = 'message'
+    TARGET_CHOICES = [(TARGET_STORY, 'Story'), (TARGET_LISTING, 'Marketplace listing'), (TARGET_PARTNER, 'Partner post'), (TARGET_MESSAGE, 'Message')]
+    STATUS_OPEN = 'open'
+    STATUS_REVIEWED = 'reviewed'
+    STATUS_ACTIONED = 'actioned'
+    STATUS_CHOICES = [(STATUS_OPEN, 'Open'), (STATUS_REVIEWED, 'Reviewed'), (STATUS_ACTIONED, 'Actioned')]
+    reporter = models.ForeignKey(User, on_delete=models.CASCADE, related_name='moderation_reports')
+    target_type = models.CharField(max_length=12, choices=TARGET_CHOICES)
+    target_id = models.PositiveIntegerField()
+    reason = models.CharField(max_length=300)
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default=STATUS_OPEN)
+    moderator_note = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        constraints = [models.UniqueConstraint(fields=['reporter', 'target_type', 'target_id'], name='uniq_report_per_target_user')]
 
 
 

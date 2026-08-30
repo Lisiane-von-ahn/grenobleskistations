@@ -66,7 +66,7 @@ jobs:
 
       - name: Verify latest API migration is applied
         run: |
-          python manage.py showmigrations api | grep "\[X\] 0042_skinewsitem"
+          python manage.py showmigrations api | grep "\[X\] 0044_busline_live_status_busline_live_updated_at_and_more"
 
       - name: Seed stations and related data
         run: |

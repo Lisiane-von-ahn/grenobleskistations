@@ -13,6 +13,16 @@ val appLovinBannerUnitId = (project.findProperty("APPLOVIN_BANNER_AD_UNIT_ID") a
     ?.takeIf { it.isNotEmpty() }
     ?: ""
 
+val adMobAppId = (project.findProperty("ADMOB_APP_ID") as String?)
+    ?.trim()
+    ?.takeIf { it.isNotEmpty() }
+    ?: "ca-app-pub-6158185990205930~3503834531"
+
+val adMobBannerUnitId = (project.findProperty("ADMOB_BANNER_AD_UNIT_ID") as String?)
+    ?.trim()
+    ?.takeIf { it.isNotEmpty() }
+    ?: "ca-app-pub-6158185990205930/9974813464"
+
 val enableMobileAds = ((project.findProperty("ENABLE_MOBILE_ADS") as String?)
     ?.trim()
     ?.lowercase()) in listOf("1", "true", "yes", "on")
@@ -33,7 +43,9 @@ android {
         buildConfigField("boolean", "ENABLE_MOBILE_ADS", enableMobileAds.toString())
         buildConfigField("String", "APPLOVIN_SDK_KEY", "\"$appLovinSdkKey\"")
         buildConfigField("String", "APPLOVIN_BANNER_AD_UNIT_ID", "\"$appLovinBannerUnitId\"")
+        buildConfigField("String", "ADMOB_BANNER_AD_UNIT_ID", "\"$adMobBannerUnitId\"")
         manifestPlaceholders["appLovinSdkKey"] = appLovinSdkKey
+        manifestPlaceholders["adMobAppId"] = adMobAppId
     }
 
     signingConfigs {
@@ -50,6 +62,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Google requires test ads while developing to protect the AdMob account.
+            buildConfigField("String", "ADMOB_BANNER_AD_UNIT_ID", "\"ca-app-pub-3940256099942544/9214589741\"")
+        }
         release {
             isMinifyEnabled = true
             proguardFiles(
@@ -107,6 +123,7 @@ dependencies {
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     implementation("androidx.browser:browser:1.8.0")
     implementation("com.applovin:applovin-sdk:13.0.1")
+    implementation("com.google.android.gms:play-services-ads:25.4.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

@@ -17,6 +17,9 @@ from .models import (
     SkiMaterialListing,
     SkiMaterialImage,
     SkiNewsItem,
+    StationLiveStatus,
+    StationOfficialSource,
+    ModerationReport,
 )
 
 class SkiStationForm(forms.ModelForm):
@@ -114,3 +117,12 @@ admin.site.register(UserProfile)
 admin.site.register(SkiMaterialListing)
 admin.site.register(SkiMaterialImage)
 admin.site.register(SkiNewsItem)
+admin.site.register(StationLiveStatus)
+admin.site.register(StationOfficialSource)
+
+@admin.register(ModerationReport)
+class ModerationReportAdmin(admin.ModelAdmin):
+    list_display = ('target_type', 'target_id', 'reporter', 'status', 'created_at')
+    list_filter = ('target_type', 'status', 'created_at')
+    search_fields = ('reason', 'moderator_note', 'reporter__username')
+    readonly_fields = ('reporter', 'target_type', 'target_id', 'reason', 'created_at')
