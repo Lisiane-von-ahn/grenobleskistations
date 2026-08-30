@@ -43,7 +43,7 @@ jobs:
 
       - name: Write Google Play service account JSON
         run: |
-          printf '%s' "${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}" > "$RUNNER_TEMP/play-service-account.json"
+          echo "${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}" | base64 --decode > "$RUNNER_TEMP/play-service-account.json"
 
       - name: Install Python dependencies for Play scripts
         run: |
