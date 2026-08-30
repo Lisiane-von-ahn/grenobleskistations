@@ -498,6 +498,16 @@ def ski_station_detail(request, station_id):
         SkiNewsItem.objects.filter(ski_station=ski_station)
         .order_by('-is_highlighted', '-published_at')[:8]
     )
+    station_news_is_global = False
+    if not station_news_items:
+        # Google News items often concern the Grenoble ski area without naming a
+        # specific resort. Keep the station feed useful while clearly indicating
+        # that these are regional mountain updates.
+        station_news_items = list(
+            SkiNewsItem.objects.select_related('ski_station')
+            .order_by('-is_highlighted', '-published_at')[:8]
+        )
+        station_news_is_global = bool(station_news_items)
     station_highlighted_news = [row for row in station_news_items if row.is_highlighted][:3]
     for news in station_news_items:
         news.safe_link = _safe_news_link(news)
@@ -530,6 +540,7 @@ def ski_station_detail(request, station_id):
         'google_place_rating': google_place_rating,
         'station_news_items': station_news_items,
         'station_highlighted_news': station_highlighted_news,
+        'station_news_is_global': station_news_is_global,
     }
 
     return render(request, 'details.html', context)

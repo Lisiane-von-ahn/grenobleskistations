@@ -906,6 +906,100 @@
             letter-spacing: 0.04em;
             text-transform: uppercase;
         }
+
+        .theme-toggle {
+            position: fixed;
+            right: 16px;
+            bottom: 74px;
+            z-index: 1050;
+            width: 46px;
+            height: 46px;
+            display: grid;
+            place-items: center;
+            border: 1px solid rgba(14, 80, 104, 0.18);
+            border-radius: 50%;
+            background: #ffffff;
+            color: #164e63;
+            box-shadow: 0 10px 22px rgba(15, 44, 61, 0.18);
+            font-size: 18px;
+        }
+
+        .theme-toggle:hover,
+        .theme-toggle:focus-visible {
+            background: #e6f7fb;
+            color: #0b7892;
+            transform: translateY(-2px);
+        }
+
+        body.theme-dark {
+            --app-bg: linear-gradient(180deg, #091923 0%, #0d202c 52%, #101923 100%);
+            --app-text: #e6eef4;
+            --app-surface: #132735;
+            --app-border: #294453;
+            --app-soft-shadow: 0 12px 26px rgba(0, 0, 0, 0.25);
+            --app-mobile-nav: rgba(7, 19, 28, 0.97);
+            background: var(--app-bg);
+            color: var(--app-text);
+        }
+
+        body.theme-dark h1, body.theme-dark h2, body.theme-dark h3,
+        body.theme-dark h4, body.theme-dark h5, body.theme-dark h6,
+        body.theme-dark .card-title, body.theme-dark .section-heading h2 {
+            color: #f3f8fb;
+        }
+
+        body.theme-dark .card, body.theme-dark .premium-panel,
+        body.theme-dark .search-form form, body.theme-dark #search-form,
+        body.theme-dark .social-post-card, body.theme-dark .station-summary-card,
+        body.theme-dark .visit-country .items .item, body.theme-dark .featured-station-card,
+        body.theme-dark .table-responsive, body.theme-dark .main-nav .nav li .offers-submenu {
+            background: #132735;
+            border-color: #294453;
+            color: #e6eef4;
+        }
+
+        body.theme-dark .text-muted, body.theme-dark small,
+        body.theme-dark .social-meta, body.theme-dark .circuit-breakdown-inline small,
+        body.theme-dark .section-heading p, body.theme-dark .site-footer p,
+        body.theme-dark .ad-slot-label {
+            color: #adc1ce !important;
+        }
+
+        body.theme-dark .form-control, body.theme-dark .form-select,
+        body.theme-dark textarea, body.theme-dark input {
+            background: #0c1d28;
+            border-color: #385565;
+            color: #edf6fa;
+        }
+
+        body.theme-dark .form-control::placeholder { color: #92a9b7; }
+        body.theme-dark .site-footer { background: #0b1a24; border-color: #294453; }
+        body.theme-dark .footer-links a { background: #1c394a; color: #e6f5fb; }
+        body.theme-dark .theme-toggle { background: #1b3949; border-color: #456474; color: #f7fbfd; }
+
+        @media (max-width: 991.98px) {
+            #cookie-banner {
+                bottom: calc(70px + env(safe-area-inset-bottom));
+                max-height: calc(100dvh - 120px);
+                overflow-y: auto;
+            }
+
+            .theme-toggle {
+                right: 12px;
+                bottom: calc(84px + env(safe-area-inset-bottom));
+            }
+
+            body.theme-dark .header-area {
+                background: linear-gradient(135deg, #0d394b 0%, #125b6e 100%);
+            }
+
+            body.theme-dark .main-nav .nav li .offers-submenu,
+            body.theme-dark .lang-select {
+                background: #132735;
+                border-color: #385565;
+                color: #edf6fa;
+            }
+        }
     </style>        
 </head>
 
@@ -1266,6 +1360,10 @@
         {% endif %}
     </a>
 
+    <button class="theme-toggle" type="button" data-theme-toggle aria-label="Activer le mode sombre" title="Mode sombre">
+        <i class="fas fa-moon" aria-hidden="true"></i>
+    </button>
+
     {% with current=request.resolver_match.url_name %}
     <nav class="mobile-bottom-nav" aria-label="Navigation mobile">
         <a href="{% url 'my_template_view' %}" class="{% if current == 'my_template_view' %}active{% endif %}">
@@ -1294,6 +1392,30 @@
     {{ city_autocomplete_values|json_script:"city-autocomplete-json" }}
 
     <script>
+        (function () {
+            const storageKey = 'grenobleski-theme';
+            const toggle = document.querySelector('[data-theme-toggle]');
+            if (!toggle) return;
+
+            const applyTheme = (theme) => {
+                const isDark = theme === 'dark';
+                document.body.classList.toggle('theme-dark', isDark);
+                const icon = toggle.querySelector('i');
+                icon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+                const label = isDark ? 'Activer le mode clair' : 'Activer le mode sombre';
+                toggle.setAttribute('aria-label', label);
+                toggle.setAttribute('title', label);
+            };
+
+            const savedTheme = localStorage.getItem(storageKey);
+            applyTheme(savedTheme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+            toggle.addEventListener('click', () => {
+                const nextTheme = document.body.classList.contains('theme-dark') ? 'light' : 'dark';
+                localStorage.setItem(storageKey, nextTheme);
+                applyTheme(nextTheme);
+            });
+        }());
+
         document.addEventListener('DOMContentLoaded', function () {
 
             const datalist = document.getElementById('city-autocomplete-list');
