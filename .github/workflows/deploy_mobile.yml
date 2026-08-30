@@ -57,6 +57,11 @@ jobs:
           chmod +x grenobleski_android_native/gradlew
           chmod +x scripts/deploy_google_play.sh
 
+      - name: Generate release version
+        id: release_version
+        run: |
+          echo "build_number=$(date +%s)" >> "$GITHUB_OUTPUT"
+
       - name: Build release APK & AAB
         working-directory: grenobleski_android_native
         env:
@@ -64,8 +69,8 @@ jobs:
           KEY_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          BUILD_NUMBER: ${{ github.run_number }}
-          VERSION_NAME: "1.${{ github.run_number }}.0"
+          BUILD_NUMBER: ${{ steps.release_version.outputs.build_number }}
+          VERSION_NAME: "1.${{ steps.release_version.outputs.build_number }}.0"
         run: |
           ./gradlew assembleRelease --no-daemon
           ./gradlew bundleRelease --no-daemon
@@ -106,8 +111,8 @@ jobs:
           GOOGLE_PLAY_TRACK: internal
           GOOGLE_PLAY_RELEASE_STATUS: completed
           GOOGLE_PLAY_ROLLOUT_PERCENTAGE: "100"
-          GOOGLE_PLAY_BUILD_NUMBER: ${{ github.run_number }}
-          GOOGLE_PLAY_VERSION_NAME: 1.${{ github.run_number }}.0
+          GOOGLE_PLAY_BUILD_NUMBER: ${{ steps.release_version.outputs.build_number }}
+          GOOGLE_PLAY_VERSION_NAME: 1.${{ steps.release_version.outputs.build_number }}.0
           GOOGLE_PLAY_CHANGES_NOT_SENT_FOR_REVIEW: "false"
           ANDROID_SIGNING_KEYSTORE_PATH: ${{ runner.temp }}/release.keystore
           ANDROID_SIGNING_STORE_PASS: ${{ secrets.ANDROID_STORE_PASSWORD }}
@@ -119,11 +124,11 @@ jobs:
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: mobile-v1.${{ github.run_number }}.0
-          name: "GrenobleSki Android v1.${{ github.run_number }}.0"
+          tag_name: mobile-v1.${{ steps.release_version.outputs.build_number }}.0
+          name: "GrenobleSki Android v1.${{ steps.release_version.outputs.build_number }}.0"
           body: |
             Automated release from commit ${{ github.sha }}.
-            Built by GitHub Actions run #${{ github.run_number }}.
+            Built with versionCode ${{ steps.release_version.outputs.build_number }}.
           files: grenobleski_android_native/app/build/outputs/apk/release/app-release.apk
           draft: false
           prerelease: false
