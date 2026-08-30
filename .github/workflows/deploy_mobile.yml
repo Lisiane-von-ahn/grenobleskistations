@@ -85,7 +85,7 @@ jobs:
           ANDROID_SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_SIGNING_KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
           GOOGLE_PLAY_PACKAGE_NAME: fr.grenobleski.nativeapp
-          GOOGLE_PLAY_TRACK: internal
+          GOOGLE_PLAY_TRACK: production
         run: ./scripts/deploy_google_play.sh
 
       - name: Upload APK artifact
@@ -102,13 +102,13 @@ jobs:
           path: grenobleski_android_native/app/build/outputs/bundle/release/app-release.aab
           retention-days: 30
 
-      - name: Deploy to Google Play Store (Internal Testing)
+      - name: Deploy to Google Play Store (Production)
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         env:
           GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ runner.temp }}/play-service-account.json
           GOOGLE_PLAY_AAB_PATH: ${{ github.workspace }}/grenobleski_android_native/app/build/outputs/bundle/release/app-release.aab
           GOOGLE_PLAY_PACKAGE_NAME: fr.grenobleski.nativeapp
-          GOOGLE_PLAY_TRACK: internal
+          GOOGLE_PLAY_TRACK: production
           GOOGLE_PLAY_RELEASE_STATUS: completed
           GOOGLE_PLAY_ROLLOUT_PERCENTAGE: "100"
           GOOGLE_PLAY_BUILD_NUMBER: ${{ steps.release_version.outputs.build_number }}
