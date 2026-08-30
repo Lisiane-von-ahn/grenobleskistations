@@ -174,8 +174,11 @@ def main() -> None:
 
         update_listing(service, args.package_name, edit_id, args)
 
-        commit_body = {"changesNotSentForReview": args.changes_not_sent_for_review}
-        service.edits().commit(packageName=args.package_name, editId=edit_id, body=commit_body).execute()
+        service.edits().commit(
+            packageName=args.package_name,
+            editId=edit_id,
+            changesNotSentForReview=args.changes_not_sent_for_review,
+        ).execute()
 
         print(f"[OK] Uploaded versionCode={version_code} to track '{args.track}' with status '{release_status}'")
 
