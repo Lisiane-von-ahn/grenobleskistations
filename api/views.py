@@ -3,7 +3,7 @@ import os
 import base64
 import binascii
 import json
-from datetime import datetime, time, timezone as datetime_timezone
+from datetime import datetime, time, timedelta, timezone as datetime_timezone
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -1151,6 +1151,11 @@ class SkiNewsItemViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         queryset = SkiNewsItem.objects.select_related('ski_station').all()
+
+        category = (self.request.query_params.get('category') or 'ski').strip().lower()
+        queryset = queryset.filter(category='culture' if category == 'culture' else 'ski')
+        if category == 'culture':
+            queryset = queryset.filter(culture_source__is_active=True, published_at__gte=timezone.now() - timedelta(days=180)).order_by('-published_at', '-id')
 
         language = (self.request.query_params.get('language') or '').strip().lower()
         if language in {SkiNewsItem.LANG_FR, SkiNewsItem.LANG_EN}:

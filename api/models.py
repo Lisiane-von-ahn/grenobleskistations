@@ -450,14 +450,16 @@ class SkiNewsItem(models.Model):
         (LANG_EN, 'English'),
     ]
 
+    category = models.CharField(max_length=12, choices=[('ski', 'Ski'), ('culture', 'Culture')], default='ski', db_index=True)
+    culture_source = models.ForeignKey('CultureFeedSource', on_delete=models.SET_NULL, null=True, blank=True, related_name='items')
     title = models.CharField(max_length=255)
     summary = models.TextField(blank=True)
-    link = models.URLField(unique=True)
+    link = models.URLField(max_length=500, unique=True)
     source_name = models.CharField(max_length=120, blank=True)
-    source_url = models.URLField(blank=True)
+    source_url = models.URLField(max_length=500, blank=True)
     language = models.CharField(max_length=2, choices=LANG_CHOICES, default=LANG_FR)
     ski_station = models.ForeignKey(SkiStation, on_delete=models.SET_NULL, null=True, blank=True, related_name='news_items')
-    image_url = models.URLField(blank=True)
+    image_url = models.URLField(max_length=500, blank=True)
     published_at = models.DateTimeField(default=timezone.now)
     is_highlighted = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -890,6 +892,22 @@ class GrenoblePlace(models.Model):
     photo_credit = models.CharField(max_length=500, blank=True)
     photo_source_url = models.URLField(max_length=500, blank=True)
     source_url = models.URLField(max_length=500)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+class CultureFeedSource(models.Model):
+    name = models.CharField(max_length=120)
+    url = models.URLField(max_length=500, unique=True)
+    topic = models.CharField(max_length=30, choices=[('museum', 'Museums'), ('performing_arts', 'Performing arts'), ('science', 'Science and families')])
+    language = models.CharField(max_length=2, default='fr')
+    is_active = models.BooleanField(default=True)
+    last_synced_at = models.DateTimeField(null=True, blank=True)
+    last_error = models.CharField(max_length=300, blank=True)
 
     class Meta:
         ordering = ['name']

@@ -129,3 +129,10 @@ class ModerationReportAdmin(admin.ModelAdmin):
 
 from .models import GrenoblePlace
 admin.site.register(GrenoblePlace)
+
+from .models import CultureFeedSource
+
+@admin.register(CultureFeedSource)
+class CultureFeedSourceAdmin(admin.ModelAdmin):
+    list_display = ['name', 'topic', 'is_active', 'last_synced_at', 'last_error']
+    readonly_fields = ['last_synced_at', 'last_error']

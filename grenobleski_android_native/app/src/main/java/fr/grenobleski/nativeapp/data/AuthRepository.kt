@@ -293,10 +293,12 @@ class AuthRepository(
         )
     }
 
-    suspend fun fetchSkiNews(token: String, highlightedOnly: Boolean = false): Result<List<SkiNewsItem>> = withContext(Dispatchers.IO) {
+    suspend fun fetchSkiNews(token: String, highlightedOnly: Boolean = false, category: String = "ski"): Result<List<SkiNewsItem>> = withContext(Dispatchers.IO) {
         val authHeader = "Token $token"
         val language = if (Locale.getDefault().language.lowercase().startsWith("en")) "en" else "fr"
-        val endpoint = if (highlightedOnly) {
+        val endpoint = if (category == "culture") {
+            "/api/ski-news/?category=culture"
+        } else if (highlightedOnly) {
             "/api/ski-news/?language=$language&highlighted=true"
         } else {
             "/api/ski-news/?language=$language"
@@ -318,6 +320,7 @@ class AuthRepository(
                 publishedAtLabel = formatServerDateTime(obj.stringOrBlank("published_at")),
                 publishedAtRaw = obj.stringOrBlank("published_at"),
                 highlighted = obj.boolOrFalse("is_highlighted"),
+                imageUrl = obj.stringOrBlank("image_url"),
             )
         }.filter { it.title.isNotBlank() && it.link.isNotBlank() }
 
@@ -366,7 +369,7 @@ class AuthRepository(
                 obj.stringOrBlank("description_fr"), obj.stringOrBlank("description_en"),
                 obj.stringOrBlank("walk_fr"), obj.stringOrBlank("walk_en"),
                 obj.stringOrBlank("image"), obj.stringOrBlank("photo_credit"),
-                obj.stringOrBlank("photo_source_url"), obj.stringOrBlank("source_url"),
+                obj.stringOrBlank("photo_source_url"), obj.stringOrBlank("source_url"), obj.stringOrBlank("slug"),
             )
         })
     }

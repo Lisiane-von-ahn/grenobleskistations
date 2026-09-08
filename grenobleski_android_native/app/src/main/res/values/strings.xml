@@ -284,8 +284,8 @@
     <string name="confirm_new_password">Confirm new password</string>
     <string name="update_password">Update password</string>
 
-    <string name="discovery_title">Your window on the Alps</string>
-    <string name="discovery_subtitle">Webcams, mountain conditions and Grenoble through the seasons.</string>
+    <string name="discovery_title">Grenoble, your way</string>
+    <string name="discovery_subtitle">A museum, a gentle stroll or a mountain view — find your next outing.</string>
     <string name="discovery_cameras">Mountain webcams</string>
     <string name="discovery_conditions">Skiing today?</string>
     <string name="discovery_no_conditions">Station conditions are not available yet. Pull up refresh to try again.</string>
@@ -302,4 +302,14 @@
     <string name="conditions_bulletin">Operator bulletin</string>
     <string name="camera_unavailable">Camera unavailable. Please retry.</string>
     <string name="camera_provider_note">Provider imagery may be delayed. Snapshots refresh every minute; check the time shown in the image.</string>
+    <string name="discovery_everyone">For curious locals and visitors, in every season.</string>
+    <string name="interest_all">Discover</string>
+    <string name="interest_mountains">Mountains</string>
+    <string name="interest_walks">Walks &amp; parks</string>
+    <string name="interest_culture">Arts &amp; culture</string>
+    <string name="culture_news_title">Culture in Grenoble</string>
+    <string name="culture_news_subtitle">Museums, live performances and science: news from local venues.</string>
+    <string name="culture_news_empty">News is temporarily unavailable. Explore the places below or refresh later.</string>
+    <string name="culture_published">Published %1$s · Original language: %2$s</string>
+    <string name="culture_read_article">Read at the source</string>
 </resources>

@@ -256,8 +256,8 @@
     <string name="confirm_new_password">Confirmer le nouveau mot de passe</string>
     <string name="update_password">Mettre a jour le mot de passe</string>
 
-    <string name="discovery_title">Votre fenêtre sur les Alpes</string>
-    <string name="discovery_subtitle">Webcams, conditions en montagne et Grenoble au fil des saisons.</string>
+    <string name="discovery_title">Grenoble, à votre rythme</string>
+    <string name="discovery_subtitle">Un musée, une balade tranquille ou un panorama : trouvez votre prochaine sortie.</string>
     <string name="discovery_cameras">Webcams en montagne</string>
     <string name="discovery_conditions">Du ski aujourd’hui ?</string>
     <string name="discovery_no_conditions">Les conditions des stations ne sont pas encore disponibles. Utilisez Actualiser pour réessayer.</string>
@@ -274,4 +274,14 @@
     <string name="conditions_bulletin">Bulletin de la station</string>
     <string name="camera_unavailable">Caméra indisponible. Veuillez réessayer.</string>
     <string name="camera_provider_note">Les images du fournisseur peuvent être différées. Les clichés sont actualisés chaque minute ; vérifier l’heure affichée sur l’image.</string>
+    <string name="discovery_everyone">Pour les habitants et les visiteurs curieux, en toute saison.</string>
+    <string name="interest_all">Découvrir</string>
+    <string name="interest_mountains">Montagne</string>
+    <string name="interest_walks">Balades et parcs</string>
+    <string name="interest_culture">Arts et culture</string>
+    <string name="culture_news_title">La culture à Grenoble</string>
+    <string name="culture_news_subtitle">Musées, spectacles et sciences : les nouvelles des lieux culturels.</string>
+    <string name="culture_news_empty">Les actualités sont momentanément indisponibles. Explorez les lieux ci-dessous ou actualisez plus tard.</string>
+    <string name="culture_published">Publié le %1$s · Langue originale : %2$s</string>
+    <string name="culture_read_article">Lire chez l’éditeur</string>
 </resources>

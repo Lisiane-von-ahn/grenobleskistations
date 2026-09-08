@@ -5420,7 +5420,7 @@ private fun decodeBase64Image(data: String): ImageBitmap? {
 }
 
 @Composable
-private fun rememberMarketplaceImage(
+internal fun rememberMarketplaceImage(
     source: String,
     cacheKey: String,
     reqWidth: Int,

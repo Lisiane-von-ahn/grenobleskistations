@@ -101,6 +101,9 @@ jobs:
             echo "==> Seeding Grenoble discovery and real station photographs"
             docker compose -f docker-compose.yml run --rm --no-deps --entrypoint "" web python manage.py seed_discovery
 
+            echo "==> Refreshing museum, performing arts and science RSS"
+            docker compose -f docker-compose.yml run --rm --no-deps --entrypoint "" web python manage.py fetch_culture_rss
+
             echo "==> Verifying that no pending migrations remain"
             docker compose -f docker-compose.yml run --rm --no-deps --entrypoint "" web python manage.py migrate --check --noinput
 

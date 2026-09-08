@@ -105,6 +105,7 @@ data class SkiNewsItem(
     val publishedAtLabel: String,
     val publishedAtRaw: String,
     val highlighted: Boolean,
+    val imageUrl: String = "",
 )
 
 enum class NativeTab {
@@ -319,4 +320,5 @@ data class GrenoblePlaceItem(
     val photoCredit: String,
     val photoSourceUrl: String,
     val sourceUrl: String,
+    val slug: String = "",
 )

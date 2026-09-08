@@ -189,3 +189,15 @@ msgstr "Enregistrer"
 #: templates/edit_listing.html
 msgid "Cancel"
 msgstr "Annuler"
+
+#: templates/index.html
+msgid "Culture in Grenoble"
+msgstr "La culture à Grenoble"
+
+#: templates/index.html
+msgid "Museums, live performances and science: news from local venues."
+msgstr "Musées, spectacles et sciences : les nouvelles des lieux culturels."
+
+#: templates/index.html
+msgid "Read at the source"
+msgstr "Lire chez l’éditeur"

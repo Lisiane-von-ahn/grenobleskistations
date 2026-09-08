@@ -186,7 +186,7 @@ jobs:
 
       - name: 'Ensure latest API migration is applied'
         run: |
-          python manage.py showmigrations api | grep "\[X\] 0046_alter_skistationcamera_camera_type"
+          python manage.py showmigrations api | grep "\[X\] 0049_alter_skinewsitem_image_url_alter_skinewsitem_link_and_more"
 
       - name: 'Summary'
         if: success()

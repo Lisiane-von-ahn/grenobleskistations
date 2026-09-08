@@ -47,6 +47,7 @@ data class AppUiState(
     val storyItems: List<StoryItem> = emptyList(),
     val highlightedStoryItems: List<StoryItem> = emptyList(),
     val skiNewsItems: List<SkiNewsItem> = emptyList(),
+    val cultureNewsItems: List<SkiNewsItem> = emptyList(),
     val highlightedSkiNewsItems: List<SkiNewsItem> = emptyList(),
     val storyStats: StoryStats = StoryStats(),
     val selectedUserActivity: UserActivitySummary? = null,
@@ -510,10 +511,12 @@ class AppViewModel(
                 NativeTab.HOME -> {
                     val stations = repository.fetchStationItems(session.token)
                     val places = repository.fetchGrenoblePlaces(session.token)
+                    val culture = repository.fetchSkiNews(session.token, category = "culture")
                     state = state.copy(
                         stationItems = stations.getOrDefault(state.stationItems),
                         grenoblePlaces = places.getOrDefault(state.grenoblePlaces),
-                        errorMessage = stations.exceptionOrNull()?.message ?: places.exceptionOrNull()?.message,
+                        cultureNewsItems = culture.getOrDefault(state.cultureNewsItems),
+                        errorMessage = stations.exceptionOrNull()?.message ?: places.exceptionOrNull()?.message ?: culture.exceptionOrNull()?.message,
                     )
                 }
 
@@ -1348,7 +1351,11 @@ class AppViewModel(
                 current.stationItems
             }
 
-            state = state.copy(grenoblePlaces = grenoblePlaces, stationItems = stationItems)
+            val cultureNewsItems = repository.fetchSkiNews(session.token, category = "culture").getOrElse {
+                firstError = firstError ?: it.message
+                current.cultureNewsItems
+            }
+            state = state.copy(grenoblePlaces = grenoblePlaces, stationItems = stationItems, cultureNewsItems = cultureNewsItems)
 
             val dashboardCounts = repository.fetchDashboardCounts(session.token).getOrElse {
                 firstError = firstError ?: (it.message ?: "Unable to load dashboard")

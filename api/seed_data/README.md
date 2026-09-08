@@ -35,7 +35,24 @@ operator bulletin; temperature alone cannot establish ideal skiing conditions.
 ## Validation and release
 
 Run Django checks, migration drift checks and tests before pushing. CI validates
-migration 0046, applies the seed, and deploy explicitly runs `migrate`,
+migration 0049, applies the seed, and deploy explicitly runs `migrate`,
 `seed_discovery`, then `migrate --check`. Android pushes still build signed APK/AAB
 artifacts. Google Play production publication requires a manual workflow run
 with `publish_to_play` enabled.
+
+
+## Cultural news
+
+Migration 0048 registers the Musée de Grenoble, MC2 and La Casemate official RSS
+feeds, checked on 2026-09-08. `fetch_culture_rss` imports short excerpts, publisher
+links, optional enclosure images, original languages and publication dates.
+Missing or invalid dates are skipped; publication dates are not event dates.
+The API exposes them through `/api/ski-news/?category=culture`; existing ski-news
+requests remain ski-only. English UI users can read the original French articles,
+which are explicitly labelled rather than presented as translated content.
+
+Deployment refreshes the feeds once; `refresh_culture.yml` then runs every four
+hours (GitHub scheduled jobs can be delayed). Each feed has its own sync timestamp
+and error in Django admin. Failures preserve existing articles; no sample cultural
+stories are fabricated. Only healthy sources prune their own articles older than
+180 days. Ski RSS pruning cannot delete cultural articles.

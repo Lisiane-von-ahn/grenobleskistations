@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -33,6 +34,7 @@ import fr.grenobleski.nativeapp.data.model.StationItem
 @Composable
 internal fun DiscoveryHome(state: AppUiState, onOpenStations: () -> Unit, onOpenUrl: (String) -> Unit) {
     val french = LocalConfiguration.current.locales[0].language == "fr"
+    var interest by rememberSaveable { mutableStateOf("all") }
     val cameras = state.stationItems.flatMap { station -> station.cameras.map { station to it } }
     var selectedCamera by remember { mutableStateOf<Int?>(null) }
     val selected = cameras.firstOrNull { it.second.id == selectedCamera } ?: cameras.firstOrNull()
@@ -47,8 +49,32 @@ internal fun DiscoveryHome(state: AppUiState, onOpenStations: () -> Unit, onOpen
             ).padding(22.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(stringResource(R.string.discovery_title), style = MaterialTheme.typography.headlineMedium)
                 Text(stringResource(R.string.discovery_subtitle), style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(R.string.discovery_everyone), style = MaterialTheme.typography.bodyMedium)
             }
         }
+        item {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(listOf("all" to R.string.interest_all, "mountains" to R.string.interest_mountains,
+                    "walks" to R.string.interest_walks, "culture" to R.string.interest_culture)) { (key, label) ->
+                    FilterChip(selected = interest == key, onClick = { interest = key }, label = { Text(stringResource(label)) })
+                }
+            }
+        }
+        if (interest == "all" || interest == "culture") {
+            item {
+                Text(stringResource(R.string.culture_news_title), style = MaterialTheme.typography.titleLarge)
+                Text(stringResource(R.string.culture_news_subtitle), style = MaterialTheme.typography.bodyMedium)
+                if (state.cultureNewsItems.isEmpty()) Text(stringResource(R.string.culture_news_empty))
+            }
+            item {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    items(state.cultureNewsItems, key = { it.id }) { news ->
+                        CultureNewsCard(news, onOpenUrl)
+                    }
+                }
+            }
+        }
+        if (interest == "all" || interest == "mountains") {
         item {
             Text(stringResource(R.string.discovery_cameras), style = MaterialTheme.typography.titleLarge)
             if (cameras.isEmpty()) Text(stringResource(R.string.no_live_cameras))
@@ -88,11 +114,16 @@ internal fun DiscoveryHome(state: AppUiState, onOpenStations: () -> Unit, onOpen
             }
             TextButton(onClick = onOpenStations) { Text(stringResource(R.string.featured_stations)) }
         }
+        }
+        if (interest != "mountains") {
         item {
             Text(stringResource(R.string.discovery_year_round), style = MaterialTheme.typography.titleLarge)
             if (state.grenoblePlaces.isEmpty()) Text(stringResource(R.string.discovery_no_places))
         }
-        items(state.grenoblePlaces, key = { "place-${it.id}" }) { place ->
+        items(state.grenoblePlaces.filter {
+            interest == "all" || (interest == "culture" && it.slug != "paul-mistral") ||
+                (interest == "walks" && it.slug != "dauphinois")
+        }, key = { "place-${it.id}" }) { place ->
             Card(shape = RoundedCornerShape(22.dp)) {
                 DiscoveryPhoto(place.imageBase64, place.name)
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -102,6 +133,26 @@ internal fun DiscoveryHome(state: AppUiState, onOpenStations: () -> Unit, onOpen
                     PhotoCredit(place.photoCredit, place.photoSourceUrl, onOpenUrl)
                     OutlinedButton(onClick = { onOpenUrl(place.sourceUrl) }) { Text(stringResource(R.string.discovery_visit_info)) }
                 }
+            }
+        }
+        }
+    }
+}
+
+@Composable
+private fun CultureNewsCard(news: fr.grenobleski.nativeapp.data.model.SkiNewsItem, onOpenUrl: (String) -> Unit) {
+    val image = rememberMarketplaceImage(news.imageUrl, "culture-${news.id}-${news.imageUrl}", 640, 360)
+    Card(modifier = Modifier.width(300.dp), shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
+        if (image != null) Image(image, null, Modifier.fillMaxWidth().height(160.dp), contentScale = ContentScale.Crop)
+        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(news.sourceName, style = MaterialTheme.typography.labelLarge)
+            Text(news.title, style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.culture_published, news.publishedAtLabel, news.language.uppercase()),
+                style = MaterialTheme.typography.labelSmall)
+            if (news.summary.isNotBlank()) Text(news.summary, style = MaterialTheme.typography.bodyMedium, maxLines = 4)
+            Button(onClick = { onOpenUrl(news.link) }, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.culture_read_article))
             }
         }
     }

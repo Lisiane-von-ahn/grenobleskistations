@@ -372,6 +372,7 @@ def home(request):
         {
             'ski_stations': random_ski_stations,
             'featured_stations': featured_stations,
+            'culture_news': SkiNewsItem.objects.filter(category='culture', culture_source__is_active=True).order_by('-published_at')[:6],
             'all': queryset,
             'nearest_stations': nearest_stations,
             'map_stations': map_stations,
@@ -495,7 +496,7 @@ def ski_station_detail(request, station_id):
     station_driving_url = f"https://www.google.com/maps/dir/?api=1&destination={destination}&travelmode=driving"
     google_place_rating = _fetch_google_place_rating(ski_station)
     station_news_items = list(
-        SkiNewsItem.objects.filter(ski_station=ski_station)
+        SkiNewsItem.objects.filter(ski_station=ski_station, category='ski')
         .order_by('-is_highlighted', '-published_at')[:8]
     )
     station_news_is_global = False
@@ -504,7 +505,7 @@ def ski_station_detail(request, station_id):
         # specific resort. Keep the station feed useful while clearly indicating
         # that these are regional mountain updates.
         station_news_items = list(
-            SkiNewsItem.objects.select_related('ski_station')
+            SkiNewsItem.objects.select_related('ski_station').filter(category='ski')
             .order_by('-is_highlighted', '-published_at')[:8]
         )
         station_news_is_global = bool(station_news_items)
@@ -1723,6 +1724,7 @@ def ski_stories(request):
     current_lang = (translation.get_language() or 'fr')[:2]
     news_items = list(
         SkiNewsItem.objects.select_related('ski_station')
+        .filter(category='ski')
         .filter(Q(language=current_lang) | Q(language='fr'))
         .order_by('-is_highlighted', '-published_at')[:12]
     )

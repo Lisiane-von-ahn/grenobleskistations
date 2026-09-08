@@ -152,6 +152,7 @@ class Command(BaseCommand):
                 SkiNewsItem.objects.update_or_create(
                     link=link,
                     defaults={
+                        'category': 'ski',
                         'title': title[:255],
                         'summary': summary,
                         'source_name': source_name[:120],
@@ -192,7 +193,7 @@ class Command(BaseCommand):
                 touched_links.add(link)
             fetched_count = 2
 
-        SkiNewsItem.objects.filter(published_at__lt=min_published).delete()
+        SkiNewsItem.objects.filter(category='ski', published_at__lt=min_published).delete()
 
         self.stdout.write(self.style.SUCCESS(f'RSS sync complete: {fetched_count} news items upserted.'))
         if skipped_too_long:
