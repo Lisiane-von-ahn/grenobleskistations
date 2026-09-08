@@ -126,3 +126,6 @@ class ModerationReportAdmin(admin.ModelAdmin):
     list_filter = ('target_type', 'status', 'created_at')
     search_fields = ('reason', 'moderator_note', 'reporter__username')
     readonly_fields = ('reporter', 'target_type', 'target_id', 'reason', 'created_at')
+
+from .models import GrenoblePlace
+admin.site.register(GrenoblePlace)

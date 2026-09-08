@@ -135,6 +135,16 @@ data class StationItem(
     val pisteMapUrl: String = "",
     val pisteMapThumbnailUrl: String = "",
     val cameras: List<StationCameraItem> = emptyList(),
+    val photoCredit: String = "",
+    val photoSourceUrl: String = "",
+    val temperature: String = "",
+    val weatherObservedAt: String = "",
+    val weatherSource: String = "",
+    val weather: String = "",
+    val observedAt: String = "",
+    val conditionSource: String = "",
+    val skiAssessment: String = "unknown",
+
 )
 
 data class StationCameraItem(
@@ -295,4 +305,18 @@ data class FriendInvitation(
     val fromUserId: Int,
     val toUserId: Int,
     val status: String,
+)
+
+
+data class GrenoblePlaceItem(
+    val id: Int,
+    val name: String,
+    val descriptionFr: String,
+    val descriptionEn: String,
+    val walkFr: String,
+    val walkEn: String,
+    val imageBase64: String,
+    val photoCredit: String,
+    val photoSourceUrl: String,
+    val sourceUrl: String,
 )

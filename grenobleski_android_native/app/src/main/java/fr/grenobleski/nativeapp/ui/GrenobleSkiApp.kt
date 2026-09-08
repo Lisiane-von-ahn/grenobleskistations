@@ -866,16 +866,9 @@ private fun NativeShell(
                 .padding(padding),
         ) {
             when (state.selectedTab) {
-                NativeTab.HOME -> HomeTab(
+                NativeTab.HOME -> DiscoveryHome(
                     state = state,
                     onOpenStations = { onSelectTab(NativeTab.STATIONS) },
-                    onOpenNews = { onSelectTab(NativeTab.NEWS) },
-                    onOpenMarketplace = { onSelectTab(NativeTab.MARKETPLACE) },
-                    onOpenBusLines = { onSelectTab(NativeTab.BUS_LINES) },
-                    onOpenServices = { onSelectTab(NativeTab.SERVICES) },
-                    onOpenCarpool = { onSelectTab(NativeTab.PARTNERS) },
-                    onOpenStories = { onSelectTab(NativeTab.STORIES) },
-                    onOpenCommunity = { onSelectTab(NativeTab.COMMUNITY) },
                     onOpenUrl = { url -> openExternalUrl(localContext, url) },
                 )
                 NativeTab.NEWS -> SkiNewsTab(
@@ -1658,266 +1651,6 @@ private fun MobileBannerAd(adUnitId: String) {
 }
 
 @Composable
-private fun HomeTab(
-    state: AppUiState,
-    onOpenStations: () -> Unit,
-    onOpenNews: () -> Unit,
-    onOpenMarketplace: () -> Unit,
-    onOpenBusLines: () -> Unit,
-    onOpenServices: () -> Unit,
-    onOpenCarpool: () -> Unit,
-    onOpenStories: () -> Unit,
-    onOpenCommunity: () -> Unit,
-    onOpenUrl: (String) -> Unit,
-) {
-    val xpInLevel = state.xpPoints % 100
-    val xpProgress = xpInLevel / 100f
-    val listState = rememberLazyListState()
-    val latestMarketplaceItems = remember(state.marketplaceItems) {
-        state.marketplaceItems.sortedByDescending { it.id }.take(4)
-    }
-    val featuredStations = remember(state.stationItems) { state.stationItems.take(8) }
-
-    LazyColumn(
-        state = listState,
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 14.dp),
-        contentPadding = PaddingValues(vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(20.dp),
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            Brush.horizontalGradient(
-                                colors = listOf(
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
-                                    MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f),
-                                )
-                            )
-                        )
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(58.dp)
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(MaterialTheme.colorScheme.surface)
-                                .border(
-                                    width = 1.dp,
-                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
-                                    shape = RoundedCornerShape(14.dp),
-                                ),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.logo),
-                                contentDescription = stringResource(id = R.string.app_name),
-                                modifier = Modifier.size(38.dp),
-                            )
-                        }
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(
-                                text = stringResource(id = R.string.home_signature_title),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                            Text(
-                                text = stringResource(id = R.string.home_signature_subtitle),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-
-                    Text(
-                        text = stringResource(id = R.string.dashboard_welcome),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        UserAvatar(
-                            displayName = state.profileInfo?.displayName?.ifBlank { state.session?.displayName.orEmpty() }
-                                ?: state.session?.displayName.orEmpty(),
-                            photoBase64 = state.profileInfo?.profilePictureBase64.orEmpty(),
-                            photoUrl = state.profileInfo?.googleProfilePictureUrl.orEmpty(),
-                            size = 40.dp,
-                        )
-                        Text(
-                            text = state.session?.displayName.orEmpty(),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
-                    Text(
-                        text = stringResource(id = R.string.dashboard_subtitle_premium),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    LinearProgressIndicator(progress = { xpProgress }, modifier = Modifier.fillMaxWidth())
-                    Text(
-                        text = stringResource(id = R.string.gamification_next_level_hint, 100 - xpInLevel),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
-
-        item {
-            Text(
-                text = stringResource(id = R.string.featured_stations),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            if (featuredStations.isEmpty()) {
-                AlpineEmptyHero()
-            } else {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(featuredStations) { station ->
-                        StationPhotoCard(station = station, onClick = onOpenStations)
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-        }
-
-        item {
-            Text(
-                text = stringResource(id = R.string.highlighted_stories),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                items(state.highlightedStoryItems) { story ->
-                    val preview = remember(story.imageBase64) { decodeBase64Image(story.imageBase64) }
-                    Card(modifier = Modifier.width(220.dp), shape = RoundedCornerShape(16.dp)) {
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            if (preview != null) {
-                                Image(
-                                    bitmap = preview,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(128.dp)
-                                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
-                                )
-                            }
-                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text(story.userLabel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                                Text(
-                                    text = story.caption.ifBlank { stringResource(id = R.string.story_no_caption) },
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    maxLines = 3,
-                                )
-                                Text(
-                                    text = "${story.stationName} • ${story.likeCount} ♥ • ${story.commentCount} 💬",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onOpenStories, modifier = Modifier.weight(1f)) {
-                    Text(stringResource(id = R.string.stories))
-                }
-                OutlinedButton(onClick = onOpenCommunity, modifier = Modifier.weight(1f)) {
-                    Text(stringResource(id = R.string.community_dashboard))
-                }
-            }
-        }
-
-        if (state.highlightedSkiNewsItems.isNotEmpty()) {
-            item {
-                Text(
-                    text = stringResource(id = R.string.highlighted_ski_news),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    items(state.highlightedSkiNewsItems) { news ->
-                        Card(modifier = Modifier.width(280.dp), shape = RoundedCornerShape(16.dp)) {
-                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(news.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 3)
-                                Text(
-                                    text = "${news.sourceName} • ${news.publishedAtLabel}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                if (news.summary.isNotBlank()) {
-                                    Text(news.summary, style = MaterialTheme.typography.bodySmall, maxLines = 3)
-                                }
-                                OutlinedButton(onClick = { onOpenUrl(news.link) }, modifier = Modifier.fillMaxWidth()) {
-                                    Text(stringResource(id = R.string.open_news))
-                                }
-                            }
-                        }
-                    }
-                }
-                TextButton(onClick = onOpenNews, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(id = R.string.view_all_news))
-                }
-            }
-        }
-
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                MetricCard(stringResource(id = R.string.stations), state.dashboardCounts.stations, modifier = Modifier.weight(1f), onClick = onOpenStations)
-                MetricCard(stringResource(id = R.string.bus_lines), state.dashboardCounts.busLines, modifier = Modifier.weight(1f), onClick = onOpenBusLines)
-            }
-        }
-
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                MetricCard(stringResource(id = R.string.services), state.dashboardCounts.services, modifier = Modifier.weight(1f), onClick = onOpenServices)
-                MetricCard(stringResource(id = R.string.marketplace), state.dashboardCounts.marketplace, modifier = Modifier.weight(1f), onClick = onOpenMarketplace)
-            }
-        }
-
-        item {
-            Card(shape = RoundedCornerShape(16.dp)) {
-                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(text = stringResource(id = R.string.home_latest_marketplace), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    if (latestMarketplaceItems.isEmpty()) {
-                        Text(text = stringResource(id = R.string.empty_marketplace), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    } else {
-                        latestMarketplaceItems.forEach { item ->
-                            Text("${item.title} • ${item.city} • ${item.priceLabel}", style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                    OutlinedButton(onClick = onOpenCarpool, modifier = Modifier.fillMaxWidth()) {
-                        Text(text = stringResource(id = R.string.carpool))
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun AlpineEmptyHero() {
     Box(
         modifier = Modifier
@@ -2430,6 +2163,7 @@ private fun StationsTab(
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         Text(item.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        PhotoCredit(item.photoCredit, item.photoSourceUrl, onOpenUrl)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             PisteMetricPill(
                                 label = stringResource(id = R.string.altitude),
@@ -2605,12 +2339,7 @@ private fun StationsTab(
                                                     color = MaterialTheme.colorScheme.primary,
                                                 )
                                             }
-                                            Button(
-                                                onClick = { onOpenUrl(camera.cameraUrl) },
-                                                modifier = Modifier.fillMaxWidth(),
-                                            ) {
-                                                Text(stringResource(id = R.string.open_camera))
-                                            }
+                                            CameraFrame(camera)
                                         }
                                     }
                                 }

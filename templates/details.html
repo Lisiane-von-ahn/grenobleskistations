@@ -221,6 +221,7 @@
                         <h3 class="mb-3">{{ station.name }}</h3>
                         {% if station.image %}
                             <img src="data:image/jpeg;base64,{{ station.image|b64encode }}" class="station-hero-image mb-3" alt="{{ station.name }}">
+{% include "partials/station_photo_credit.html" %}
                         {% else %}
                             <img src="{% static 'images/chamrousse.jpg' %}" class="station-hero-image mb-3" alt="{{ station.name }}">
                         {% endif %}

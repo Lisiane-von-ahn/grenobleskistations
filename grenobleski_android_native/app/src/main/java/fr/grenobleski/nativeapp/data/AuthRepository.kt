@@ -357,6 +357,20 @@ class AuthRepository(
         )
     }
 
+    suspend fun fetchGrenoblePlaces(token: String): Result<List<fr.grenobleski.nativeapp.data.model.GrenoblePlaceItem>> = withContext(Dispatchers.IO) {
+        val payload = fetchPayloadFromCandidates(listOf("/api/grenoble-places/"), "Token $token")
+            ?: return@withContext Result.failure(IllegalStateException("Unable to load Grenoble places"))
+        Result.success(extractObjectList(payload).map { obj ->
+            fr.grenobleski.nativeapp.data.model.GrenoblePlaceItem(
+                obj.intOrZero("id"), obj.stringOrBlank("name"),
+                obj.stringOrBlank("description_fr"), obj.stringOrBlank("description_en"),
+                obj.stringOrBlank("walk_fr"), obj.stringOrBlank("walk_en"),
+                obj.stringOrBlank("image"), obj.stringOrBlank("photo_credit"),
+                obj.stringOrBlank("photo_source_url"), obj.stringOrBlank("source_url"),
+            )
+        })
+    }
+
     suspend fun fetchStationItems(token: String): Result<List<StationItem>> = withContext(Dispatchers.IO) {
         val authHeader = "Token $token"
         val payload = fetchPayloadFromCandidates(listOf("/api/skistations/", "/api/skistations"), authHeader)
@@ -397,9 +411,26 @@ class AuthRepository(
                 pisteMapUrl = obj.stringOrBlank("piste_map_url"),
                 pisteMapThumbnailUrl = obj.stringOrBlank("piste_map_thumbnail_url"),
                 cameras = cameras,
+                photoCredit = obj.stringOrBlank("photo_credit"),
+                photoSourceUrl = obj.stringOrBlank("photo_source_url"),
+                temperature = obj.get("live_status")?.takeIf { it.isJsonObject }?.asJsonObject?.stringOrBlank("temperature_c").orEmpty(),
+                weather = obj.get("live_status")?.takeIf { it.isJsonObject }?.asJsonObject?.stringOrBlank("weather_summary").orEmpty(),
+                observedAt = obj.get("live_status")?.takeIf { it.isJsonObject }?.asJsonObject?.stringOrBlank("observed_at").orEmpty(),
+                conditionSource = obj.get("live_status")?.takeIf { it.isJsonObject }?.asJsonObject?.stringOrBlank("source_url").orEmpty(),
+                skiAssessment = obj.stringOrBlank("ski_assessment").ifBlank { "unknown" },
             )
         }
-        Result.success(items)
+        val weatherPayload = fetchPayloadFromCandidates(listOf("/api/station-weather/"), authHeader)
+        val weatherById = weatherPayload?.let { extractObjectList(it) }?.associateBy { it.intOrZero("id") }.orEmpty()
+        Result.success(items.map { station ->
+            val weather = weatherById[station.id]
+            if (weather != null && (station.temperature.isBlank() || station.skiAssessment == "stale")) station.copy(
+                temperature = weather.stringOrBlank("temperature_c"),
+                weather = weather.stringOrBlank("weather_description"),
+                weatherObservedAt = weather.stringOrBlank("observed_at"),
+                weatherSource = weather.stringOrBlank("source_url"),
+            ) else station
+        })
     }
 
     suspend fun fetchBusLineItems(token: String): Result<List<BusLineItem>> = withContext(Dispatchers.IO) {

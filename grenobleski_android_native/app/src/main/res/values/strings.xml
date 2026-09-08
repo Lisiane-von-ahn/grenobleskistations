@@ -283,4 +283,23 @@
     <string name="new_password">New password</string>
     <string name="confirm_new_password">Confirm new password</string>
     <string name="update_password">Update password</string>
+
+    <string name="discovery_title">Your window on the Alps</string>
+    <string name="discovery_subtitle">Webcams, mountain conditions and Grenoble through the seasons.</string>
+    <string name="discovery_cameras">Mountain webcams</string>
+    <string name="discovery_conditions">Skiing today?</string>
+    <string name="discovery_no_conditions">Station conditions are not available yet. Pull up refresh to try again.</string>
+    <string name="discovery_year_round">Grenoble, all year round</string>
+    <string name="discovery_no_places">Walking and cultural ideas are currently unavailable. Refresh to try again.</string>
+    <string name="discovery_visit_info">Plan your visit</string>
+    <string name="discovery_no_temperature">Temperature unavailable</string>
+    <string name="ski_closed">Skiing unavailable: pistes or lifts reported closed</string>
+    <string name="ski_stale">Report out of date — conditions need checking</string>
+    <string name="ski_unfavourable">Reported conditions are unfavourable</string>
+    <string name="ski_check_bulletin">Pistes open — check wind, visibility and snow quality before skiing</string>
+    <string name="ski_unknown">Not enough current data to assess skiing conditions</string>
+    <string name="conditions_observed">Observed: %1$s</string>
+    <string name="conditions_bulletin">Operator bulletin</string>
+    <string name="camera_unavailable">Camera unavailable. Please retry.</string>
+    <string name="camera_provider_note">Provider imagery may be delayed. Snapshots refresh every minute; check the time shown in the image.</string>
 </resources>

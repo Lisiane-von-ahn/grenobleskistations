@@ -48,6 +48,7 @@ case "$COMMAND" in
             echo "❌ ERROR: Failed to seed ski stations data"
             exit 1
         }
+        python manage.py seed_discovery
         ;;
     verify-migrations)
         python manage.py migrate --check --noinput || {

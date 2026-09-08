@@ -18,6 +18,8 @@ class SkiStation(models.Model):
     longitude = models.DecimalField(max_digits=9, decimal_places=6)
     capacity = models.IntegerField(null=True)
     image = models.BinaryField(null=True, blank=True) 
+    photo_credit = models.CharField(max_length=500, blank=True)
+    photo_source_url = models.URLField(max_length=500, blank=True)
     altitude = models.IntegerField(null=False,default=1000)
     distanceFromGrenoble = models.IntegerField(null=False,default=100)
     piste_map_url = models.URLField(null=True, blank=True)
@@ -557,6 +559,7 @@ class SkiStationCamera(models.Model):
             ('live_stream', 'Live Stream (MJPEG)'),
             ('hls_stream', 'HLS Stream (m3u8)'),
             ('snapshot', 'Snapshot Only'),
+            ('embedded', 'Embedded provider viewer'),
         ],
         default='snapshot'
     )
@@ -872,3 +875,24 @@ def save_user_profile(sender, instance, **kwargs):
         instance.profile.save()    
     except:
         print ("Does not do anything")
+
+
+class GrenoblePlace(models.Model):
+    slug = models.SlugField(unique=True)
+    name = models.CharField(max_length=150)
+    description_fr = models.TextField()
+    description_en = models.TextField()
+    walk_fr = models.TextField()
+    walk_en = models.TextField()
+    latitude = models.DecimalField(max_digits=8, decimal_places=6)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6)
+    image = models.BinaryField(null=True, blank=True)
+    photo_credit = models.CharField(max_length=500, blank=True)
+    photo_source_url = models.URLField(max_length=500, blank=True)
+    source_url = models.URLField(max_length=500)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name

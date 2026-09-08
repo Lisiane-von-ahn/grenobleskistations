@@ -9,6 +9,11 @@ on:
       - main
       - master
   workflow_dispatch:
+    inputs:
+      publish_to_play:
+        description: 'Publish the signed bundle to Google Play production'
+        type: boolean
+        default: false
 
 jobs:
   build-android:
@@ -106,7 +111,7 @@ jobs:
           retention-days: 30
 
       - name: Deploy to Google Play Store (Production)
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        if: github.event_name == 'workflow_dispatch' && inputs.publish_to_play && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
         env:
           GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ runner.temp }}/play-service-account.json
           GOOGLE_PLAY_AAB_PATH: ${{ github.workspace }}/grenobleski_android_native/app/build/outputs/bundle/release/app-release.aab

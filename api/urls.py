@@ -37,7 +37,10 @@ from .views import (
     auth_password_change_view, auth_profile_update_view,
     auth_register_view, login_view, mobile_bridge_info_view,
 )
+from .discovery import GrenoblePlaceViewSet, station_weather
+
 router = DefaultRouter()
+router.register(r"grenoble-places", GrenoblePlaceViewSet)
 router.register(r'skistations', SkiStationViewSet)
 router.register(r'buslines', BusLineViewSet)
 router.register(r'cameras', SkiStationCameraViewSet, basename='cameras')
@@ -70,6 +73,7 @@ router.register(r'gamification/badges', GamificationBadgeViewSet, basename='badg
 router.register(r'gamification/user-badges', UserBadgeViewSet, basename='user-badges')
 
 urlpatterns = [
+    path("station-weather/", station_weather, name="station-weather"),
     path('overpass/nearby/', overpass_nearby_view, name='api-overpass-nearby'),
     path('auth/register/', auth_register_view, name='auth-register'),
     path('auth/login/', auth_login_view, name='auth-login'),

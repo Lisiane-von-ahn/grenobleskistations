@@ -1,0 +1,26 @@
+[
+  {
+    "slug": "bastille", "name": "La Bastille", "latitude": "45.198600", "longitude": "5.725200",
+    "description_fr": "Au-dessus de Grenoble, les fortifications de la Bastille racontent l’histoire militaire de la ville et offrent un panorama sur les massifs alpins.",
+    "description_en": "Above Grenoble, the Bastille fortifications tell the story of the city's military past, with panoramic views of the Alpine ranges.",
+    "walk_fr": "Depuis le Jardin des Dauphins, suivez les chemins balisés vers le fort. Montée avec escaliers : prévoir des chaussures adaptées. Au fil des saisons, vérifier la météo et l’état des chemins ; éviter les passages verglacés.",
+    "walk_en": "Follow the marked paths from Jardin des Dauphins to the fort. This uphill walk includes steps: wear suitable shoes. Check weather and path conditions in every season; avoid icy sections.",
+    "source_url": "https://www.grenoble-tourisme.com/fr/catalogue/detail/la-bastille-853507/"
+  },
+  {
+    "slug": "paul-mistral", "name": "Parc Paul Mistral", "latitude": "45.183200", "longitude": "5.735600",
+    "description_fr": "Un grand parc urbain pour découvrir Grenoble à pied, entre arbres, pelouses et la silhouette de la tour Perret, héritage de l’exposition de 1925.",
+    "description_en": "Discover Grenoble on foot in this large urban park, among trees, lawns and the outline of the Perret tower, a legacy of the 1925 exhibition.",
+    "walk_fr": "Une promenade à composer selon votre envie sur les allées du parc : feuillages au printemps, pauses à l’ombre en été, couleurs d’automne et balade en journée en hiver. Vérifier les éventuelles zones de travaux sur le site de la ville.",
+    "walk_en": "Choose your own stroll along the park paths: spring foliage, shady summer pauses, autumn colours and winter daylight walks. Check the city website for any areas affected by works.",
+    "source_url": "https://www.grenoble.fr/lieu/978/386-parc-paul-mistral.htm"
+  },
+  {
+    "slug": "dauphinois", "name": "Musée dauphinois", "latitude": "45.195100", "longitude": "5.726900",
+    "description_fr": "Installé dans l’ancien couvent Sainte-Marie d’en-Haut sur les pentes de la Bastille, le musée explore les sociétés et le patrimoine des Alpes dauphinoises.",
+    "description_en": "Set in the former Sainte-Marie d’en-Haut convent on the Bastille hillside, the museum explores the communities and heritage of the Dauphiné Alps.",
+    "walk_fr": "Associez la montée depuis les quais de l’Isère à une visite culturelle, toute l’année. L’accès à pied est en pente et peut comporter des marches. Consulter les horaires et les informations d’accessibilité avant la visite.",
+    "walk_en": "Combine a walk uphill from the Isère riverbanks with a cultural visit in any season. The pedestrian approach is steep and may include steps. Check opening times and accessibility information before visiting.",
+    "source_url": "https://musees.isere.fr/musee/musee-dauphinois"
+  }
+]

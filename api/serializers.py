@@ -75,10 +75,15 @@ class SkiStationSerializer(serializers.ModelSerializer):
     cameras = serializers.SerializerMethodField()
     bus_lines = serializers.SerializerMethodField()
     live_status = serializers.SerializerMethodField()
+    ski_assessment = serializers.SerializerMethodField()
 
     class Meta:
         model = SkiStation
         fields = '__all__'
+
+    def get_ski_assessment(self, obj):
+        from .discovery import ski_assessment
+        return ski_assessment(getattr(obj, 'live_status', None))
 
     def get_cameras(self, obj):
         cameras = obj.cameras.filter(is_active=True)

@@ -142,7 +142,7 @@ jobs:
 
       - name: 'Check migration dependencies'
         run: |
-          python manage.py showmigrations --verbose || {
+          python manage.py showmigrations --verbosity 2 || {
             echo "❌ ERROR: Failed to display migration graph"
             exit 1
           }
@@ -186,7 +186,7 @@ jobs:
 
       - name: 'Ensure latest API migration is applied'
         run: |
-          python manage.py showmigrations api | grep "\[X\] 0042_skinewsitem"
+          python manage.py showmigrations api | grep "\[X\] 0046_alter_skistationcamera_camera_type"
 
       - name: 'Summary'
         if: success()

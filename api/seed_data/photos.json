@@ -1,0 +1,128 @@
+[
+  {
+    "name": "Les 7 Laux",
+    "file": "photo-01.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Station_les_Sept_Laux.JPG",
+    "credit": "Florian Pépellin",
+    "license": "Public domain"
+  },
+  {
+    "name": "Alpe d'Huez",
+    "file": "photo-02.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Alpe_D%27Huez_-_view_from_the_top_%28191108244%29.jpg",
+    "credit": "joiseyshowaa",
+    "license": "CC BY-SA 2.0"
+  },
+  {
+    "name": "Autrans-Méaudre en Vercors",
+    "file": "photo-04.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Autrans_%2826088295098%29.jpg",
+    "credit": "Nicolas Buffler from Guilherand Granges, France",
+    "license": "CC BY 2.0"
+  },
+  {
+    "name": "Chamrousse",
+    "file": "photo-00.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Chamrousse_%40_Cr%C3%AAte_des_Barres.jpg",
+    "credit": "Rémih",
+    "license": "CC BY-SA 4.0"
+  },
+  {
+    "name": "Villard-de-Lans / Corrençon",
+    "file": "photo-03.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Villard-de-Lans_le_24_janvier_2021.jpg",
+    "credit": "Jean-Paul Corlin",
+    "license": "CC BY-SA 4.0"
+  },
+  {
+    "name": "Les 2 Alpes",
+    "file": "photo-06.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Les_Deux_Alpes_domaine_skiable_%40_Mais.jpg",
+    "credit": "Rémih",
+    "license": "CC BY-SA 4.0"
+  },
+  {
+    "name": "Le Collet d'Allevard",
+    "file": "photo-05.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Collet_d%27Allevard_%28janvier_2017%29..jpg",
+    "credit": "CamilleKaz",
+    "license": "CC BY-SA 4.0"
+  },
+  {
+    "name": "Vaujany",
+    "file": "photo-09.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Collet_de_Vaujany_2017_1.jpg",
+    "credit": "Pierre Goiffon",
+    "license": "CC BY-SA 4.0"
+  },
+  {
+    "name": "Oz 3300",
+    "file": "photo-08.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Oz_en_Oisans_2017_2.jpg",
+    "credit": "Pierre Goiffon",
+    "license": "CC BY-SA 4.0"
+  },
+  {
+    "name": "Auris-en-Oisans",
+    "file": "photo-10.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Auris_en_Oisans_depuis_les_pistes.JPG",
+    "credit": "Tib115",
+    "license": "CC BY-SA 3.0"
+  },
+  {
+    "name": "La Grave - La Meije",
+    "file": "photo-07.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:20180904_Le_lac_L%C3%A9ri%C3%A9_et_la_Meije.jpg",
+    "credit": "Limfjord69",
+    "license": "CC BY-SA 4.0"
+  },
+  {
+    "name": "Saint-Pierre-de-Chartreuse",
+    "file": "photo-12.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Saint-Pierre-de-Chartreuse_%282007%29.JPG",
+    "credit": "Florian Pépellin ( Floflo )",
+    "license": "CC BY-SA 3.0"
+  },
+  {
+    "name": "Lans-en-Vercors",
+    "file": "photo-13.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Parc_national_du_Vercors_-_Lans_en_Vercors.JPG",
+    "credit": "Brice Hugonnet",
+    "license": "CC BY-SA 3.0"
+  },
+  {
+    "name": "Le Sappey-en-Chartreuse",
+    "file": "photo-11.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Village_du_Sappey-en-Chartreuse.jpg",
+    "credit": "Remontees",
+    "license": "CC BY-SA 4.0"
+  },
+  {
+    "name": "Gresse-en-Vercors",
+    "file": "photo-14.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:38650_Gresse-en-Vercors%2C_France_-_panoramio.jpg",
+    "credit": "Eusebyus",
+    "license": "CC BY 3.0"
+  },
+  {
+    "name": "bastille",
+    "file": "photo-15.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Bastille_%40_Grenoble_%287979209450%29.jpg",
+    "credit": "Guilhem Vellut from Annecy, France",
+    "license": "CC BY 2.0"
+  },
+  {
+    "name": "paul-mistral",
+    "file": "photo-16.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Parc_Paul-Mistral_%28Grenoble%29.jpg",
+    "credit": "Anfrx",
+    "license": "CC BY-SA 4.0"
+  },
+  {
+    "name": "dauphinois",
+    "file": "photo-17.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Entre%C3%A9_Mus%C3%A9e_dauphinois_-_Grenoble.JPG",
+    "credit": "Milky",
+    "license": "CC BY-SA 3.0"
+  }
+]

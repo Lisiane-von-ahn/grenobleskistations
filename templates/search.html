@@ -114,6 +114,7 @@
                         <div class="row g-0">
                             <div class="col-md-6">
                                 <img src="data:image/jpeg;base64,{{ station.image|b64encode }}" class="img-fluid rounded-start" alt="{{ station.name }}">
+{% include "partials/station_photo_credit.html" %}
                             </div>
                             <div class="col-md-6 d-flex align-items-center">
                                 <div class="card-body">

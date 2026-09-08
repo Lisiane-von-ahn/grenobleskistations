@@ -67,6 +67,7 @@ PY
     else
         echo "Seed skipped (data already present)."
     fi
+    python manage.py seed_discovery
 fi
 
 python manage.py collectstatic --noinput

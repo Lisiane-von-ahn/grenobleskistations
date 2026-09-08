@@ -1,4 +1,5 @@
 import os
+import json
 from pathlib import Path
 from io import BytesIO
 
@@ -303,6 +304,14 @@ def enrich_service_data(service, station_name):
 def get_services_for_station(station_name):
     specific_services = list(SERVICE_SEED_BY_STATION.get(station_name, []))
     return [enrich_service_data(service, station_name) for service in specific_services]
+
+
+# Share verified provider viewers with the deployment seed.
+for _camera in json.loads((Path(__file__).resolve().parent / 'api/seed_data/cameras.json').read_text()):
+    STATION_CAMERAS_SEED[_camera['station']] = [{
+        'name': _camera['name'], 'camera_url': _camera['url'],
+        'camera_type': 'embedded', 'description': _camera['label'],
+    }]
 
 
 def get_cameras_for_station(station_name, station):
@@ -612,6 +621,12 @@ def create_station_placeholder_image(station_name):
 
 
 def get_station_image_bytes(station_name):
+    photo_dir = Path(__file__).resolve().parent / 'api' / 'seed_data'
+    photos = json.loads((photo_dir / 'photos.json').read_text())
+    for photo in photos:
+        if photo['name'] == station_name:
+            return (photo_dir / 'photos' / photo['file']).read_bytes()
+
     filename = STATION_IMAGE_MAP.get(station_name)
     if filename:
         image_bytes = get_image_bytes(filename)

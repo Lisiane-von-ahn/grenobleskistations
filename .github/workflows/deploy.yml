@@ -98,13 +98,16 @@ jobs:
             echo "==> Applying all Django migrations explicitly from GitHub Actions"
             docker compose -f docker-compose.yml run --rm --no-deps --entrypoint "" web python manage.py migrate --noinput
 
+            echo "==> Seeding Grenoble discovery and real station photographs"
+            docker compose -f docker-compose.yml run --rm --no-deps --entrypoint "" web python manage.py seed_discovery
+
             echo "==> Verifying that no pending migrations remain"
             docker compose -f docker-compose.yml run --rm --no-deps --entrypoint "" web python manage.py migrate --check --noinput
 
             echo "==> Showing migration state"
             docker compose -f docker-compose.yml run --rm --no-deps --entrypoint "" web python manage.py showmigrations
 
-            REQUIRED_PATHS='["/auth/login/","/auth/register/","/auth/google-login/","/auth/me/","/auth/logout/","/messages/","/skistories/","/skipartnerposts/","/instructorservices/","/mobile/"]'
+            REQUIRED_PATHS='["/auth/login/","/auth/register/","/auth/google-login/","/auth/me/","/auth/logout/","/messages/","/skistories/","/skipartnerposts/","/instructorservices/","/mobile/","/grenoble-places/","/station-weather/"]'
 
             check_openapi() {
               local url="$1"

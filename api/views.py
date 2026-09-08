@@ -3,7 +3,7 @@ import os
 import base64
 import binascii
 import json
-from datetime import datetime, time
+from datetime import datetime, time, timezone as datetime_timezone
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -203,6 +203,8 @@ def _fetch_weather_summary(latitude, longitude):
     return {
         "weather_description": ((weather[0] or {}).get("description") if weather else "") or "",
         "temperature_c": main.get("temp"),
+        "observed_at": datetime.fromtimestamp(payload["dt"], tz=datetime_timezone.utc).isoformat() if payload.get("dt") else "",
+        "source_url": "https://openweathermap.org/",
         "feels_like_c": main.get("feels_like"),
         "snow_cm": snow.get("1h") or snow.get("3h"),
     }

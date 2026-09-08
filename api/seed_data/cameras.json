@@ -1,0 +1,9 @@
+[
+ {"station":"Chamrousse","name":"Webcams station","url":"https://www.skaping.com/chamrousse/la-croix","label":"La Croix · 2250 m · Skaping / Chamrousse","source":"https://www.chamrousse.com/webcams.html"},
+ {"station":"Les 7 Laux","name":"Webcams station","url":"https://www.skaping.com/les7laux/pipay/grand-cerf","label":"Pipay · Grand Cerf · Skaping / Les 7 Laux","source":"https://www.les7laux.com/hiver/ski-alpin-nordique-autres-glisses/ski/webcams/"},
+ {"station":"Alpe d'Huez","name":"Webcams station","url":"https://www.skaping.com/alpedhuez/pic-blanc","label":"Pic Blanc · Skaping / Alpe d’Huez","source":"https://www.alpedhuez.com/fr/webcams/"},
+ {"station":"Les 2 Alpes","name":"Webcams et livecams","url":"https://www.skaping.com/les2alpes/3200m","label":"3200 m · Skaping / Les 2 Alpes","source":"https://www.les2alpes.com/hiver/live/webcams/"},
+ {"station":"Vaujany","name":"Webcams station","url":"https://www.skaping.com/alpedhuez/vaujany/montfrais","label":"Montfrais · Skaping / Vaujany","source":"https://www.vaujany.com/fr/live/webcams/"},
+ {"station":"Oz 3300","name":"Webcams station","url":"https://www.skaping.com/alpedhuez/oz-en-oisans/station/","label":"Oz · Skaping / Alpe d’Huez","source":"https://www.alpedhuez.com/fr/webcams/"},
+ {"station":"Auris-en-Oisans","name":"Webcams station","url":"https://www.skaping.com/alpedhuez/auris-station","label":"Auris · Skaping / Alpe d’Huez","source":"https://www.alpedhuez.com/fr/webcams/"}
+]

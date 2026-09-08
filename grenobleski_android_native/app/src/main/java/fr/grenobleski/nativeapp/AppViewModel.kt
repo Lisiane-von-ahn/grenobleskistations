@@ -57,6 +57,7 @@ data class AppUiState(
     val isStoriesLoadingMore: Boolean = false,
     val storiesStationFilterId: Int? = null,
     val storiesSearchQuery: String = "",
+    val grenoblePlaces: List<fr.grenobleski.nativeapp.data.model.GrenoblePlaceItem> = emptyList(),
     val stationItems: List<StationItem> = emptyList(),
     val busLineItems: List<BusLineItem> = emptyList(),
     val serviceStoreItems: List<ServiceStoreItem> = emptyList(),
@@ -507,35 +508,13 @@ class AppViewModel(
 
             when (tab) {
                 NativeTab.HOME -> {
-                    val result = repository.fetchDashboardCounts(session.token)
-                    val storiesResult = repository.fetchStoriesPage(
-                        token = session.token,
-                        page = 1,
-                        pageSize = 5,
-                        stationId = state.storiesStationFilterId,
-                        query = state.storiesSearchQuery,
+                    val stations = repository.fetchStationItems(session.token)
+                    val places = repository.fetchGrenoblePlaces(session.token)
+                    state = state.copy(
+                        stationItems = stations.getOrDefault(state.stationItems),
+                        grenoblePlaces = places.getOrDefault(state.grenoblePlaces),
+                        errorMessage = stations.exceptionOrNull()?.message ?: places.exceptionOrNull()?.message,
                     )
-                    val newsResult = repository.fetchSkiNews(session.token)
-                    if (result.isSuccess) {
-                        val page = storiesResult.getOrNull()
-                        val stories = page?.items ?: state.storyItems
-                        val highlighted = stories.sortedWith(
-                            compareByDescending<StoryItem> { it.likeCount + it.commentCount }
-                                .thenByDescending { it.createdAtRaw }
-                        ).take(5)
-                        state = state.copy(
-                            dashboardCounts = result.getOrNull()!!,
-                            storyItems = stories,
-                            highlightedStoryItems = highlighted,
-                            skiNewsItems = newsResult.getOrDefault(state.skiNewsItems),
-                            highlightedSkiNewsItems = newsResult.getOrDefault(state.skiNewsItems).filter { it.highlighted }.take(5),
-                            storiesPage = 1,
-                            storiesNextPage = page?.nextPage,
-                            storiesHasNextPage = page?.hasNextPage ?: false,
-                        )
-                    } else {
-                        state = state.copy(errorMessage = result.exceptionOrNull()?.message ?: "Unable to refresh")
-                    }
                 }
 
                 NativeTab.NEWS -> {
@@ -1334,7 +1313,7 @@ class AppViewModel(
 
     private fun hasDataForTab(tab: NativeTab): Boolean {
         return when (tab) {
-            NativeTab.HOME -> state.storyItems.isNotEmpty() || state.skiNewsItems.isNotEmpty()
+            NativeTab.HOME -> state.stationItems.isNotEmpty() || state.grenoblePlaces.isNotEmpty()
             NativeTab.NEWS -> state.skiNewsItems.isNotEmpty()
             NativeTab.STORIES -> state.storyItems.isNotEmpty()
             NativeTab.COMMUNITY -> state.storyItems.isNotEmpty() || state.skiNewsItems.isNotEmpty()
@@ -1358,6 +1337,18 @@ class AppViewModel(
 
             val current = state
             var firstError: String? = null
+
+            val grenoblePlaces = repository.fetchGrenoblePlaces(session.token).getOrElse {
+                firstError = firstError ?: it.message
+                current.grenoblePlaces
+            }
+
+            val stationItems = repository.fetchStationItems(session.token).getOrElse {
+                firstError = firstError ?: (it.message ?: "Unable to load stations")
+                current.stationItems
+            }
+
+            state = state.copy(grenoblePlaces = grenoblePlaces, stationItems = stationItems)
 
             val dashboardCounts = repository.fetchDashboardCounts(session.token).getOrElse {
                 firstError = firstError ?: (it.message ?: "Unable to load dashboard")
@@ -1387,11 +1378,6 @@ class AppViewModel(
             val skiNewsItems = repository.fetchSkiNews(session.token).getOrElse {
                 firstError = firstError ?: (it.message ?: "Unable to load ski news")
                 current.skiNewsItems
-            }
-
-            val stationItems = repository.fetchStationItems(session.token).getOrElse {
-                firstError = firstError ?: (it.message ?: "Unable to load stations")
-                current.stationItems
             }
 
             val busLineItems = repository.fetchBusLineItems(session.token).getOrElse {
@@ -1457,6 +1443,7 @@ class AppViewModel(
             state = state.copy(
                 isTabLoading = false,
                 dashboardCounts = dashboardCounts,
+                grenoblePlaces = grenoblePlaces,
                 storyItems = storyPage.items,
                 highlightedStoryItems = storyPage.items.sortedWith(
                     compareByDescending<StoryItem> { it.likeCount + it.commentCount }

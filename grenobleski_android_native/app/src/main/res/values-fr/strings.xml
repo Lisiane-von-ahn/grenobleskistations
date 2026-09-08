@@ -255,4 +255,23 @@
     <string name="new_password">Nouveau mot de passe</string>
     <string name="confirm_new_password">Confirmer le nouveau mot de passe</string>
     <string name="update_password">Mettre a jour le mot de passe</string>
+
+    <string name="discovery_title">Votre fenêtre sur les Alpes</string>
+    <string name="discovery_subtitle">Webcams, conditions en montagne et Grenoble au fil des saisons.</string>
+    <string name="discovery_cameras">Webcams en montagne</string>
+    <string name="discovery_conditions">Du ski aujourd’hui ?</string>
+    <string name="discovery_no_conditions">Les conditions des stations ne sont pas encore disponibles. Utilisez Actualiser pour réessayer.</string>
+    <string name="discovery_year_round">Grenoble, toute l’année</string>
+    <string name="discovery_no_places">Les idées de balades et de culture sont indisponibles. Actualisez pour réessayer.</string>
+    <string name="discovery_visit_info">Préparer votre visite</string>
+    <string name="discovery_no_temperature">Température indisponible</string>
+    <string name="ski_closed">Ski indisponible : pistes ou remontées signalées fermées</string>
+    <string name="ski_stale">Bulletin ancien — conditions à vérifier</string>
+    <string name="ski_unfavourable">Conditions signalées défavorables</string>
+    <string name="ski_check_bulletin">Pistes ouvertes — vérifier vent, visibilité et qualité de neige avant de skier</string>
+    <string name="ski_unknown">Données récentes insuffisantes pour évaluer les conditions de ski</string>
+    <string name="conditions_observed">Observation : %1$s</string>
+    <string name="conditions_bulletin">Bulletin de la station</string>
+    <string name="camera_unavailable">Caméra indisponible. Veuillez réessayer.</string>
+    <string name="camera_provider_note">Les images du fournisseur peuvent être différées. Les clichés sont actualisés chaque minute ; vérifier l’heure affichée sur l’image.</string>
 </resources>
