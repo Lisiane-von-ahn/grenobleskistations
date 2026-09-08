@@ -229,6 +229,13 @@ run_compose() {
         continue
       fi
 
+      if grep -qiE "TLS handshake timeout|i/o timeout|connection reset by peer|context deadline exceeded|temporary failure in name resolution|no such host|failed to do request|net/http:" "$log_file"; then
+        rm -f "$log_file"
+        echo "⚠️ Transient network/registry error while pulling/building images; retrying (${i}/${attempts})..."
+        sleep $((5 * i))
+        continue
+      fi
+
       rm -f "$log_file"
       return 1
     done
