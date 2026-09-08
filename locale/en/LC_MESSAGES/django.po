@@ -1354,3 +1354,67 @@ msgstr "Cancel"
 
 #~ msgid "Impossible d\\'afficher la tendance pour le moment."
 #~ msgstr "Unable to display trend at the moment."
+
+#: templates/base.html
+msgid "Découvrir"
+msgstr "Discover"
+
+#: templates/base.html
+msgid "Culture et stories"
+msgstr "Culture and stories"
+
+#: templates/base.html
+msgid "Bus et accès"
+msgstr "Buses and access"
+
+#: templates/base.html
+msgid "Covoiturage"
+msgstr "Carpooling"
+
+#: templates/base.html
+msgid "Partenaires"
+msgstr "Partners"
+
+#: templates/base.html
+msgid "Application mobile"
+msgstr "Mobile app"
+
+#: templates/base.html
+msgid "Application Android"
+msgstr "Android app"
+
+#: templates/base.html
+msgid "Mon espace"
+msgstr "My account"
+
+#: templates/base.html
+msgid "Créer un compte"
+msgstr "Create an account"
+
+#: templates/index.html
+msgid "GrenobleSki Android"
+msgstr "GrenobleSki Android"
+
+#: templates/index.html
+msgid "Emportez Grenoble et les montagnes avec vous"
+msgstr "Take Grenoble and the mountains with you"
+
+#: templates/index.html
+msgid "Scannez le QR code avec votre téléphone Android pour télécharger la dernière version de l'application."
+msgstr "Scan the QR code with your Android phone to download the latest version of the app."
+
+#: templates/index.html
+msgid "Télécharger l'application"
+msgstr "Download the app"
+
+#: templates/index.html
+msgid "Téléchargement direct depuis la dernière version publiée sur GitHub."
+msgstr "Direct download from the latest release published on GitHub."
+
+#: templates/index.html
+msgid "Télécharger la dernière application Android"
+msgstr "Download the latest Android app"
+
+#: templates/index.html
+msgid "QR code de téléchargement de l'application Android"
+msgstr "QR code to download the Android app"

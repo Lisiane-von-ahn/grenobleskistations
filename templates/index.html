@@ -17,6 +17,35 @@
       margin-bottom: 28px;
     }
 
+    .mobile-app-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 210px;
+      align-items: center;
+      gap: 28px;
+      margin: 32px 0;
+      padding: 28px;
+      border-radius: 24px;
+      color: #fff;
+      background: linear-gradient(135deg, #0b4f6c 0%, #1481ba 58%, #2ca7b7 100%);
+      box-shadow: 0 18px 38px rgba(11, 79, 108, .23);
+    }
+
+    .mobile-app-card h2,
+    .mobile-app-card p { color: #fff; }
+
+    .mobile-app-qr {
+      width: 210px;
+      max-width: 100%;
+      padding: 12px;
+      border-radius: 18px;
+      background: #fff;
+    }
+
+    @media (max-width: 767.98px) {
+      .mobile-app-card { grid-template-columns: 1fr; text-align: center; }
+      .mobile-app-qr { margin: 0 auto; }
+    }
+
     .featured-station-card {
       border-radius: 14px;
       overflow: hidden;
@@ -266,6 +295,23 @@
     </div>
   </div>
   
+  <section class="container" id="mobile-app" aria-labelledby="mobile-app-heading">
+    <div class="mobile-app-card">
+      <div>
+        <small class="text-uppercase font-weight-bold">{% trans "GrenobleSki Android" %}</small>
+        <h2 id="mobile-app-heading" class="mt-2">{% trans "Emportez Grenoble et les montagnes avec vous" %}</h2>
+        <p>{% trans "Scannez le QR code avec votre téléphone Android pour télécharger la dernière version de l'application." %}</p>
+        <a class="btn btn-light btn-lg" href="https://github.com/Lisiane-von-ahn/grenobleskistations/releases/latest/download/app-release.apk">
+          <i class="fab fa-android" aria-hidden="true"></i> {% trans "Télécharger l'application" %}
+        </a>
+        <p class="small mt-3 mb-0">{% trans "Téléchargement direct depuis la dernière version publiée sur GitHub." %}</p>
+      </div>
+      <a href="https://github.com/Lisiane-von-ahn/grenobleskistations/releases/latest/download/app-release.apk" aria-label="{% trans "Télécharger la dernière application Android" %}">
+        <img class="mobile-app-qr" src="{% static 'images/grenobleski-android-qr.png' %}" alt="{% trans "QR code de téléchargement de l'application Android" %}">
+      </a>
+    </div>
+  </section>
+
   {% if culture_news %}
   <section class="container my-5" aria-labelledby="culture-heading">
     <div class="section-heading mb-3">

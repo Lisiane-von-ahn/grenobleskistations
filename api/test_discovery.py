@@ -5,6 +5,9 @@ from unittest.mock import patch
 
 from django.core.cache import cache
 from django.core.management import call_command
+from django.contrib.auth import get_user_model
+from django.conf import settings
+from django.contrib.staticfiles import finders
 from django.test import TestCase
 from django.utils import timezone
 from PIL import Image
@@ -72,3 +75,29 @@ class DiscoveryTests(TestCase):
         self.assertEqual(second.data[0]['temperature_c'], 4)
         fetch.assert_called_once()
         self.assertFalse(StationLiveStatus.objects.exists())
+
+    def test_public_navigation_is_compact_and_android_download_is_stable(self):
+        response = self.client.get('/')
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        self.assertIn('id="site-main-nav"', html)
+        self.assertEqual(html.count('class="nav-dropdown"'), 2)
+        self.assertIn('id="mobile-app"', html)
+        self.assertIn('/releases/latest/download/app-release.apk', html)
+        self.assertIn('grenobleski-android-qr.png', html)
+        self.assertNotIn('>Confidentialité</a></li>', html)
+        self.assertIsNotNone(finders.find('images/grenobleski-android-qr.png'))
+
+        self.client.cookies[settings.LANGUAGE_COOKIE_NAME] = 'en'
+        english = self.client.get('/').content.decode()
+        self.assertIn('Take Grenoble and the mountains with you', english)
+        self.assertIn('Buses and access', english)
+
+    def test_account_actions_stay_available_inside_grouped_menu(self):
+        user = get_user_model().objects.create_user(username='menu-user', password='menu-password')
+        self.client.force_login(user)
+        response = self.client.get('/')
+        html = response.content.decode()
+        self.assertIn('href="/profile/"', html)
+        self.assertIn('href="/messages/"', html)
+        self.assertIn('href="/logout/"', html)

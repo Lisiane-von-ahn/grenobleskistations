@@ -311,10 +311,12 @@
             font-size: 10px;
         }
 
+        .main-nav .nav li.nav-dropdown,
         .main-nav .nav li.offers-dropdown {
             position: relative;
         }
 
+        .main-nav .nav li .nav-submenu,
         .main-nav .nav li .offers-submenu {
             list-style: none;
             margin: 0;
@@ -330,6 +332,7 @@
             z-index: 1200;
         }
 
+        .main-nav .nav li .nav-submenu li a,
         .main-nav .nav li .offers-submenu li a {
             display: block;
             color: #2d3a4a;
@@ -338,11 +341,14 @@
             white-space: nowrap;
         }
 
+        .main-nav .nav li .nav-submenu li a:hover,
         .main-nav .nav li .offers-submenu li a:hover {
             background: rgba(13, 110, 253, 0.12);
             color: #0d6efd;
         }
 
+        .main-nav .nav li.nav-dropdown:hover .nav-submenu,
+        .main-nav .nav li.nav-dropdown:focus-within .nav-submenu,
         .main-nav .nav li.offers-dropdown:hover .offers-submenu,
         .main-nav .nav li.offers-dropdown:focus-within .offers-submenu {
             display: block;
@@ -823,9 +829,10 @@
                 margin-top: 96px !important;
             }
 
+            .main-nav .nav li .nav-submenu,
             .main-nav .nav li .offers-submenu {
                 position: static;
-                display: block;
+                display: none;
                 box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
                 background: #ffffff;
                 border: 1px solid #e5e7eb;
@@ -835,12 +842,22 @@
                 min-width: unset;
             }
 
+            .main-nav .nav li.nav-dropdown.is-open .nav-submenu {
+                display: block !important;
+            }
+
+            .main-nav .nav li.nav-dropdown:not(.is-open) .nav-submenu {
+                display: none !important;
+            }
+
+            .main-nav .nav li .nav-submenu li a,
             .main-nav .nav li .offers-submenu li a {
                 color: #1f2937;
                 opacity: 1;
                 padding-left: 14px;
             }
 
+            .main-nav .nav li .nav-submenu li a:hover,
             .main-nav .nav li .offers-submenu li a:hover {
                 background: #eef2ff;
                 color: #1d4ed8;
@@ -952,7 +969,9 @@
         body.theme-dark .search-form form, body.theme-dark #search-form,
         body.theme-dark .social-post-card, body.theme-dark .station-summary-card,
         body.theme-dark .visit-country .items .item, body.theme-dark .featured-station-card,
-        body.theme-dark .table-responsive, body.theme-dark .main-nav .nav li .offers-submenu {
+        body.theme-dark .table-responsive,
+        body.theme-dark .main-nav .nav li .nav-submenu,
+        body.theme-dark .main-nav .nav li .offers-submenu {
             background: #132735;
             border-color: #294453;
             color: #e6eef4;
@@ -993,6 +1012,7 @@
                 background: linear-gradient(135deg, #0d394b 0%, #125b6e 100%);
             }
 
+            body.theme-dark .main-nav .nav li .nav-submenu,
             body.theme-dark .main-nav .nav li .offers-submenu,
             body.theme-dark .lang-select {
                 background: #132735;
@@ -1017,25 +1037,38 @@
                         {% with current=request.resolver_match.url_name %}
                         <ul class="nav" id="site-main-nav">
                             <li><a href="{% url 'my_template_view' %}" class="{% if current == 'my_template_view' %}active{% endif %}">{% trans "Accueil" %}</a></li>
+                            <li><a href="{% url 'ski_station_search' %}" class="{% if current == 'ski_station_search' or current == 'ski_station_detail' %}active{% endif %}">{% trans "Stations" %}</a></li>
                             <li><a href="{% url 'ski_material_listings' %}" class="{% if current == 'ski_material_listings' or current == 'listing_detail' or current == 'ajouter_materiel' or current == 'edit_listing' %}active{% endif %}">{% trans "Marketplace" %}</a></li>
-                            <li><a href="{% url 'ski_station_search' %}" class="{% if current == 'ski_station_search' or current == 'ski_station_detail' %}active{% endif %}">{% trans "Recherche" %}</a></li>
-                            <li><a href="{% url 'services' %}" class="{% if current == 'services' or current == 'service_detail' %}active{% endif %}">{% trans "Services" %}</a></li>
-                            <li><a href="{% url 'instructors' %}" class="{% if current == 'instructors' or current == 'become_instructor' or current == 'instructor_services' %}active{% endif %}">{% trans "Moniteurs" %}</a></li>
-                            <li><a href="{% url 'bus' %}" class="{% if current == 'bus' %}active{% endif %}">{% trans "Lignes de Bus" %}</a></li>
-                            <li><a href="{% url 'ski_partners' %}" class="{% if current == 'ski_partners' %}active{% endif %}">{% trans "Partenaires" %}</a></li>
-                            <li><a href="{% url 'ski_stories' %}" class="{% if current == 'ski_stories' %}active{% endif %}">{% trans "Stories" %}</a></li>
-                            <li><a href="{% url 'covoiturage' %}" class="{% if current == 'covoiturage' %}active{% endif %}">{% trans "Covoiturage" %}</a></li>
-                            <li>
-                                <a href="{% url 'messages' %}" class="{% if current == 'messages' %}active{% endif %}">
-                                    Chat
-                                    {% if unread_count > 0 %}
-                                        <span class="nav-unread-badge">{{ unread_count }}</span>
-                                    {% endif %}
-                                </a>
+                            <li class="nav-dropdown">
+                                <a href="{% url 'ski_stories' %}" class="menu-chip">{% trans "Découvrir" %} ▾</a>
+                                <ul class="nav-submenu">
+                                    <li><a href="{% url 'ski_stories' %}">{% trans "Culture et stories" %}</a></li>
+                                    <li><a href="{% url 'services' %}">{% trans "Services" %}</a></li>
+                                    <li><a href="{% url 'instructors' %}">{% trans "Moniteurs" %}</a></li>
+                                    <li><a href="{% url 'bus' %}">{% trans "Bus et accès" %}</a></li>
+                                    <li><a href="{% url 'covoiturage' %}">{% trans "Covoiturage" %}</a></li>
+                                    <li><a href="{% url 'ski_partners' %}">{% trans "Partenaires" %}</a></li>
+                                    <li><a href="{% url 'my_template_view' %}#mobile-app">{% trans "Application mobile" %}</a></li>
+                                </ul>
                             </li>
-                            <li><a href="{% url 'terms' %}" class="{% if current == 'terms' %}active{% endif %}">{% trans "Conditions" %}</a></li>
-                            <li><a href="{% url 'privacy' %}" class="{% if current == 'privacy' %}active{% endif %}">{% trans "Confidentialité" %}</a></li>
-                            <li class="mobile-hide"><a href="{% url 'schema-swagger-ui' %}">API</a></li>
+                            <li class="nav-dropdown">
+                                <a href="{% if user.is_authenticated %}{% url 'profile' %}{% else %}{% url 'login' %}{% endif %}" class="menu-chip">
+                                    {% trans "Mon espace" %}{% if unread_count > 0 %}<span class="nav-unread-badge">{{ unread_count }}</span>{% endif %} ▾
+                                </a>
+                                <ul class="nav-submenu">
+                                    {% if user.is_authenticated %}
+                                    <li><a href="{% url 'profile' %}">{% trans "Mon profil" %}</a></li>
+                                    <li><a href="{% url 'messages' %}">{% trans "Messages" %}{% if unread_count > 0 %} ({{ unread_count }}){% endif %}</a></li>
+                                    <li><a href="{% url 'ski_material_listings' %}?my_listings=1">{% trans "Mes annonces" %}</a></li>
+                                    <li><a href="{% url 'instructor_services' %}">{% trans "Mes offres" %}</a></li>
+                                    <li><a href="{% url 'become_instructor' %}">{% trans "Devenir moniteur" %}</a></li>
+                                    <li><a href="{% url 'logout' %}" class="logout-link">{% trans "Déconnexion" %}</a></li>
+                                    {% else %}
+                                    <li><a href="{% url 'login' %}">{% trans "Connexion" %}</a></li>
+                                    <li><a href="{% url 'register' %}">{% trans "Créer un compte" %}</a></li>
+                                    {% endif %}
+                                </ul>
+                            </li>
                             <li>
                                 <form action="{% url 'set_language_safe' %}" method="get" class="lang-form">
                                     <input name="next" type="hidden" value="{{ request.get_full_path }}">
@@ -1046,31 +1079,6 @@
                                 </form>
                             </li>
 
-                            {% if user.is_authenticated %}
-                                <li>
-                                    <a href="{% url 'profile' %}">
-                                        <span class="desktop-label">
-                                            {% if user.first_name or user.last_name %}
-                                                {{ user.first_name }} {{ user.last_name }}
-                                            {% else %}
-                                                {% trans "Mon profil" %}
-                                            {% endif %}
-                                        </span>
-                                        <span class="mobile-label">{% trans "Profil" %}</span>
-                                    </a>
-                                </li>
-                                <li><a href="{% url 'ski_material_listings' %}?my_listings=1">{% trans "Mes annonces" %}</a></li>
-                                <li><a href="{% url 'become_instructor' %}">{% trans "Devenir moniteur" %}</a></li>
-                                <li class="offers-dropdown">
-                                    <a href="{% url 'instructor_services' %}" class="menu-chip">{% trans "Mes offres" %}</a>
-                                    <ul class="offers-submenu">
-                                        <li><a href="{% url 'instructor_services' %}">{% trans "Offres moniteur" %}</a></li>
-                                    </ul>
-                                </li>
-                                <li><a href="{% url 'logout' %}" class="logout-link">{% trans "Déconnexion" %}</a></li>
-                            {% else %}
-                                <li><a href="{% url 'login' %}">{% trans "Connexion" %}</a></li>
-                            {% endif %}
                         </ul>
                         {% endwith %}
                         <a class='menu-trigger' href="#" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="site-main-nav">
@@ -1149,9 +1157,11 @@
                     <div class="col-lg-12">
                         <p>Copyright © 2026 Grenoble Ski Station</p>
                         <div class="footer-links">
+                            <a href="{% url 'my_template_view' %}#mobile-app">{% trans "Application Android" %}</a>
                             <a href="{% url 'terms' %}">{% trans "Conditions d'utilisation" %}</a>
                             <a href="{% url 'privacy' %}">{% trans "Politique de confidentialité" %}</a>
                             <a href="#" id="open-cookie-settings">{% trans "Préférences cookies" %}</a>
+                            <a href="{% url 'schema-swagger-ui' %}">API</a>
                         </div>
                     </div>
                 </div>
@@ -1176,6 +1186,11 @@
             }
 
             function closeMobileMenu() {
+                nav.querySelectorAll('.nav-dropdown').forEach(function (dropdown) {
+                    dropdown.classList.remove('is-open');
+                    const control = dropdown.querySelector(':scope > a');
+                    if (control) control.setAttribute('aria-expanded', 'false');
+                });
                 if (!isMobile()) {
                     nav.style.display = '';
                     trigger.classList.remove('active');
@@ -1204,7 +1219,26 @@
                 }
             });
 
+            nav.querySelectorAll('.nav-dropdown > a').forEach(function (link) {
+                link.setAttribute('aria-haspopup', 'true');
+                link.setAttribute('aria-expanded', 'false');
+                link.addEventListener('click', function (event) {
+                    if (!isMobile()) return;
+                    event.preventDefault();
+                    const dropdown = link.parentElement;
+                    const willOpen = !dropdown.classList.contains('is-open');
+                    nav.querySelectorAll('.nav-dropdown').forEach(function (item) {
+                        item.classList.remove('is-open');
+                        const control = item.querySelector(':scope > a');
+                        if (control) control.setAttribute('aria-expanded', 'false');
+                    });
+                    dropdown.classList.toggle('is-open', willOpen);
+                    link.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+                });
+            });
+
             nav.querySelectorAll('a').forEach(function (link) {
+                if (link.parentElement.classList.contains('nav-dropdown')) return;
                 link.addEventListener('click', function () {
                     if (isMobile()) closeMobileMenu();
                 });
