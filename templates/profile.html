@@ -1,226 +1,93 @@
 {% extends 'base.html' %}
-{% load static %}
-{% load base64_filters %}
-{% load i18n %}
+{% load static i18n %}
 {% block title %}{% trans "Profil de l'utilisateur" %}{% endblock %}
-
 {% block content %}
-<style>
-  .profile-shell {
-    background:
-      radial-gradient(circle at 8% 10%, rgba(39, 171, 188, 0.16), transparent 36%),
-      radial-gradient(circle at 90% 0%, rgba(11, 126, 169, 0.12), transparent 34%),
-      #eef3f8;
-    min-height: 65vh;
-  }
-
-  .profile-hero-wrap {
-    position: relative;
-    padding: 2.25rem 0 1.2rem;
-  }
-
-  .profile-hero-wrap::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(130deg, rgba(36, 180, 194, 0.85), rgba(24, 108, 160, 0.9));
-    border-radius: 20px;
-    box-shadow: 0 20px 45px rgba(8, 44, 74, 0.2);
-    z-index: 0;
-  }
-
-  .profile-hero {
-    position: relative;
-    z-index: 1;
-    color: #f8fbff;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
-    padding: 2rem 2.1rem;
-  }
-
-  .profile-hero-kicker {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.28rem 0.75rem;
-    border-radius: 999px;
-    font-size: 0.78rem;
-    font-weight: 700;
-    letter-spacing: 0.07em;
-    text-transform: uppercase;
-    background: rgba(255, 255, 255, 0.18);
-    margin-bottom: 0.8rem;
-  }
-
-  .profile-hero h2 {
-    font-size: clamp(1.8rem, 3vw, 2.5rem);
-    margin-bottom: 0.4rem;
-  }
-
-  .profile-hero p {
-    margin-bottom: 0;
-    color: rgba(242, 250, 255, 0.93);
-    max-width: 640px;
-  }
-
-  .profile-info-card,
-  .profile-edit-card {
-    border-radius: 16px;
-    border: 1px solid #e2ebf2;
-    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08) !important;
-  }
-
-  @media (max-width: 767.98px) {
-    .profile-hero-wrap {
-      padding-top: 1rem;
-    }
-
-    .profile-hero {
-      padding: 1.25rem 1.1rem;
-    }
-
-    .profile-hero h2 {
-      font-size: 1.65rem;
-    }
-
-    .profile-hero p {
-      font-size: 0.95rem;
-      color: #eef6fb;
-    }
-
-    .profile-info-card,
-    .profile-edit-card {
-      border-radius: 12px;
-    }
-
-    .profile-actions {
-      flex-direction: column;
-      gap: 0.6rem;
-      align-items: stretch !important;
-    }
-
-    .profile-actions .btn {
-      width: 100%;
-    }
-
-    .form-row {
-      display: block;
-    }
-  }
-</style>
-<section class="profile-hero-wrap">
-  <div class="container profile-hero">
-    <span class="profile-hero-kicker">{% trans "Espace Membre" %}</span>
-    <h2>{% trans "Profil utilisateur" %}</h2>
-    <p>{% trans "Mettez a jour votre identite, votre photo et les informations visibles dans l'application mobile." %}</p>
-  </div>
-</section>
-
-<section class="py-5 profile-shell">
-  <div class="container">
-    {% if messages %}
-      <div class="row mb-3">
-        <div class="col-lg-12">
-          {% for message in messages %}
-            <div class="alert alert-info mb-2" role="alert">{{ message }}</div>
-          {% endfor %}
-        </div>
+<link rel="stylesheet" href="{% static 'css/profile.css' %}">
+<div class="profile-page">
+  <div class="profile-container">
+    <header class="profile-heading">
+      <div>
+        <span class="profile-eyebrow"><i class="fas fa-mountain" aria-hidden="true"></i> {% trans "Espace Membre" %}</span>
+        <h1>{% trans "Profil utilisateur" %}</h1>
+        <p>{% trans "Mettez a jour votre identite, votre photo et les informations visibles dans l'application mobile." %}</p>
       </div>
-    {% endif %}
+      <a class="profile-home" href="{% url 'my_template_view' %}"><i class="fas fa-arrow-left" aria-hidden="true"></i> {% trans "Retour à l'accueil" %}</a>
+    </header>
 
-    <div class="row">
-      <div class="col-lg-4 mb-4">
-        <div class="card border-0 shadow-sm h-100 profile-info-card">
-          <div class="card-body text-center p-4">
-            {% if profile_picture %}
-              <img src="data:image/png;base64,{{ profile_picture }}" class="rounded-circle mb-3" alt="{% trans 'Photo de profil' %}" style="width: 150px; height: 150px; object-fit: cover;">
-            {% elif google_profile_picture_url %}
-              <img src="{{ google_profile_picture_url }}" class="rounded-circle mb-3" alt="{% trans 'Photo Google' %}" style="width: 150px; height: 150px; object-fit: cover;">
-            {% else %}
-              <img src="{% static 'images/default-profile.png' %}" class="rounded-circle mb-3" alt="{% trans 'Photo de profil' %}" style="width: 150px; height: 150px; object-fit: cover;">
+    {% for message in messages %}<div class="alert alert-info" role="status">{{ message }}</div>{% endfor %}
+
+    <div class="profile-layout">
+      <aside class="profile-identity profile-panel" aria-labelledby="profile-name">
+        <div class="profile-cover" aria-hidden="true"><i class="fas fa-mountain"></i></div>
+        <div class="profile-identity-content">
+          {% if profile_picture %}
+            <img class="profile-avatar" src="data:image/png;base64,{{ profile_picture }}" alt="{% trans 'Photo de profil' %}" width="104" height="104">
+          {% elif google_profile_picture_url %}
+            <img class="profile-avatar" src="{{ google_profile_picture_url }}" alt="{% trans 'Photo Google' %}" width="104" height="104">
+          {% else %}
+            <img class="profile-avatar" src="{% static 'images/default-profile.png' %}" alt="{% trans 'Photo de profil' %}" width="104" height="104">
+          {% endif %}
+          <h2 id="profile-name">{% if user.first_name or user.last_name %}{{ user.first_name }} {{ user.last_name }}{% else %}{{ user.username }}{% endif %}</h2>
+          <p class="profile-email">{{ user.email }}</p>
+          {% if google_profile_picture_url %}<span class="profile-connected"><i class="fas fa-check-circle" aria-hidden="true"></i> {% trans "Connecté avec Google" %}</span>{% endif %}
+          <dl class="profile-details">
+            {% if google_full_name %}<div><dt>{% trans "Nom Google :" %}</dt><dd>{{ google_full_name }}</dd></div>{% endif %}
+            <div><dt>{% trans "Identifiant (email) :" %}</dt><dd>{{ user.email }}</dd></div>
+            <div><dt>{% trans "Membre depuis :" %}</dt><dd>{{ user.date_joined|date:"d/m/Y" }}</dd></div>
+            <div><dt>{% trans "Dernière connexion :" %}</dt><dd>{{ user.last_login|date:"d/m/Y H:i"|default:"—" }}</dd></div>
+          </dl>
+        </div>
+      </aside>
+
+      <div class="profile-main">
+        <section class="profile-editor profile-panel" aria-labelledby="profile-edit-title">
+          <div class="profile-panel-heading">
+            <span class="profile-section-icon" aria-hidden="true"><i class="fas fa-user-edit"></i></span>
+            <h2 id="profile-edit-title">{% trans "Mettre à jour vos informations" %}</h2>
+          </div>
+          <form method="post" enctype="multipart/form-data" class="profile-form">
+            {% csrf_token %}
+            {% if form.errors %}
+              <div class="alert alert-danger" role="alert">{% trans "Vérifiez les champs du formulaire avant de continuer." %}{{ form.non_field_errors }}</div>
             {% endif %}
-
-            <h4 class="mb-1">
-              {% if user.first_name or user.last_name %}
-                {{ user.first_name }} {{ user.last_name }}
-              {% else %}
-                {{ user.username }}
-              {% endif %}
-            </h4>
-            <p class="text-muted mb-3">{{ user.email }}</p>
-
-            {% if google_profile_picture_url %}
-              <p class="mb-3"><span class="badge bg-info text-dark">{% trans "Connecté avec Google" %}</span></p>
-            {% endif %}
-
-            <div class="text-left border rounded p-3 bg-light">
-              {% if google_full_name %}
-                <p class="mb-2"><strong>{% trans "Nom Google :" %}</strong> {{ google_full_name }}</p>
-              {% endif %}
-              <p class="mb-2"><strong>{% trans "Identifiant (email) :" %}</strong> {{ user.email }}</p>
-              <p class="mb-2"><strong>{% trans "Membre depuis :" %}</strong> {{ user.date_joined|date:"d/m/Y" }}</p>
-              <p class="mb-0"><strong>{% trans "Dernière connexion :" %}</strong> {{ user.last_login|date:"d/m/Y H:i" }}</p>
+            <div class="profile-name-fields">
+              <div class="profile-field">
+                <label for="first_name">{% trans "Prénom" %}</label>
+                <input type="text" id="first_name" name="first_name" autocomplete="given-name" maxlength="150" value="{{ form.first_name.value|default_if_none:'' }}"{% if form.first_name.errors %} aria-invalid="true" aria-describedby="first-name-error"{% endif %}>
+                {% if form.first_name.errors %}<div class="profile-error" id="first-name-error">{{ form.first_name.errors }}</div>{% endif %}
+              </div>
+              <div class="profile-field">
+                <label for="last_name">{% trans "Nom" %}</label>
+                <input type="text" id="last_name" name="last_name" autocomplete="family-name" maxlength="150" value="{{ form.last_name.value|default_if_none:'' }}"{% if form.last_name.errors %} aria-invalid="true" aria-describedby="last-name-error"{% endif %}>
+                {% if form.last_name.errors %}<div class="profile-error" id="last-name-error">{{ form.last_name.errors }}</div>{% endif %}
+              </div>
             </div>
-          </div>
+            <div class="profile-field">
+              <label for="email">{% trans "Email" %}</label>
+              <input type="email" id="email" name="email" autocomplete="email" maxlength="254" value="{{ form.email.value|default_if_none:'' }}"{% if form.email.field.required %} required{% endif %}{% if form.email.errors %} aria-invalid="true" aria-describedby="email-error"{% endif %}>
+              {% if form.email.errors %}<div class="profile-error" id="email-error">{{ form.email.errors }}</div>{% endif %}
+            </div>
+            <div class="profile-field profile-upload">
+              <label for="profile_picture"><i class="fas fa-camera" aria-hidden="true"></i> {% trans "Photo de profil" %}</label>
+              <p id="profile-photo-help">{% trans "Choisissez une image carrée pour un meilleur rendu." %}</p>
+              <input type="file" id="profile_picture" name="profile_picture" accept="image/*" aria-describedby="profile-photo-help{% if form.profile_picture.errors %} profile-photo-error{% endif %}"{% if form.profile_picture.errors %} aria-invalid="true"{% endif %}>
+              {% if form.profile_picture.errors %}<div class="profile-error" id="profile-photo-error">{{ form.profile_picture.errors }}</div>{% endif %}
+            </div>
+            <div class="profile-actions">
+              <button type="submit" class="profile-save"><i class="fas fa-check" aria-hidden="true"></i> {% trans "Mettre à jour le profil" %}</button>
+            </div>
+          </form>
+        </section>
+        <div class="profile-danger">
+          <span class="profile-danger-icon" aria-hidden="true"><i class="fas fa-shield-alt"></i></span>
+          <form method="post" action="{% url 'delete_account' %}" data-delete-account data-confirm-message="{% trans 'Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible.' %}">
+            {% csrf_token %}
+            <button type="submit"><i class="far fa-trash-alt" aria-hidden="true"></i> {% trans "Supprimer le compte" %}</button>
+          </form>
         </div>
-      </div>
-
-      <div class="col-lg-8 mb-4">
-        <div class="card border-0 shadow-sm h-100 profile-edit-card">
-          <div class="card-header border-0 text-white" style="background: linear-gradient(135deg, #2ca7b7, #1f8f9e);">
-            <h4 class="mb-0">{% trans "Mettre à jour vos informations" %}</h4>
-          </div>
-          <div class="card-body p-4">
-            <form method="POST" enctype="multipart/form-data">
-              {% csrf_token %}
-
-              {% if form.errors %}
-                <div class="alert alert-danger" role="alert">
-                  {% trans "Vérifiez les champs du formulaire avant de continuer." %}
-                </div>
-              {% endif %}
-
-              <div class="form-row">
-                <div class="form-group col-md-6">
-                  <label for="first_name"><i class="fas fa-user"></i> {% trans "Prénom" %}</label>
-                  <input type="text" class="form-control" id="first_name" name="first_name" value="{{ user.first_name }}">
-                </div>
-                <div class="form-group col-md-6">
-                  <label for="last_name"><i class="fas fa-user"></i> {% trans "Nom" %}</label>
-                  <input type="text" class="form-control" id="last_name" name="last_name" value="{{ user.last_name }}">
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label for="email"><i class="fas fa-envelope"></i> {% trans "Email" %}</label>
-                <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}">
-              </div>
-
-              <div class="form-group">
-                <label for="profile_picture"><i class="fas fa-camera"></i> {% trans "Photo de profil" %}</label>
-                <input type="file" class="form-control-file" id="profile_picture" name="profile_picture">
-                <small class="form-text text-muted">{% trans "Choisissez une image carrée pour un meilleur rendu." %}</small>
-              </div>
-
-              <div class="d-flex justify-content-between align-items-center mt-4 profile-actions">
-                <button type="submit" class="btn btn-primary btn-lg">{% trans "Mettre à jour le profil" %}</button>
-                <a href="{% url 'my_template_view' %}" class="btn btn-outline-secondary">{% trans "Retour à l'accueil" %}</a>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="row">
-      <div class="col-lg-12 text-center mt-2">
-        <form method="post" action="{% url 'delete_account' %}" onsubmit="return confirm('{% trans "Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible." %}');" class="d-inline-block">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-danger btn-lg">
-            <i class="fas fa-trash-alt"></i> {% trans "Supprimer le compte" %}
-          </button>
-        </form>
       </div>
     </div>
   </div>
-</section>
-
+</div>
+<script src="{% static 'js/profile.js' %}" defer></script>
 {% endblock %}
