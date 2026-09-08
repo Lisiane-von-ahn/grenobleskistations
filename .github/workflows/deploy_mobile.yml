@@ -10,6 +10,10 @@ on:
       - master
   workflow_dispatch:
     inputs:
+      build_number:
+        description: 'Explicit versionCode (leave empty to use the current timestamp)'
+        type: string
+        default: ''
       publish_to_play:
         description: 'Publish the signed bundle to Google Play production'
         type: boolean
@@ -67,8 +71,15 @@ jobs:
 
       - name: Generate release version
         id: release_version
+        env:
+          REQUESTED_BUILD_NUMBER: ${{ inputs.build_number }}
         run: |
-          echo "build_number=$(date +%s)" >> "$GITHUB_OUTPUT"
+          build_number="${REQUESTED_BUILD_NUMBER:-$(date +%s)}"
+          if ! [[ "$build_number" =~ ^[1-9][0-9]{0,9}$ ]] || (( build_number > 2100000000 )); then
+            echo "Invalid Android versionCode"
+            exit 1
+          fi
+          echo "build_number=$build_number" >> "$GITHUB_OUTPUT"
 
       - name: Build release APK & AAB
         working-directory: grenobleski_android_native
@@ -137,6 +148,8 @@ jobs:
           body: |
             Automated release from commit ${{ github.sha }}.
             Built with versionCode ${{ steps.release_version.outputs.build_number }}.
-          files: grenobleski_android_native/app/build/outputs/apk/release/app-release.apk
+          files: |
+            grenobleski_android_native/app/build/outputs/apk/release/app-release.apk
+            grenobleski_android_native/app/build/outputs/bundle/release/app-release.aab
           draft: false
           prerelease: false
