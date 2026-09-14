@@ -494,6 +494,8 @@ def ski_station_detail(request, station_id):
     destination = f"{ski_station.latitude},{ski_station.longitude}"
     station_transit_url = f"https://www.google.com/maps/dir/?api=1&destination={destination}&travelmode=transit"
     station_driving_url = f"https://www.google.com/maps/dir/?api=1&destination={destination}&travelmode=driving"
+    station_walking_url = f"https://www.google.com/maps/dir/?api=1&destination={destination}&travelmode=walking"
+    station_bicycling_url = f"https://www.google.com/maps/dir/?api=1&destination={destination}&travelmode=bicycling"
     google_place_rating = _fetch_google_place_rating(ski_station)
     station_news_items = list(
         SkiNewsItem.objects.filter(ski_station=ski_station, category='ski')
@@ -523,6 +525,8 @@ def ski_station_detail(request, station_id):
         'circuit_breakdown': circuit_breakdown,
         'station_transit_url': station_transit_url,
         'station_driving_url': station_driving_url,
+        'station_walking_url': station_walking_url,
+        'station_bicycling_url': station_bicycling_url,
         'piste_form': piste_form,
         'snow_form': snow_form,
         'piste_reports': piste_reports,

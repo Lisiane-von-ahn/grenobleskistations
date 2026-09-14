@@ -795,6 +795,18 @@ private fun NativeShell(
                     IconButton(onClick = onLogout) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.Logout, contentDescription = stringResource(id = R.string.logout))
                     }
+                    IconButton(onClick = { onSelectTab(NativeTab.PROFILE) }) {
+                        if (state.profileInfo != null) {
+                            UserAvatar(
+                                displayName = state.profileInfo.displayName,
+                                photoBase64 = state.profileInfo.profilePictureBase64,
+                                photoUrl = state.profileInfo.googleProfilePictureUrl,
+                                size = 34.dp,
+                            )
+                        } else {
+                            Icon(Icons.Filled.Person, contentDescription = stringResource(id = R.string.profile))
+                        }
+                    }
                 },
             )
         },

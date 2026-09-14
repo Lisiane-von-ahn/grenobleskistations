@@ -107,6 +107,7 @@ internal fun DiscoveryHome(state: AppUiState, onOpenStations: () -> Unit, onOpen
                         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(station.name, style = MaterialTheme.typography.titleMedium)
                             StationConditions(station, onOpenUrl)
+                            StationRouteButtons(station, onOpenUrl)
                             PhotoCredit(station.photoCredit, station.photoSourceUrl, onOpenUrl)
                         }
                     }
@@ -132,9 +133,52 @@ internal fun DiscoveryHome(state: AppUiState, onOpenStations: () -> Unit, onOpen
                     Text(if (french) place.walkFr else place.walkEn, style = MaterialTheme.typography.bodyMedium)
                     PhotoCredit(place.photoCredit, place.photoSourceUrl, onOpenUrl)
                     OutlinedButton(onClick = { onOpenUrl(place.sourceUrl) }) { Text(stringResource(R.string.discovery_visit_info)) }
+                    OutlinedButton(onClick = { onOpenUrl("https://www.google.com/maps/dir/?api=1&destination=${Uri.encode(place.name + ", Grenoble")}&travelmode=walking") }) {
+                        Text(stringResource(R.string.walk_to_place))
+                    }
                 }
             }
         }
+        item { HikingTrailsSection(onOpenUrl) }
+        }
+    }
+}
+
+@Composable
+private fun HikingTrailsSection(onOpenUrl: (String) -> Unit) {
+    val trails = listOf(
+        Triple("Bastille – Fort de la Bastille", "Grenoble · facile · 5 km", "Fort de la Bastille, Grenoble"),
+        Triple("Mont Jalla – mémorial", "Bastille · intermédiaire · 7 km", "Mont Jalla, Grenoble"),
+        Triple("Bastille – Quais de l’Isère", "Grenoble · facile · 4 km", "Quai Stéphane Jay, Grenoble"),
+        Triple("Le Moucherotte", "Vercors · difficile · vérifier les conditions", "Le Moucherotte, France"),
+    )
+    Text(stringResource(R.string.hiking_trails_title), style = MaterialTheme.typography.titleLarge)
+    Text(stringResource(R.string.hiking_trails_subtitle), style = MaterialTheme.typography.bodyMedium)
+    trails.forEach { (name, details, destination) ->
+        Card(shape = RoundedCornerShape(18.dp)) {
+            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(name, style = MaterialTheme.typography.titleMedium)
+                Text(details, style = MaterialTheme.typography.bodySmall)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { onOpenUrl("https://www.google.com/maps/search/?api=1&query=${Uri.encode(destination)}") }) { Text(stringResource(R.string.hiking_open_map)) }
+                    TextButton(onClick = { onOpenUrl("https://www.openstreetmap.org/search?query=${Uri.encode(destination)}") }) { Text(stringResource(R.string.hiking_open_osm)) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StationRouteButtons(station: StationItem, onOpenUrl: (String) -> Unit) {
+    val lat = station.latitude ?: return
+    val lon = station.longitude ?: return
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(stringResource(R.string.getting_there_title), style = MaterialTheme.typography.labelLarge)
+        Text(stringResource(R.string.getting_there_subtitle), style = MaterialTheme.typography.bodySmall)
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            items(listOf("driving" to R.string.route_car, "transit" to R.string.route_transit, "bicycling" to R.string.route_bike, "walking" to R.string.route_walk)) { (mode, label) ->
+                OutlinedButton(onClick = { onOpenUrl("https://www.google.com/maps/dir/?api=1&destination=$lat,$lon&travelmode=$mode") }) { Text(stringResource(label)) }
+            }
         }
     }
 }

@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import os
 import webbrowser
 from pathlib import Path
@@ -69,8 +70,15 @@ class GrenobleSkiMobile(toga.App):
             ),
         )
 
+        profile_label = self.t("nav_profile") if self.user else "👤"
+        self.profile_top_button = toga.Button(
+            profile_label,
+            on_press=lambda widget: self._show_section("profile") if self.user else None,
+            style=Pack(width=76, color=COLORS["accent_text"], background_color=COLORS["accent"], padding=8),
+        )
+
         header_row = toga.Box(
-            children=[self.logo_view, title_box, self.lang_button],
+            children=[self.logo_view, title_box, self.lang_button, self.profile_top_button],
             style=Pack(
                 direction=ROW,
                 alignment=CENTER,
@@ -355,6 +363,8 @@ class GrenobleSkiMobile(toga.App):
         )
         self.home_summary = toga.Label("", style=Pack(color=COLORS["title_text"], padding=8))
         self.home_counts = toga.Label("", style=Pack(color=COLORS["muted_text"], padding=8, padding_top=0))
+        self.home_conditions_title = toga.Label(self.t("home_conditions_title"), style=Pack(color=COLORS["title_text"], font_weight="bold", padding=8))
+        self.home_conditions_box = toga.Box(style=Pack(direction=COLUMN, padding_left=8, padding_right=8, padding_bottom=8))
         self.home_market_title = toga.Label(
             self.t("home_latest_marketplace"),
             style=Pack(color=COLORS["title_text"], font_weight="bold", padding_left=8, padding_right=8, padding_top=2, padding_bottom=6),
@@ -364,16 +374,22 @@ class GrenobleSkiMobile(toga.App):
             self.home_summary,
             summary_card,
             self.home_counts,
+            self.home_conditions_title,
+            self.home_conditions_box,
             self.home_market_title,
             self.home_market_list_box,
         ]
         if self.capabilities.get("has_partners"):
+            self.home_partners_hint = toga.Label(
+                self.t("home_partners_hint"),
+                style=Pack(color=COLORS["muted_text"], padding=8, padding_top=2),
+            )
             self.home_carpool_button = toga.Button(
                 self.t("home_open_carpool"),
                 on_press=self.on_home_open_carpool,
                 style=Pack(width=220, padding=10),
             )
-            home_children.append(self.home_carpool_button)
+            home_children.extend([self.home_partners_hint, self.home_carpool_button])
         else:
             self.home_carpool_button = None
         home_children.append(toga.Button(self.t("refresh"), on_press=self.on_refresh_all, style=Pack(width=170, padding=10)))
@@ -422,7 +438,7 @@ class GrenobleSkiMobile(toga.App):
         partners_refresh = toga.Button(self.t("refresh"), on_press=self.on_refresh_partners, style=Pack(width=120))
         self.partners_list_box = toga.Box(style=Pack(direction=COLUMN))
         self.partners_section = toga.Box(
-            children=[partners_refresh, toga.ScrollContainer(content=self.partners_list_box, style=Pack(flex=1, padding_top=8))],
+            children=[toga.Label(self.t("partners_intro"), style=Pack(color=COLORS["muted_text"], padding_bottom=8)), partners_refresh, toga.ScrollContainer(content=self.partners_list_box, style=Pack(flex=1, padding_top=8))],
             style=Pack(direction=COLUMN, flex=1),
         )
 
@@ -442,6 +458,7 @@ class GrenobleSkiMobile(toga.App):
         self.carpool_list_box = toga.Box(style=Pack(direction=COLUMN))
         self.carpool_section = toga.Box(
             children=[
+                toga.Label(self.t("carpool_intro"), style=Pack(color=COLORS["muted_text"], padding_bottom=8)),
                 carpool_refresh,
                 self.carpool_title_input,
                 self.carpool_message_input,
@@ -495,8 +512,10 @@ class GrenobleSkiMobile(toga.App):
 
         self.profile_name = toga.Label("", style=Pack(color=COLORS["title_text"], padding=8))
         self.profile_email = toga.Label("", style=Pack(color=COLORS["muted_text"], padding=8))
+        profile_picture = self._profile_picture_view()
         self.profile_section = toga.Box(
             children=[
+                profile_picture,
                 self.profile_name,
                 self.profile_email,
                 toga.Button(
@@ -507,6 +526,18 @@ class GrenobleSkiMobile(toga.App):
             ],
             style=Pack(direction=COLUMN),
         )
+
+    def _profile_picture_view(self):
+        picture = (self.user or {}).get("profile_picture") or (self.user or {}).get("google_profile_picture_url")
+        if picture and str(picture).startswith("http"):
+            return toga.ImageView(picture, style=Pack(width=88, height=88, padding=8))
+        if picture:
+            try:
+                raw = picture.split(",", 1)[1] if "," in picture else picture
+                return toga.ImageView(toga.Image(data=base64.b64decode(raw)), style=Pack(width=88, height=88, padding=8))
+            except Exception:
+                pass
+        return toga.Label("👤", style=Pack(font_size=48, padding=8))
 
         self.sections = {
             "home": self.home_section,
@@ -558,6 +589,7 @@ class GrenobleSkiMobile(toga.App):
         self.home_counts.text = " | ".join(counters)
         self.profile_name.text = name
         self.profile_email.text = self.user.get("email", "")
+        self.profile_top_button.text = self.t("nav_profile")
 
     def _render_home_market_highlights(self):
         self._clear_box(self.home_market_list_box)
@@ -581,6 +613,26 @@ class GrenobleSkiMobile(toga.App):
                 f"{self.t('published')}: {created_day}",
             ]
             self.home_market_list_box.add(self._make_card(title, lines))
+
+    def _render_home_conditions(self):
+        self._clear_box(self.home_conditions_box)
+        conditions = {item.get("id"): item for item in self.station_conditions_data if isinstance(item, dict)}
+        for station in self.stations_data[:3]:
+            condition = conditions.get(station.get("id"), {})
+            lines = [f"{station.get('distanceFromGrenoble', '-')} km · {station.get('altitude', '-')} m"]
+            temp = condition.get("temperature_c")
+            snow = condition.get("snow_depth_cm")
+            open_pistes = condition.get("pistes_open")
+            total_pistes = condition.get("pistes_total")
+            if temp is not None: lines.append(f"🌡 {round(temp)}°C")
+            if snow is not None: lines.append(f"❄️ {snow} cm")
+            if open_pistes is not None: lines.append(f"⛷ {open_pistes}/{total_pistes or '?'} {self.t('pistes_open')}")
+            card = self._make_card(station.get("name") or self.t("station"), lines)
+            lat, lon = station.get("latitude"), station.get("longitude")
+            if lat is not None and lon is not None:
+                route = f"https://www.google.com/maps/dir/?api=1&destination={lat},{lon}&travelmode=driving"
+                card.add(toga.Button(self.t("getting_there"), on_press=lambda w, url=route: self._open_external_url(url), style=Pack(padding=5)))
+            self.home_conditions_box.add(card)
 
     def _make_card(self, title, lines):
         card = toga.Box(style=Pack(direction=COLUMN, background_color=COLORS["card_bg"], padding=14, padding_bottom=16, padding_top=14))
@@ -701,6 +753,17 @@ class GrenobleSkiMobile(toga.App):
                 lines.append(f"🚌 {len(bus_lines)} bus line(s)")
             
             card = self._make_card(title, lines)
+
+            latitude = station.get("latitude")
+            longitude = station.get("longitude")
+            if latitude is not None and longitude is not None:
+                destination = f"{latitude},{longitude}"
+                card.add(toga.Label(self.t("getting_there_more"), style=Pack(color=COLORS["muted_text"], padding_top=6)))
+                modes = toga.Box(style=Pack(direction=ROW, padding_top=4, padding_bottom=4))
+                for mode, label_key in (("driving", "route_car"), ("transit", "route_transit"), ("bicycling", "route_bike"), ("walking", "route_walk")):
+                    url = f"https://www.google.com/maps/dir/?api=1&destination={destination}&travelmode={mode}"
+                    modes.add(toga.Button(self.t(label_key), on_press=lambda w, route=url: self._open_external_url(route), style=Pack(padding=5)))
+                card.add(modes)
             
             # Add button to view cameras if available
             if cameras:
@@ -1090,6 +1153,7 @@ class GrenobleSkiMobile(toga.App):
             self.cameras_list_box.add(card)
 
     def _render_all_sections(self):
+        self._render_home_conditions()
         self._render_home_market_highlights()
         self._render_stations_list()
         self._render_bus_list()

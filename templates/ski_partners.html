@@ -11,12 +11,12 @@
     <section class="premium-shell mb-4 p-3">
         <div class="premium-hero">
             <span class="premium-kicker">Communaute</span>
-            <h2 class="premium-title h3 mb-1">{% if is_carpool_page %}Trouver un covoiturage ski{% else %}Trouver des partenaires de ski{% endif %}</h2>
-            <p class="premium-subtitle">{% if is_carpool_page %}Proposez ou trouvez une place voiture pour monter en station.{% else %}Publiez votre sortie et trouvez des personnes avec le meme niveau.{% endif %}</p>
+            <h2 class="premium-title h3 mb-1">{% if is_carpool_page %}Organiser un trajet ski{% else %}Créer une sortie ski{% endif %}</h2>
+            <p class="premium-subtitle">{% if is_carpool_page %}Publiez votre trajet pour remplir les places disponibles ou rejoignez d'autres skieurs pour monter en station.{% else %}Créez un événement, invitez des participants et trouvez des partenaires qui partagent votre niveau et votre rythme.{% endif %}</p>
         </div>
         <div class="d-flex flex-wrap gap-2 mt-3">
             {% if user.is_authenticated %}
-            <a class="btn btn-success" href="{% url 'ski_partner_publish' %}{% if is_carpool_page %}?kind=carpool{% endif %}">Publier une sortie</a>
+            <a class="btn btn-success" href="{% url 'ski_partner_publish' %}{% if is_carpool_page %}?kind=carpool{% endif %}">{% if is_carpool_page %}Publier un trajet{% else %}Créer un événement{% endif %}</a>
             {% if is_carpool_page %}
             <a class="btn btn-outline-dark" href="{% url 'my_carpool_reservations' %}">Mes reservations</a>
             {% endif %}

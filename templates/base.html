@@ -239,6 +239,10 @@
             gap: 10px;
         }
 
+        .profile-avatar-link { margin-left: auto; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; border: 2px solid rgba(20, 127, 180, .28); background: #fff; box-shadow: 0 5px 14px rgba(12, 44, 66, .14); overflow: hidden; }
+        .profile-avatar-link img { width: 100%; height: 100%; object-fit: cover; }
+        .profile-avatar-fallback { color: #147ea9; font-weight: 700; font-size: 1rem; }
+
         .header-area .main-nav .logo {
             flex-basis: auto;
             flex-shrink: 0;
@@ -1046,8 +1050,8 @@
                                     <li><a href="{% url 'services' %}">{% trans "Services" %}</a></li>
                                     <li><a href="{% url 'instructors' %}">{% trans "Moniteurs" %}</a></li>
                                     <li><a href="{% url 'bus' %}">{% trans "Bus et accès" %}</a></li>
-                                    <li><a href="{% url 'covoiturage' %}">{% trans "Covoiturage" %}</a></li>
-                                    <li><a href="{% url 'ski_partners' %}">{% trans "Partenaires" %}</a></li>
+                                    <li><a href="{% url 'covoiturage' %}">{% trans "Trajets partagés" %}</a></li>
+                                    <li><a href="{% url 'ski_partners' %}">{% trans "Sorties ski" %}</a></li>
                                     <li><a href="{% url 'my_template_view' %}#mobile-app">{% trans "Application mobile" %}</a></li>
                                 </ul>
                             </li>
@@ -1080,6 +1084,15 @@
                             </li>
 
                         </ul>
+                        <a class="profile-avatar-link" href="{% if user.is_authenticated %}{% url 'profile' %}{% else %}{% url 'login' %}{% endif %}" aria-label="{% if user.is_authenticated %}{% trans 'Ouvrir mon profil' %}{% else %}{% trans 'Se connecter' %}{% endif %}">
+                            {% if user.is_authenticated and user.profile.profile_picture %}
+                                <img src="data:image/png;base64,{{ user.profile.profile_picture|b64encode }}" alt="{% trans 'Photo de profil' %}">
+                            {% elif user.is_authenticated %}
+                                <span class="profile-avatar-fallback">{{ user.first_name|default:user.username|slice:':1'|upper }}</span>
+                            {% else %}
+                                <i class="fa fa-user profile-avatar-fallback" aria-hidden="true"></i>
+                            {% endif %}
+                        </a>
                         {% endwith %}
                         <a class='menu-trigger' href="#" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="site-main-nav">
                             <span>{% trans "Menu" %}</span>

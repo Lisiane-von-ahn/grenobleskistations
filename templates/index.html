@@ -74,6 +74,17 @@
       color: #556b7d;
     }
 
+    .conditions-section { margin: 38px auto; }
+    .conditions-card { overflow: hidden; height: 100%; border: 0; border-radius: 20px; background: #fff; box-shadow: 0 12px 30px rgba(15, 58, 99, .12); }
+    .conditions-card .station-photo { width: 100%; height: 170px; object-fit: cover; }
+    .conditions-card .card-body { padding: 18px; }
+    .conditions-badge { display: inline-block; padding: 4px 9px; border-radius: 999px; background: #e7f7f8; color: #087b8d; font-size: .75rem; font-weight: 700; }
+    .condition-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 16px; }
+    .condition-metric { padding: 10px 6px; border-radius: 12px; background: #f4f8fb; text-align: center; }
+    .condition-metric i { color: #1686a9; display: block; margin-bottom: 4px; }
+    .condition-metric strong { display: block; font-size: 1.05rem; color: #173b59; }
+    .condition-metric small { color: #64788a; font-size: .7rem; }
+
     @media (max-width: 991.98px) {
       .featured-stations-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -294,6 +305,36 @@
       {% endfor %}
     </div>
   </div>
+
+  <section class="container my-5" aria-labelledby="hiking-heading">
+    <div class="section-heading mb-3"><h2 id="hiking-heading">Sentiers de randonnée autour de Grenoble</h2><p>Cartes et accès pour la Bastille, le Mont Jalla et les itinéraires de montagne proches.</p></div>
+    <div class="row g-3">
+      <div class="col-12 col-md-6 col-lg-3"><article class="conditions-card p-3 h-100"><h3 class="h6">Bastille – Fort de la Bastille</h3><p class="small text-muted">Grenoble · facile · 5 km. Vérifiez météo et état du sentier.</p><a class="btn btn-sm btn-primary" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=Fort%20de%20la%20Bastille%2C%20Grenoble">Ouvrir la carte</a> <a class="btn btn-sm btn-outline-secondary mt-2" target="_blank" rel="noopener" href="https://www.openstreetmap.org/search?query=Fort%20de%20la%20Bastille%2C%20Grenoble">OSM</a></article></div>
+      <div class="col-12 col-md-6 col-lg-3"><article class="conditions-card p-3 h-100"><h3 class="h6">Mont Jalla – mémorial</h3><p class="small text-muted">Bastille · intermédiaire · 7 km. Vérifiez météo et état du sentier.</p><a class="btn btn-sm btn-primary" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=Mont%20Jalla%2C%20Grenoble">Ouvrir la carte</a> <a class="btn btn-sm btn-outline-secondary mt-2" target="_blank" rel="noopener" href="https://www.openstreetmap.org/search?query=Mont%20Jalla%2C%20Grenoble">OSM</a></article></div>
+      <div class="col-12 col-md-6 col-lg-3"><article class="conditions-card p-3 h-100"><h3 class="h6">Bastille – Quais de l’Isère</h3><p class="small text-muted">Grenoble · facile · 4 km. Vérifiez météo et état du sentier.</p><a class="btn btn-sm btn-primary" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=Quai%20Stephane%20Jay%2C%20Grenoble">Ouvrir la carte</a> <a class="btn btn-sm btn-outline-secondary mt-2" target="_blank" rel="noopener" href="https://www.openstreetmap.org/search?query=Quai%20Stephane%20Jay%2C%20Grenoble">OSM</a></article></div>
+      <div class="col-12 col-md-6 col-lg-3"><article class="conditions-card p-3 h-100"><h3 class="h6">Le Moucherotte – Vercors</h3><p class="small text-muted">Vercors · difficile. Vérifiez météo, neige et conditions officielles.</p><a class="btn btn-sm btn-primary" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=Le%20Moucherotte%2C%20France">Ouvrir la carte</a> <a class="btn btn-sm btn-outline-secondary mt-2" target="_blank" rel="noopener" href="https://www.openstreetmap.org/search?query=Le%20Moucherotte%2C%20France">OSM</a></article></div>
+    </div>
+  </section>
+
+  <section class="container conditions-section" aria-labelledby="conditions-heading">
+    <div class="section-heading mb-3 d-flex justify-content-between align-items-end">
+      <div><h2 id="conditions-heading">{% trans "Les conditions du jour" %}</h2><p>{% trans "Neige, météo et domaine skiable pour choisir votre prochaine sortie." %}</p></div>
+      <a class="btn btn-outline-primary" href="{% url 'ski_station_search' %}">{% trans "Comparer les stations" %}</a>
+    </div>
+    <div class="row g-4">
+      {% for station in nearest_stations|slice:":3" %}
+      <div class="col-12 col-md-4">
+        <article class="conditions-card" data-condition-station="{{ station.id }}" data-lat="{{ station.latitude|unlocalize }}" data-lng="{{ station.longitude|unlocalize }}">
+          {% if station.image %}<img class="station-photo" src="data:image/jpeg;base64,{{ station.image|b64encode }}" alt="{{ station.name }}" loading="lazy">{% else %}<img class="station-photo" src="{% static 'images/chamrousse.jpg' %}" alt="{{ station.name }}" loading="lazy">{% endif %}
+          <div class="card-body"><span class="conditions-badge"><i class="fa fa-snowflake"></i> {% trans "À découvrir" %}</span><h3 class="h5 mt-2 mb-1">{{ station.name }}</h3><p class="small text-muted mb-0">{{ station.altitude }} m · {{ station.distanceFromGrenoble }} km de Grenoble</p>
+            <div class="condition-metrics"><div class="condition-metric"><i class="fa fa-temperature-low"></i><strong class="condition-temp">—</strong><small>{% trans "Météo" %}</small></div><div class="condition-metric"><i class="fa fa-snowflake"></i><strong class="condition-snow">—</strong><small>{% trans "Neige" %}</small></div><div class="condition-metric"><i class="fa fa-road"></i><strong>{{ station.num_circuits|default:"—" }}</strong><small>{% trans "Pistes" %}</small></div></div>
+            <a class="btn btn-primary w-100 mt-3" href="{% url 'ski_station_detail' station.id %}">{% trans "Voir la station" %} <i class="fa fa-arrow-right"></i></a>
+          </div>
+        </article>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
   
   <section class="container" id="mobile-app" aria-labelledby="mobile-app-heading">
     <div class="mobile-app-card">
@@ -441,6 +482,16 @@
   <script src="{% static 'js/custom.js'%}"></script>
 
   <script>
+    document.querySelectorAll('[data-condition-station]').forEach((card) => {
+      fetch('/api/station-weather/').then((r) => r.json()).then((data) => {
+        const weather = (Array.isArray(data) ? data.find((item) => String(item.id) === card.dataset.conditionStation) : data) || {};
+        const temp = weather.temperature_c ?? weather.temp;
+        const snow = weather.snow_depth_cm ?? weather.snow_cm;
+        card.querySelector('.condition-temp').textContent = temp == null ? '—' : `${Math.round(temp)}°C`;
+        card.querySelector('.condition-snow').textContent = snow == null ? '—' : `${Math.round(snow)} cm`;
+      }).catch(() => {});
+    });
+
     function bannerSwitcher() {
       next = $('.sec-1-input').filter(':checked').next('.sec-1-input');
       if (next.length) next.prop('checked', true);

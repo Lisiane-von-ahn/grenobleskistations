@@ -256,9 +256,15 @@
                             </div>
                         {% endif %}
 
-                        <div class="mt-2 station-cta-row">
-                            <a href="{{ station_transit_url }}" class="btn btn-outline-primary btn-sm" target="_blank">{% trans "Venir en bus" %}</a>
-                            <a href="{{ station_driving_url }}" class="btn btn-outline-success btn-sm" target="_blank">{% trans "Venir en voiture" %}</a>
+                        <div class="mt-3 p-3 rounded border bg-light">
+                            <h6 class="mb-1">{% trans "Comment venir ?" %}</h6>
+                            <p class="small text-muted mb-2">{% trans "Comparez les itinéraires, le trafic, les horaires et les dénivelés dans Google Maps." %}</p>
+                            <div class="station-cta-row d-flex flex-wrap gap-2">
+                                <a href="{{ station_driving_url }}" class="btn btn-outline-success btn-sm" target="_blank" rel="noopener">🚗 {% trans "Voiture" %}</a>
+                                <a href="{{ station_transit_url }}" class="btn btn-outline-primary btn-sm" target="_blank" rel="noopener">🚌 {% trans "Bus / transport" %}</a>
+                                <a href="{{ station_bicycling_url }}" class="btn btn-outline-info btn-sm" target="_blank" rel="noopener">🚲 {% trans "Vélo" %}</a>
+                                <a href="{{ station_walking_url }}" class="btn btn-outline-secondary btn-sm" target="_blank" rel="noopener">🚶 {% trans "À pied" %}</a>
+                            </div>
                         </div>
                     </div>
                 </div>
