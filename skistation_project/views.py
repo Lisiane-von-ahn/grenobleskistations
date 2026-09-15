@@ -28,6 +28,7 @@ from api.models import (
     FriendInvitation,
     InstructorProfile,
     InstructorService,
+    AccommodationPlace,
 )
 from django.db.models import Sum
 from django.db.models import Q
@@ -1677,9 +1678,12 @@ def ski_partner_publish(request):
             messages.error(request, 'Publication trop rapide. Merci d\'attendre quelques minutes avant une nouvelle annonce.')
         elif preferred_date:
             try:
-                parsed_date = date.fromisoformat(preferred_date)
+                parsed_date = datetime.strptime(preferred_date, '%d/%m/%Y').date()
             except ValueError:
-                parsed_date = None
+                try:
+                    parsed_date = date.fromisoformat(preferred_date)
+                except ValueError:
+                    parsed_date = None
             if not parsed_date:
                 messages.error(request, 'Date invalide.')
                 return redirect('ski_partner_publish')
@@ -1697,9 +1701,14 @@ def ski_partner_publish(request):
                 messages.error(request, 'Date et heure de depart requises pour un covoiturage.')
                 return redirect('ski_partner_publish')
             try:
-                departure_dt = timezone.make_aware(
-                    datetime.fromisoformat(f"{departure_date}T{departure_time}:00")
-                )
+                try:
+                    parsed_departure_date = datetime.strptime(departure_date, '%d/%m/%Y').date()
+                except ValueError:
+                    parsed_departure_date = date.fromisoformat(departure_date)
+                departure_dt = timezone.make_aware(datetime.combine(
+                    parsed_departure_date,
+                    datetime.strptime(departure_time, '%H:%M').time(),
+                ))
             except ValueError:
                 messages.error(request, 'Date/heure de depart invalide.')
                 return redirect('ski_partner_publish')
@@ -1761,9 +1770,19 @@ def mountain_tips(request):
 
 
 def accommodations(request):
+    def parse_stay_date(value):
+        value = (value or '').strip()[:10]
+        for date_format in ('%d/%m/%Y', '%Y-%m-%d'):
+            try:
+                parsed = datetime.strptime(value, date_format).date()
+                return parsed.isoformat(), parsed.strftime('%d/%m/%Y')
+            except ValueError:
+                continue
+        return '', ''
+
     destination = (request.GET.get('destination') or 'Grenoble').strip()[:120]
-    checkin = (request.GET.get('checkin') or '').strip()[:10]
-    checkout = (request.GET.get('checkout') or '').strip()[:10]
+    checkin, checkin_display = parse_stay_date(request.GET.get('checkin'))
+    checkout, checkout_display = parse_stay_date(request.GET.get('checkout'))
     guests = max(1, min(int(request.GET.get('guests') or 2), 16)) if (request.GET.get('guests') or '2').isdigit() else 2
     rooms = max(1, min(int(request.GET.get('rooms') or 1), 8)) if (request.GET.get('rooms') or '1').isdigit() else 1
     lodging_type = (request.GET.get('lodging_type') or '').strip()[:30]
@@ -1774,14 +1793,21 @@ def accommodations(request):
         max_price_value = int(max_price) if max_price else 500
     except ValueError:
         max_price_value = 500
-    accommodation_catalog = [
-        {'name': 'Grenoble Central Stay', 'destination': 'Grenoble', 'type': 'apartment', 'price': 78, 'rating': 4.6, 'reviews': 184, 'distance': 0, 'ski_minutes': 35, 'amenities': ['kitchen'], 'provider': 'booking'},
-        {'name': 'Chamrousse View Chalet', 'destination': 'Chamrousse', 'type': 'house', 'price': 145, 'rating': 4.8, 'reviews': 96, 'distance': 30, 'ski_minutes': 4, 'amenities': ['parking', 'kitchen'], 'provider': 'airbnb'},
-        {'name': 'Villard Alpine Apartment', 'destination': 'Villard-de-Lans', 'type': 'apartment', 'price': 112, 'rating': 4.7, 'reviews': 128, 'distance': 34, 'ski_minutes': 6, 'amenities': ['parking', 'kitchen', 'pet-friendly'], 'provider': 'booking'},
-        {'name': 'Alpe d’Huez Slopes Residence', 'destination': 'Alpe d’Huez', 'type': 'hotel', 'price': 189, 'rating': 4.5, 'reviews': 241, 'distance': 65, 'ski_minutes': 3, 'amenities': ['parking'], 'provider': 'booking'},
-        {'name': 'Les Deux Alpes Mountain House', 'destination': 'Les Deux Alpes', 'type': 'house', 'price': 176, 'rating': 4.7, 'reviews': 73, 'distance': 70, 'ski_minutes': 8, 'amenities': ['parking', 'kitchen'], 'provider': 'airbnb'},
-        {'name': 'Chartreuse Comfort Lodge', 'destination': 'Saint-Pierre-de-Chartreuse', 'type': 'hotel', 'price': 98, 'rating': 4.4, 'reviews': 67, 'distance': 32, 'ski_minutes': 5, 'amenities': ['parking', 'pet-friendly'], 'provider': 'booking'},
+    fallback_catalog = [
+        {'name': 'OKKO Hotels Grenoble Centre', 'destination': 'Grenoble', 'type': 'hotel', 'price': 118, 'rating': 8.5, 'reviews': 991, 'distance': 0, 'ski_minutes': 35, 'amenities': ['pet-friendly'], 'provider': 'booking', 'provider_url': 'https://www.booking.com/hotel/fr/okko-hotels-grenoble-jardin-hoche.fr.html', 'photos': ['https://hapi.mmcreation.com/hapidam/f8521bfa-5ad0-4688-85c8-b67836f820ac/okko-hotels-officielles-grenoble-jardin-hoche-029.jpg?w=960&h=960&mode=ratio&coi=50%2C50', 'https://hapi.mmcreation.com/hapidam/4dd71f70-d360-4125-b8ca-158c92e20304/Grenoble_chambre_classique5.jpg.jpg?size=lg']},
+        {'name': 'Joy Villard de Lans', 'destination': 'Villard-de-Lans', 'type': 'hotel', 'price': 112, 'rating': 8.5, 'reviews': 128, 'distance': 34, 'ski_minutes': 6, 'amenities': ['parking', 'pet-friendly'], 'provider': 'booking', 'provider_url': 'https://www.booking.com/hotel/fr/roseraie.fr.html'},
+        {'name': 'Grandes Rousses Hotel & Spa', 'destination': 'Alpe d’Huez', 'type': 'hotel', 'price': 189, 'rating': 8.7, 'reviews': 509, 'distance': 65, 'ski_minutes': 3, 'amenities': ['parking'], 'provider': 'booking', 'provider_url': 'https://www.booking.com/hotel/fr/grandes-rousses.fr.html', 'photos': ['https://www.hotelgrandesrousses.com/_novaimg/galleria/1534878.jpg', 'https://media.grenoble-tourisme.com/photos/structure_33495/40506006.jpg']},
+        {'name': 'Hotel Le Beau Site', 'destination': 'Saint-Pierre-de-Chartreuse', 'type': 'hotel', 'price': 107, 'rating': 8.8, 'reviews': 250, 'distance': 32, 'ski_minutes': 5, 'amenities': ['parking'], 'provider': 'booking', 'provider_url': 'https://www.booking.com/hotel/fr/le-beau-site-st-pierre-de-chartreuse.fr.html'},
     ]
+    cached_places = AccommodationPlace.objects.all()
+    if destination and destination.lower() != 'grenoble':
+        cached_places = cached_places.filter(Q(city__icontains=destination) | Q(name__icontains=destination) | Q(address__icontains=destination))
+    accommodation_catalog = [{
+        'name': place.name, 'destination': place.city or 'Isère', 'type': place.accommodation_type,
+        'price': None, 'rating': None, 'reviews': None, 'distance': None, 'ski_minutes': None,
+        'amenities': [], 'provider': 'osm', 'provider_url': place.website_url,
+        'photos': place.image_urls,
+    } for place in cached_places[:120]] or fallback_catalog
     destination_query = destination.lower()
     results = [item for item in accommodation_catalog if not destination_query or destination_query in item['destination'].lower() or item['destination'].lower() in destination_query]
     if destination_query == 'grenoble':
@@ -1789,15 +1815,15 @@ def accommodations(request):
     if lodging_type:
         results = [item for item in results if item['type'] == lodging_type]
     if max_price_value < 500:
-        results = [item for item in results if item['price'] <= max_price_value]
+        results = [item for item in results if item['price'] is None or item['price'] <= max_price_value]
     if amenities:
         results = [item for item in results if all(amenity in item['amenities'] for amenity in amenities)]
     if sort == 'price':
-        results.sort(key=lambda item: item['price'])
+        results.sort(key=lambda item: item['price'] if item['price'] is not None else 999999)
     elif sort == 'rating':
-        results.sort(key=lambda item: item['rating'], reverse=True)
+        results.sort(key=lambda item: item['rating'] if item['rating'] is not None else -1, reverse=True)
     elif sort == 'distance':
-        results.sort(key=lambda item: item['distance'])
+        results.sort(key=lambda item: item['distance'] if item['distance'] is not None else 999999)
     from urllib.parse import urlencode, quote
     booking_params = {'ss': destination, 'group_adults': guests, 'no_rooms': rooms}
     if checkin:
@@ -1813,8 +1839,17 @@ def accommodations(request):
         item_booking_params = dict(booking_params, ss=item_destination)
         item['booking_url'] = 'https://www.booking.com/searchresults.html?' + urlencode(item_booking_params)
         item['airbnb_url'] = f"https://www.airbnb.com/s/{quote(item_destination)}/homes?{urlencode({'adults': guests, 'checkin': checkin, 'checkout': checkout})}"
+        item['detail_url'] = item.get('provider_url') or item['booking_url']
+        if item.get('provider_url') and item.get('provider') == 'booking':
+            direct_params = {'group_adults': guests, 'no_rooms': rooms}
+            if checkin:
+                direct_params['checkin'] = checkin
+            if checkout:
+                direct_params['checkout'] = checkout
+            item['booking_url'] = item['provider_url'] + '?' + urlencode(direct_params)
+            item['detail_url'] = item['booking_url']
     return render(request, 'accommodations.html', {
-        'destination': destination, 'checkin': checkin, 'checkout': checkout,
+        'destination': destination, 'checkin': checkin_display, 'checkout': checkout_display,
         'guests': guests, 'rooms': rooms, 'lodging_type': lodging_type,
         'amenities': amenities, 'booking_url': booking_url, 'airbnb_url': airbnb_url,
         'results': results, 'max_price': max_price_value, 'sort': sort,

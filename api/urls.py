@@ -33,6 +33,7 @@ from .views import (
     UserProfileViewSet,
     UserViewSet,
     overpass_nearby_view,
+    accommodations_view,
     auth_login_view, auth_logout_view, auth_me_view, auth_google_login_view,
     auth_password_change_view, auth_profile_update_view,
     auth_register_view, login_view, mobile_bridge_info_view,
@@ -75,6 +76,7 @@ router.register(r'gamification/user-badges', UserBadgeViewSet, basename='user-ba
 urlpatterns = [
     path("station-weather/", station_weather, name="station-weather"),
     path('overpass/nearby/', overpass_nearby_view, name='api-overpass-nearby'),
+    path('accommodations/', accommodations_view, name='api-accommodations'),
     path('auth/register/', auth_register_view, name='auth-register'),
     path('auth/login/', auth_login_view, name='auth-login'),
     path('auth/google-login/', auth_google_login_view, name='auth-google-login'),

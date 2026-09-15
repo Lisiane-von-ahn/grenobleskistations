@@ -26,10 +26,15 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import coil.compose.AsyncImage
 import fr.grenobleski.nativeapp.AppUiState
 import fr.grenobleski.nativeapp.R
 import fr.grenobleski.nativeapp.data.model.StationCameraItem
 import fr.grenobleski.nativeapp.data.model.StationItem
+import com.google.gson.JsonParser
+import java.net.URL
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 internal fun DiscoveryHome(state: AppUiState, onOpenStations: () -> Unit, onOpenUrl: (String) -> Unit) {
@@ -156,29 +161,99 @@ internal fun DiscoveryHome(state: AppUiState, onOpenStations: () -> Unit, onOpen
 
 @Composable
 private fun AccommodationPreview(onOpenUrl: (String) -> Unit) {
-    val stays = listOf(
-        Triple("Grenoble centre", "À partir de 78 € · 0 km", "booking"),
-        Triple("Chamrousse chalet", "À partir de 145 € · 30 km", "airbnb"),
-        Triple("Villard-de-Lans", "À partir de 112 € · 34 km", "booking"),
+    val fallbackStays = listOf(
+        AccommodationStay("OKKO Hotels Grenoble Centre", 118, "https://www.booking.com/hotel/fr/okko-hotels-grenoble-jardin-hoche.fr.html", listOf("https://hapi.mmcreation.com/hapidam/f8521bfa-5ad0-4688-85c8-b67836f820ac/okko-hotels-officielles-grenoble-jardin-hoche-029.jpg?w=960&h=960&mode=ratio&coi=50%2C50", "https://hapi.mmcreation.com/hapidam/4dd71f70-d360-4125-b8ca-158c92e20304/Grenoble_chambre_classique5.jpg.jpg?size=lg")),
+        AccommodationStay("Joy Villard de Lans", 112, "https://www.booking.com/hotel/fr/roseraie.fr.html", emptyList()),
+        AccommodationStay("Grandes Rousses Hotel & Spa", 189, "https://www.booking.com/hotel/fr/grandes-rousses.fr.html", listOf("https://www.hotelgrandesrousses.com/_novaimg/galleria/1534878.jpg", "https://media.grenoble-tourisme.com/photos/structure_33495/40506006.jpg")),
     )
+    var stays by remember { mutableStateOf(fallbackStays) }
+    var maximumPrice by rememberSaveable { mutableFloatStateOf(200f) }
+    var checkin by rememberSaveable { mutableStateOf("") }
+    var checkout by rememberSaveable { mutableStateOf("") }
+    LaunchedEffect(Unit) {
+        runCatching {
+            withContext(Dispatchers.IO) {
+                val payload = URL("https://www.grenobleski.fr/api/accommodations/").readText()
+                JsonParser.parseString(payload).asJsonObject.getAsJsonArray("results").mapNotNull { element ->
+                    val row = element.asJsonObject
+                    val name = row.get("name")?.asString?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                    val website = row.get("website_url")?.asString.orEmpty()
+                    val url = website.ifBlank { "https://www.booking.com/searchresults.html?ss=${Uri.encode(name)}" }
+                    val photos = row.getAsJsonArray("image_urls")?.mapNotNull { it.asString?.takeIf(String::isNotBlank) }.orEmpty()
+                    AccommodationStay(name, 0, url, photos)
+                }
+            }
+        }.getOrNull()?.takeIf { it.isNotEmpty() }?.let { stays = it }
+    }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(stringResource(R.string.accommodation_title), style = MaterialTheme.typography.titleLarge)
         Text(stringResource(R.string.accommodation_subtitle), style = MaterialTheme.typography.bodyMedium)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(
+                value = checkin,
+                onValueChange = { checkin = formatDayMonthYear(it) },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                label = { Text(stringResource(R.string.accommodation_checkin)) },
+                placeholder = { Text("dd/mm/yyyy") },
+            )
+            OutlinedTextField(
+                value = checkout,
+                onValueChange = { checkout = formatDayMonthYear(it) },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                label = { Text(stringResource(R.string.accommodation_checkout)) },
+                placeholder = { Text("dd/mm/yyyy") },
+            )
+        }
+        Text(stringResource(R.string.accommodation_max_price, maximumPrice.toInt()), style = MaterialTheme.typography.labelLarge)
+        Slider(value = maximumPrice, onValueChange = { maximumPrice = it }, valueRange = 60f..500f, steps = 43)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            items(stays) { (name, details, provider) ->
+            items(stays.filter { it.price == 0 || it.price <= maximumPrice.toInt() }) { stay ->
                 Card(Modifier.width(250.dp), shape = RoundedCornerShape(18.dp)) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(name, style = MaterialTheme.typography.titleMedium)
-                        Text(details, style = MaterialTheme.typography.bodySmall)
-                        Text(if (provider == "airbnb") "Airbnb" else "Booking.com", style = MaterialTheme.typography.labelSmall)
-                        OutlinedButton(onClick = { onOpenUrl("https://www.grenobleski.fr/accommodations/?destination=${Uri.encode(name.substringBefore(" "))}") }) {
-                            Text(stringResource(R.string.accommodation_view_all))
+                        if (stay.photos.isNotEmpty()) {
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                items(stay.photos) { photo ->
+                                    AsyncImage(model = photo, contentDescription = stay.name, modifier = Modifier.width(222.dp).height(140.dp).clip(RoundedCornerShape(12.dp)), contentScale = ContentScale.Crop)
+                                }
+                            }
+                        }
+                        Text(stay.name, style = MaterialTheme.typography.titleMedium)
+                        Text(if (stay.price > 0) stringResource(R.string.accommodation_from_price, stay.price) else stringResource(R.string.accommodation_check_price), style = MaterialTheme.typography.bodySmall)
+                        Text("OpenStreetMap", style = MaterialTheme.typography.labelSmall)
+                        OutlinedButton(onClick = { onOpenUrl(stayUrl(stay.url, checkin, checkout)) }) {
+                            Text(stringResource(R.string.accommodation_view_establishment))
                         }
                     }
                 }
             }
         }
     }
+}
+
+private data class AccommodationStay(val name: String, val price: Int, val url: String, val photos: List<String>)
+
+private fun formatDayMonthYear(raw: String): String {
+    val digits = raw.filter(Char::isDigit).take(8)
+    return listOf(digits.take(2), digits.drop(2).take(2), digits.drop(4).take(4))
+        .filter(String::isNotEmpty)
+        .joinToString("/")
+}
+
+private fun stayUrl(baseUrl: String, checkin: String, checkout: String): String {
+    fun isoDate(value: String): String? {
+        val parts = value.split('/')
+        if (parts.size != 3 || parts[0].length != 2 || parts[1].length != 2 || parts[2].length != 4) return null
+        val day = parts[0].toIntOrNull() ?: return null
+        val month = parts[1].toIntOrNull() ?: return null
+        if (day !in 1..31 || month !in 1..12) return null
+        return "${parts[2]}-${parts[1]}-${parts[0]}"
+    }
+    val arrival = isoDate(checkin)
+    val departure = isoDate(checkout)
+    if (!baseUrl.contains("booking.com") || arrival == null || departure == null) return baseUrl
+    return "$baseUrl?checkin=$arrival&checkout=$departure&group_adults=2&no_rooms=1"
 }
 
 @Composable

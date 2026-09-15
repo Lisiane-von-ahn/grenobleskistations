@@ -31,7 +31,7 @@
             </div>
             <div class="col-lg-3">
                 <label class="form-label">Date</label>
-                <input type="date" name="preferred_date" class="form-control">
+                <input type="text" inputmode="numeric" name="preferred_date" class="form-control js-date-ddmmyyyy" placeholder="dd/mm/yyyy" pattern="(?:0[1-9]|[12][0-9]|3[01])/(?:0[1-9]|1[0-2])/[0-9]{4}" maxlength="10">
             </div>
             <div class="col-lg-6">
                 <label class="form-label">Station</label>
@@ -60,7 +60,7 @@
             </div>
             <div class="col-lg-4">
                 <label class="form-label">Date depart</label>
-                <input type="date" name="departure_date" class="form-control" required>
+                <input type="text" inputmode="numeric" name="departure_date" class="form-control js-date-ddmmyyyy" placeholder="dd/mm/yyyy" pattern="(?:0[1-9]|[12][0-9]|3[01])/(?:0[1-9]|1[0-2])/[0-9]{4}" maxlength="10" required>
             </div>
             <div class="col-lg-4">
                 <label class="form-label">Heure depart</label>
@@ -91,6 +91,12 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.js-date-ddmmyyyy').forEach(function (input) {
+        input.addEventListener('input', function () {
+            const digits = input.value.replace(/\D/g, '').slice(0, 8);
+            input.value = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)].filter(Boolean).join('/');
+        });
+    });
     // Même logique que base.html
     const rhoneAlpesCities = [
         'Aix-les-Bains', 'Albertville', 'Annemasse', 'Annonay', 'Aubenas', 'Bourg-en-Bresse', 'Bourgoin-Jallieu',

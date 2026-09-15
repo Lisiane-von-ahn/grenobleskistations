@@ -104,6 +104,9 @@ jobs:
             echo "==> Refreshing museum, performing arts and science RSS"
             docker compose -f docker-compose.yml run --rm --no-deps --entrypoint "" web python manage.py fetch_culture_rss
 
+            echo "==> Refreshing the daily OpenStreetMap accommodation cache"
+            docker compose -f docker-compose.yml run --rm --no-deps --entrypoint "" web python manage.py refresh_accommodations
+
             echo "==> Verifying that no pending migrations remain"
             docker compose -f docker-compose.yml run --rm --no-deps --entrypoint "" web python manage.py migrate --check --noinput
 

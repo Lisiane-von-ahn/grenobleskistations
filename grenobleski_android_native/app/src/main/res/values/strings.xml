@@ -263,6 +263,12 @@
     <string name="accommodation_title">Stay near the mountains</string>
     <string name="accommodation_subtitle">Compare local accommodation options before booking.</string>
     <string name="accommodation_view_all">View all stays</string>
+    <string name="accommodation_max_price">Maximum price: %1$d € / night</string>
+    <string name="accommodation_from_price">From %1$d € / night</string>
+    <string name="accommodation_checkin">Check-in</string>
+    <string name="accommodation_checkout">Check-out</string>
+    <string name="accommodation_view_establishment">View establishment</string>
+    <string name="accommodation_check_price">Check current price</string>
     <string name="hiking_trails_subtitle">Explore Grenoble, Bastille and nearby mountains. Check weather and official conditions before leaving.</string>
     <string name="hiking_open_map">Open map</string>
     <string name="hiking_open_osm">Open OpenStreetMap</string>

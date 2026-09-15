@@ -79,6 +79,7 @@ from .models import (
     UserFriend,
     UserGameStats,
     UserProfile,
+    AccommodationPlace,
 )
 from .serializers import (
     BusLineSerializer,
@@ -1872,3 +1873,23 @@ def overpass_nearby_view(request):
     }
     cache.set(cache_key, result, timeout=60 * 15)
     return Response(result)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def accommodations_view(request):
+    query = (request.GET.get('destination') or '').strip()[:120]
+    places = AccommodationPlace.objects.all()
+    if query:
+        places = places.filter(Q(name__icontains=query) | Q(city__icontains=query) | Q(address__icontains=query))
+    return Response({
+        'results': [{
+            'id': place.id, 'name': place.name, 'type': place.accommodation_type,
+            'city': place.city, 'address': place.address,
+            'latitude': float(place.latitude), 'longitude': float(place.longitude),
+            'website_url': place.website_url, 'image_urls': place.image_urls,
+            'stars': place.stars,
+        } for place in places[:120]],
+        'source': 'OpenStreetMap',
+        'updated_at': places.first().cached_at.isoformat() if places.exists() else None,
+    })

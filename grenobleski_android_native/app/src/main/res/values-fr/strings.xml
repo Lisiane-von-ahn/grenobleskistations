@@ -239,6 +239,12 @@
     <string name="accommodation_title">Dormir près des montagnes</string>
     <string name="accommodation_subtitle">Comparez les hébergements locaux avant de réserver.</string>
     <string name="accommodation_view_all">Voir tous les hébergements</string>
+    <string name="accommodation_max_price">Prix maximum : %1$d € / nuit</string>
+    <string name="accommodation_from_price">À partir de %1$d € / nuit</string>
+    <string name="accommodation_checkin">Arrivée</string>
+    <string name="accommodation_checkout">Départ</string>
+    <string name="accommodation_view_establishment">Voir l’établissement</string>
+    <string name="accommodation_check_price">Consulter le prix actuel</string>
     <string name="hiking_trails_subtitle">Explorez Grenoble, la Bastille et les montagnes proches. Vérifiez la météo et les conditions officielles avant de partir.</string>
     <string name="hiking_open_map">Ouvrir la carte</string>
     <string name="hiking_open_osm">Ouvrir OpenStreetMap</string>

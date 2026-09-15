@@ -907,6 +907,29 @@ class GrenoblePlace(models.Model):
         return self.name
 
 
+class AccommodationPlace(models.Model):
+    osm_type = models.CharField(max_length=12)
+    osm_id = models.BigIntegerField()
+    name = models.CharField(max_length=180)
+    accommodation_type = models.CharField(max_length=40, blank=True)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6)
+    address = models.CharField(max_length=300, blank=True)
+    city = models.CharField(max_length=120, blank=True)
+    website_url = models.URLField(max_length=700, blank=True)
+    image_urls = models.JSONField(default=list, blank=True)
+    stars = models.PositiveSmallIntegerField(null=True, blank=True)
+    source_updated_at = models.DateTimeField(null=True, blank=True)
+    cached_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['name']
+        constraints = [models.UniqueConstraint(fields=['osm_type', 'osm_id'], name='unique_osm_accommodation')]
+
+    def __str__(self):
+        return self.name
+
+
 class CultureFeedSource(models.Model):
     name = models.CharField(max_length=120)
     url = models.URLField(max_length=500, unique=True)
