@@ -1707,7 +1707,7 @@ def ski_partner_publish(request):
                 messages.error(request, 'Le depart doit etre dans le futur.')
                 return redirect('ski_partner_publish')
 
-        SkiPartnerPost.objects.create(
+        post = SkiPartnerPost.objects.create(
             user=request.user,
             ski_station_id=int(station_post) if station_post and station_post.isdigit() else None,
             title=title,
@@ -1768,6 +1768,36 @@ def accommodations(request):
     rooms = max(1, min(int(request.GET.get('rooms') or 1), 8)) if (request.GET.get('rooms') or '1').isdigit() else 1
     lodging_type = (request.GET.get('lodging_type') or '').strip()[:30]
     amenities = request.GET.getlist('amenities')
+    max_price = request.GET.get('max_price', '').strip()
+    sort = request.GET.get('sort', 'recommended').strip()
+    try:
+        max_price_value = int(max_price) if max_price else 500
+    except ValueError:
+        max_price_value = 500
+    accommodation_catalog = [
+        {'name': 'Grenoble Central Stay', 'destination': 'Grenoble', 'type': 'apartment', 'price': 78, 'rating': 4.6, 'reviews': 184, 'distance': 0, 'ski_minutes': 35, 'amenities': ['kitchen'], 'provider': 'booking'},
+        {'name': 'Chamrousse View Chalet', 'destination': 'Chamrousse', 'type': 'house', 'price': 145, 'rating': 4.8, 'reviews': 96, 'distance': 30, 'ski_minutes': 4, 'amenities': ['parking', 'kitchen'], 'provider': 'airbnb'},
+        {'name': 'Villard Alpine Apartment', 'destination': 'Villard-de-Lans', 'type': 'apartment', 'price': 112, 'rating': 4.7, 'reviews': 128, 'distance': 34, 'ski_minutes': 6, 'amenities': ['parking', 'kitchen', 'pet-friendly'], 'provider': 'booking'},
+        {'name': 'Alpe d’Huez Slopes Residence', 'destination': 'Alpe d’Huez', 'type': 'hotel', 'price': 189, 'rating': 4.5, 'reviews': 241, 'distance': 65, 'ski_minutes': 3, 'amenities': ['parking'], 'provider': 'booking'},
+        {'name': 'Les Deux Alpes Mountain House', 'destination': 'Les Deux Alpes', 'type': 'house', 'price': 176, 'rating': 4.7, 'reviews': 73, 'distance': 70, 'ski_minutes': 8, 'amenities': ['parking', 'kitchen'], 'provider': 'airbnb'},
+        {'name': 'Chartreuse Comfort Lodge', 'destination': 'Saint-Pierre-de-Chartreuse', 'type': 'hotel', 'price': 98, 'rating': 4.4, 'reviews': 67, 'distance': 32, 'ski_minutes': 5, 'amenities': ['parking', 'pet-friendly'], 'provider': 'booking'},
+    ]
+    destination_query = destination.lower()
+    results = [item for item in accommodation_catalog if not destination_query or destination_query in item['destination'].lower() or item['destination'].lower() in destination_query]
+    if destination_query == 'grenoble':
+        results = accommodation_catalog
+    if lodging_type:
+        results = [item for item in results if item['type'] == lodging_type]
+    if max_price_value < 500:
+        results = [item for item in results if item['price'] <= max_price_value]
+    if amenities:
+        results = [item for item in results if all(amenity in item['amenities'] for amenity in amenities)]
+    if sort == 'price':
+        results.sort(key=lambda item: item['price'])
+    elif sort == 'rating':
+        results.sort(key=lambda item: item['rating'], reverse=True)
+    elif sort == 'distance':
+        results.sort(key=lambda item: item['distance'])
     from urllib.parse import urlencode, quote
     booking_params = {'ss': destination, 'group_adults': guests, 'no_rooms': rooms}
     if checkin:
@@ -1778,10 +1808,16 @@ def accommodations(request):
         booking_params['nflt'] = f'type={lodging_type}'
     booking_url = 'https://www.booking.com/searchresults.html?' + urlencode(booking_params)
     airbnb_url = f"https://www.airbnb.com/s/{quote(destination)}/homes?{urlencode({'adults': guests, 'checkin': checkin, 'checkout': checkout})}"
+    for item in results:
+        item_destination = item['destination']
+        item_booking_params = dict(booking_params, ss=item_destination)
+        item['booking_url'] = 'https://www.booking.com/searchresults.html?' + urlencode(item_booking_params)
+        item['airbnb_url'] = f"https://www.airbnb.com/s/{quote(item_destination)}/homes?{urlencode({'adults': guests, 'checkin': checkin, 'checkout': checkout})}"
     return render(request, 'accommodations.html', {
         'destination': destination, 'checkin': checkin, 'checkout': checkout,
         'guests': guests, 'rooms': rooms, 'lodging_type': lodging_type,
         'amenities': amenities, 'booking_url': booking_url, 'airbnb_url': airbnb_url,
+        'results': results, 'max_price': max_price_value, 'sort': sort,
     })
 
 

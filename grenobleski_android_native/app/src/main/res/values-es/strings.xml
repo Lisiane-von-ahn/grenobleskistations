@@ -1,0 +1,5 @@
+<resources>
+    <string name="language_preference">Idioma</string><string name="language_system">Sistema</string><string name="language_french">Francés</string><string name="language_english">Inglés</string>
+    <string name="accommodation_title">Alójate cerca de las montañas</string><string name="accommodation_subtitle">Compara alojamientos locales antes de reservar.</string><string name="accommodation_view_all">Ver todos los alojamientos</string><string name="open_accommodations">Alojamientos</string>
+    <string name="open_trail_maps">Mapas de senderos</string><string name="open_mountain_tips">Consejos de montaña</string><string name="hiking_trails_title">Senderos y mapas</string><string name="hiking_trails_subtitle">Explora Grenoble y las montañas cercanas. Consulta el tiempo y las condiciones oficiales.</string>
+</resources>

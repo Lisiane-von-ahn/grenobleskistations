@@ -1,0 +1,167 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: GrenobleSki\n"
+"Language: es\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Rechercher un hébergement"
+msgstr "Buscar alojamiento"
+
+msgid "Recherche sécurisée"
+msgstr "Búsqueda segura"
+
+msgid "Destination"
+msgstr "Destino"
+
+msgid "Destinations populaires près de Grenoble"
+msgstr "Destinos populares cerca de Grenoble"
+
+msgid "Arrivée"
+msgstr "Llegada"
+
+msgid "Départ"
+msgstr "Salida"
+
+msgid "Hôtes"
+msgstr "Huéspedes"
+
+msgid "Logement"
+msgstr "Tipo de alojamiento"
+
+msgid "Tous"
+msgstr "Todos"
+
+msgid "Hôtel"
+msgstr "Hotel"
+
+msgid "Appartement"
+msgstr "Apartamento"
+
+msgid "Maison / chalet"
+msgstr "Casa / chalet"
+
+msgid "Prix max / nuit"
+msgstr "Precio máximo / noche"
+
+msgid "Tous les prix"
+msgstr "Todos los precios"
+
+msgid "Trier par"
+msgstr "Ordenar por"
+
+msgid "Recommandés"
+msgstr "Recomendados"
+
+msgid "Prix"
+msgstr "Precio"
+
+msgid "Note"
+msgstr "Valoración"
+
+msgid "Distance"
+msgstr "Distancia"
+
+msgid "Préférences"
+msgstr "Preferencias"
+
+msgid "Parking"
+msgstr "Aparcamiento"
+
+msgid "Cuisine"
+msgstr "Cocina"
+
+msgid "Animaux acceptés"
+msgstr "Se admiten mascotas"
+
+msgid "Rechercher des hébergements"
+msgstr "Buscar alojamientos"
+
+msgid "hébergements trouvés"
+msgstr "alojamientos encontrados"
+
+msgid "Sélection locale"
+msgstr "Selección local"
+
+msgid "nuit"
+msgstr "noche"
+
+msgid "Voir"
+msgstr "Ver"
+
+msgid "Vérifier disponibilité et prix"
+msgstr "Ver disponibilidad y precio"
+
+msgid "Rechercher sur les plateformes"
+msgstr "Buscar en las plataformas"
+
+msgid "Ouverture sécurisée"
+msgstr "Apertura segura"
+
+msgid "Voir les disponibilités"
+msgstr "Ver disponibilidad"
+
+msgid "Voir les logements"
+msgstr "Ver alojamientos"
+
+msgid "Comment ça marche"
+msgstr "Cómo funciona"
+
+msgid "1. Définissez vos critères"
+msgstr "1. Define tus criterios"
+
+msgid "2. Comparez"
+msgstr "2. Compara"
+
+msgid "3. Réservez"
+msgstr "3. Reserva"
+
+msgid "Hébergements"
+msgstr "Alojamientos"
+msgid "Comparez hôtels, appartements, chalets et maisons avec disponibilité selon vos dates."
+msgstr "Compara hoteles, apartamentos, chalés y casas disponibles en tus fechas."
+
+msgid "Trouvez des appartements, maisons, chalets et logements adaptés aux séjours en montagne."
+msgstr "Encuentra apartamentos, casas, chalés y alojamientos para viajes de montaña."
+
+msgid "Choisissez destination, dates, voyageurs et type de logement."
+msgstr "Elige destino, fechas, huéspedes y tipo de alojamiento."
+
+msgid "Ouvrez les résultats auprès de la plateforme qui vous convient."
+msgstr "Abre los resultados en la plataforma que prefieras."
+
+msgid "Vérifiez toujours les conditions, frais et règles d’annulation."
+msgstr "Comprueba siempre condiciones, cargos y reglas de cancelación."
+
+msgid "Les résultats et prix sont fournis par les plateformes partenaires. GrenobleSki pourra recevoir une commission lorsque les liens affiliés seront activés."
+msgstr "Los resultados y precios proceden de plataformas asociadas. GrenobleSki podrá recibir una comisión cuando se activen los enlaces afiliados."
+
+msgid "Chambres"
+msgstr "Habitaciones"
+
+msgid "Effacer les filtres"
+msgstr "Borrar filtros"
+
+msgid "des pistes"
+msgstr "de las pistas"
+
+msgid "Annulation à vérifier"
+msgstr "Verificar cancelación"
+
+msgid "Prix indicatif, disponibilité à confirmer"
+msgstr "Precio orientativo; confirma disponibilidad"
+
+msgid "Les disponibilités et prix sont vérifiés sur la plateforme choisie."
+msgstr "La disponibilidad y los precios se confirman en la plataforma elegida."
+
+msgid "Hôtels et locations"
+msgstr "Hoteles y alquileres"
+
+msgid "Maisons et logements uniques"
+msgstr "Casas y alojamientos únicos"
+
+msgid "Résultats GrenobleSki correspondant à vos critères."
+msgstr "Resultados GrenobleSki según tus criterios."
+
+msgid "Pour voir l’inventaire complet et les disponibilités en temps réel."
+msgstr "Consulta todo el inventario y la disponibilidad en tiempo real."

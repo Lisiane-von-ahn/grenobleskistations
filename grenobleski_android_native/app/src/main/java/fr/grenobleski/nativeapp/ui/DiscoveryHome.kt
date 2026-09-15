@@ -61,6 +61,7 @@ internal fun DiscoveryHome(state: AppUiState, onOpenStations: () -> Unit, onOpen
                 }
             }
         }
+        item { AccommodationPreview(onOpenUrl) }
         if (interest == "all" || interest == "culture") {
             item {
                 Text(stringResource(R.string.culture_news_title), style = MaterialTheme.typography.titleLarge)
@@ -149,6 +150,33 @@ internal fun DiscoveryHome(state: AppUiState, onOpenStations: () -> Unit, onOpen
             }
         }
         item { HikingTrailsSection(onOpenUrl) }
+        }
+    }
+}
+
+@Composable
+private fun AccommodationPreview(onOpenUrl: (String) -> Unit) {
+    val stays = listOf(
+        Triple("Grenoble centre", "À partir de 78 € · 0 km", "booking"),
+        Triple("Chamrousse chalet", "À partir de 145 € · 30 km", "airbnb"),
+        Triple("Villard-de-Lans", "À partir de 112 € · 34 km", "booking"),
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(stringResource(R.string.accommodation_title), style = MaterialTheme.typography.titleLarge)
+        Text(stringResource(R.string.accommodation_subtitle), style = MaterialTheme.typography.bodyMedium)
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            items(stays) { (name, details, provider) ->
+                Card(Modifier.width(250.dp), shape = RoundedCornerShape(18.dp)) {
+                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(name, style = MaterialTheme.typography.titleMedium)
+                        Text(details, style = MaterialTheme.typography.bodySmall)
+                        Text(if (provider == "airbnb") "Airbnb" else "Booking.com", style = MaterialTheme.typography.labelSmall)
+                        OutlinedButton(onClick = { onOpenUrl("https://www.grenobleski.fr/accommodations/?destination=${Uri.encode(name.substringBefore(" "))}") }) {
+                            Text(stringResource(R.string.accommodation_view_all))
+                        }
+                    }
+                }
+            }
         }
     }
 }

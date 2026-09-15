@@ -295,7 +295,7 @@ class AuthRepository(
 
     suspend fun fetchSkiNews(token: String, highlightedOnly: Boolean = false, category: String = "ski"): Result<List<SkiNewsItem>> = withContext(Dispatchers.IO) {
         val authHeader = "Token $token"
-        val language = if (Locale.getDefault().language.lowercase().startsWith("en")) "en" else "fr"
+        val language = Locale.getDefault().language.lowercase().takeIf { it in setOf("fr", "en", "pt", "it", "es", "de") } ?: "fr"
         val endpoint = if (category == "culture") {
             "/api/ski-news/?category=culture"
         } else if (highlightedOnly) {

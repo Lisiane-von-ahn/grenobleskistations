@@ -14,7 +14,7 @@ object GrenobleSkiApiClient {
 
         val client = OkHttpClient.Builder()
             .addInterceptor { chain ->
-                val language = if (Locale.getDefault().language.lowercase().startsWith("en")) "en" else "fr"
+                val language = Locale.getDefault().language.lowercase().takeIf { it in setOf("fr", "en", "pt", "it", "es", "de") } ?: "fr"
                 val request = chain.request().newBuilder()
                     .header("Accept-Language", language)
                     .build()

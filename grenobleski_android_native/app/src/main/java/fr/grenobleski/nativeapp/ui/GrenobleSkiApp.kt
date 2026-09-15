@@ -4839,7 +4839,7 @@ private fun ProfileTab(
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilterChipButton(
                             label = stringResource(id = R.string.language_system),
-                            selected = currentLanguage.lowercase() !in setOf("fr", "en"),
+                            selected = currentLanguage.lowercase() !in setOf("fr", "en", "pt", "it", "es", "de"),
                             onClick = { onLanguageChange("system") },
                         )
                         FilterChipButton(
@@ -4852,6 +4852,10 @@ private fun ProfileTab(
                             selected = currentLanguage.lowercase() == "en",
                             onClick = { onLanguageChange("en") },
                         )
+                        FilterChipButton(label = "Português", selected = currentLanguage.lowercase() == "pt", onClick = { onLanguageChange("pt") })
+                        FilterChipButton(label = "Italiano", selected = currentLanguage.lowercase() == "it", onClick = { onLanguageChange("it") })
+                        FilterChipButton(label = "Español", selected = currentLanguage.lowercase() == "es", onClick = { onLanguageChange("es") })
+                        FilterChipButton(label = "Deutsch", selected = currentLanguage.lowercase() == "de", onClick = { onLanguageChange("de") })
                     }
                 }
             }

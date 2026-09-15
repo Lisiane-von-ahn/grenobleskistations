@@ -1,0 +1,167 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: GrenobleSki\n"
+"Language: pt\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Rechercher un hébergement"
+msgstr "Pesquisar alojamento"
+
+msgid "Recherche sécurisée"
+msgstr "Pesquisa segura"
+
+msgid "Destination"
+msgstr "Destino"
+
+msgid "Destinations populaires près de Grenoble"
+msgstr "Destinos populares perto de Grenoble"
+
+msgid "Arrivée"
+msgstr "Entrada"
+
+msgid "Départ"
+msgstr "Saída"
+
+msgid "Hôtes"
+msgstr "Hóspedes"
+
+msgid "Logement"
+msgstr "Tipo de alojamento"
+
+msgid "Tous"
+msgstr "Todos"
+
+msgid "Hôtel"
+msgstr "Hotel"
+
+msgid "Appartement"
+msgstr "Apartamento"
+
+msgid "Maison / chalet"
+msgstr "Casa / chalé"
+
+msgid "Prix max / nuit"
+msgstr "Preço máximo / noite"
+
+msgid "Tous les prix"
+msgstr "Todos os preços"
+
+msgid "Trier par"
+msgstr "Ordenar por"
+
+msgid "Recommandés"
+msgstr "Recomendados"
+
+msgid "Prix"
+msgstr "Preço"
+
+msgid "Note"
+msgstr "Avaliação"
+
+msgid "Distance"
+msgstr "Distância"
+
+msgid "Préférences"
+msgstr "Preferências"
+
+msgid "Parking"
+msgstr "Estacionamento"
+
+msgid "Cuisine"
+msgstr "Cozinha"
+
+msgid "Animaux acceptés"
+msgstr "Animais aceitos"
+
+msgid "Rechercher des hébergements"
+msgstr "Pesquisar alojamentos"
+
+msgid "hébergements trouvés"
+msgstr "alojamentos encontrados"
+
+msgid "Sélection locale"
+msgstr "Seleção local"
+
+msgid "nuit"
+msgstr "noite"
+
+msgid "Voir"
+msgstr "Ver"
+
+msgid "Vérifier disponibilité et prix"
+msgstr "Verificar disponibilidade e preço"
+
+msgid "Rechercher sur les plateformes"
+msgstr "Pesquisar nas plataformas"
+
+msgid "Ouverture sécurisée"
+msgstr "Abertura segura"
+
+msgid "Voir les disponibilités"
+msgstr "Ver disponibilidade"
+
+msgid "Voir les logements"
+msgstr "Ver alojamentos"
+
+msgid "Comment ça marche"
+msgstr "Como funciona"
+
+msgid "1. Définissez vos critères"
+msgstr "1. Defina os critérios"
+
+msgid "2. Comparez"
+msgstr "2. Compare"
+
+msgid "3. Réservez"
+msgstr "3. Reserve"
+
+msgid "Hébergements"
+msgstr "Alojamentos"
+msgid "Comparez hôtels, appartements, chalets et maisons avec disponibilité selon vos dates."
+msgstr "Compare hotéis, apartamentos, chalés e casas disponíveis nas suas datas."
+
+msgid "Trouvez des appartements, maisons, chalets et logements adaptés aux séjours en montagne."
+msgstr "Encontre apartamentos, casas, chalés e alojamentos para viagens à montanha."
+
+msgid "Choisissez destination, dates, voyageurs et type de logement."
+msgstr "Escolha destino, datas, hóspedes e tipo de alojamento."
+
+msgid "Ouvrez les résultats auprès de la plateforme qui vous convient."
+msgstr "Abra os resultados na plataforma da sua preferência."
+
+msgid "Vérifiez toujours les conditions, frais et règles d’annulation."
+msgstr "Verifique sempre as condições, taxas e regras de cancelamento."
+
+msgid "Les résultats et prix sont fournis par les plateformes partenaires. GrenobleSki pourra recevoir une commission lorsque les liens affiliés seront activés."
+msgstr "Os resultados e preços são fornecidos pelas plataformas parceiras. GrenobleSki poderá receber uma comissão quando os links afiliados forem ativados."
+
+msgid "Chambres"
+msgstr "Quartos"
+
+msgid "Effacer les filtres"
+msgstr "Limpar filtros"
+
+msgid "des pistes"
+msgstr "das pistas"
+
+msgid "Annulation à vérifier"
+msgstr "Verificar cancelamento"
+
+msgid "Prix indicatif, disponibilité à confirmer"
+msgstr "Preço indicativo; confirmar disponibilidade"
+
+msgid "Les disponibilités et prix sont vérifiés sur la plateforme choisie."
+msgstr "A disponibilidade e os preços são confirmados na plataforma escolhida."
+
+msgid "Hôtels et locations"
+msgstr "Hotéis e alugueres"
+
+msgid "Maisons et logements uniques"
+msgstr "Casas e alojamentos únicos"
+
+msgid "Résultats GrenobleSki correspondant à vos critères."
+msgstr "Resultados GrenobleSki segundo os seus critérios."
+
+msgid "Pour voir l’inventaire complet et les disponibilités en temps réel."
+msgstr "Veja todo o inventário e disponibilidade em tempo real."

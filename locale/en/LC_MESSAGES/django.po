@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: grenobleskistations\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-25 08:26+0100\n"
+"POT-Creation-Date: 2026-09-15 13:35+0200\n"
 "PO-Revision-Date: 2026-02-25 00:00+0000\n"
 "Last-Translator: GitHub Copilot\n"
 "Language-Team: English\n"
@@ -11,535 +11,1642 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: templates/account/login.html:8 templates/base.html:232
+#: skistation_project/forms.py:83 skistation_project/forms.py:86
+#: skistation_project/forms.py:272 skistation_project/forms.py:275
+#: skistation_project/forms.py:444 skistation_project/forms.py:447
+msgid "Merci de choisir une ville de la liste Rhône-Alpes."
+msgstr ""
+
+#: skistation_project/forms.py:199 templates/account/signup.html:38
+#, fuzzy
+#| msgid "Transaction"
+msgid "Organization"
+msgstr "Transaction"
+
+#: skistation_project/forms.py:203
+msgid "I accept the Terms and Privacy Policy"
+msgstr ""
+
+#: skistation_project/forms.py:210
+msgid "You must accept the Terms and Privacy Policy to continue."
+msgstr ""
+
+#: skistation_project/forms.py:219
+msgid "This organization name already exists."
+msgstr ""
+
+#: skistation_project/forms.py:329
+msgid "Titre"
+msgstr ""
+
+#: skistation_project/forms.py:329
+msgid "Title"
+msgstr ""
+
+#: skistation_project/forms.py:330 skistation_project/forms.py:569
+#: templates/listing_detail.html:61
+#, fuzzy
+#| msgid "Inscription"
+msgid "Description"
+msgstr "Registration"
+
+#: skistation_project/forms.py:331 templates/bus.html:126
+msgid "Station de ski"
+msgstr "Ski station"
+
+#: skistation_project/forms.py:331
+#, fuzzy
+#| msgid "Station"
+msgid "Ski station"
+msgstr "Station"
+
+#: skistation_project/forms.py:332 templates/ski_material_listings.html:93
+#, fuzzy
+#| msgid "Ville:"
+msgid "Ville"
+msgstr "City:"
+
+#: skistation_project/forms.py:332
+msgid "City"
+msgstr ""
+
+#: skistation_project/forms.py:333 skistation_project/forms.py:572
+#: templates/accommodations.html:43 templates/listing_detail.html:69
+#, fuzzy
+#| msgid "Prix:"
+msgid "Prix"
+msgstr "Price:"
+
+#: skistation_project/forms.py:333
+msgid "Price"
+msgstr ""
+
+#: skistation_project/forms.py:334 templates/ski_material_listings.html:61
+#, fuzzy
+#| msgid "Par categorie"
+msgid "Categorie"
+msgstr "By category"
+
+#: skistation_project/forms.py:334
+msgid "Category"
+msgstr ""
+
+#: skistation_project/forms.py:335
+#, fuzzy
+#| msgid "Par type d'offre"
+msgid "Type d'offre"
+msgstr "By offer type"
+
+#: skistation_project/forms.py:335
+msgid "Offer type"
+msgstr ""
+
+#: skistation_project/forms.py:336 templates/ski_material_listings.html:70
+msgid "Etat"
+msgstr ""
+
+#: skistation_project/forms.py:336
+#, fuzzy
+#| msgid "Conditions"
+msgid "Condition"
+msgstr "Terms"
+
+#: skistation_project/forms.py:337
+msgid "Marque"
+msgstr ""
+
+#: skistation_project/forms.py:337
+msgid "Brand"
+msgstr ""
+
+#: skistation_project/forms.py:338
+#, fuzzy
+#| msgid "Ville:"
+msgid "Taille"
+msgstr "City:"
+
+#: skistation_project/forms.py:338
+msgid "Size"
+msgstr ""
+
+#: skistation_project/forms.py:339 skistation_project/forms.py:369
+#: templates/ajouter_materiel.html:75
+#, fuzzy
+#| msgid "Photo professionnelle"
+msgid "Photo principale"
+msgstr "Professional photo"
+
+#: skistation_project/forms.py:339
+#, fuzzy
+#| msgid "Avec photo"
+msgid "Main photo"
+msgstr "With photo"
+
+#: skistation_project/forms.py:340 templates/ajouter_materiel.html:86
+msgid "Photos supplementaires"
+msgstr ""
+
+#: skistation_project/forms.py:340
+msgid "Extra photos"
+msgstr ""
+
+#: skistation_project/forms.py:348
+#, python-format
+msgid "%(label)s: format invalide. Veuillez utiliser une image."
+msgstr ""
+
+#: skistation_project/forms.py:352
+#, python-format
+msgid "%(label)s: fichier trop volumineux (max 5 Mo)."
+msgstr ""
+
+#: skistation_project/forms.py:363
+#, python-format
+msgid "%(label)s: image corrompue ou non prise en charge."
+msgstr ""
+
+#: skistation_project/forms.py:375
+#, python-format
+msgid "Photo supplementaire %(index)s"
+msgstr ""
+
+#: skistation_project/forms.py:480
+msgid "Partagez les conditions de piste..."
+msgstr ""
+
+#: skistation_project/forms.py:487 skistation_project/forms.py:505
+#, fuzzy
+#| msgid "Comment"
+msgid "Commentaire"
+msgstr "Comment"
+
+#: skistation_project/forms.py:497
+msgid "Ex: neige fraiche ce matin, piste centrale verglacee..."
+msgstr ""
+
+#: skistation_project/forms.py:506
+#, fuzzy
+#| msgid "Hauteur neige estimée:"
+msgid "Hauteur de neige (cm)"
+msgstr "Estimated snow depth:"
+
+#: skistation_project/forms.py:507
+msgid "Photo"
+msgstr ""
+
+#: skistation_project/forms.py:526
+msgid "Décrivez votre approche, spécialités et type de cours proposés."
+msgstr ""
+
+#: skistation_project/forms.py:528
+msgid "ESF, diplôme d'État, secourisme..."
+msgstr ""
+
+#: skistation_project/forms.py:529
+msgid "Ex: +33 6 12 34 56 78"
+msgstr ""
+
+#: skistation_project/forms.py:568
+#, fuzzy
+#| msgid "Par type d'offre"
+msgid "Titre de l'offre"
+msgstr "By offer type"
+
+#: skistation_project/forms.py:570 templates/bus_line_detail.html:76
+#: templates/instructor_services.html:251 templates/instructors.html:170
+#: templates/listing_detail.html:71 templates/services.html:178
+#: templates/services.html:219
+msgid "Station"
+msgstr "Station"
+
+#: skistation_project/forms.py:571
+msgid "Duree (minutes)"
+msgstr ""
+
+#: skistation_project/forms.py:573
+msgid "Devise"
+msgstr ""
+
+#: skistation_project/forms.py:574
+msgid "Taille max du groupe"
+msgstr ""
+
+#: skistation_project/forms.py:575
+#, fuzzy
+#| msgid "Offres matériel"
+msgid "Offre active"
+msgstr "Gear Offers"
+
+#: skistation_project/forms.py:577
+msgid "Cours prive debutant, session carving..."
+msgstr ""
+
+#: skistation_project/forms.py:578
+msgid "Precisez niveau, contenu, equipement et point de rendez-vous."
+msgstr ""
+
+#: skistation_project/views.py:440
+#, fuzzy
+#| msgid "Filtre enregistre."
+msgid "Avis piste enregistre."
+msgstr "Filter saved."
+
+#: skistation_project/views.py:442
+msgid "Veuillez verifier le formulaire piste."
+msgstr ""
+
+#: skistation_project/views.py:454
+#, fuzzy
+#| msgid "Affluence moyenne"
+msgid "Affluence mise a jour."
+msgstr "Average crowd"
+
+#: skistation_project/views.py:456
+msgid "Valeur d'affluence invalide."
+msgstr ""
+
+#: skistation_project/views.py:469
+msgid "Actualisation neige publiee."
+msgstr ""
+
+#: skistation_project/views.py:471
+msgid "Veuillez verifier le formulaire neige."
+msgstr ""
+
+#: skistation_project/views.py:507 templates/details.html:534
+#: templates/details.html:737
+msgid "Peu"
+msgstr "Low"
+
+#: skistation_project/views.py:508
+#, fuzzy
+#| msgid "Agréable"
+msgid "Agreable"
+msgstr "Moderate"
+
+#: skistation_project/views.py:509
+#, fuzzy
+#| msgid "Bondé"
+msgid "Bonde"
+msgstr "Busy"
+
+#: skistation_project/views.py:559
+msgid "3 heures"
+msgstr ""
+
+#: skistation_project/views.py:559
+msgid "24 heures"
+msgstr ""
+
+#: skistation_project/views.py:990
+msgid "Nom de filtre requis."
+msgstr "Filter name is required."
+
+#: skistation_project/views.py:1007
+msgid "Filtre enregistre."
+msgstr "Filter saved."
+
+#: skistation_project/views.py:1012
+msgid "Filtre supprime."
+msgstr "Filter deleted."
+
+#: skistation_project/views.py:2708
+#, fuzzy
+#| msgid "Filtre supprime."
+msgid "Publication supprimee."
+msgstr "Filter deleted."
+
+#: templates/accommodations.html:35
+msgid "Rechercher un hébergement"
+msgstr "Search accommodation"
+
+#: templates/accommodations.html:35
+msgid "Recherche sécurisée"
+msgstr "Secure search"
+
+#: templates/accommodations.html:37
+msgid "Destination"
+msgstr "Destination"
+
+#: templates/accommodations.html:37
+msgid "Destinations populaires près de Grenoble"
+msgstr "Popular destinations near Grenoble"
+
+#: templates/accommodations.html:38 templates/bus.html:181
+#: templates/bus_line_detail.html:122 templates/bus_line_detail.html:159
+msgid "Arrivée"
+msgstr "Arrival"
+
+#: templates/accommodations.html:39 templates/bus.html:122
+#: templates/bus.html:180 templates/bus_line_detail.html:122
+#: templates/bus_line_detail.html:158
+msgid "Départ"
+msgstr "Departure"
+
+#: templates/accommodations.html:40
+msgid "Hôtes"
+msgstr "Guests"
+
+#: templates/accommodations.html:41
+msgid "Logement"
+msgstr "Property type"
+
+#: templates/accommodations.html:41 templates/bus.html:137
+#: templates/instructor_services.html:262
+#: templates/ski_material_listings.html:54
+#: templates/ski_material_listings.html:72
+msgid "Tous"
+msgstr "All"
+
+#: templates/accommodations.html:41
+msgid "Hôtel"
+msgstr "Hotel"
+
+#: templates/accommodations.html:41
+msgid "Appartement"
+msgstr "Apartment"
+
+#: templates/accommodations.html:41
+msgid "Maison / chalet"
+msgstr "House / chalet"
+
+#: templates/accommodations.html:42
+msgid "Prix max / nuit"
+msgstr "Maximum price / night"
+
+#: templates/accommodations.html:42
+msgid "Tous les prix"
+msgstr "Any price"
+
+#: templates/accommodations.html:43
+msgid "Trier par"
+msgstr "Sort by"
+
+#: templates/accommodations.html:43
+msgid "Recommandés"
+msgstr "Recommended"
+
+#: templates/accommodations.html:43
+msgid "Note"
+msgstr "Rating"
+
+#: templates/accommodations.html:43
+msgid "Distance"
+msgstr "Distance"
+
+#: templates/accommodations.html:44
+msgid "Préférences"
+msgstr "Preferences"
+
+#: templates/accommodations.html:44 templates/details.html:806
+msgid "Parking"
+msgstr "Parking"
+
+#: templates/accommodations.html:44
+msgid "Cuisine"
+msgstr "Kitchen"
+
+#: templates/accommodations.html:44
+msgid "Animaux acceptés"
+msgstr "Pets allowed"
+
+#: templates/accommodations.html:45
+msgid "Les disponibilités et prix sont vérifiés sur la plateforme choisie."
+msgstr "Availability and prices are confirmed on the selected platform."
+
+#: templates/accommodations.html:45
+msgid "Rechercher des hébergements"
+msgstr "Search stays"
+
+#: templates/accommodations.html:48
+msgid "hébergements trouvés"
+msgstr "stays found"
+
+#: templates/accommodations.html:48
+msgid "Résultats GrenobleSki correspondant à vos critères."
+msgstr "GrenobleSki results matching your criteria."
+
+#: templates/accommodations.html:48
+msgid "Sélection locale"
+msgstr "Local selection"
+
+#: templates/accommodations.html:51
+msgid "nuit"
+msgstr "night"
+
+#: templates/accommodations.html:51 templates/index.html:327
+msgid "Voir"
+msgstr "View"
+
+#: templates/accommodations.html:51
+msgid "Vérifier disponibilité et prix"
+msgstr "Check availability and price"
+
+#: templates/accommodations.html:52
+msgid ""
+"Aucun résultat pour ces filtres. Élargissez la destination ou le budget."
+msgstr "No results for these filters. Broaden the destination or budget."
+
+#: templates/accommodations.html:54
+msgid "Rechercher sur les plateformes"
+msgstr "Search booking platforms"
+
+#: templates/accommodations.html:54
+msgid "Pour voir l’inventaire complet et les disponibilités en temps réel."
+msgstr "See full inventory and live availability."
+
+#: templates/accommodations.html:54
+msgid "Ouverture sécurisée"
+msgstr "Secure external link"
+
+#: templates/accommodations.html:56
+msgid "Hôtels et locations"
+msgstr "Hotels and rentals"
+
+#: templates/accommodations.html:56
+msgid ""
+"Comparez hôtels, appartements, chalets et maisons avec disponibilité selon "
+"vos dates."
+msgstr "Compare hotels, apartments, chalets and homes available for your dates."
+
+#: templates/accommodations.html:56
+#, fuzzy
+#| msgid "Moniteurs disponibles"
+msgid "Voir les disponibilités"
+msgstr "Check availability"
+
+#: templates/accommodations.html:57
+msgid "Maisons et logements uniques"
+msgstr "Homes and unique stays"
+
+#: templates/accommodations.html:57
+msgid ""
+"Trouvez des appartements, maisons, chalets et logements adaptés aux séjours "
+"en montagne."
+msgstr "Find apartments, homes, chalets and stays suited to mountain trips."
+
+#: templates/accommodations.html:57
+msgid "Voir les logements"
+msgstr "View stays"
+
+#: templates/accommodations.html:59
+msgid "Comment ça marche"
+msgstr "How it works"
+
+#: templates/accommodations.html:59
+msgid "1. Définissez vos critères"
+msgstr "1. Set your criteria"
+
+#: templates/accommodations.html:59
+msgid "Choisissez destination, dates, voyageurs et type de logement."
+msgstr "Choose destination, dates, guests and property type."
+
+#: templates/accommodations.html:59
+msgid "2. Comparez"
+msgstr "2. Compare"
+
+#: templates/accommodations.html:59
+msgid "Ouvrez les résultats auprès de la plateforme qui vous convient."
+msgstr "Open results on your preferred booking platform."
+
+#: templates/accommodations.html:59
+msgid "3. Réservez"
+msgstr "3. Book"
+
+#: templates/accommodations.html:59
+msgid "Vérifiez toujours les conditions, frais et règles d’annulation."
+msgstr "Always check terms, fees and cancellation rules."
+
+#: templates/accommodations.html:60
+msgid ""
+"Les résultats et prix sont fournis par les plateformes partenaires. "
+"GrenobleSki pourra recevoir une commission lorsque les liens affiliés seront "
+"activés."
+msgstr "Results and prices are supplied by partner platforms. GrenobleSki may earn a commission once affiliate links are enabled."
+
+#: templates/account/confirm_email.html:11
+msgid "Confirmer votre e-mail"
+msgstr ""
+
+#: templates/account/confirm_email.html:13
+msgid "Confirmez cette adresse e-mail pour activer votre compte."
+msgstr ""
+
+#: templates/account/confirm_email.html:16
+#, fuzzy
+#| msgid "confirmed"
+msgid "Confirmer"
+msgstr "confirmed"
+
+#: templates/account/confirm_email.html:19
+msgid "Le lien de confirmation est invalide ou expiré."
+msgstr ""
+
+#: templates/account/confirm_email.html:20
+#, fuzzy
+#| msgid "Envoyer"
+msgid "Renvoyer"
+msgstr "Send"
+
+#: templates/account/email_verification_sent.html:11
+#, fuzzy
+#| msgid "Confirm transaction as buyer"
+msgid "Confirmation envoyée"
+msgstr "Confirm transaction as buyer"
+
+#: templates/account/email_verification_sent.html:12
+msgid ""
+"Un e-mail de confirmation a été envoyé. Ouvrez-le pour confirmer votre "
+"compte."
+msgstr ""
+
+#: templates/account/email_verification_sent.html:13
+#, fuzzy
+#| msgid "Dernière connexion :"
+msgid "Aller à la connexion"
+msgstr "Last login:"
+
+#: templates/account/login.html:107
+msgid "Bienvenue sur GrenobleSki"
+msgstr ""
+
+#: templates/account/login.html:108
+msgid ""
+"Connectez-vous pour gérer vos annonces, échanger via le chat et réserver vos "
+"services en quelques clics."
+msgstr ""
+
+#: templates/account/login.html:109
+msgid "Marketplace achat, location et prêt"
+msgstr ""
+
+#: templates/account/login.html:110
+msgid "Messagerie directe vendeur / acheteur"
+msgstr ""
+
+#: templates/account/login.html:111
+#, fuzzy
+#| msgid "Rechercher le service"
+msgid "Recherche simple et filtres rapides"
+msgstr "Search service"
+
+#: templates/account/login.html:118 templates/base.html:1072
+#: templates/socialaccount/login.html:5
 msgid "Connexion"
 msgstr "Login"
 
-#: templates/account/login.html:15 templates/profile.html:47
-msgid "Nom d'utilisateur :"
-msgstr "Username:"
+#: templates/account/login.html:119
+msgid "Accédez à votre espace avec votre e-mail."
+msgstr ""
 
-#: templates/account/login.html:19
-msgid "Mot de passe :"
+#: templates/account/login.html:129 templates/account/password_reset.html:17
+#: templates/account/signup.html:33 templates/profile.html:66
+msgid "Email"
+msgstr "Email"
+
+#: templates/account/login.html:135 templates/account/signup.html:50
+#, fuzzy
+#| msgid "Mot de passe :"
+msgid "Mot de passe"
 msgstr "Password:"
 
-#: templates/account/login.html:20
+#: templates/account/login.html:136
 msgid "Entrez votre mot de passe"
 msgstr "Enter your password"
 
-#: templates/account/login.html:25 templates/register.html:81
+#: templates/account/login.html:143
+#, fuzzy
+#| msgid "Se connecter"
+msgid "Rester connecté"
+msgstr "Log in"
+
+#: templates/account/login.html:151
+#: templates/account/password_reset_from_key_done.html:13
+#: templates/account/signup.html:83 templates/base.html:1092
+#: templates/register.html:78
 msgid "Se connecter"
 msgstr "Log in"
 
-#: templates/account/login.html:31
-msgid "Ou connectez-vous avec Google"
-msgstr "Or sign in with Google"
+#: templates/account/login.html:155 templates/account/password_change.html:78
+#, fuzzy
+#| msgid "Mot de passe :"
+msgid "Mot de passe oublié ?"
+msgstr "Password:"
 
-#: templates/account/login.html:33
-msgid "Connexion avec Google"
+#: templates/account/login.html:159
+#, fuzzy
+#| msgid "Connexion avec Google"
+msgid "Continuer avec Google"
 msgstr "Sign in with Google"
 
-#: templates/account/login.html:36
+#: templates/account/login.html:163
 msgid "Pas encore de compte ?"
 msgstr "No account yet?"
 
-#: templates/account/login.html:36
-msgid "Inscrivez-vous"
-msgstr "Sign up"
+#: templates/account/login.html:164 templates/account/signup.html:11
+#: templates/base.html:1073
+msgid "Créer un compte"
+msgstr "Create an account"
 
-#: templates/account/register.html:6 templates/register.html:27
+#: templates/account/password_change.html:11
+#, fuzzy
+#| msgid "Entrez votre mot de passe"
+msgid "Modifier le mot de passe"
+msgstr "Enter your password"
+
+#: templates/account/password_change.html:12
+msgid "Pour votre sécurité, choisissez un mot de passe fort et unique."
+msgstr ""
+
+#: templates/account/password_change.html:24
+#, fuzzy
+#| msgid "Mot de passe :"
+msgid "Mot de passe actuel"
+msgstr "Password:"
+
+#: templates/account/password_change.html:39
+#: templates/account/password_reset_from_key.html:11
+#: templates/account/password_reset_from_key.html:19
+#: templates/account/password_set.html:24
+#, fuzzy
+#| msgid "Entrez votre mot de passe"
+msgid "Nouveau mot de passe"
+msgstr "Enter your password"
+
+#: templates/account/password_change.html:57
+#: templates/account/password_set.html:35
+#, fuzzy
+#| msgid "Entrez votre mot de passe"
+msgid "Confirmer le nouveau mot de passe"
+msgstr "Enter your password"
+
+#: templates/account/password_change.html:72
+#, fuzzy
+#| msgid "Entrez votre mot de passe"
+msgid "Mettre à jour le mot de passe"
+msgstr "Enter your password"
+
+#: templates/account/password_change.html:73
+#: templates/edit_instructor_service.html:96
+msgid "Annuler"
+msgstr "Cancel"
+
+#: templates/account/password_reset.html:11
+#, fuzzy
+#| msgid "Entrez votre mot de passe"
+msgid "Réinitialiser le mot de passe"
+msgstr "Enter your password"
+
+#: templates/account/password_reset.html:12
+msgid "Nous vous envoyons un e-mail avec un code/lien de confirmation."
+msgstr ""
+
+#: templates/account/password_reset.html:20
+msgid "Envoyer"
+msgstr "Send"
+
+#: templates/account/password_reset.html:24
+#, fuzzy
+#| msgid "Retour à l'accueil"
+msgid "Retour à la connexion"
+msgstr "Back to home"
+
+#: templates/account/password_reset_done.html:11
+msgid "E-mail envoyé"
+msgstr ""
+
+#: templates/account/password_reset_done.html:12
+msgid "Vérifiez votre boîte mail pour le code/lien de réinitialisation."
+msgstr ""
+
+#: templates/account/password_reset_done.html:13
+#, fuzzy
+#| msgid "Dernière connexion :"
+msgid "Retour connexion"
+msgstr "Last login:"
+
+#: templates/account/password_reset_from_key.html:13
+msgid "Le lien est invalide ou expiré."
+msgstr ""
+
+#: templates/account/password_reset_from_key.html:14
+msgid "Demander un nouveau lien"
+msgstr ""
+
+#: templates/account/password_reset_from_key.html:23
+#: templates/account/signup.html:54
+#, fuzzy
+#| msgid "Entrez votre mot de passe"
+msgid "Confirmer le mot de passe"
+msgstr "Enter your password"
+
+#: templates/account/password_reset_from_key.html:26
+#, fuzzy
+#| msgid "Mettre à jour le profil"
+msgid "Mettre à jour"
+msgstr "Update profile"
+
+#: templates/account/password_reset_from_key_done.html:11
+#, fuzzy
+#| msgid "Mot de passe :"
+msgid "Mot de passe mis à jour"
+msgstr "Password:"
+
+#: templates/account/password_reset_from_key_done.html:12
+msgid "Votre mot de passe a été réinitialisé avec succès."
+msgstr ""
+
+#: templates/account/password_set.html:11
+#, fuzzy
+#| msgid "Entrez votre mot de passe"
+msgid "Définir un mot de passe"
+msgstr "Enter your password"
+
+#: templates/account/password_set.html:12
+msgid "Définissez votre mot de passe pour sécuriser votre compte."
+msgstr ""
+
+#: templates/account/password_set.html:42
+#: templates/edit_instructor_service.html:95
+#: templates/ski_material_listings.html:215
+msgid "Enregistrer"
+msgstr "Save"
+
+#: templates/account/register.html:11 templates/register.html:24
 msgid "Inscription"
 msgstr "Registration"
 
-#: templates/account/register.html:10 templates/register.html:7
-#: templates/register.html:15 templates/register.html:59
+#: templates/account/register.html:12
+msgid "Créez votre compte pour acceder aux fonctionnalités premium."
+msgstr ""
+
+#: templates/account/register.html:17 templates/account/signup.html:78
+#: templates/register.html:7 templates/register.html:56
 msgid "S'inscrire"
 msgstr "Sign up"
 
-#: templates/account/register.html:12
+#: templates/account/register.html:20
 msgid "Déjà un compte ?"
 msgstr "Already have an account?"
 
-#: templates/account/register.html:12
+#: templates/account/register.html:20
 msgid "Connectez-vous ici"
 msgstr "Log in here"
+
+#: templates/account/signup.html:12
+msgid "Utilisez votre e-mail comme identifiant."
+msgstr ""
+
+#: templates/account/signup.html:23 templates/profile.html:55
+msgid "Prénom"
+msgstr "First name"
+
+#: templates/account/signup.html:27 templates/profile.html:60
+msgid "Nom"
+msgstr "Last name"
+
+#: templates/account/signup.html:40
+#, fuzzy
+#| msgid "Transaction"
+msgid "Votre organisation"
+msgstr "Transaction"
+
+#: templates/account/signup.html:41
+msgid "Générer"
+msgstr ""
+
+#: templates/account/signup.html:63
+msgid "J'accepte les"
+msgstr ""
+
+#: templates/account/signup.html:64
+msgid "Conditions"
+msgstr "Terms"
+
+#: templates/account/signup.html:65
+msgid "et la"
+msgstr ""
+
+#: templates/account/signup.html:66 templates/base.html:1114
+#: templates/base.html:1180
+msgid "Politique de confidentialité"
+msgstr ""
+
+#: templates/account/signup.html:82
+#, fuzzy
+#| msgid "Déjà un compte ?"
+msgid "Déjà inscrit ?"
+msgstr "Already have an account?"
+
+#: templates/ajouter_materiel.html:5 templates/ajouter_materiel.html:12
+#, fuzzy
+#| msgid "Detail Marketplace"
+msgid "Ajouter un article Marketplace"
+msgstr "Marketplace Detail"
+
+#: templates/ajouter_materiel.html:13
+msgid "Publiez rapidement une annonce complete."
+msgstr ""
+
+#: templates/ajouter_materiel.html:25
+msgid "Infos principales"
+msgstr ""
+
+#: templates/ajouter_materiel.html:51 templates/ajouter_materiel.html:102
+msgid "Type et caracteristiques"
+msgstr ""
+
+#: templates/ajouter_materiel.html:63
+msgid "Photos"
+msgstr ""
+
+#: templates/ajouter_materiel.html:64
+msgid "Glissez-deposez vos images ou cliquez pour selectionner."
+msgstr ""
+
+#: templates/ajouter_materiel.html:76
+msgid "Une image de couverture claire et nette"
+msgstr ""
+
+#: templates/ajouter_materiel.html:87
+msgid "Ajoutez plusieurs angles: detail, semelle, fixations..."
+msgstr ""
+
+#: templates/ajouter_materiel.html:96
+#, fuzzy
+#| msgid "Retours"
+msgid "Retour"
+msgstr "Reports"
+
+#: templates/ajouter_materiel.html:97
+msgid "Publier"
+msgstr ""
 
 #: templates/base.html:14
 msgid "Stations de Ski - Vue d'ensemble"
 msgstr "Ski Stations - Overview"
 
-#: templates/base.html:195
+#: templates/base.html:1043 templates/base.html:1423
 msgid "Accueil"
 msgstr "Home"
 
-#: templates/base.html:196
-msgid "Matériel de Ski"
-msgstr "Ski Gear"
+#: templates/base.html:1044
+#, fuzzy
+#| msgid "Station"
+msgid "Stations"
+msgstr "Station"
 
-#: templates/base.html:197
-msgid "Recherche"
-msgstr "Search"
+#: templates/base.html:1045 templates/base.html:1431
+#: templates/ski_material_listings.html:6
+#: templates/ski_material_listings.html:15
+#: templates/ski_material_listings.html:244
+msgid "Marketplace"
+msgstr "Marketplace"
 
-#: templates/base.html:198
+#: templates/base.html:1047
+msgid "Découvrir"
+msgstr "Discover"
+
+#: templates/base.html:1049
+msgid "Culture et stories"
+msgstr "Culture and stories"
+
+#: templates/base.html:1050
 msgid "Services"
 msgstr "Services"
 
-#: templates/base.html:199 templates/instructors.html:6
+#: templates/base.html:1051 templates/instructors.html:6
 msgid "Moniteurs"
 msgstr "Instructors"
 
-#: templates/base.html:200 templates/bus.html:6 templates/bus.html:14
-msgid "Lignes de Bus"
-msgstr "Bus Lines"
+#: templates/base.html:1052
+msgid "Bus et accès"
+msgstr "Buses and access"
 
-#: templates/base.html:202
-msgid "Conditions"
-msgstr "Terms"
+#: templates/base.html:1053
+msgid "Trajets partagés"
+msgstr ""
 
-#: templates/base.html:218
+#: templates/base.html:1054
+#, fuzzy
+#| msgid "Station de ski"
+msgid "Sorties ski"
+msgstr "Ski station"
+
+#: templates/base.html:1055
+msgid "Hébergements"
+msgstr "Accommodation"
+msgid "Chambres"
+msgstr "Rooms"
+
+msgid "Effacer les filtres"
+msgstr "Clear filters"
+
+msgid "des pistes"
+msgstr "from the slopes"
+
+msgid "Annulation à vérifier"
+msgstr "Check cancellation terms"
+
+msgid "Prix indicatif, disponibilité à confirmer"
+msgstr "Indicative price; confirm availability"
+
+#: templates/base.html:1056
+msgid "Application mobile"
+msgstr "Mobile app"
+
+#: templates/base.html:1061
+msgid "Mon espace"
+msgstr "My account"
+
+#: templates/base.html:1065
 msgid "Mon profil"
 msgstr "My Profile"
 
-#: templates/base.html:219
-msgid "Profil"
-msgstr "Profile"
+#: templates/base.html:1066 templates/base.html:1435
+msgid "Messages"
+msgstr "Messages"
 
-#: templates/base.html:222
-msgid "Devenir moniteur"
-msgstr "Become an Instructor"
+#: templates/base.html:1067 templates/ski_material_listings.html:168
+#: templates/ski_material_listings.html:242
+#, fuzzy
+#| msgid "Type annonce:"
+msgid "Mes annonces"
+msgstr "Listing type:"
 
-#: templates/base.html:224 templates/instructors.html:118
-#: templates/ski_material_listings.html:100
+#: templates/base.html:1068 templates/instructors.html:203
 msgid "Mes offres"
 msgstr "My Offers"
 
-#: templates/base.html:226
-msgid "Offres matériel"
-msgstr "Gear Offers"
+#: templates/base.html:1069
+msgid "Devenir moniteur"
+msgstr "Become an Instructor"
 
-#: templates/base.html:227
-msgid "Offres moniteur"
-msgstr "Instructor Offers"
-
-#: templates/base.html:230
+#: templates/base.html:1070
 msgid "Déconnexion"
 msgstr "Logout"
 
-#: templates/base.html:236
+#: templates/base.html:1092
+#, fuzzy
+#| msgid "Enregistrer mon profil"
+msgid "Ouvrir mon profil"
+msgstr "Save my profile"
+
+#: templates/base.html:1094 templates/profile.html:24 templates/profile.html:28
+#: templates/profile.html:71
+msgid "Photo de profil"
+msgstr "Profile picture"
+
+#: templates/base.html:1103
 msgid "Menu"
 msgstr "Menu"
 
-#: templates/base.html:247
-msgid "Nous utilisons des cookies pour améliorer votre expérience."
-msgstr "We use cookies to improve your experience."
+#: templates/base.html:1114
+msgid ""
+"Nous utilisons des cookies nécessaires pour le fonctionnement du site et des "
+"cookies optionnels pour améliorer l'expérience."
+msgstr ""
 
-#: templates/base.html:247
-msgid "En savoir plus"
-msgstr "Learn more"
-
-#: templates/base.html:248
+#: templates/base.html:1115
 msgid "Accepter"
 msgstr "Accept"
 
-#: templates/base.html:249
+#: templates/base.html:1116 templates/user_public_profile.html:284
 msgid "Refuser"
 msgstr "Reject"
 
-#: templates/bus.html:15
+#: templates/base.html:1117
+msgid "Gérer"
+msgstr ""
+
+#: templates/base.html:1135 templates/base.html:1148 templates/base.html:1160
+msgid "Publicite"
+msgstr ""
+
+#: templates/base.html:1178
+msgid "Application Android"
+msgstr "Android app"
+
+#: templates/base.html:1179
+msgid "Conditions d'utilisation"
+msgstr ""
+
+#: templates/base.html:1181
+msgid "Préférences cookies"
+msgstr ""
+
+#: templates/base.html:1427 templates/instructor_services.html:247
+#: templates/instructors.html:159
+msgid "Recherche"
+msgstr "Search"
+
+#: templates/bus.html:7 templates/bus.html:112
+msgid "Lignes de Bus"
+msgstr "Bus Lines"
+
+#: templates/bus.html:113
 #, fuzzy
 msgid "Liste des lignes de bus pour les stations de ski"
 msgstr "List of bus lines to ski stations"
 
-#: templates/bus.html:23
+#: templates/bus.html:119
 msgid "Planifier votre trajet vers une station"
 msgstr "Plan your trip to a station"
 
-#: templates/bus.html:26 templates/bus.html:81
-msgid "Départ"
-msgstr "Departure"
-
-#: templates/bus.html:27
+#: templates/bus.html:123
 msgid "Ex: Grenoble Gare, Meylan, Voiron"
 msgstr "e.g. Grenoble Station, Meylan, Voiron"
 
-#: templates/bus.html:30 templates/bus.html:86
-msgid "Station de ski"
-msgstr "Ski station"
-
-#: templates/bus.html:32 templates/instructors.html:87
-#: templates/services.html:131
+#: templates/bus.html:128 templates/instructors.html:172
+#: templates/services.html:180
 msgid "Toutes les stations"
 msgstr "All stations"
 
-#: templates/bus.html:39
+#: templates/bus.html:135
 msgid "Période"
 msgstr "Period"
 
-#: templates/bus.html:41 templates/ski_material_listings.html:79
-msgid "Tous"
-msgstr "All"
-
-#: templates/bus.html:42 templates/bus.html:55
+#: templates/bus.html:138 templates/bus.html:151
 msgid "Semaine"
 msgstr "Weekdays"
 
-#: templates/bus.html:43 templates/bus.html:56
+#: templates/bus.html:139 templates/bus.html:152
 msgid "Week-end"
 msgstr "Weekend"
 
-#: templates/bus.html:47
+#: templates/bus.html:143
 msgid "Calculer"
 msgstr "Calculate"
 
-#: templates/bus.html:53
+#: templates/bus.html:149
 msgid "Station:"
 msgstr "Station:"
 
-#: templates/bus.html:54 templates/details.html:138
+#: templates/bus.html:150 templates/details.html:358
 msgid "Départ:"
 msgstr "Departure:"
 
-#: templates/bus.html:57
+#: templates/bus.html:153
 msgid "Itinéraire Bus"
 msgstr "Bus route"
 
-#: templates/bus.html:58
+#: templates/bus.html:154
 msgid "Itinéraire Voiture"
 msgstr "Driving route"
 
-#: templates/bus.html:66
+#: templates/bus.html:162
 msgid "Localisation approximative des départs bus"
 msgstr "Approximate location of bus departures"
 
-#: templates/bus.html:80
-msgid "Numéro de bus"
+#: templates/bus.html:174
+#, fuzzy
+#| msgid "Moniteurs disponibles"
+msgid "Horaires et lignes disponibles"
+msgstr "Available instructors"
+
+#: templates/bus.html:179
+#, fuzzy
+#| msgid "Numéro de bus"
+msgid "Numéro"
 msgstr "Bus number"
 
-#: templates/bus.html:82
-msgid "Arrivée"
-msgstr "Arrival"
+#: templates/bus.html:182
+#, fuzzy
+#| msgid "Horaires:"
+msgid "Horaires"
+msgstr "Opening hours:"
 
-#: templates/bus.html:83
-msgid "Fréquence"
+#: templates/bus.html:183
+#, fuzzy
+#| msgid "Fréquence"
+msgid "Temps/Fréquence"
 msgstr "Frequency"
 
-#: templates/bus.html:84
-msgid "Temps de trajet"
+#: templates/bus.html:184
+#, fuzzy
+#| msgid "Itinéraire Bus"
+msgid "Itinéraire"
+msgstr "Bus route"
+
+#: templates/bus.html:213 templates/bus.html:306
+#, fuzzy
+#| msgid "Temps de trajet"
+msgid "Voir le trajet"
 msgstr "Travel time"
 
-#: templates/bus.html:85
-msgid "Points de passage"
-msgstr "Route points"
+#: templates/bus.html:216 templates/bus_line_detail.html:68
+msgid "Source officielle"
+msgstr ""
 
-#: templates/bus.html:106
+#: templates/bus.html:236
 msgid "Aucune ligne de bus disponible."
 msgstr "No bus lines available."
 
-#: templates/bus.html:134
+#: templates/bus.html:306 templates/bus.html:317
 msgid "Ligne"
 msgstr "Line"
 
-#: templates/bus.html:134
+#: templates/bus.html:317
 msgid "Vers"
 msgstr "To"
 
-#: templates/details.html:7 templates/index.html:7 templates/search.html:7
+#: templates/bus_line_detail.html:5
+#, fuzzy
+#| msgid "Itinéraire Bus"
+msgid "Itinéraire bus"
+msgstr "Bus route"
+
+#: templates/bus_line_detail.html:62
+msgid "Trajet interne"
+msgstr ""
+
+#: templates/bus_line_detail.html:66
+#, fuzzy
+#| msgid "Retour services"
+msgid "Retour aux lignes"
+msgstr "Back to services"
+
+#: templates/bus_line_detail.html:82
+msgid "Temps"
+msgstr ""
+
+#: templates/bus_line_detail.html:88
+msgid "Premier départ"
+msgstr ""
+
+#: templates/bus_line_detail.html:94
+#, fuzzy
+#| msgid "Départ"
+msgid "Dernier départ"
+msgstr "Departure"
+
+#: templates/bus_line_detail.html:108
+#, fuzzy
+#| msgid "Temps de trajet"
+msgid "Carte du trajet"
+msgstr "Travel time"
+
+#: templates/bus_line_detail.html:114
+msgid "Arrêts"
+msgstr ""
+
+#: templates/bus_line_detail.html:122
+msgid "Arrêt intermédiaire"
+msgstr ""
+
+#: templates/bus_line_detail.html:127
+msgid "Aucun arrêt détaillé disponible pour cette ligne."
+msgstr ""
+
+#: templates/bus_line_detail.html:159
+msgid "Arrêt"
+msgstr ""
+
+#: templates/details.html:8 templates/index.html:8 templates/search.html:7
 msgid "Stations de Ski"
 msgstr "Ski Stations"
 
-#: templates/details.html:96 templates/details.html:494 templates/index.html:38
+#: templates/details.html:231 templates/details.html:790
+#: templates/index.html:264
 msgid "Capacité:"
 msgstr "Capacity:"
 
-#: templates/details.html:99 templates/details.html:494
+#: templates/details.html:234 templates/details.html:790
 msgid "Pistes:"
 msgstr "Runs:"
 
-#: templates/details.html:102
+#: templates/details.html:237
 msgid "Distance Grenoble:"
 msgstr "Distance Grenoble:"
 
-#: templates/details.html:105
+#: templates/details.html:240
 msgid "Altitude max:"
 msgstr "Max altitude:"
 
-#: templates/details.html:110
-msgid "Venir en bus"
-msgstr "Come by bus"
+#: templates/details.html:246
+msgid "Répartition des pistes"
+msgstr ""
 
-#: templates/details.html:111
-msgid "Venir en voiture"
-msgstr "Come by car"
+#: templates/details.html:260
+#, fuzzy
+#| msgid "Comment"
+msgid "Comment venir ?"
+msgstr "Comment"
 
-#: templates/details.html:118
+#: templates/details.html:261
+msgid ""
+"Comparez les itinéraires, le trafic, les horaires et les dénivelés dans "
+"Google Maps."
+msgstr ""
+
+#: templates/details.html:263
+#, fuzzy
+#| msgid "Covoiturage"
+msgid "Voiture"
+msgstr "Carpooling"
+
+#: templates/details.html:264
+msgid "Bus / transport"
+msgstr ""
+
+#: templates/details.html:265
+msgid "Vélo"
+msgstr ""
+
+#: templates/details.html:266
+msgid "À pied"
+msgstr ""
+
+#: templates/details.html:274
 msgid "Conditions météorologiques actuelles"
 msgstr "Current weather conditions"
 
-#: templates/details.html:134
-msgid "Lignes de bus vers la station"
-msgstr "Bus lines to the station"
+#: templates/details.html:291
+#, fuzzy
+#| msgid "Distance de Grenoble:"
+msgid "Actualites montagne autour de Grenoble"
+msgstr "Distance from Grenoble:"
 
-#: templates/details.html:139
-msgid "Arrivée:"
-msgstr "Arrival:"
-
-#: templates/details.html:140
-msgid "Fréquence:"
-msgstr "Frequency:"
-
-#: templates/details.html:141
-msgid "Trajet:"
-msgstr "Trip:"
-
-#: templates/details.html:144
-msgid "Aucune ligne de bus renseignée."
-msgstr "No bus line listed."
-
-#: templates/details.html:151
-msgid "Carte de localisation"
+#: templates/details.html:291
+#, fuzzy
+#| msgid "Carte de localisation"
+msgid "Actualites RSS de la station"
 msgstr "Location map"
 
-#: templates/details.html:158
-#, python-format
-msgid "Services disponibles à %(station_name)s"
-msgstr "Services available in %(station_name)s"
+#: templates/details.html:296
+msgid ""
+"Aucune actualite recente ne cite cette station precisement. Voici les "
+"dernieres informations utiles pour le ski autour de Grenoble."
+msgstr ""
 
-#: templates/details.html:164
-msgid "Type:"
-msgstr "Type:"
-
-#: templates/details.html:165 templates/service_detail.html:25
-msgid "Horaires:"
-msgstr "Opening hours:"
-
-#: templates/details.html:169
-msgid "Aucun service renseigné."
-msgstr "No service listed."
-
-#: templates/details.html:183
-msgid "État coopératif des pistes (dernières minutes/heures)"
-msgstr "Cooperative slope status (last minutes/hours)"
-
-#: templates/details.html:187
-msgid "Note moyenne piste:"
-msgstr "Average slope rating:"
-
-#: templates/details.html:193
-msgid "avis"
-msgstr "reviews"
-
-#: templates/details.html:196
-msgid "Pas encore de note piste"
-msgstr "No slope rating yet"
-
-#: templates/details.html:199
-msgid "Affluence actuelle:"
-msgstr "Current crowd:"
-
-#: templates/details.html:208
-msgid "Note piste:"
-msgstr "Slope rating:"
-
-#: templates/details.html:209
-msgid "Note piste"
-msgstr "Slope rating"
-
-#: templates/details.html:211
-msgid "5 étoiles"
-msgstr "5 stars"
-
-#: templates/details.html:213
-msgid "4 étoiles"
-msgstr "4 stars"
-
-#: templates/details.html:215
-msgid "3 étoiles"
-msgstr "3 stars"
-
-#: templates/details.html:217
-msgid "2 étoiles"
-msgstr "2 stars"
-
-#: templates/details.html:219
-msgid "1 étoile"
-msgstr "1 star"
-
-#: templates/details.html:227
-msgid "Enregistrer mon avis"
-msgstr "Save my review"
-
-#: templates/details.html:235
-msgid "Affluence actuelle (mise à jour instantanée):"
-msgstr "Current crowd (instant update):"
-
-#: templates/details.html:236
-msgid "Affluence actuelle"
-msgstr "Current crowd"
-
-#: templates/details.html:238 templates/details.html:441
-msgid "Peu"
-msgstr "Low"
-
-#: templates/details.html:240 templates/details.html:442
-msgid "Agréable"
-msgstr "Moderate"
-
-#: templates/details.html:242 templates/details.html:443
-msgid "Bondé"
-msgstr "Busy"
-
-#: templates/details.html:246
-msgid "Mettre à jour l'affluence"
-msgstr "Update crowd"
-
-#: templates/details.html:250 templates/details.html:319
-msgid "Connectez-vous"
-msgstr "Log in"
-
-#: templates/details.html:250
-msgid "pour partager l'état des pistes."
-msgstr "to share slope conditions."
-
-#: templates/details.html:259
+#: templates/details.html:305 templates/details.html:320
+#: templates/details.html:555
 #, python-format
 msgid "il y a %(ago)s"
 msgstr "%(ago)s ago"
 
-#: templates/details.html:262
+#: templates/details.html:311 templates/details.html:323
+#: templates/ski_stories.html:130
+#, fuzzy
+#| msgid "Découvrir"
+msgid "Ouvrir"
+msgstr "Discover"
+
+#: templates/details.html:327
+#, fuzzy
+#| msgid "Aucune conversation pour le moment."
+msgid "Aucune actualite RSS disponible pour cette station pour le moment."
+msgstr "No conversations yet."
+
+#: templates/details.html:333
+#, fuzzy
+#| msgid "Toutes les stations"
+msgid "Avis Google (station)"
+msgstr "All stations"
+
+#: templates/details.html:337 templates/details.html:489
+#, python-format
+msgid "%(counter)s avis"
+msgid_plural "%(counter)s avis"
+msgstr[0] ""
+msgstr[1] ""
+
+#: templates/details.html:340 templates/service_detail.html:50
+msgid "Voir sur Google Maps"
+msgstr "View on Google Maps"
+
+#: templates/details.html:344
+msgid "Source vérifiée"
+msgstr ""
+
+#: templates/details.html:351
+msgid "Lignes de bus vers la station"
+msgstr "Bus lines to the station"
+
+#: templates/details.html:359
+msgid "Arrivée:"
+msgstr "Arrival:"
+
+#: templates/details.html:360
+msgid "Trajet:"
+msgstr "Trip:"
+
+#: templates/details.html:361
+#, fuzzy
+#| msgid "Itinéraire Bus"
+msgid "Voir l'itinéraire"
+msgstr "Bus route"
+
+#: templates/details.html:364
+msgid "Aucune ligne de bus renseignée."
+msgstr "No bus line listed."
+
+#: templates/details.html:372
+msgid "Carte de localisation"
+msgstr "Location map"
+
+#: templates/details.html:373
+msgid "Calques interactifs"
+msgstr ""
+
+#: templates/details.html:375
+msgid "Explorez les pistes et équipements autour de la station en temps réel."
+msgstr ""
+
+#: templates/details.html:386
+msgid "Caméras en direct"
+msgstr ""
+
+#: templates/details.html:391 templates/details.html:439
+#, fuzzy
+#| msgid "Carte de localisation"
+msgid "Carte des pistes"
+msgstr "Location map"
+
+#: templates/details.html:418
+msgid "Ouvrir webcam"
+msgstr ""
+
+#: templates/details.html:435
+msgid "Ouvrir la carte interactive"
+msgstr ""
+
+#: templates/details.html:442
+msgid "Cliquez pour accéder à la carte interactive officielle"
+msgstr ""
+
+#: templates/details.html:454
+#, python-format
+msgid "Services disponibles à %(station_name)s"
+msgstr "Services available in %(station_name)s"
+
+#: templates/details.html:460
+msgid "Type:"
+msgstr "Type:"
+
+#: templates/details.html:461 templates/service_detail.html:36
+msgid "Horaires:"
+msgstr "Opening hours:"
+
+#: templates/details.html:465
+msgid "Aucun service renseigné."
+msgstr "No service listed."
+
+#: templates/details.html:479
+msgid "État coopératif des pistes (dernières minutes/heures)"
+msgstr "Cooperative slope status (last minutes/hours)"
+
+#: templates/details.html:483
+msgid "Note moyenne piste:"
+msgstr "Average slope rating:"
+
+#: templates/details.html:492
+msgid "Pas encore de note piste"
+msgstr "No slope rating yet"
+
+#: templates/details.html:495
+msgid "Affluence actuelle:"
+msgstr "Current crowd:"
+
+#: templates/details.html:504
+msgid "Note piste:"
+msgstr "Slope rating:"
+
+#: templates/details.html:505
+msgid "Note piste"
+msgstr "Slope rating"
+
+#: templates/details.html:507
+msgid "5 étoiles"
+msgstr "5 stars"
+
+#: templates/details.html:509
+msgid "4 étoiles"
+msgstr "4 stars"
+
+#: templates/details.html:511
+msgid "3 étoiles"
+msgstr "3 stars"
+
+#: templates/details.html:513
+msgid "2 étoiles"
+msgstr "2 stars"
+
+#: templates/details.html:515
+msgid "1 étoile"
+msgstr "1 star"
+
+#: templates/details.html:523
+msgid "Enregistrer mon avis"
+msgstr "Save my review"
+
+#: templates/details.html:531
+msgid "Affluence actuelle (mise à jour instantanée):"
+msgstr "Current crowd (instant update):"
+
+#: templates/details.html:532
+msgid "Affluence actuelle"
+msgstr "Current crowd"
+
+#: templates/details.html:536 templates/details.html:738
+msgid "Agréable"
+msgstr "Moderate"
+
+#: templates/details.html:538 templates/details.html:739
+msgid "Bondé"
+msgstr "Busy"
+
+#: templates/details.html:542
+msgid "Mettre à jour l'affluence"
+msgstr "Update crowd"
+
+#: templates/details.html:546 templates/details.html:615
+msgid "Connectez-vous"
+msgstr "Log in"
+
+#: templates/details.html:546
+msgid "pour partager l'état des pistes."
+msgstr "to share slope conditions."
+
+#: templates/details.html:558
 msgid "Note:"
 msgstr "Rating:"
 
-#: templates/details.html:276
+#: templates/details.html:572
 msgid "Aucun retour piste coopératif pour le moment."
 msgstr "No cooperative slope feedback yet."
 
-#: templates/details.html:283
+#: templates/details.html:579
 msgid "Tendance sur"
 msgstr "Trend over"
 
-#: templates/details.html:292
+#: templates/details.html:588
 msgid ""
 "Affluence: 1 = peu de gens, 2 = agréable, 3 = bondé (basé sur les mises à "
 "jour instantanées)."
 msgstr "Crowd: 1 = low, 2 = moderate, 3 = busy (based on instant updates)."
 
-#: templates/details.html:300
+#: templates/details.html:596
 msgid "Conditions actuelles: partage photo"
 msgstr "Current conditions: photo sharing"
 
-#: templates/details.html:301
+#: templates/details.html:597
 msgid "Ajoutez une photo récente de la neige et un commentaire terrain."
 msgstr "Add a recent snow photo and an on-site comment."
 
-#: templates/details.html:316
+#: templates/details.html:612
 msgid "Publier l'actualisation"
 msgstr "Publish update"
 
-#: templates/details.html:319
+#: templates/details.html:615
 msgid "pour publier une photo des conditions."
 msgstr "to publish a conditions photo."
 
-#: templates/details.html:326
+#: templates/details.html:622
 msgid "Dernières actualisations"
 msgstr "Latest updates"
 
-#: templates/details.html:334
+#: templates/details.html:630
 msgid "Hauteur neige estimée:"
 msgstr "Estimated snow depth:"
 
-#: templates/details.html:340
+#: templates/details.html:636
 msgid "Photo conditions"
 msgstr "Conditions photo"
 
-#: templates/details.html:345
+#: templates/details.html:641
 msgid "Supprimer cette publication ?"
 msgstr "Delete this post?"
 
-#: templates/details.html:345
+#: templates/details.html:641
 msgid "Supprimer ma publication"
 msgstr "Delete my post"
 
-#: templates/details.html:350
+#: templates/details.html:646
 msgid "Aucune actualisation encore. Soyez le premier à publier une photo."
 msgstr "No updates yet. Be the first to post a photo."
 
-#: templates/details.html:380
+#: templates/details.html:676
 msgid "Nombre de retours"
 msgstr "Number of reports"
 
-#: templates/details.html:389
+#: templates/details.html:685
 msgid "Note moyenne piste"
 msgstr "Average slope rating"
 
-#: templates/details.html:399
+#: templates/details.html:695
 msgid "Affluence moyenne"
 msgstr "Average crowd"
 
-#: templates/details.html:420
+#: templates/details.html:716
 msgid "Retours"
 msgstr "Reports"
 
-#: templates/details.html:429
+#: templates/details.html:725
 msgid "Note /5"
 msgstr "Rating /5"
 
-#: templates/details.html:438
+#: templates/details.html:734
 msgid "Affluence"
 msgstr "Crowd"
 
-#: templates/details.html:494 templates/index.html:38
+#: templates/details.html:748
+#, fuzzy
+#| msgid "Impossible d\\'afficher la tendance pour le moment."
+msgid "Impossible d'afficher la tendance pour le moment."
+msgstr "Unable to display trend at the moment."
+
+#: templates/details.html:790 templates/index.html:264
 msgid "personnes"
 msgstr "people"
 
-#: templates/details.html:517 templates/details.html:526
+#: templates/details.html:797
+msgid "Équipements"
+msgstr ""
+
+#: templates/details.html:798
+#, fuzzy
+#| msgid "Pistes"
+msgid "Pistes OSM"
+msgstr "Runs"
+
+#: templates/details.html:805
+msgid "Calques"
+msgstr ""
+
+#: templates/details.html:807
+msgid "Toilettes"
+msgstr ""
+
+#: templates/details.html:808
+#, fuzzy
+#| msgid "Request transaction"
+msgid "Restauration"
+msgstr "Request transaction"
+
+#: templates/details.html:809
+msgid "Tracé piste"
+msgstr ""
+
+#: templates/details.html:833
+msgid "Équipement"
+msgstr ""
+
+#: templates/details.html:839
+#, fuzzy
+#| msgid "Pistes"
+msgid "Piste"
+msgstr "Runs"
+
+#: templates/details.html:891 templates/details.html:900
 msgid "Météo :"
 msgstr "Weather:"
 
-#: templates/details.html:517
+#: templates/details.html:891
 msgid "indisponible"
 msgstr "unavailable"
 
-#: templates/details.html:527
+#: templates/details.html:901
 msgid "Température :"
 msgstr "Temperature:"
 
-#: templates/details.html:528
+#: templates/details.html:902
 msgid "Niveau de neige :"
 msgstr "Snow level:"
 
-#: templates/details.html:528
+#: templates/details.html:902
 msgid "Pas de neige"
 msgstr "No snow"
 
-#: templates/details.html:529
+#: templates/details.html:903
 msgid "Ressenti :"
 msgstr "Feels like:"
 
-#: templates/details.html:530
+#: templates/details.html:904
 msgid "Humidité :"
 msgstr "Humidity:"
 
-#: templates/details.html:531
+#: templates/details.html:905
 msgid "Vitesse du vent :"
 msgstr "Wind speed:"
 
-#: templates/details.html:532
+#: templates/details.html:906
 msgid "Direction du vent :"
 msgstr "Wind direction:"
 
-#: templates/details.html:533
+#: templates/details.html:907
 msgid "Visibilité :"
 msgstr "Visibility:"
 
-#: templates/details.html:534
+#: templates/details.html:908
 msgid "Pression :"
 msgstr "Pressure:"
 
-#: templates/details.html:538
+#: templates/details.html:912
 msgid "Lever du soleil :"
 msgstr "Sunrise:"
 
-#: templates/details.html:539
+#: templates/details.html:913
 msgid "Coucher du soleil :"
 msgstr "Sunset:"
 
@@ -547,35 +1654,165 @@ msgstr "Sunset:"
 msgid "Modifier offre moniteur"
 msgstr "Edit instructor offer"
 
-#: templates/edit_instructor_service.html:8
+#: templates/edit_instructor_service.html:40
+#, fuzzy
+#| msgid "Modifier l'offre moniteur"
+msgid "Modifier l'offre"
+msgstr "Edit instructor offer"
+
+#: templates/edit_instructor_service.html:41
+msgid "Mettez a jour votre offre pour qu'elle reste claire et attractive."
+msgstr ""
+
+#: templates/edit_instructor_service.html:47
 msgid "Modifier l'offre moniteur"
 msgstr "Edit instructor offer"
 
-#: templates/edit_instructor_service.html:12
-msgid "Enregistrer"
+#: templates/edit_listing.html:4 templates/edit_listing.html:12
+msgid "Edit Marketplace item"
+msgstr "Edit Marketplace item"
+
+#: templates/edit_listing.html:13
+msgid "Update the information to keep a clear and premium listing."
+msgstr "Update the information to keep a clear and premium listing."
+
+#: templates/edit_listing.html:21
+msgid "Save"
 msgstr "Save"
 
-#: templates/edit_instructor_service.html:13
-msgid "Annuler"
+#: templates/edit_listing.html:22
+msgid "Cancel"
 msgstr "Cancel"
 
-#: templates/index.html:28
+#: templates/index.html:254
 msgid "Allez"
 msgstr "Go"
 
-#: templates/index.html:42
+#: templates/index.html:268
 msgid "Altitude:"
 msgstr "Altitude:"
 
-#: templates/index.html:46
+#: templates/index.html:272
 msgid "Distance de Grenoble:"
 msgstr "Distance from Grenoble:"
 
-#: templates/index.html:75
+#: templates/index.html:285
+#, fuzzy
+#| msgid "Stations de Ski"
+msgid "Stations Grenoble Ski"
+msgstr "Ski Stations"
+
+#: templates/index.html:287
+#, fuzzy
+#| msgid "Toutes les stations"
+msgid "Voir les stations"
+msgstr "All stations"
+
+#: templates/index.html:311
+msgid "5 stations en evidence"
+msgstr ""
+
+#: templates/index.html:312
+msgid "Selection aleatoire du jour autour de Grenoble."
+msgstr ""
+
+#: templates/index.html:347
+msgid "Les conditions du jour"
+msgstr ""
+
+#: templates/index.html:347
+msgid "Neige, météo et domaine skiable pour choisir votre prochaine sortie."
+msgstr ""
+
+#: templates/index.html:348
+#, fuzzy
+#| msgid "Toutes les stations"
+msgid "Comparer les stations"
+msgstr "All stations"
+
+#: templates/index.html:355
+#, fuzzy
+#| msgid "Découvrir"
+msgid "À découvrir"
+msgstr "Discover"
+
+#: templates/index.html:356
+#, fuzzy
+#| msgid "Météo :"
+msgid "Météo"
+msgstr "Weather:"
+
+#: templates/index.html:356
+msgid "Neige"
+msgstr ""
+
+#: templates/index.html:356 templates/index.html:447
+msgid "Pistes"
+msgstr "Runs"
+
+#: templates/index.html:357
+msgid "Mise à jour des conditions : chargement..."
+msgstr ""
+
+#: templates/index.html:358
+#, fuzzy
+#| msgid "Toutes les stations"
+msgid "Voir la station"
+msgstr "All stations"
+
+#: templates/index.html:369
+msgid "GrenobleSki Android"
+msgstr "GrenobleSki Android"
+
+#: templates/index.html:370
+msgid "Emportez Grenoble et les montagnes avec vous"
+msgstr "Take Grenoble and the mountains with you"
+
+#: templates/index.html:371
+msgid ""
+"Scannez le QR code avec votre téléphone Android pour télécharger la dernière "
+"version de l'application."
+msgstr ""
+"Scan the QR code with your Android phone to download the latest version of "
+"the app."
+
+#: templates/index.html:373
+#, fuzzy
+#| msgid "Voir sur Google Maps"
+msgid "Disponible sur Google Play"
+msgstr "View on Google Maps"
+
+#: templates/index.html:375
+msgid "Installez la dernière version depuis la fiche officielle Google Play."
+msgstr ""
+
+#: templates/index.html:377
+msgid "Ouvrir GrenobleSki sur Google Play"
+msgstr ""
+
+#: templates/index.html:379
+msgid "QR code pour ouvrir GrenobleSki sur Google Play"
+msgstr ""
+
+#: templates/index.html:389
+#, fuzzy
+#| msgid "Itinéraire depuis Grenoble"
+msgid "Culture in Grenoble"
+msgstr "Route from Grenoble"
+
+#: templates/index.html:390
+msgid "Museums, live performances and science: news from local venues."
+msgstr ""
+
+#: templates/index.html:401
+msgid "Read at the source"
+msgstr ""
+
+#: templates/index.html:415
 msgid "Visitez l'une de nos stations de ski dès maintenant"
 msgstr "Visit one of our ski stations now"
 
-#: templates/index.html:76
+#: templates/index.html:416
 msgid ""
 "Découvrez les meilleures stations de ski que nous proposons, avec des "
 "informations détaillées et des visuels époustouflants."
@@ -583,32 +1820,34 @@ msgstr ""
 "Discover the best ski stations we offer, with detailed information and "
 "stunning visuals."
 
-#: templates/index.html:101
+#: templates/index.html:433 templates/ski_material_listings.html:255
+#, fuzzy
+#| msgid "indisponible"
+msgid "Image indisponible"
+msgstr "unavailable"
+
+#: templates/index.html:442
 msgid "Découvrez"
 msgstr "Discover"
 
-#: templates/index.html:103
+#: templates/index.html:444
 #, python-format
 msgid "Découvrez la beauté de %(station_name)s."
 msgstr "Discover the beauty of %(station_name)s."
 
-#: templates/index.html:105 templates/search.html:25
+#: templates/index.html:446 templates/search.html:80
 msgid "Capacité"
 msgstr "Capacity"
 
-#: templates/index.html:106
-msgid "Pistes"
-msgstr "Runs"
-
-#: templates/index.html:109
+#: templates/index.html:457
 msgid "Besoin d'indications ?"
 msgstr "Need directions?"
 
-#: templates/index.html:128
+#: templates/index.html:476
 msgid "Stations les plus proches"
 msgstr "Nearest stations"
 
-#: templates/index.html:133
+#: templates/index.html:481
 #, python-format
 msgid ""
 "%(distance)s km de Grenoble • %(service_count)s services • "
@@ -617,15 +1856,15 @@ msgstr ""
 "%(distance)s km from Grenoble • %(service_count)s services • "
 "%(instructor_count)s instructor offers"
 
-#: templates/index.html:135
+#: templates/index.html:483
 msgid "Météo: chargement..."
 msgstr "Weather: loading..."
 
-#: templates/index.html:145
+#: templates/index.html:493
 msgid "Précédent"
 msgstr "Previous"
 
-#: templates/index.html:147
+#: templates/index.html:495 templates/ski_material_listings.html:328
 msgid "Suivant"
 msgstr "Next"
 
@@ -633,65 +1872,277 @@ msgstr "Next"
 msgid "Inscription Moniteur"
 msgstr "Instructor Registration"
 
-#: templates/instructor_register.html:11
+#: templates/instructor_register.html:86
 msgid "Devenir moniteur de ski"
 msgstr "Become a ski instructor"
 
-#: templates/instructor_register.html:12
+#: templates/instructor_register.html:87
 msgid ""
 "Créez un profil professionnel pour proposer vos cours et accompagnements."
 msgstr ""
 "Create a professional profile to offer your lessons and guided sessions."
 
-#: templates/instructor_register.html:23 templates/instructor_register.html:25
+#: templates/instructor_register.html:113
+#: templates/instructor_register.html:115
 msgid "Photo moniteur"
 msgstr "Instructor photo"
 
-#: templates/instructor_register.html:28
+#: templates/instructor_register.html:119
 msgid "Profil moniteur"
 msgstr "Instructor profile"
 
-#: templates/instructor_register.html:36
+#: templates/instructor_register.html:121
+msgid "Conseil: un profil complet augmente vos chances d'être contacté."
+msgstr ""
+
+#: templates/instructor_register.html:130
 msgid "Informations professionnelles"
 msgstr "Professional information"
 
-#: templates/instructor_register.html:43
+#: templates/instructor_register.html:138
 msgid "Bio"
 msgstr "Bio"
 
-#: templates/instructor_register.html:49
+#: templates/instructor_register.html:146
 msgid "Années d'expérience"
 msgstr "Years of experience"
 
-#: templates/instructor_register.html:53
+#: templates/instructor_register.html:151
 msgid "Certifications"
 msgstr "Certifications"
 
-#: templates/instructor_register.html:60
+#: templates/instructor_register.html:159
 msgid "Téléphone"
 msgstr "Phone"
 
-#: templates/instructor_register.html:64
+#: templates/instructor_register.html:166
 msgid "Profil actif"
 msgstr "Active profile"
 
-#: templates/instructor_register.html:70
+#: templates/instructor_register.html:172
 msgid "Photo professionnelle"
 msgstr "Professional photo"
 
-#: templates/instructor_register.html:72
+#: templates/instructor_register.html:175
 msgid "Ajoutez une photo claire pour inspirer confiance aux skieurs."
 msgstr "Add a clear photo to build trust with skiers."
 
-#: templates/instructor_register.html:75
+#: templates/instructor_register.html:179
 msgid "Enregistrer mon profil"
 msgstr "Save my profile"
 
-#: templates/instructors.html:63
+#: templates/instructor_register.html:180
+#, fuzzy
+#| msgid "Offres moniteur"
+msgid "Voir les moniteurs"
+msgstr "Instructor Offers"
+
+#: templates/instructor_services.html:35
+#, fuzzy
+#| msgid "Mes offres moniteur"
+msgid "Mes Offres Moniteur"
+msgstr "My instructor offers"
+
+#: templates/instructor_services.html:150
+#: templates/instructor_services.html:167
+#, fuzzy
+#| msgid "Retour services"
+msgid "Mes offres de services"
+msgstr "Back to services"
+
+#: templates/instructor_services.html:151
+msgid "Pilotez vos offres, ajustez vos prix et publiez des cours premium."
+msgstr ""
+
+#: templates/instructor_services.html:168
+msgid "Publiez des cours clairs et attractifs pour vos futurs clients."
+msgstr ""
+
+#: templates/instructor_services.html:171
+#, fuzzy
+#| msgid "Ajouter une offre"
+msgid "Ajouter une nouvelle offre"
+msgstr "Add an offer"
+
+#: templates/instructor_services.html:219
+msgid "Publier l'offre"
+msgstr ""
+
+#: templates/instructor_services.html:220
+#, fuzzy
+#| msgid "Voir la fiche"
+msgid "Voir le catalogue"
+msgstr "View details"
+
+#: templates/instructor_services.html:229 templates/services.html:223
+msgid "Total"
+msgstr "Total"
+
+#: templates/instructor_services.html:230
+#: templates/instructor_services.html:263
+msgid "Actives"
+msgstr ""
+
+#: templates/instructor_services.html:231
+#: templates/instructor_services.html:264
+msgid "Inactives"
+msgstr ""
+
+#: templates/instructor_services.html:240
+#: templates/instructor_services.html:366
+msgid "Afficher les filtres"
+msgstr ""
+
+#: templates/instructor_services.html:248
+msgid "Titre, description, station..."
+msgstr ""
+
+#: templates/instructor_services.html:253
+#: templates/ski_material_listings.html:63
+msgid "Toutes"
+msgstr ""
+
+#: templates/instructor_services.html:260
+#, fuzzy
+#| msgid "Status:"
+msgid "Statut"
+msgstr "Status:"
+
+#: templates/instructor_services.html:268
+#: templates/ski_material_listings.html:99
+#, fuzzy
+#| msgid "Prix min (€)"
+msgid "Prix min"
+msgstr "Min price (€)"
+
+#: templates/instructor_services.html:272
+#: templates/ski_material_listings.html:108
+#, fuzzy
+#| msgid "Prix max (€)"
+msgid "Prix max"
+msgstr "Max price (€)"
+
+#: templates/instructor_services.html:276 templates/instructors.html:187
+#: templates/ski_material_listings.html:79
+msgid "Tri"
+msgstr "Sort"
+
+#: templates/instructor_services.html:278
+#, fuzzy
+#| msgid "Plus recents"
+msgid "Plus recentes"
+msgstr "Newest first"
+
+#: templates/instructor_services.html:279
+#, fuzzy
+#| msgid "Plus recents"
+msgid "Plus anciennes"
+msgstr "Newest first"
+
+#: templates/instructor_services.html:280
+#: templates/ski_material_listings.html:83
+#, fuzzy
+#| msgid "Prix decroissant"
+msgid "Prix croissant"
+msgstr "Price: high to low"
+
+#: templates/instructor_services.html:281
+#: templates/ski_material_listings.html:84
+msgid "Prix decroissant"
+msgstr "Price: high to low"
+
+#: templates/instructor_services.html:282
+#, fuzzy
+#| msgid "Prix decroissant"
+msgid "Duree croissante"
+msgstr "Price: high to low"
+
+#: templates/instructor_services.html:286 templates/instructors.html:197
+msgid "Filtrer"
+msgstr "Filter"
+
+#: templates/instructor_services.html:287
+msgid "Reset"
+msgstr ""
+
+#: templates/instructor_services.html:295
+#, fuzzy
+#| msgid "Offres de moniteurs"
+msgid "Offres existantes"
+msgstr "Instructor offers"
+
+#: templates/instructor_services.html:303
+msgid "Active"
+msgstr ""
+
+#: templates/instructor_services.html:305
+msgid "Inactive"
+msgstr ""
+
+#: templates/instructor_services.html:313
+#: templates/instructor_services.html:331
+msgid "Groupe max"
+msgstr ""
+
+#: templates/instructor_services.html:318
+msgid "Apercu public"
+msgstr ""
+
+#: templates/instructor_services.html:319
+#, fuzzy
+#| msgid "Modifier l'annonce"
+msgid "Modifier"
+msgstr "Edit listing"
+
+#: templates/instructor_services.html:322
+#, fuzzy
+#| msgid "Supprimer cette annonce ?"
+msgid "Supprimer cette offre ?"
+msgstr "Delete this listing?"
+
+#: templates/instructor_services.html:322
+#: templates/ski_material_listings.html:228
+msgid "Supprimer"
+msgstr "Delete"
+
+#: templates/instructor_services.html:333
+#, fuzzy
+#| msgid "ans d'expérience"
+msgid "ans d'experience"
+msgstr "years of experience"
+
+#: templates/instructor_services.html:341
+msgid ""
+"Aucune offre publiée pour le moment. Créez votre première offre pour "
+"apparaître dans la liste des moniteurs."
+msgstr ""
+
+#: templates/instructor_services.html:350
+#, fuzzy
+#| msgid "Ajouter une offre"
+msgid "Nouvelle offre"
+msgstr "Add an offer"
+
+#: templates/instructor_services.html:351
+#: templates/instructor_services.html:369
+#, fuzzy
+#| msgid "Filtrer"
+msgid "Filtres"
+msgstr "Filter"
+
+#: templates/instructor_services.html:366
+msgid "Masquer les filtres"
+msgstr ""
+
+#: templates/instructor_services.html:369
+msgid "Masquer"
+msgstr ""
+
+#: templates/instructors.html:130
 msgid "Moniteurs disponibles"
 msgstr "Available instructors"
 
-#: templates/instructors.html:64
+#: templates/instructors.html:131
 msgid ""
 "Trouvez un professionnel pour cours privés, perfectionnement et "
 "accompagnement piste."
@@ -699,202 +2150,277 @@ msgstr ""
 "Find a professional for private lessons, improvement training, and slope "
 "guidance."
 
-#: templates/instructors.html:74 templates/services.html:107
-msgid "Recherche libre"
-msgstr "Free search"
-
-#: templates/instructors.html:85 templates/services.html:129
-#: templates/services.html:170
-msgid "Station"
-msgstr "Station"
-
-#: templates/instructors.html:94
+#: templates/instructors.html:179
 msgid "Prix min (€)"
 msgstr "Min price (€)"
 
-#: templates/instructors.html:98
+#: templates/instructors.html:183
 msgid "Prix max (€)"
 msgstr "Max price (€)"
 
-#: templates/instructors.html:102
-msgid "Tri"
-msgstr "Sort"
-
-#: templates/instructors.html:104
+#: templates/instructors.html:189
 msgid "Pertinence"
 msgstr "Relevance"
 
-#: templates/instructors.html:112 templates/ski_material_listings.html:91
-msgid "Filtrer"
-msgstr "Filter"
-
-#: templates/instructors.html:121 templates/services.html:145
-#: templates/ski_material_listings.html:102
+#: templates/instructors.html:206 templates/services.html:194
 msgid "Réinitialiser"
 msgstr "Reset"
 
-#: templates/instructors.html:129 templates/services.html:154
-#: templates/ski_material_listings.html:111
+#: templates/instructors.html:214 templates/services.html:203
 msgid "Filtres actifs :"
 msgstr "Active filters:"
 
-#: templates/instructors.html:160
+#: templates/instructors.html:245
 msgid "ans d'expérience"
 msgstr "years of experience"
 
-#: templates/instructors.html:164
+#: templates/instructors.html:249
 msgid "Certifications:"
 msgstr "Certifications:"
 
-#: templates/instructors.html:185
+#: templates/instructors.html:270
 msgid "Pas encore d'évaluation"
 msgstr "No rating yet"
 
-#: templates/instructors.html:191
+#: templates/instructors.html:276 templates/ski_material_listings.html:288
 msgid "Contacter"
 msgstr "Contact"
 
-#: templates/instructors.html:194
+#: templates/instructors.html:279
 msgid "Évaluer"
 msgstr "Rate"
 
-#: templates/instructors.html:198
+#: templates/instructors.html:283
 msgid "Se connecter pour contacter"
 msgstr "Log in to contact"
 
-#: templates/listing_detail.html:5
-msgid "Détail annonce"
-msgstr "Listing details"
+#: templates/listing_detail.html:6
+msgid "Detail Marketplace"
+msgstr "Marketplace Detail"
 
-#: templates/listing_detail.html:15
-msgid "Type annonce:"
-msgstr "Listing type:"
+#: templates/listing_detail.html:14 templates/listing_detail.html:22
+#: templates/ski_material_listings.html:271
+msgid "Par"
+msgstr ""
 
-#: templates/listing_detail.html:16
-msgid "Matériel:"
-msgstr "Gear:"
+#: templates/listing_detail.html:24
+#, python-format
+msgid "Seller rating %(avg)s/5 (%(count)s reviews)"
+msgstr "Seller rating %(avg)s/5 (%(count)s reviews)"
 
-#: templates/listing_detail.html:17
-msgid "Ville:"
-msgstr "City:"
+#: templates/listing_detail.html:41
+#, python-format
+msgid "Size %(size)s"
+msgstr "Size %(size)s"
 
-#: templates/listing_detail.html:19 templates/listing_detail.html:21
-msgid "Prix:"
-msgstr "Price:"
+#: templates/listing_detail.html:50
+msgid "Galerie"
+msgstr ""
 
-#: templates/listing_detail.html:19
+#: templates/listing_detail.html:70 templates/ski_material_listings.html:260
 msgid "Gratuit"
 msgstr "Free"
 
-#: templates/listing_detail.html:24
-msgid "Contacter le propriétaire"
-msgstr "Contact owner"
+#: templates/listing_detail.html:75
+#, fuzzy
+#| msgid "Contacter"
+msgid "Contacter le vendeur"
+msgstr "Contact"
 
-#: templates/listing_detail.html:27
+#: templates/listing_detail.html:77
+#, fuzzy
+#| msgid "Aucune conversation pour le moment."
+msgid "Ouvrez une conversation directe avec le vendeur."
+msgstr "No conversations yet."
+
+#: templates/listing_detail.html:78
+msgid "Poser une question"
+msgstr ""
+
+#: templates/listing_detail.html:82
+msgid "Transaction"
+msgstr "Transaction"
+
+#: templates/listing_detail.html:85
+msgid "Status:"
+msgstr "Status:"
+
+#: templates/listing_detail.html:86 templates/listing_detail.html:141
+msgid "buyer"
+msgstr "buyer"
+
+#: templates/listing_detail.html:87 templates/listing_detail.html:89
+#: templates/listing_detail.html:141
+msgid "confirmed"
+msgstr "confirmed"
+
+#: templates/listing_detail.html:87 templates/listing_detail.html:89
+#: templates/listing_detail.html:141
+msgid "pending"
+msgstr "pending"
+
+#: templates/listing_detail.html:88
+msgid "seller"
+msgstr "seller"
+
+#: templates/listing_detail.html:92
+msgid "No transaction requested."
+msgstr "No transaction requested."
+
+#: templates/listing_detail.html:98
+msgid "Request transaction"
+msgstr "Request transaction"
+
+#: templates/listing_detail.html:103
+msgid "Confirm transaction as buyer"
+msgstr "Confirm transaction as buyer"
+
+#: templates/listing_detail.html:107
+msgid "Rate seller"
+msgstr "Rate seller"
+
+#: templates/listing_detail.html:112
+msgid "Score"
+msgstr "Score"
+
+#: templates/listing_detail.html:114
+msgid "Choose"
+msgstr "Choose"
+
+#: templates/listing_detail.html:119
+msgid "Comment"
+msgstr "Comment"
+
+#: templates/listing_detail.html:120
+msgid "Your review..."
+msgstr "Your review..."
+
+#: templates/listing_detail.html:121
+msgid "Save my rating"
+msgstr "Save my rating"
+
+#: templates/listing_detail.html:124
+msgid "Rating is available after both sides confirm the transaction."
+msgstr "Rating is available after both sides confirm the transaction."
+
+#: templates/listing_detail.html:127
+msgid "C'est votre annonce."
+msgstr ""
+
+#: templates/listing_detail.html:129
 msgid "Modifier l'annonce"
 msgstr "Edit listing"
 
-#: templates/listing_detail.html:30
+#: templates/listing_detail.html:130
 msgid "Supprimer cette annonce ?"
 msgstr "Delete this listing?"
 
-#: templates/listing_detail.html:30
-msgid "Supprimer"
-msgstr "Delete"
+#: templates/listing_detail.html:132
+#, fuzzy
+#| msgid "Supprimer cette annonce ?"
+msgid "Supprimer l'annonce"
+msgstr "Delete this listing?"
 
-#: templates/messages/messages.html:82
-msgid "Discussions"
-msgstr "Conversations"
+#: templates/listing_detail.html:137
+msgid "Transactions to confirm"
+msgstr "Transactions to confirm"
 
-#: templates/messages/messages.html:95
-msgid "Aucune conversation pour le moment."
-msgstr "No conversations yet."
+#: templates/listing_detail.html:141
+msgid "Buyer:"
+msgstr "Buyer:"
 
-#: templates/messages/messages.html:100
-msgid "Démarrer un chat"
-msgstr "Start a chat"
+#: templates/listing_detail.html:148
+msgid "Confirm as seller"
+msgstr "Confirm as seller"
 
-#: templates/messages/messages.html:122
-#, python-format
-msgid "Commencez la conversation avec %(username)s."
-msgstr "Start the conversation with %(username)s."
+#: templates/listing_detail.html:151
+msgid "Already confirmed as seller."
+msgstr "Already confirmed as seller."
 
-#: templates/messages/messages.html:131
-msgid "Écrivez votre message..."
-msgstr "Write your message..."
+#: templates/listing_detail.html:157
+#, fuzzy
+#| msgid "Se connecter pour contacter"
+msgid "Se connecter pour ecrire"
+msgstr "Log in to contact"
 
-#: templates/messages/messages.html:132
-msgid "Envoyer"
-msgstr "Send"
+#: templates/listing_detail.html:162
+msgid "Recent reviews"
+msgstr "Recent reviews"
 
-#: templates/messages/messages.html:138
-msgid "Sélectionnez une conversation à gauche."
-msgstr "Select a conversation on the left."
-
-#: templates/profile.html:5
+#: templates/profile.html:3
 msgid "Profil de l'utilisateur"
 msgstr "User profile"
 
 #: templates/profile.html:10
+msgid "Espace Membre"
+msgstr ""
+
+#: templates/profile.html:11
 msgid "Profil utilisateur"
 msgstr "User profile"
 
-#: templates/profile.html:11
-msgid "Gérez vos informations personnelles et votre photo de profil."
-msgstr "Manage your personal information and profile picture."
+#: templates/profile.html:12
+msgid ""
+"Mettez a jour votre identite, votre photo et les informations visibles dans "
+"l'application mobile."
+msgstr ""
 
-#: templates/profile.html:32 templates/profile.html:34
-#: templates/profile.html:87
-msgid "Photo de profil"
-msgstr "Profile picture"
+#: templates/profile.html:14
+msgid "Retour à l'accueil"
+msgstr "Back to home"
 
-#: templates/profile.html:48
+#: templates/profile.html:26
+#, fuzzy
+#| msgid "Photo moniteur"
+msgid "Photo Google"
+msgstr "Instructor photo"
+
+#: templates/profile.html:32
+#, fuzzy
+#| msgid "Connexion avec Google"
+msgid "Connecté avec Google"
+msgstr "Sign in with Google"
+
+#: templates/profile.html:34
+msgid "Nom Google :"
+msgstr ""
+
+#: templates/profile.html:35
+msgid "Identifiant (email) :"
+msgstr ""
+
+#: templates/profile.html:36
 msgid "Membre depuis :"
 msgstr "Member since:"
 
-#: templates/profile.html:49
+#: templates/profile.html:37
 msgid "Dernière connexion :"
 msgstr "Last login:"
 
-#: templates/profile.html:58
+#: templates/profile.html:46
 msgid "Mettre à jour vos informations"
 msgstr "Update your information"
 
-#: templates/profile.html:66
+#: templates/profile.html:51
 msgid "Vérifiez les champs du formulaire avant de continuer."
 msgstr "Please check the form fields before continuing."
 
 #: templates/profile.html:72
-msgid "Prénom"
-msgstr "First name"
-
-#: templates/profile.html:76
-msgid "Nom"
-msgstr "Last name"
-
-#: templates/profile.html:82
-msgid "Email"
-msgstr "Email"
-
-#: templates/profile.html:89
 msgid "Choisissez une image carrée pour un meilleur rendu."
 msgstr "Choose a square image for better display."
 
-#: templates/profile.html:93
+#: templates/profile.html:77
 msgid "Mettre à jour le profil"
 msgstr "Update profile"
 
-#: templates/profile.html:94
-msgid "Retour à l'accueil"
-msgstr "Back to home"
-
-#: templates/profile.html:104
+#: templates/profile.html:83
 msgid ""
 "Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est "
 "irréversible."
-msgstr "Are you sure you want to delete your account? This action is irreversible."
+msgstr ""
+"Are you sure you want to delete your account? This action is irreversible."
 
-#: templates/profile.html:107
+#: templates/profile.html:85
 msgid "Supprimer le compte"
 msgstr "Delete account"
 
@@ -902,55 +2428,59 @@ msgstr "Delete account"
 msgid "Créez votre compte"
 msgstr "Create your account"
 
-#: templates/search.html:13
+#: templates/register.html:17
+msgid "Inscrivez-vous pour publier, discuter et reserver plus vite."
+msgstr ""
+
+#: templates/search.html:68
 msgid "Trouvez la station de ski idéale"
 msgstr "Find the ideal ski station"
 
-#: templates/search.html:14
+#: templates/search.html:69
 msgid "Recherchez des stations de ski adaptées à vos préférences."
 msgstr "Search for ski stations that match your preferences."
 
-#: templates/search.html:27
+#: templates/search.html:82
 msgid "Capacité minimale"
 msgstr "Minimum capacity"
 
-#: templates/search.html:31
+#: templates/search.html:86
 msgid "Distance de Grenoble (km)"
 msgstr "Distance from Grenoble (km)"
 
-#: templates/search.html:33
+#: templates/search.html:88
 msgid "Distance maximale"
 msgstr "Maximum distance"
 
-#: templates/search.html:37
+#: templates/search.html:92
 msgid "Altitude (m)"
 msgstr "Altitude (m)"
 
-#: templates/search.html:39
+#: templates/search.html:94
 msgid "Altitude minimale"
 msgstr "Minimum altitude"
 
-#: templates/search.html:43
+#: templates/search.html:98 templates/ski_material_listings.html:115
 msgid "Rechercher"
 msgstr "Search"
 
-#: templates/search.html:67
+#: templates/search.html:123
 msgid "Altitude :"
 msgstr "Altitude:"
 
-#: templates/search.html:68
+#: templates/search.html:124
 msgid "Distance :"
 msgstr "Distance:"
 
-#: templates/search.html:69
+#: templates/search.html:125
 msgid "Capacité :"
 msgstr "Capacity:"
 
-#: templates/search.html:71
+#: templates/search.html:127
 msgid "Voir plus de détails"
 msgstr "View more details"
 
-#: templates/search.html:80
+#: templates/search.html:136
 msgid ""
 "Aucune station de ski ne correspond à vos critères. Essayez de modifier les "
 "filtres."
@@ -960,39 +2490,41 @@ msgstr "No ski station matches your criteria. Try adjusting the filters."
 msgid "Fiche Service"
 msgstr "Service details"
 
-#: templates/service_detail.html:16
+#: templates/service_detail.html:24
 msgid "Retour services"
 msgstr "Back to services"
 
-#: templates/service_detail.html:22
+#: templates/service_detail.html:30
 msgid "Localisation"
 msgstr "Location"
 
-#: templates/service_detail.html:23
+#: templates/service_detail.html:31
 msgid "Adresse:"
 msgstr "Address:"
 
-#: templates/service_detail.html:24
+#: templates/service_detail.html:32
 msgid "Coordonnées:"
 msgstr "Coordinates:"
 
-#: templates/service_detail.html:25
+#: templates/service_detail.html:34
+#, fuzzy
+#| msgid "Téléphone"
+msgid "Téléphone:"
+msgstr "Phone"
+
+#: templates/service_detail.html:36
 msgid "Non renseigné"
 msgstr "Not provided"
 
-#: templates/service_detail.html:31
+#: templates/service_detail.html:42
 msgid "Liens rapides"
 msgstr "Quick links"
 
-#: templates/service_detail.html:34 templates/services.html:216
+#: templates/service_detail.html:48 templates/services.html:271
 msgid "Site du service"
 msgstr "Service website"
 
-#: templates/service_detail.html:36
-msgid "Voir sur Google Maps"
-msgstr "View on Google Maps"
-
-#: templates/service_detail.html:37
+#: templates/service_detail.html:51
 msgid "Itinéraire depuis Grenoble"
 msgstr "Route from Grenoble"
 
@@ -1000,421 +2532,500 @@ msgstr "Route from Grenoble"
 msgid "Rechercher des Services"
 msgstr "Search Services"
 
-#: templates/services.html:98
+#: templates/services.html:146
 msgid "Services autour des stations"
 msgstr "Services around ski stations"
 
-#: templates/services.html:99
+#: templates/services.html:147
 msgid ""
 "Cliquez sur un service pour ouvrir son site ou sa localisation Google Maps."
 msgstr "Click a service to open its website or Google Maps location."
 
-#: templates/services.html:111 templates/ski_material_listings.html:77
+#: templates/services.html:156
+msgid "Recherche libre"
+msgstr "Free search"
+
+#: templates/services.html:160
 msgid "Type"
 msgstr "Type"
 
-#: templates/services.html:113
+#: templates/services.html:162
 msgid "Tous les types"
 msgstr "All types"
 
-#: templates/services.html:120
+#: templates/services.html:169
 msgid "Catégorie service"
 msgstr "Service category"
 
-#: templates/services.html:122
+#: templates/services.html:171
 msgid "Toutes les catégories"
 msgstr "All categories"
 
-#: templates/services.html:138
+#: templates/services.html:187
 msgid "OK"
 msgstr "OK"
 
-#: templates/services.html:143
+#: templates/services.html:192
 msgid "Mes offres moniteur"
 msgstr "My instructor offers"
 
-#: templates/services.html:165
+#: templates/services.html:214
 msgid "Quantité de services par station"
 msgstr "Number of services per station"
 
-#: templates/services.html:174
-msgid "Total"
-msgstr "Total"
-
-#: templates/services.html:188
+#: templates/services.html:237
 msgid "Aucune donnée de service pour cette recherche."
 msgstr "No service data for this search."
 
-#: templates/services.html:197
+#: templates/services.html:246
 msgid "Services commerce / location / secours"
 msgstr "Shops / rentals / rescue services"
 
-#: templates/services.html:204 templates/services.html:213
+#: templates/services.html:253 templates/services.html:268
 msgid "Voir la fiche"
 msgstr "View details"
 
-#: templates/services.html:210
+#: templates/services.html:259
 msgid "Adresse :"
 msgstr "Address:"
 
-#: templates/services.html:211
+#: templates/services.html:261
+#, fuzzy
+#| msgid "Téléphone"
+msgid "Téléphone :"
+msgstr "Phone"
+
+#: templates/services.html:263
 msgid "Horaires :"
 msgstr "Opening hours:"
 
-#: templates/services.html:218
+#: templates/services.html:273
 msgid "Rechercher le service"
 msgstr "Search service"
 
-#: templates/services.html:227
+#: templates/services.html:282
 msgid "Aucun service trouvé correspondant à vos critères."
 msgstr "No service matches your criteria."
 
-#: templates/services.html:232
+#: templates/services.html:287
 msgid "Offres de moniteurs"
 msgstr "Instructor offers"
 
-#: templates/ski_material_listings.html:7
-msgid "Donner ou Vendre du Matériel de Ski"
-msgstr "Lend or Sell Ski Gear"
-
-#: templates/ski_material_listings.html:54
-msgid "Marketplace Matériel de ski"
-msgstr "Ski Gear Marketplace"
-
-#: templates/ski_material_listings.html:55
-msgid "Recherche rapide, filtres flottants et gestion de vos offres."
-msgstr "Quick search, floating filters, and offer management."
-
-#: templates/ski_material_listings.html:58
-msgid "Ajouter une offre"
-msgstr "Add an offer"
-
-#: templates/ski_material_listings.html:66
-msgid "Recherche globale"
-msgstr "Global search"
-
-#: templates/ski_material_listings.html:80
-msgid "Prêt"
-msgstr "Lend"
-
-#: templates/ski_material_listings.html:81
-msgid "Vente"
-msgstr "Sell"
-
-#: templates/ski_material_listings.html:87
-msgid "Uniquement gratuit"
-msgstr "Free only"
-
-#: templates/ski_material_listings.html:172
-msgid "Aucune annonce trouvée avec ces critères."
-msgstr "No listing found with these criteria."
-
-#: templates/ski_material_listings.html:183
-msgid "Ajouter une annonce de matériel"
-msgstr "Add a gear listing"
-
-#: templates/socialaccount/login.html:5
-msgid "Sign In"
-msgstr "Sign In"
-
-#: templates/socialaccount/login.html:10
-#, python-format
-msgid "Connect %(provider)s"
-msgstr "Connect %(provider)s"
-
-#: templates/socialaccount/login.html:13
-#, python-format
-msgid "You are about to connect a new third-party account from %(provider)s."
-msgstr "You are about to connect a new third-party account from %(provider)s."
-
-#: templates/socialaccount/login.html:17
-#, python-format
-msgid "Sign In Via %(provider)s"
-msgstr "Sign In Via %(provider)s"
-
-#: templates/socialaccount/login.html:20
-#, python-format
-msgid "You are about to sign in using a third-party account from %(provider)s."
-msgstr ""
-"You are about to sign in using a third-party account from %(provider)s."
-
-#: templates/socialaccount/login.html:27
-msgid "Continue"
-msgstr "Continue"
-
-#: templates/base.html:744
-msgid "Marketplace"
-msgstr "Marketplace"
-
-#: templates/base.html:748
-msgid "Messages"
-msgstr "Messages"
-
-#: templates/ski_material_listings.html:14
+#: templates/ski_material_listings.html:16
 msgid "Vendre, louer ou preter facilement."
 msgstr "Sell, rent, or lend easily."
 
 #: templates/ski_material_listings.html:18
+#, fuzzy
+#| msgid "Ajouter une offre"
+msgid "Ajouter un article"
+msgstr "Add an offer"
+
+#: templates/ski_material_listings.html:21
 msgid "Week-end malin"
 msgstr "Smart weekend"
 
-#: templates/ski_material_listings.html:19
+#: templates/ski_material_listings.html:22
 msgid "Petit budget"
 msgstr "Budget picks"
 
-#: templates/ski_material_listings.html:20
+#: templates/ski_material_listings.html:23
 msgid "Premium"
 msgstr "Premium"
 
-#: templates/ski_material_listings.html:21
+#: templates/ski_material_listings.html:24
 msgid "Pack securite"
 msgstr "Safety pack"
 
-#: templates/ski_material_listings.html:22
+#: templates/ski_material_listings.html:25
 msgid "Tout voir"
 msgstr "View all"
 
-#: templates/ski_material_listings.html:56
+#: templates/ski_material_listings.html:32
+#, fuzzy
+#| msgid "Filtres actifs :"
+msgid "Filtres avances"
+msgstr "Active filters:"
+
+#: templates/ski_material_listings.html:40
+#: templates/ski_material_listings.html:373
+msgid "Afficher les options"
+msgstr ""
+
+#: templates/ski_material_listings.html:48
+msgid "Recherche globale"
+msgstr "Global search"
+
+#: templates/ski_material_listings.html:49
+msgid "Marque, ville, type, utilisateur..."
+msgstr ""
+
+#: templates/ski_material_listings.html:52
+msgid "Offre"
+msgstr ""
+
+#: templates/ski_material_listings.html:81
 msgid "Plus recents"
 msgstr "Newest first"
 
-#: templates/ski_material_listings.html:59
-msgid "Prix decroissant"
-msgstr "Price: high to low"
+#: templates/ski_material_listings.html:82
+#, fuzzy
+#| msgid "Plus recents"
+msgid "Plus anciens"
+msgstr "Newest first"
 
-#: templates/ski_material_listings.html:88
+#: templates/ski_material_listings.html:85
+msgid "Titre A-Z"
+msgstr ""
+
+#: templates/ski_material_listings.html:94
+msgid "Grenoble..."
+msgstr ""
+
+#: templates/ski_material_listings.html:116
+#, fuzzy
+#| msgid "Réinitialiser"
+msgid "Reinitialiser"
+msgstr "Reset"
+
+#: templates/ski_material_listings.html:119
 msgid "Articles par page"
 msgstr "Items per page"
 
-#: templates/ski_material_listings.html:102
+#: templates/ski_material_listings.html:140
+#: templates/ski_material_listings.html:391
+msgid "Afficher infos marche"
+msgstr ""
+
+#: templates/ski_material_listings.html:150
 msgid "Annonces visibles"
 msgstr "Visible listings"
 
-#: templates/ski_material_listings.html:108
+#: templates/ski_material_listings.html:156
 msgid "Avec photo"
 msgstr "With photo"
 
-#: templates/ski_material_listings.html:114
+#: templates/ski_material_listings.html:162
 msgid "Liees a une station"
 msgstr "Linked to a station"
 
-#: templates/ski_material_listings.html:129
+#: templates/ski_material_listings.html:179
 msgid "Par type d'offre"
 msgstr "By offer type"
 
-#: templates/ski_material_listings.html:139
-msgid "Par materiel"
-msgstr "By gear type"
-
-#: templates/ski_material_listings.html:152
-msgid "Filtres enregistres"
-msgstr "Saved filters"
-
-#: templates/ski_material_listings.html:153
-msgid "Sauvegardez votre recherche actuelle pour la relancer en un clic."
-msgstr "Save your current search and reuse it in one click."
-
-#: templates/ski_material_listings.html:160
-msgid "Nom du filtre"
-msgstr "Filter name"
-
-#: templates/ski_material_listings.html:176
-msgid "Aucun filtre enregistre pour le moment."
-msgstr "No saved filters yet."
-
-#: skistation_project/views.py:420
-msgid "Nom de filtre requis."
-msgstr "Filter name is required."
-
-#: skistation_project/views.py:426
-msgid "Filtre enregistre."
-msgstr "Filter saved."
-
-#: skistation_project/views.py:434
-msgid "Filtre supprime."
-msgstr "Filter deleted."
-
-#: templates/ski_material_listings.html
+#: templates/ski_material_listings.html:189
 msgid "Par categorie"
 msgstr "By category"
 
-#: templates/listing_detail.html
-msgid "Detail Marketplace"
-msgstr "Marketplace Detail"
+#: templates/ski_material_listings.html:204
+msgid "Filtres enregistres"
+msgstr "Saved filters"
 
-#: templates/listing_detail.html
+#: templates/ski_material_listings.html:206
+msgid "Sauvegardez votre recherche actuelle pour la relancer en un clic."
+msgstr "Save your current search and reuse it in one click."
+
+#: templates/ski_material_listings.html:207
 #, python-format
-msgid "Seller rating %(avg)s/5 (%(count)s reviews)"
-msgstr "Seller rating %(avg)s/5 (%(count)s reviews)"
+msgid "(maximum %(saved_filters_limit)s filtres)."
+msgstr ""
 
-#: templates/listing_detail.html
-#, python-format
-msgid "Size %(size)s"
-msgstr "Size %(size)s"
+#: templates/ski_material_listings.html:214
+msgid "Nom du filtre"
+msgstr "Filter name"
 
-#: templates/listing_detail.html
-msgid "Transaction"
-msgstr "Transaction"
+#: templates/ski_material_listings.html:232
+msgid "Aucun filtre enregistre pour le moment."
+msgstr "No saved filters yet."
 
-#: templates/listing_detail.html
-msgid "Status:"
-msgstr "Status:"
+#: templates/ski_material_listings.html:288
+msgid "Details"
+msgstr ""
 
-#: templates/listing_detail.html
-msgid "buyer"
-msgstr "buyer"
+#: templates/ski_material_listings.html:298
+#, fuzzy
+#| msgid "Aucune annonce trouvée avec ces critères."
+msgid "Aucune annonce personnelle dans ce filtre."
+msgstr "No listing found with these criteria."
 
-#: templates/listing_detail.html
-msgid "seller"
-msgstr "seller"
+#: templates/ski_material_listings.html:300
+#, fuzzy
+#| msgid "Aucun service renseigné."
+msgid "Aucun article trouve."
+msgstr "No service listed."
 
-#: templates/listing_detail.html
-msgid "confirmed"
-msgstr "confirmed"
+#: templates/ski_material_listings.html:312
+#, fuzzy
+#| msgid "Précédent"
+msgid "Precedent"
+msgstr "Previous"
 
-#: templates/listing_detail.html
-msgid "pending"
-msgstr "pending"
+#: templates/ski_material_listings.html:373
+#, fuzzy
+#| msgid "Toutes les stations"
+msgid "Masquer les options"
+msgstr "All stations"
 
-#: templates/listing_detail.html
-msgid "No transaction requested."
-msgstr "No transaction requested."
+#: templates/ski_material_listings.html:391
+msgid "Masquer infos marche"
+msgstr ""
 
-#: templates/listing_detail.html
-msgid "Request transaction"
-msgstr "Request transaction"
+#: templates/ski_stories.html:94
+msgid "Actualites ski pres de Grenoble"
+msgstr ""
 
-#: templates/listing_detail.html
-msgid "Confirm transaction as buyer"
-msgstr "Confirm transaction as buyer"
+#: templates/ski_stories.html:104
+msgid "A la une"
+msgstr ""
 
-#: templates/listing_detail.html
-msgid "Rate seller"
-msgstr "Rate seller"
+#: templates/ski_stories.html:113
+msgid "Lire"
+msgstr ""
 
-#: templates/listing_detail.html
-msgid "Score"
-msgstr "Score"
+#: templates/ski_stories.html:135
+#, fuzzy
+#| msgid "Aucune conversation pour le moment."
+msgid "Aucune actualite disponible pour le moment."
+msgstr "No conversations yet."
 
-#: templates/listing_detail.html
-msgid "Choose"
-msgstr "Choose"
+#: templates/ski_stories.html:173 templates/user_public_profile.html:295
+msgid "Inviter en ami"
+msgstr ""
 
-#: templates/listing_detail.html
-msgid "Comment"
+#: templates/ski_stories.html:178
+#, fuzzy
+#| msgid "Comment"
+msgid "Commenter"
 msgstr "Comment"
 
-#: templates/listing_detail.html
-msgid "Your review..."
-msgstr "Your review..."
+#: templates/socialaccount/login.html:15
+#, fuzzy, python-format
+#| msgid "Connect %(provider)s"
+msgid "Connecter %(provider)s"
+msgstr "Connect %(provider)s"
 
-#: templates/listing_detail.html
-msgid "Save my rating"
-msgstr "Save my rating"
+#: templates/socialaccount/login.html:16
+#, python-format
+msgid "Vous allez connecter un nouveau compte tiers depuis %(provider)s."
+msgstr ""
 
-#: templates/listing_detail.html
-msgid "Rating is available after both sides confirm the transaction."
-msgstr "Rating is available after both sides confirm the transaction."
+#: templates/socialaccount/login.html:18
+#, fuzzy, python-format
+#| msgid "Connect %(provider)s"
+msgid "Se connecter via %(provider)s"
+msgstr "Connect %(provider)s"
 
-#: templates/listing_detail.html
-msgid "Transactions to confirm"
-msgstr "Transactions to confirm"
+#: templates/socialaccount/login.html:19
+#, fuzzy, python-format
+#| msgid ""
+#| "You are about to connect a new third-party account from %(provider)s."
+msgid "Vous allez vous connecter avec votre compte %(provider)s."
+msgstr "You are about to connect a new third-party account from %(provider)s."
 
-#: templates/listing_detail.html
-msgid "Buyer:"
-msgstr "Buyer:"
+#: templates/socialaccount/login.html:24
+#, fuzzy
+#| msgid "Continue"
+msgid "Continuer"
+msgstr "Continue"
 
-#: templates/listing_detail.html
-msgid "Confirm as seller"
-msgstr "Confirm as seller"
+#: templates/user_public_profile.html:226
+#, fuzzy
+#| msgid "Photo de profil"
+msgid "Rider profile"
+msgstr "Profile picture"
 
-#: templates/listing_detail.html
-msgid "Already confirmed as seller."
-msgstr "Already confirmed as seller."
+#: templates/user_public_profile.html:239
+msgid "Stories"
+msgstr ""
 
-#: templates/listing_detail.html
-msgid "Recent reviews"
-msgstr "Recent reviews"
+#: templates/user_public_profile.html:245
+#, fuzzy
+#| msgid "Comment"
+msgid "Commentaires"
+msgstr "Comment"
 
-#: templates/edit_listing.html
-msgid "Edit Marketplace item"
-msgstr "Edit Marketplace item"
+#: templates/user_public_profile.html:251
+msgid "Amis"
+msgstr ""
 
-#: templates/edit_listing.html
-msgid "Update the information to keep a clear and premium listing."
-msgstr "Update the information to keep a clear and premium listing."
+#: templates/user_public_profile.html:257
+msgid "Likes recus"
+msgstr ""
 
-#: templates/edit_listing.html
-msgid "Save"
-msgstr "Save"
+#: templates/user_public_profile.html:263
+#, fuzzy
+#| msgid "Messages"
+msgid "Messages publics"
+msgstr "Messages"
 
-#: templates/edit_listing.html
-msgid "Cancel"
-msgstr "Cancel"
+#: templates/user_public_profile.html:275
+msgid "Retirer ami"
+msgstr ""
 
-#~ msgid "Impossible d\\'afficher la tendance pour le moment."
-#~ msgstr "Unable to display trend at the moment."
+#: templates/user_public_profile.html:280
+msgid "Accepter l'invitation"
+msgstr ""
 
-#: templates/base.html
-msgid "Découvrir"
-msgstr "Discover"
+#: templates/user_public_profile.html:287
+msgid "Invitation en attente"
+msgstr ""
 
-#: templates/base.html
-msgid "Culture et stories"
+#: templates/user_public_profile.html:290
+#, fuzzy
+#| msgid "Publier l'actualisation"
+msgid "Annuler l'invitation"
+msgstr "Publish update"
+
+#: templates/user_public_profile.html:298
+msgid "Envoyer un message"
+msgstr ""
+
+#: templates/user_public_profile.html:300
+#, fuzzy
+#| msgid "Se connecter pour contacter"
+msgid "Se connecter pour interagir"
+msgstr "Log in to contact"
+
+#: templates/user_public_profile.html:302
+#, fuzzy
+#| msgid "Retour services"
+msgid "Retour stories"
+msgstr "Back to services"
+
+#: templates/user_public_profile.html:310
+#, fuzzy
+#| msgid "Culture et stories"
+msgid "Dernieres stories"
 msgstr "Culture and stories"
 
-#: templates/base.html
-msgid "Bus et accès"
-msgstr "Buses and access"
+#: templates/user_public_profile.html:326
+msgid "Aucune story recente"
+msgstr ""
 
-#: templates/base.html
-msgid "Covoiturage"
-msgstr "Carpooling"
+#: templates/user_public_profile.html:336
+msgid "Derniers commentaires"
+msgstr ""
 
-#: templates/base.html
-msgid "Partenaires"
-msgstr "Partners"
+#: templates/user_public_profile.html:349
+msgid "Aucun commentaire recent"
+msgstr ""
 
-#: templates/base.html
-msgid "Application mobile"
-msgstr "Mobile app"
+#: templates/user_public_profile.html:359
+msgid "Ce profil n'a pas encore d'activite recente."
+msgstr ""
 
-#: templates/base.html
-msgid "Application Android"
-msgstr "Android app"
+#~ msgid "Nom d'utilisateur :"
+#~ msgstr "Username:"
 
-#: templates/base.html
-msgid "Mon espace"
-msgstr "My account"
+#~ msgid "Ou connectez-vous avec Google"
+#~ msgstr "Or sign in with Google"
 
-#: templates/base.html
-msgid "Créer un compte"
-msgstr "Create an account"
+#~ msgid "Inscrivez-vous"
+#~ msgstr "Sign up"
 
-#: templates/index.html
-msgid "GrenobleSki Android"
-msgstr "GrenobleSki Android"
+#~ msgid "Matériel de Ski"
+#~ msgstr "Ski Gear"
 
-#: templates/index.html
-msgid "Emportez Grenoble et les montagnes avec vous"
-msgstr "Take Grenoble and the mountains with you"
+#~ msgid "Profil"
+#~ msgstr "Profile"
 
-#: templates/index.html
-msgid "Scannez le QR code avec votre téléphone Android pour télécharger la dernière version de l'application."
-msgstr "Scan the QR code with your Android phone to download the latest version of the app."
+#~ msgid "Nous utilisons des cookies pour améliorer votre expérience."
+#~ msgstr "We use cookies to improve your experience."
 
-#: templates/index.html
-msgid "Télécharger l'application"
-msgstr "Download the app"
+#~ msgid "En savoir plus"
+#~ msgstr "Learn more"
 
-#: templates/index.html
-msgid "Téléchargement direct depuis la dernière version publiée sur GitHub."
-msgstr "Direct download from the latest release published on GitHub."
+#~ msgid "Points de passage"
+#~ msgstr "Route points"
 
-#: templates/index.html
-msgid "Télécharger la dernière application Android"
-msgstr "Download the latest Android app"
+#~ msgid "Venir en bus"
+#~ msgstr "Come by bus"
 
-#: templates/index.html
-msgid "QR code de téléchargement de l'application Android"
-msgstr "QR code to download the Android app"
+#~ msgid "Venir en voiture"
+#~ msgstr "Come by car"
+
+#~ msgid "Fréquence:"
+#~ msgstr "Frequency:"
+
+#~ msgid "avis"
+#~ msgstr "reviews"
+
+#~ msgid "Détail annonce"
+#~ msgstr "Listing details"
+
+#~ msgid "Matériel:"
+#~ msgstr "Gear:"
+
+#~ msgid "Contacter le propriétaire"
+#~ msgstr "Contact owner"
+
+#~ msgid "Discussions"
+#~ msgstr "Conversations"
+
+#~ msgid "Démarrer un chat"
+#~ msgstr "Start a chat"
+
+#, python-format
+#~ msgid "Commencez la conversation avec %(username)s."
+#~ msgstr "Start the conversation with %(username)s."
+
+#~ msgid "Écrivez votre message..."
+#~ msgstr "Write your message..."
+
+#~ msgid "Sélectionnez une conversation à gauche."
+#~ msgstr "Select a conversation on the left."
+
+#~ msgid "Gérez vos informations personnelles et votre photo de profil."
+#~ msgstr "Manage your personal information and profile picture."
+
+#~ msgid "Donner ou Vendre du Matériel de Ski"
+#~ msgstr "Lend or Sell Ski Gear"
+
+#~ msgid "Marketplace Matériel de ski"
+#~ msgstr "Ski Gear Marketplace"
+
+#~ msgid "Recherche rapide, filtres flottants et gestion de vos offres."
+#~ msgstr "Quick search, floating filters, and offer management."
+
+#~ msgid "Prêt"
+#~ msgstr "Lend"
+
+#~ msgid "Vente"
+#~ msgstr "Sell"
+
+#~ msgid "Uniquement gratuit"
+#~ msgstr "Free only"
+
+#~ msgid "Ajouter une annonce de matériel"
+#~ msgstr "Add a gear listing"
+
+#~ msgid "Sign In"
+#~ msgstr "Sign In"
+
+#, python-format
+#~ msgid "Sign In Via %(provider)s"
+#~ msgstr "Sign In Via %(provider)s"
+
+#, python-format
+#~ msgid ""
+#~ "You are about to sign in using a third-party account from %(provider)s."
+#~ msgstr ""
+#~ "You are about to sign in using a third-party account from %(provider)s."
+
+#~ msgid "Par materiel"
+#~ msgstr "By gear type"
+
+#~ msgid "Partenaires"
+#~ msgstr "Partners"
+
+#~ msgid "Télécharger l'application"
+#~ msgstr "Download the app"
+
+#~ msgid "Téléchargement direct depuis la dernière version publiée sur GitHub."
+#~ msgstr "Direct download from the latest release published on GitHub."
+
+#~ msgid "Télécharger la dernière application Android"
+#~ msgstr "Download the latest Android app"
+
+#~ msgid "QR code de téléchargement de l'application Android"
+#~ msgstr "QR code to download the Android app"
