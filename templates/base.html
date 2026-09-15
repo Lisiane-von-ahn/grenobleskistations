@@ -339,10 +339,22 @@
         .main-nav .nav li .nav-submenu li a,
         .main-nav .nav li .offers-submenu li a {
             display: block;
-            color: #2d3a4a;
+            color: #172b3a !important;
+            background: transparent !important;
+            height: auto !important;
+            line-height: 1.35 !important;
+            opacity: 1 !important;
             border-radius: 8px;
             padding: 8px 10px;
             white-space: nowrap;
+        }
+
+        .main-nav .nav li .nav-submenu li,
+        .main-nav .nav li .offers-submenu li {
+            display: block;
+            width: 100%;
+            height: auto;
+            padding: 0;
         }
 
         .main-nav .nav li .nav-submenu li a:hover,

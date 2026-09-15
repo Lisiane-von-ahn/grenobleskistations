@@ -1,4 +1,5 @@
 import json
+import re
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -45,7 +46,21 @@ class Command(BaseCommand):
             for element in elements:
                 tags = element.get('tags') or {}
                 coordinates = element.get('center') or element
-                if not tags.get('name') or coordinates.get('lat') is None or coordinates.get('lon') is None:
+                name = (tags.get('name') or '').strip()
+                normalized_name = name.casefold()
+                generic_names = {
+                    'appartement', 'appartements', 'chalet', 'gîte', 'gite', 'hotel', 'hôtel',
+                    'maison', 'résidence', 'residence', 'studio', 'camping', 'hébergement',
+                }
+                if (
+                    not name
+                    or len(name) < 4
+                    or name[0].isdigit()
+                    or len(re.findall(r'[A-Za-zÀ-ÖØ-öø-ÿ]', name)) < 3
+                    or normalized_name in generic_names
+                    or coordinates.get('lat') is None
+                    or coordinates.get('lon') is None
+                ):
                     continue
                 key = (element.get('type', ''), element.get('id'))
                 images = []
@@ -57,7 +72,7 @@ class Command(BaseCommand):
                 address = ' '.join(filter(None, [tags.get('addr:housenumber'), tags.get('addr:street')]))
                 stars = str(tags.get('stars', '')).strip()
                 AccommodationPlace.objects.update_or_create(osm_type=key[0], osm_id=key[1], defaults={
-                    'name': tags['name'][:180], 'accommodation_type': tags.get('tourism', '')[:40],
+                    'name': name[:180], 'accommodation_type': tags.get('tourism', '')[:40],
                     'latitude': coordinates['lat'], 'longitude': coordinates['lon'],
                     'address': address[:300], 'city': tags.get('addr:city', '')[:120],
                     'website_url': (tags.get('website') or tags.get('contact:website') or '')[:700],

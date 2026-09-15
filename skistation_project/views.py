@@ -1800,7 +1800,7 @@ def accommodations(request):
         {'name': 'Hotel Le Beau Site', 'destination': 'Saint-Pierre-de-Chartreuse', 'type': 'hotel', 'price': 107, 'rating': 8.8, 'reviews': 250, 'distance': 32, 'ski_minutes': 5, 'amenities': ['parking'], 'provider': 'booking', 'provider_url': 'https://www.booking.com/hotel/fr/le-beau-site-st-pierre-de-chartreuse.fr.html'},
     ]
     cached_places = AccommodationPlace.objects.all()
-    if destination and destination.lower() != 'grenoble':
+    if destination:
         cached_places = cached_places.filter(Q(city__icontains=destination) | Q(name__icontains=destination) | Q(address__icontains=destination))
     accommodation_catalog = [{
         'name': place.name, 'destination': place.city or 'Isère', 'type': place.accommodation_type,
@@ -1808,10 +1808,9 @@ def accommodations(request):
         'amenities': [], 'provider': 'osm', 'provider_url': place.website_url,
         'photos': place.image_urls,
     } for place in cached_places[:120]] or fallback_catalog
+    accommodation_catalog = list({item['name'].casefold(): item for item in accommodation_catalog}.values())
     destination_query = destination.lower()
     results = [item for item in accommodation_catalog if not destination_query or destination_query in item['destination'].lower() or item['destination'].lower() in destination_query]
-    if destination_query == 'grenoble':
-        results = accommodation_catalog
     if lodging_type:
         results = [item for item in results if item['type'] == lodging_type]
     if max_price_value < 500:
