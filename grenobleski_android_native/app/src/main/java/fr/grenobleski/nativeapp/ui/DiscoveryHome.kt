@@ -168,6 +168,7 @@ private fun AccommodationPreview(onOpenUrl: (String) -> Unit) {
     )
     var stays by remember { mutableStateOf(fallbackStays) }
     var maximumPrice by rememberSaveable { mutableFloatStateOf(200f) }
+    var accommodationPage by rememberSaveable { mutableIntStateOf(0) }
     var checkin by rememberSaveable { mutableStateOf("") }
     var checkout by rememberSaveable { mutableStateOf("") }
     LaunchedEffect(Unit) {
@@ -183,7 +184,7 @@ private fun AccommodationPreview(onOpenUrl: (String) -> Unit) {
                     AccommodationStay(name, 0, url, photos)
                 }
             }
-        }.getOrNull()?.takeIf { it.isNotEmpty() }?.let { stays = it }
+        }.getOrNull()?.takeIf { it.isNotEmpty() }?.let { stays = it; accommodationPage = 0 }
     }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(stringResource(R.string.accommodation_title), style = MaterialTheme.typography.titleLarge)
@@ -208,8 +209,12 @@ private fun AccommodationPreview(onOpenUrl: (String) -> Unit) {
         }
         Text(stringResource(R.string.accommodation_max_price, maximumPrice.toInt()), style = MaterialTheme.typography.labelLarge)
         Slider(value = maximumPrice, onValueChange = { maximumPrice = it }, valueRange = 60f..500f, steps = 43)
+        val filteredStays = stays.filter { it.price == 0 || it.price <= maximumPrice.toInt() }
+        val pageSize = 6
+        val pageCount = maxOf(1, (filteredStays.size + pageSize - 1) / pageSize)
+        val safePage = accommodationPage.coerceIn(0, pageCount - 1)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            items(stays.filter { it.price == 0 || it.price <= maximumPrice.toInt() }) { stay ->
+            items(filteredStays.drop(safePage * pageSize).take(pageSize)) { stay ->
                 Card(Modifier.width(250.dp), shape = RoundedCornerShape(18.dp)) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (stay.photos.isNotEmpty()) {
@@ -222,11 +227,18 @@ private fun AccommodationPreview(onOpenUrl: (String) -> Unit) {
                         Text(stay.name, style = MaterialTheme.typography.titleMedium)
                         Text(if (stay.price > 0) stringResource(R.string.accommodation_from_price, stay.price) else stringResource(R.string.accommodation_check_price), style = MaterialTheme.typography.bodySmall)
                         Text("OpenStreetMap", style = MaterialTheme.typography.labelSmall)
-                        OutlinedButton(onClick = { onOpenUrl(stayUrl(stay.url, checkin, checkout)) }) {
+                        OutlinedButton(onClick = { onOpenUrl(bookingSearchUrl(stay.name, checkin, checkout)) }) {
                             Text(stringResource(R.string.accommodation_view_establishment))
                         }
                     }
                 }
+            }
+        }
+        if (pageCount > 1) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                OutlinedButton(onClick = { accommodationPage = safePage - 1 }, enabled = safePage > 0) { Text(stringResource(R.string.previous_page)) }
+                Text("${safePage + 1} / $pageCount", style = MaterialTheme.typography.labelLarge)
+                OutlinedButton(onClick = { accommodationPage = safePage + 1 }, enabled = safePage + 1 < pageCount) { Text(stringResource(R.string.next_page)) }
             }
         }
     }
@@ -241,7 +253,7 @@ private fun formatDayMonthYear(raw: String): String {
         .joinToString("/")
 }
 
-private fun stayUrl(baseUrl: String, checkin: String, checkout: String): String {
+private fun bookingSearchUrl(name: String, checkin: String, checkout: String): String {
     fun isoDate(value: String): String? {
         val parts = value.split('/')
         if (parts.size != 3 || parts[0].length != 2 || parts[1].length != 2 || parts[2].length != 4) return null
@@ -252,8 +264,10 @@ private fun stayUrl(baseUrl: String, checkin: String, checkout: String): String 
     }
     val arrival = isoDate(checkin)
     val departure = isoDate(checkout)
-    if (!baseUrl.contains("booking.com") || arrival == null || departure == null) return baseUrl
-    return "$baseUrl?checkin=$arrival&checkout=$departure&group_adults=2&no_rooms=1"
+    val params = mutableListOf("ss=${Uri.encode(name)}", "group_adults=2", "no_rooms=1")
+    if (arrival != null) params += "checkin=$arrival"
+    if (departure != null) params += "checkout=$departure"
+    return "https://www.booking.com/searchresults.html?${params.joinToString("&")}"
 }
 
 @Composable

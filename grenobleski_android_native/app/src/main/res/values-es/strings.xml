@@ -3,4 +3,5 @@
     <string name="accommodation_title">Alójate cerca de las montañas</string><string name="accommodation_subtitle">Compara alojamientos locales antes de reservar.</string><string name="accommodation_view_all">Ver todos los alojamientos</string><string name="accommodation_max_price">Precio máximo: %1$d € / noche</string><string name="accommodation_from_price">Desde %1$d € / noche</string><string name="accommodation_checkin">Llegada</string><string name="accommodation_checkout">Salida</string><string name="accommodation_view_establishment">Ver establecimiento</string><string name="open_accommodations">Alojamientos</string>
     <string name="open_trail_maps">Mapas de senderos</string><string name="open_mountain_tips">Consejos de montaña</string><string name="hiking_trails_title">Senderos y mapas</string><string name="hiking_trails_subtitle">Explora Grenoble y las montañas cercanas. Consulta el tiempo y las condiciones oficiales.</string>
     <string name="accommodation_check_price">Consultar precio actual</string>
+    <string name="previous_page">Anterior</string><string name="next_page">Siguiente</string>
 </resources>

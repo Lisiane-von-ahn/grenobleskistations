@@ -1802,15 +1802,16 @@ def accommodations(request):
     cached_places = AccommodationPlace.objects.all()
     if destination:
         cached_places = cached_places.filter(Q(city__icontains=destination) | Q(name__icontains=destination) | Q(address__icontains=destination))
-    accommodation_catalog = [{
+    cached_catalog = [{
         'name': place.name, 'destination': place.city or 'Isère', 'type': place.accommodation_type,
         'price': None, 'rating': None, 'reviews': None, 'distance': None, 'ski_minutes': None,
         'amenities': [], 'provider': 'osm', 'provider_url': place.website_url,
         'photos': place.image_urls,
-    } for place in cached_places[:120]] or fallback_catalog
+    } for place in cached_places[:120]]
+    accommodation_catalog = cached_catalog or fallback_catalog
     accommodation_catalog = list({item['name'].casefold(): item for item in accommodation_catalog}.values())
     destination_query = destination.lower()
-    results = [item for item in accommodation_catalog if not destination_query or destination_query in item['destination'].lower() or item['destination'].lower() in destination_query]
+    results = accommodation_catalog if cached_catalog else [item for item in accommodation_catalog if not destination_query or destination_query in item['destination'].lower() or item['destination'].lower() in destination_query]
     if lodging_type:
         results = [item for item in results if item['type'] == lodging_type]
     if max_price_value < 500:
@@ -1835,23 +1836,20 @@ def accommodations(request):
     airbnb_url = f"https://www.airbnb.com/s/{quote(destination)}/homes?{urlencode({'adults': guests, 'checkin': checkin, 'checkout': checkout})}"
     for item in results:
         item_destination = item['destination']
-        item_booking_params = dict(booking_params, ss=item_destination)
+        item_booking_params = dict(booking_params, ss=f"{item['name']}, {item_destination}")
         item['booking_url'] = 'https://www.booking.com/searchresults.html?' + urlencode(item_booking_params)
         item['airbnb_url'] = f"https://www.airbnb.com/s/{quote(item_destination)}/homes?{urlencode({'adults': guests, 'checkin': checkin, 'checkout': checkout})}"
-        item['detail_url'] = item.get('provider_url') or item['booking_url']
-        if item.get('provider_url') and item.get('provider') == 'booking':
-            direct_params = {'group_adults': guests, 'no_rooms': rooms}
-            if checkin:
-                direct_params['checkin'] = checkin
-            if checkout:
-                direct_params['checkout'] = checkout
-            item['booking_url'] = item['provider_url'] + '?' + urlencode(direct_params)
-            item['detail_url'] = item['booking_url']
+        item['detail_url'] = item['booking_url']
+    page_obj = Paginator(results, 12).get_page(request.GET.get('page'))
+    query_without_page = request.GET.copy()
+    query_without_page.pop('page', None)
     return render(request, 'accommodations.html', {
         'destination': destination, 'checkin': checkin_display, 'checkout': checkout_display,
         'guests': guests, 'rooms': rooms, 'lodging_type': lodging_type,
         'amenities': amenities, 'booking_url': booking_url, 'airbnb_url': airbnb_url,
-        'results': results, 'max_price': max_price_value, 'sort': sort,
+        'results': page_obj.object_list, 'result_count': page_obj.paginator.count,
+        'page_obj': page_obj, 'query_without_page': query_without_page.urlencode(),
+        'max_price': max_price_value, 'sort': sort,
     })
 
 

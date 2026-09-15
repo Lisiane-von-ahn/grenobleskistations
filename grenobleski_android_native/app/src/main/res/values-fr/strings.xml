@@ -245,6 +245,8 @@
     <string name="accommodation_checkout">Départ</string>
     <string name="accommodation_view_establishment">Voir l’établissement</string>
     <string name="accommodation_check_price">Consulter le prix actuel</string>
+    <string name="previous_page">Précédent</string>
+    <string name="next_page">Suivant</string>
     <string name="hiking_trails_subtitle">Explorez Grenoble, la Bastille et les montagnes proches. Vérifiez la météo et les conditions officielles avant de partir.</string>
     <string name="hiking_open_map">Ouvrir la carte</string>
     <string name="hiking_open_osm">Ouvrir OpenStreetMap</string>

@@ -269,6 +269,8 @@
     <string name="accommodation_checkout">Check-out</string>
     <string name="accommodation_view_establishment">View establishment</string>
     <string name="accommodation_check_price">Check current price</string>
+    <string name="previous_page">Previous</string>
+    <string name="next_page">Next</string>
     <string name="hiking_trails_subtitle">Explore Grenoble, Bastille and nearby mountains. Check weather and official conditions before leaving.</string>
     <string name="hiking_open_map">Open map</string>
     <string name="hiking_open_osm">Open OpenStreetMap</string>
