@@ -47,6 +47,13 @@
                 <input type="text" name="city" maxlength="80" class="form-control" placeholder="Grenoble" list="city-autocomplete-list" data-city-autocomplete="true" autocomplete="address-level2">
             </div>
             {% if is_carpool_mode %}
+            <div class="col-12">
+                <label class="form-label">Type d'annonce</label>
+                <div class="d-flex gap-3 flex-wrap">
+                    <label class="form-check"><input class="form-check-input" type="radio" name="carpool_mode" value="offer" checked> <span class="form-check-label">Je propose des places</span></label>
+                    <label class="form-check"><input class="form-check-input" type="radio" name="carpool_mode" value="request"> <span class="form-check-label">Je recherche une place</span></label>
+                </div>
+            </div>
             <div class="col-lg-4">
                 <label class="form-label">Ville depart covoiturage</label>
                 <input type="text" name="departure_city" maxlength="80" class="form-control" placeholder="Grenoble" list="city-autocomplete-list" data-city-autocomplete="true" autocomplete="address-level2" required>

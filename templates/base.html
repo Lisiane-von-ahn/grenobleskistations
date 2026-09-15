@@ -1052,6 +1052,7 @@
                                     <li><a href="{% url 'bus' %}">{% trans "Bus et accès" %}</a></li>
                                     <li><a href="{% url 'covoiturage' %}">{% trans "Trajets partagés" %}</a></li>
                                     <li><a href="{% url 'ski_partners' %}">{% trans "Sorties ski" %}</a></li>
+                                    <li><a href="{% url 'accommodations' %}">{% trans "Hébergements" %}</a></li>
                                     <li><a href="{% url 'my_template_view' %}#mobile-app">{% trans "Application mobile" %}</a></li>
                                 </ul>
                             </li>
@@ -1079,6 +1080,10 @@
                                     <select name="language" class="lang-select" onchange="this.form.submit()">
                                         <option value="fr" {% if LANGUAGE_CODE == 'fr' %}selected{% endif %}>FR</option>
                                         <option value="en" {% if LANGUAGE_CODE == 'en' %}selected{% endif %}>EN</option>
+                                        <option value="pt" {% if LANGUAGE_CODE == 'pt' %}selected{% endif %}>PT</option>
+                                        <option value="it" {% if LANGUAGE_CODE == 'it' %}selected{% endif %}>IT</option>
+                                        <option value="es" {% if LANGUAGE_CODE == 'es' %}selected{% endif %}>ES</option>
+                                        <option value="de" {% if LANGUAGE_CODE == 'de' %}selected{% endif %}>DE</option>
                                     </select>
                                 </form>
                             </li>

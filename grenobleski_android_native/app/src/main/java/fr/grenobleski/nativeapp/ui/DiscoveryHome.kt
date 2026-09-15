@@ -35,6 +35,7 @@ import fr.grenobleski.nativeapp.data.model.StationItem
 internal fun DiscoveryHome(state: AppUiState, onOpenStations: () -> Unit, onOpenUrl: (String) -> Unit) {
     val french = LocalConfiguration.current.locales[0].language == "fr"
     var interest by rememberSaveable { mutableStateOf("all") }
+    var stationSort by rememberSaveable { mutableStateOf("recommended") }
     val cameras = state.stationItems.flatMap { station -> station.cameras.map { station to it } }
     var selectedCamera by remember { mutableStateOf<Int?>(null) }
     val selected = cameras.firstOrNull { it.second.id == selectedCamera } ?: cameras.firstOrNull()
@@ -76,6 +77,15 @@ internal fun DiscoveryHome(state: AppUiState, onOpenStations: () -> Unit, onOpen
         }
         if (interest == "all" || interest == "mountains") {
         item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(stringResource(R.string.discovery_conditions), style = MaterialTheme.typography.titleLarge)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    FilterChip(selected = stationSort == "recommended", onClick = { stationSort = "recommended" }, label = { Text(stringResource(R.string.sort_recommended)) })
+                    FilterChip(selected = stationSort == "distance", onClick = { stationSort = "distance" }, label = { Text(stringResource(R.string.sort_distance)) })
+                }
+            }
+        }
+        item {
             Text(stringResource(R.string.discovery_cameras), style = MaterialTheme.typography.titleLarge)
             if (cameras.isEmpty()) Text(stringResource(R.string.no_live_cameras))
             else {
@@ -97,11 +107,10 @@ internal fun DiscoveryHome(state: AppUiState, onOpenStations: () -> Unit, onOpen
                 }
             }
         }
-        item { Text(stringResource(R.string.discovery_conditions), style = MaterialTheme.typography.titleLarge) }
         item {
             if (state.stationItems.isEmpty()) Text(stringResource(R.string.discovery_no_conditions))
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(state.stationItems, key = { it.id }) { station ->
+                items((if (stationSort == "distance") state.stationItems.sortedBy { distanceValue(it) } else state.stationItems.sortedWith(compareByDescending<StationItem> { stationScore(it) }.thenBy { distanceValue(it) })), key = { it.id }) { station ->
                     Card(Modifier.width(290.dp), shape = RoundedCornerShape(20.dp)) {
                         DiscoveryPhoto(station.imageBase64, station.name)
                         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -154,6 +163,11 @@ private fun HikingTrailsSection(onOpenUrl: (String) -> Unit) {
     )
     Text(stringResource(R.string.hiking_trails_title), style = MaterialTheme.typography.titleLarge)
     Text(stringResource(R.string.hiking_trails_subtitle), style = MaterialTheme.typography.bodyMedium)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Button(onClick = { onOpenUrl("https://www.grenobleski.fr/trail-maps/") }) { Text(stringResource(R.string.open_trail_maps)) }
+        OutlinedButton(onClick = { onOpenUrl("https://www.grenobleski.fr/mountain-tips/") }) { Text(stringResource(R.string.open_mountain_tips)) }
+        OutlinedButton(onClick = { onOpenUrl("https://www.grenobleski.fr/accommodations/") }) { Text(stringResource(R.string.open_accommodations)) }
+    }
     trails.forEach { (name, details, destination) ->
         Card(shape = RoundedCornerShape(18.dp)) {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -232,10 +246,26 @@ private fun StationConditions(station: StationItem, onOpenUrl: (String) -> Unit)
         else -> R.string.ski_unknown
     }
     Text(stringResource(label), color = MaterialTheme.colorScheme.primary)
+    if (station.skiAssessment != "closed" && station.skiAssessment != "stale") {
+        AssistChip(onClick = {}, label = { Text(stringResource(R.string.conditions_ready_today)) })
+    }
+    if (station.observedAt.isBlank() && station.weatherObservedAt.isBlank()) {
+        Text(stringResource(R.string.conditions_update_unknown), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+    }
     if (station.observedAt.isNotBlank()) Text(stringResource(R.string.conditions_observed, station.observedAt), style = MaterialTheme.typography.labelSmall)
     if (station.conditionSource.isNotBlank()) TextButton(onClick = { onOpenUrl(station.conditionSource) }) {
         Text(stringResource(R.string.conditions_bulletin))
     }
+}
+
+private fun distanceValue(station: StationItem): Double = station.distanceLabel.replace(',', '.').filter { it.isDigit() || it == '.' }.toDoubleOrNull() ?: Double.MAX_VALUE
+
+private fun stationScore(station: StationItem): Int = when (station.skiAssessment) {
+    "closed" -> 0
+    "stale" -> 1
+    "unfavourable" -> 2
+    "check_bulletin" -> 3
+    else -> 4
 }
 
 @Composable

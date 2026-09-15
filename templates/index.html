@@ -41,6 +41,30 @@
       background: #fff;
     }
 
+    .mobile-app-qr-wrap {
+      position: relative;
+      width: 210px;
+      max-width: 100%;
+      margin: 0 auto;
+    }
+
+    .mobile-app-play-mark {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border: 5px solid #fff;
+      border-radius: 12px;
+      background: #34a853;
+      color: #fff;
+      font-size: 1.35rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .22);
+    }
+
     @media (max-width: 767.98px) {
       .mobile-app-card { grid-template-columns: 1fr; text-align: center; }
       .mobile-app-qr { margin: 0 auto; }
@@ -79,6 +103,8 @@
     .conditions-card .station-photo { width: 100%; height: 170px; object-fit: cover; }
     .conditions-card .card-body { padding: 18px; }
     .conditions-badge { display: inline-block; padding: 4px 9px; border-radius: 999px; background: #e7f7f8; color: #087b8d; font-size: .75rem; font-weight: 700; }
+    .conditions-freshness { color: #607487; font-size: .74rem; margin-top: 10px; }
+    .conditions-freshness.is-stale { color: #a05a00; }
     .condition-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 16px; }
     .condition-metric { padding: 10px 6px; border-radius: 12px; background: #f4f8fb; text-align: center; }
     .condition-metric i { color: #1686a9; display: block; margin-bottom: 4px; }
@@ -307,7 +333,7 @@
   </div>
 
   <section class="container my-5" aria-labelledby="hiking-heading">
-    <div class="section-heading mb-3"><h2 id="hiking-heading">Sentiers de randonnée autour de Grenoble</h2><p>Cartes et accès pour la Bastille, le Mont Jalla et les itinéraires de montagne proches.</p></div>
+    <div class="section-heading mb-3"><h2 id="hiking-heading">{% if LANGUAGE_CODE == 'en' %}Mountain trails around Grenoble{% elif LANGUAGE_CODE == 'pt' %}Trilhas de montanha perto de Grenoble{% elif LANGUAGE_CODE == 'it' %}Sentieri di montagna intorno a Grenoble{% elif LANGUAGE_CODE == 'es' %}Senderos de montaña cerca de Grenoble{% elif LANGUAGE_CODE == 'de' %}Bergwege rund um Grenoble{% else %}Sentiers de randonnée autour de Grenoble{% endif %}</h2><p>{% if LANGUAGE_CODE == 'en' %}Maps and access for Bastille, Mont Jalla and nearby mountain routes.{% elif LANGUAGE_CODE == 'pt' %}Mapas e acessos para a Bastille, Mont Jalla e trilhas próximas.{% elif LANGUAGE_CODE == 'it' %}Mappe e accessi alla Bastille, al Mont Jalla e ai sentieri vicini.{% elif LANGUAGE_CODE == 'es' %}Mapas y accesos a la Bastilla, Mont Jalla y rutas cercanas.{% elif LANGUAGE_CODE == 'de' %}Karten und Zugänge zur Bastille, zum Mont Jalla und zu nahegelegenen Bergwegen.{% else %}Cartes et accès pour la Bastille, le Mont Jalla et les itinéraires de montagne proches.{% endif %}</p><div class="d-flex gap-2 flex-wrap"><a class="btn btn-primary" href="{% url 'trail_maps' %}">{% if LANGUAGE_CODE == 'en' %}Dedicated trail maps{% elif LANGUAGE_CODE == 'pt' %}Mapas de trilhas{% elif LANGUAGE_CODE == 'it' %}Mappe dei sentieri{% elif LANGUAGE_CODE == 'es' %}Mapas de senderos{% elif LANGUAGE_CODE == 'de' %}Wegkarten{% else %}Cartes dédiées des sentiers{% endif %}</a><a class="btn btn-outline-primary" href="{% url 'mountain_tips' %}">{% if LANGUAGE_CODE == 'en' %}Mountain tips{% elif LANGUAGE_CODE == 'pt' %}Dicas de montanha{% elif LANGUAGE_CODE == 'it' %}Consigli di montagna{% elif LANGUAGE_CODE == 'es' %}Consejos de montaña{% elif LANGUAGE_CODE == 'de' %}Bergtipps{% else %}Conseils montagne{% endif %}</a></div></div>
     <div class="row g-3">
       <div class="col-12 col-md-6 col-lg-3"><article class="conditions-card p-3 h-100"><h3 class="h6">Bastille – Fort de la Bastille</h3><p class="small text-muted">Grenoble · facile · 5 km. Vérifiez météo et état du sentier.</p><a class="btn btn-sm btn-primary" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=Fort%20de%20la%20Bastille%2C%20Grenoble">Ouvrir la carte</a> <a class="btn btn-sm btn-outline-secondary mt-2" target="_blank" rel="noopener" href="https://www.openstreetmap.org/search?query=Fort%20de%20la%20Bastille%2C%20Grenoble">OSM</a></article></div>
       <div class="col-12 col-md-6 col-lg-3"><article class="conditions-card p-3 h-100"><h3 class="h6">Mont Jalla – mémorial</h3><p class="small text-muted">Bastille · intermédiaire · 7 km. Vérifiez météo et état du sentier.</p><a class="btn btn-sm btn-primary" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=Mont%20Jalla%2C%20Grenoble">Ouvrir la carte</a> <a class="btn btn-sm btn-outline-secondary mt-2" target="_blank" rel="noopener" href="https://www.openstreetmap.org/search?query=Mont%20Jalla%2C%20Grenoble">OSM</a></article></div>
@@ -328,6 +354,7 @@
           {% if station.image %}<img class="station-photo" src="data:image/jpeg;base64,{{ station.image|b64encode }}" alt="{{ station.name }}" loading="lazy">{% else %}<img class="station-photo" src="{% static 'images/chamrousse.jpg' %}" alt="{{ station.name }}" loading="lazy">{% endif %}
           <div class="card-body"><span class="conditions-badge"><i class="fa fa-snowflake"></i> {% trans "À découvrir" %}</span><h3 class="h5 mt-2 mb-1">{{ station.name }}</h3><p class="small text-muted mb-0">{{ station.altitude }} m · {{ station.distanceFromGrenoble }} km de Grenoble</p>
             <div class="condition-metrics"><div class="condition-metric"><i class="fa fa-temperature-low"></i><strong class="condition-temp">—</strong><small>{% trans "Météo" %}</small></div><div class="condition-metric"><i class="fa fa-snowflake"></i><strong class="condition-snow">—</strong><small>{% trans "Neige" %}</small></div><div class="condition-metric"><i class="fa fa-road"></i><strong>{{ station.num_circuits|default:"—" }}</strong><small>{% trans "Pistes" %}</small></div></div>
+            <p class="conditions-freshness" data-freshness>{% trans "Mise à jour des conditions : chargement..." %}</p>
             <a class="btn btn-primary w-100 mt-3" href="{% url 'ski_station_detail' station.id %}">{% trans "Voir la station" %} <i class="fa fa-arrow-right"></i></a>
           </div>
         </article>
@@ -342,13 +369,16 @@
         <small class="text-uppercase font-weight-bold">{% trans "GrenobleSki Android" %}</small>
         <h2 id="mobile-app-heading" class="mt-2">{% trans "Emportez Grenoble et les montagnes avec vous" %}</h2>
         <p>{% trans "Scannez le QR code avec votre téléphone Android pour télécharger la dernière version de l'application." %}</p>
-        <a class="btn btn-light btn-lg" href="https://github.com/Lisiane-von-ahn/grenobleskistations/releases/latest/download/app-release.apk">
-          <i class="fab fa-android" aria-hidden="true"></i> {% trans "Télécharger l'application" %}
+        <a class="btn btn-light btn-lg" href="https://play.google.com/store/apps/details?id=fr.grenobleski.nativeapp" target="_blank" rel="noopener">
+          <i class="fab fa-google-play" aria-hidden="true"></i> {% trans "Disponible sur Google Play" %}
         </a>
-        <p class="small mt-3 mb-0">{% trans "Téléchargement direct depuis la dernière version publiée sur GitHub." %}</p>
+        <p class="small mt-3 mb-0">{% trans "Installez la dernière version depuis la fiche officielle Google Play." %}</p>
       </div>
-      <a href="https://github.com/Lisiane-von-ahn/grenobleskistations/releases/latest/download/app-release.apk" aria-label="{% trans "Télécharger la dernière application Android" %}">
-        <img class="mobile-app-qr" src="{% static 'images/grenobleski-android-qr.png' %}" alt="{% trans "QR code de téléchargement de l'application Android" %}">
+      <a href="https://play.google.com/store/apps/details?id=fr.grenobleski.nativeapp" target="_blank" rel="noopener" aria-label="{% trans "Ouvrir GrenobleSki sur Google Play" %}">
+        <span class="mobile-app-qr-wrap">
+          <img class="mobile-app-qr" src="https://api.qrserver.com/v1/create-qr-code/?size=570x570&data=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Dfr.grenobleski.nativeapp" alt="{% trans "QR code pour ouvrir GrenobleSki sur Google Play" %}">
+          <span class="mobile-app-play-mark" aria-hidden="true"><i class="fab fa-google-play"></i></span>
+        </span>
       </a>
     </div>
   </section>
@@ -482,15 +512,22 @@
   <script src="{% static 'js/custom.js'%}"></script>
 
   <script>
-    document.querySelectorAll('[data-condition-station]').forEach((card) => {
-      fetch('/api/station-weather/').then((r) => r.json()).then((data) => {
+    fetch('/api/station-weather/').then((r) => r.json()).then((data) => {
+      document.querySelectorAll('[data-condition-station]').forEach((card) => {
         const weather = (Array.isArray(data) ? data.find((item) => String(item.id) === card.dataset.conditionStation) : data) || {};
         const temp = weather.temperature_c ?? weather.temp;
         const snow = weather.snow_depth_cm ?? weather.snow_cm;
         card.querySelector('.condition-temp').textContent = temp == null ? '—' : `${Math.round(temp)}°C`;
         card.querySelector('.condition-snow').textContent = snow == null ? '—' : `${Math.round(snow)} cm`;
-      }).catch(() => {});
-    });
+        const observed = weather.observed_at || weather.updated_at || weather.weather_observed_at;
+        const freshness = card.querySelector('[data-freshness]');
+        if (observed) freshness.textContent = `Mise à jour : ${observed}`;
+        else { freshness.textContent = 'Mise à jour inconnue — vérifiez avant de partir'; freshness.classList.add('is-stale'); }
+      });
+    }).catch(() => document.querySelectorAll('[data-freshness]').forEach((node) => {
+      node.textContent = 'Conditions indisponibles — vérifiez le bulletin officiel';
+      node.classList.add('is-stale');
+    }));
 
     function bannerSwitcher() {
       next = $('.sec-1-input').filter(':checked').next('.sec-1-input');

@@ -233,6 +233,9 @@
     <string name="menu_short_partners">Sorties ski</string>
     <string name="walk_to_place">🚶 Itinéraire à pied</string>
     <string name="hiking_trails_title">Sentiers de randonnée et cartes</string>
+    <string name="open_trail_maps">Cartes des sentiers</string>
+    <string name="open_mountain_tips">Conseils montagne</string>
+    <string name="open_accommodations">Hébergements</string>
     <string name="hiking_trails_subtitle">Explorez Grenoble, la Bastille et les montagnes proches. Vérifiez la météo et les conditions officielles avant de partir.</string>
     <string name="hiking_open_map">Ouvrir la carte</string>
     <string name="hiking_open_osm">Ouvrir OpenStreetMap</string>
@@ -272,6 +275,10 @@
     <string name="discovery_subtitle">Un musée, une balade tranquille ou un panorama : trouvez votre prochaine sortie.</string>
     <string name="discovery_cameras">Webcams en montagne</string>
     <string name="discovery_conditions">Du ski aujourd’hui ?</string>
+    <string name="sort_recommended">Meilleures aujourd’hui</string>
+    <string name="sort_distance">Plus proches</string>
+    <string name="conditions_ready_today">À regarder aujourd’hui</string>
+    <string name="conditions_update_unknown">Mise à jour inconnue — vérifiez avant de partir</string>
     <string name="discovery_no_conditions">Les conditions des stations ne sont pas encore disponibles. Utilisez Actualiser pour réessayer.</string>
     <string name="discovery_year_round">Grenoble, toute l’année</string>
     <string name="discovery_no_places">Les idées de balades et de culture sont indisponibles. Actualisez pour réessayer.</string>

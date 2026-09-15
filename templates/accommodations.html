@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{% if LANGUAGE_CODE == 'en' %}Accommodation near Grenoble{% elif LANGUAGE_CODE == 'pt' %}Alojamentos perto de Grenoble{% elif LANGUAGE_CODE == 'it' %}Alloggi vicino a Grenoble{% elif LANGUAGE_CODE == 'es' %}Alojamientos cerca de Grenoble{% elif LANGUAGE_CODE == 'de' %}Unterkünfte bei Grenoble{% else %}Hébergements autour de Grenoble{% endif %}{% endblock %}
+{% block content %}
+{% block extra_css %}
+<style>
+  .stay-page { background: #f5f8fb; margin-bottom: -60px; padding-bottom: 80px; }
+  .stay-hero { border-radius: 28px; padding: 42px; color: #fff; background: linear-gradient(120deg,#092b4c,#0f6385 58%,#22a6a6); box-shadow: 0 22px 50px rgba(8,47,73,.22); }
+  .stay-hero h1 { color: #fff; max-width: 760px; font-weight: 800; }
+  .stay-hero p { color: rgba(255,255,255,.86); max-width: 700px; }
+  .stay-search { margin-top: -25px; position: relative; border-radius: 22px; }
+  .stay-search .form-label { font-size: .78rem; font-weight: 700; color: #526577; text-transform: uppercase; letter-spacing: .03em; }
+  .stay-search .form-control, .stay-search .form-select { min-height: 46px; border-radius: 11px; border-color: #dce5ec; }
+  .stay-chip { display: inline-flex; align-items: center; gap: 7px; border-radius: 999px; background: #edf7f7; color: #087b8d; padding: 8px 12px; font-size: .82rem; font-weight: 700; }
+  .stay-provider { height: 100%; border: 1px solid #e4ebf0; border-radius: 20px; background: #fff; padding: 24px; transition: transform .2s, box-shadow .2s; }
+  .stay-provider:hover { transform: translateY(-3px); box-shadow: 0 16px 34px rgba(15,58,99,.12); }
+  .stay-provider-logo { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 14px; font-weight: 800; font-size: 1.15rem; color: #fff; background: #003b95; }
+  .stay-provider.airbnb .stay-provider-logo { background: #ff385c; }
+  .stay-step { border-radius: 16px; background: #fff; padding: 18px; height: 100%; border: 1px solid #e7eef3; }
+  .stay-step i { color: #13849b; font-size: 1.25rem; }
+  .stay-trust { color: #63788b; font-size: .86rem; }
+</style>
+{% endblock %}
+<main class="stay-page">
+<div class="container py-5">
+  <div class="section-heading mb-4">
+    <div class="stay-hero"><span class="text-uppercase small font-weight-bold">GrenobleSki Stays</span><h1 class="mt-2">{% if LANGUAGE_CODE == 'en' %}Find your mountain stay{% elif LANGUAGE_CODE == 'pt' %}Encontre o seu alojamento na montanha{% elif LANGUAGE_CODE == 'it' %}Trova il tuo soggiorno in montagna{% elif LANGUAGE_CODE == 'es' %}Encuentra tu alojamiento en la montaña{% elif LANGUAGE_CODE == 'de' %}Finde deine Unterkunft in den Bergen{% else %}Trouvez votre hébergement en montagne{% endif %}</h1><p class="mb-0">{% if LANGUAGE_CODE == 'en' %}Compare the right destination, dates and accommodation type before booking.{% elif LANGUAGE_CODE == 'pt' %}Compare destino, datas e tipo de alojamento antes de reservar.{% elif LANGUAGE_CODE == 'it' %}Confronta destinazione, date e tipo di alloggio prima di prenotare.{% elif LANGUAGE_CODE == 'es' %}Compara destino, fechas y tipo de alojamiento antes de reservar.{% elif LANGUAGE_CODE == 'de' %}Vergleiche Ziel, Reisedaten und Unterkunft vor der Buchung.{% else %}Comparez destination, dates et type d’hébergement avant de réserver.{% endif %}</p></div>
+  </div>
+  <form method="get" class="card border-0 shadow-lg p-4 mb-5 stay-search">
+    <div class="d-flex justify-content-between align-items-center mb-3"><h2 class="h5 mb-0">{% trans "Rechercher un hébergement" %}</h2><span class="stay-chip"><i class="fa fa-shield-alt"></i> {% trans "Recherche sécurisée" %}</span></div>
+    <div class="row g-3">
+      <div class="col-12 col-lg-5"><label class="form-label">{% trans "Destination" %}</label><input class="form-control" name="destination" value="{{ destination }}" placeholder="Grenoble, Chamrousse..."></div>
+      <div class="col-6 col-lg-2"><label class="form-label">{% trans "Arrivée" %}</label><input class="form-control" type="date" name="checkin" value="{{ checkin }}"></div>
+      <div class="col-6 col-lg-2"><label class="form-label">{% trans "Départ" %}</label><input class="form-control" type="date" name="checkout" value="{{ checkout }}"></div>
+      <div class="col-6 col-lg-1"><label class="form-label">{% trans "Hôtes" %}</label><input class="form-control" type="number" name="guests" min="1" max="16" value="{{ guests }}"></div>
+      <div class="col-6 col-lg-2"><label class="form-label">{% trans "Logement" %}</label><select class="form-select" name="lodging_type"><option value="">{% trans "Tous" %}</option><option value="hotel" {% if lodging_type == 'hotel' %}selected{% endif %}>{% trans "Hôtel" %}</option><option value="apartment" {% if lodging_type == 'apartment' %}selected{% endif %}>{% trans "Appartement" %}</option><option value="house" {% if lodging_type == 'house' %}selected{% endif %}>{% trans "Maison / chalet" %}</option></select></div>
+      <div class="col-12"><span class="form-label d-block">{% trans "Préférences" %}</span><label class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="amenities" value="parking"> {% trans "Parking" %}</label><label class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="amenities" value="kitchen"> {% trans "Cuisine" %}</label><label class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="amenities" value="pet-friendly"> {% trans "Animaux acceptés" %}</label></div>
+      <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2"><small class="text-muted"><i class="fa fa-info-circle"></i> {% trans "Les disponibilités et prix sont vérifiés sur la plateforme choisie." %}</small><button class="btn btn-primary px-4" type="submit"><i class="fa fa-search"></i> {% trans "Rechercher des hébergements" %}</button></div>
+    </div>
+  </form>
+  <div class="d-flex justify-content-between align-items-end mb-3"><div><h2 class="h4 mb-1">{% trans "Comparer les plateformes" %}</h2><p class="text-muted mb-0">{% trans "Votre recherche est conservée dans les liens ci-dessous." %}</p></div><span class="stay-trust"><i class="fa fa-external-link-alt"></i> {% trans "Ouverture sécurisée" %}</span></div>
+  <div class="row g-4 mb-5">
+    <div class="col-12 col-md-6"><article class="stay-provider"><div class="d-flex align-items-center gap-3 mb-3"><span class="stay-provider-logo">B</span><div><h2 class="h5 mb-1">Booking.com</h2><small class="text-muted">{% trans "Hôtels et locations" %}</small></div></div><p>{% trans "Comparez hôtels, appartements, chalets et maisons avec disponibilité selon vos dates." %}</p><a class="btn btn-primary w-100" href="{{ booking_url }}" target="_blank" rel="noopener sponsored">{% trans "Voir les disponibilités" %} <i class="fa fa-arrow-right"></i></a></article></div>
+    <div class="col-12 col-md-6"><article class="stay-provider airbnb"><div class="d-flex align-items-center gap-3 mb-3"><span class="stay-provider-logo">A</span><div><h2 class="h5 mb-1">Airbnb</h2><small class="text-muted">{% trans "Maisons et logements uniques" %}</small></div></div><p>{% trans "Trouvez des appartements, maisons, chalets et logements adaptés aux séjours en montagne." %}</p><a class="btn btn-outline-primary w-100" href="{{ airbnb_url }}" target="_blank" rel="noopener sponsored">{% trans "Voir les logements" %} <i class="fa fa-arrow-right"></i></a></article></div>
+  </div>
+  <h2 class="h4 mb-3">{% trans "Comment ça marche" %}</h2><div class="row g-3 mb-4"><div class="col-12 col-md-4"><div class="stay-step"><i class="fa fa-sliders-h"></i><h3 class="h6 mt-3">{% trans "1. Définissez vos critères" %}</h3><p class="small text-muted mb-0">{% trans "Choisissez destination, dates, voyageurs et type de logement." %}</p></div></div><div class="col-12 col-md-4"><div class="stay-step"><i class="fa fa-balance-scale"></i><h3 class="h6 mt-3">{% trans "2. Comparez" %}</h3><p class="small text-muted mb-0">{% trans "Ouvrez les résultats auprès de la plateforme qui vous convient." %}</p></div></div><div class="col-12 col-md-4"><div class="stay-step"><i class="fa fa-check-circle"></i><h3 class="h6 mt-3">{% trans "3. Réservez" %}</h3><p class="small text-muted mb-0">{% trans "Vérifiez toujours les conditions, frais et règles d’annulation." %}</p></div></div></div>
+  <p class="stay-trust mt-4"><i class="fa fa-info-circle"></i> {% trans "Les résultats et prix sont fournis par les plateformes partenaires. GrenobleSki pourra recevoir une commission lorsque les liens affiliés seront activés." %}</p>
+</div></main>
+{% endblock %}

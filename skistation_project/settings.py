@@ -204,6 +204,10 @@ LANGUAGE_CODE = 'fr'
 LANGUAGES = [
     ('fr', 'Français'),
     ('en', 'English'),
+    ('pt', 'Português'),
+    ('it', 'Italiano'),
+    ('es', 'Español'),
+    ('de', 'Deutsch'),
 ]
 
 LOCALE_PATHS = [

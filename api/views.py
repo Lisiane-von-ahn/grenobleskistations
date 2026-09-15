@@ -148,6 +148,15 @@ def _send_platform_message(sender, recipient, subject, body):
     )
 
 
+def _notify_carpool_watchers(post, author):
+    candidates = User.objects.filter(is_active=True, profile__seeking_carpool=True).exclude(id=author.id)
+    if post.ski_station_id:
+        candidates = candidates.filter(Q(profile__favorite_stations__id=post.ski_station_id) | Q(profile__favorite_stations__isnull=True))
+    for recipient in candidates.distinct()[:100]:
+        mode_label = 'offer' if post.carpool_mode == SkiPartnerPost.CARPOOL_OFFER else 'request'
+        _send_platform_message(author, recipient, 'New carpool alert', f"A new carpool {mode_label} was posted: \"{post.title}\".")
+
+
 def _ensure_bidirectional_friendship(user_a, user_b):
     UserFriend.objects.get_or_create(user=user_a, friend=user_b)
     UserFriend.objects.get_or_create(user=user_b, friend=user_a)
@@ -710,7 +719,9 @@ class SkiPartnerPostViewSet(viewsets.ModelViewSet):
         save_kwargs = {'user': self.request.user}
         if is_carpool and not serializer.validated_data.get('departure_city'):
             save_kwargs['departure_city'] = serializer.validated_data.get('city', '')
-        serializer.save(**save_kwargs)
+        post = serializer.save(**save_kwargs)
+        if is_carpool:
+            _notify_carpool_watchers(post, self.request.user)
 
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated], url_path='my-reservations')
     def my_reservations(self, request):

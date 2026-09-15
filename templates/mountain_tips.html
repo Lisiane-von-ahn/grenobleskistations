@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block title %}{% if LANGUAGE_CODE == 'en' %}Mountain tips{% elif LANGUAGE_CODE == 'pt' %}Dicas de montanha{% elif LANGUAGE_CODE == 'it' %}Consigli di montagna{% elif LANGUAGE_CODE == 'es' %}Consejos de montaña{% elif LANGUAGE_CODE == 'de' %}Bergtipps{% else %}Conseils montagne{% endif %}{% endblock %}
+{% block content %}
+<main class="container py-5">
+  <div class="section-heading mb-4"><h1>{% if LANGUAGE_CODE == 'en' %}Mountain tips{% elif LANGUAGE_CODE == 'pt' %}Dicas de montanha{% elif LANGUAGE_CODE == 'it' %}Consigli di montagna{% elif LANGUAGE_CODE == 'es' %}Consejos de montaña{% elif LANGUAGE_CODE == 'de' %}Bergtipps{% else %}Conseils montagne{% endif %}</h1><p>{% if LANGUAGE_CODE == 'en' %}A short checklist for safer, more enjoyable days in the mountains.{% elif LANGUAGE_CODE == 'pt' %}Uma lista curta para aproveitar a montanha com mais segurança.{% elif LANGUAGE_CODE == 'it' %}Una breve checklist per vivere la montagna in modo più sicuro e piacevole.{% elif LANGUAGE_CODE == 'es' %}Una lista breve para disfrutar de la montaña con más seguridad.{% elif LANGUAGE_CODE == 'de' %}Eine kurze Checkliste für sichere und schöne Tage in den Bergen.{% else %}Une checklist simple pour profiter de la montagne en sécurité.{% endif %}</p></div>
+  <div class="row g-4">
+    {% for title, text in tips %}<div class="col-12 col-md-6"><article class="card h-100 shadow-sm border-0 p-4"><h2 class="h5">{{ title }}</h2><p class="mb-0">{{ text }}</p></article></div>{% endfor %}
+  </div>
+</main>
+{% endblock %}

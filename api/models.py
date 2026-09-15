@@ -292,6 +292,12 @@ class MarketplaceSavedFilter(models.Model):
 
 
 class SkiPartnerPost(models.Model):
+    CARPOOL_OFFER = 'offer'
+    CARPOOL_REQUEST = 'request'
+    CARPOOL_MODE_CHOICES = [
+        (CARPOOL_OFFER, 'Offer a ride'),
+        (CARPOOL_REQUEST, 'Request a ride'),
+    ]
     LEVEL_BEGINNER = 'beginner'
     LEVEL_INTERMEDIATE = 'intermediate'
     LEVEL_ADVANCED = 'advanced'
@@ -310,6 +316,7 @@ class SkiPartnerPost(models.Model):
     skill_level = models.CharField(max_length=16, choices=LEVEL_CHOICES, default=LEVEL_INTERMEDIATE)
     preferred_date = models.DateField(null=True, blank=True)
     is_carpool = models.BooleanField(default=False)
+    carpool_mode = models.CharField(max_length=8, choices=CARPOOL_MODE_CHOICES, default=CARPOOL_OFFER)
     departure_city = models.CharField(max_length=80, blank=True)
     departure_datetime = models.DateTimeField(null=True, blank=True)
     total_seats = models.PositiveSmallIntegerField(default=1)

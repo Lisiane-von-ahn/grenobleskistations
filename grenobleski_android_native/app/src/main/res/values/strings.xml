@@ -257,6 +257,9 @@
     <string name="adventure_partners">Ski outings</string>
     <string name="walk_to_place">🚶 Walk to this place</string>
     <string name="hiking_trails_title">Hiking trails &amp; maps</string>
+    <string name="open_trail_maps">Trail maps</string>
+    <string name="open_mountain_tips">Mountain tips</string>
+    <string name="open_accommodations">Accommodation</string>
     <string name="hiking_trails_subtitle">Explore Grenoble, Bastille and nearby mountains. Check weather and official conditions before leaving.</string>
     <string name="hiking_open_map">Open map</string>
     <string name="hiking_open_osm">Open OpenStreetMap</string>
@@ -299,6 +302,10 @@
     <string name="discovery_subtitle">A museum, a gentle stroll or a mountain view — find your next outing.</string>
     <string name="discovery_cameras">Mountain webcams</string>
     <string name="discovery_conditions">Skiing today?</string>
+    <string name="sort_recommended">Best today</string>
+    <string name="sort_distance">Nearest</string>
+    <string name="conditions_ready_today">Worth checking today</string>
+    <string name="conditions_update_unknown">Update time unavailable — verify before leaving</string>
     <string name="discovery_no_conditions">Station conditions are not available yet. Pull up refresh to try again.</string>
     <string name="discovery_year_round">Grenoble, all year round</string>
     <string name="discovery_no_places">Walking and cultural ideas are currently unavailable. Refresh to try again.</string>

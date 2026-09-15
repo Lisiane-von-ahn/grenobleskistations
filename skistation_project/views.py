@@ -128,6 +128,26 @@ def _send_platform_message(sender, recipient, subject, body):
     )
 
 
+def _notify_carpool_watchers(post, author):
+    """Notify users who opted into carpool alerts, without exposing contact details."""
+    candidates = User.objects.filter(
+        is_active=True,
+        profile__seeking_carpool=True,
+    ).exclude(id=author.id)
+    if post.ski_station_id:
+        candidates = candidates.filter(
+            Q(profile__favorite_stations__id=post.ski_station_id) | Q(profile__favorite_stations__isnull=True)
+        )
+    for recipient in candidates.distinct()[:100]:
+        mode_label = 'propose' if post.carpool_mode == SkiPartnerPost.CARPOOL_OFFER else 'recherche'
+        _send_platform_message(
+            sender=author,
+            recipient=recipient,
+            subject='Nouvelle alerte covoiturage',
+            body=f"Une annonce {mode_label} un covoiturage vient d'être publiée : « {post.title} ». Consultez la rubrique Covoiturage pour répondre.",
+        )
+
+
 def _build_ski_story_placeholder(caption, station_name):
     img = Image.new('RGB', (900, 560), (18, 61, 115))
     draw = ImageDraw.Draw(img)
@@ -1627,6 +1647,7 @@ def ski_partner_publish(request):
         departure_date = request.POST.get('departure_date', '').strip()
         departure_time = request.POST.get('departure_time', '').strip()
         vehicle_image_url = request.POST.get('vehicle_image_url', '').strip()
+        carpool_mode = request.POST.get('carpool_mode', SkiPartnerPost.CARPOOL_OFFER).strip()
         total_seats_raw = request.POST.get('total_seats', '1').strip()
 
         try:
@@ -1635,6 +1656,8 @@ def ski_partner_publish(request):
             total_seats = 1
 
         valid_levels = {choice[0] for choice in SkiPartnerPost.LEVEL_CHOICES}
+        if carpool_mode not in {choice[0] for choice in SkiPartnerPost.CARPOOL_MODE_CHOICES}:
+            carpool_mode = SkiPartnerPost.CARPOOL_OFFER
         title = _mask_sensitive_contact_data(title[:120])
         message_body = _mask_sensitive_contact_data(message_body)
 
@@ -1693,11 +1716,14 @@ def ski_partner_publish(request):
             skill_level=skill_level,
             preferred_date=preferred_date,
             is_carpool=is_carpool_mode,
+            carpool_mode=carpool_mode if is_carpool_mode else SkiPartnerPost.CARPOOL_OFFER,
             departure_city=(departure_city or city_post)[:80] if is_carpool_mode else '',
             departure_datetime=departure_dt,
             total_seats=total_seats if is_carpool_mode else 1,
             vehicle_image_url=vehicle_image_url if is_carpool_mode else '',
         )
+        if is_carpool_mode:
+            _notify_carpool_watchers(post, request.user)
         messages.success(request, 'Sortie partenaire publiee.')
         return redirect('covoiturage' if is_carpool_mode else 'ski_partners')
 
@@ -1710,6 +1736,53 @@ def ski_partner_publish(request):
             'is_carpool_mode': is_carpool_mode,
         },
     )
+
+
+def trail_maps(request):
+    return render(request, 'trail_maps.html', {'trail_destinations': [
+        ('Fort de la Bastille', 'Fort de la Bastille, Grenoble', 'easy'),
+        ('Mont Jalla', 'Mont Jalla, Grenoble', 'medium'),
+        ('Quais de l’Isère', 'Quai Stéphane Jay, Grenoble', 'easy'),
+        ('Le Moucherotte', 'Le Moucherotte, France', 'hard'),
+    ]})
+
+
+def mountain_tips(request):
+    language = getattr(request, 'LANGUAGE_CODE', 'fr')
+    tips = {
+        'fr': [('Avant de partir', 'Consultez la météo, la neige, le vent et les alertes officielles.'), ('Équipement', 'Prenez eau, téléphone chargé, vêtements adaptés et une carte hors connexion.'), ('Sur le terrain', 'Restez sur l’itinéraire choisi, prévenez un proche et renoncez si les conditions changent.')],
+        'en': [('Before leaving', 'Check weather, snow, wind and official alerts.'), ('Equipment', 'Carry water, a charged phone, suitable layers and an offline map.'), ('On the trail', 'Stay on your route, tell someone your plan and turn back if conditions change.')],
+        'pt': [('Antes de sair', 'Consulte o tempo, a neve, o vento e os alertas oficiais.'), ('Equipamento', 'Leve água, telefone carregado, roupa adequada e mapa offline.'), ('No percurso', 'Siga a rota, avise alguém e volte se as condições mudarem.')],
+        'it': [('Prima di partire', 'Controlla meteo, neve, vento e allerte ufficiali.'), ('Equipaggiamento', 'Porta acqua, telefono carico, abbigliamento adatto e una mappa offline.'), ('Sul sentiero', 'Segui il percorso, informa qualcuno e torna indietro se le condizioni cambiano.')],
+        'es': [('Antes de salir', 'Consulta el tiempo, la nieve, el viento y las alertas oficiales.'), ('Equipo', 'Lleva agua, teléfono cargado, ropa adecuada y un mapa sin conexión.'), ('En el sendero', 'Sigue la ruta, avisa a alguien y regresa si cambian las condiciones.')],
+        'de': [('Vor dem Aufbruch', 'Prüfe Wetter, Schnee, Wind und offizielle Warnungen.'), ('Ausrüstung', 'Nimm Wasser, ein geladenes Telefon, passende Kleidung und eine Offline-Karte mit.'), ('Unterwegs', 'Bleib auf deiner Route, informiere jemanden und kehre bei Wetterwechsel um.')],
+    }.get(language, [])
+    return render(request, 'mountain_tips.html', {'tips': tips})
+
+
+def accommodations(request):
+    destination = (request.GET.get('destination') or 'Grenoble').strip()[:120]
+    checkin = (request.GET.get('checkin') or '').strip()[:10]
+    checkout = (request.GET.get('checkout') or '').strip()[:10]
+    guests = max(1, min(int(request.GET.get('guests') or 2), 16)) if (request.GET.get('guests') or '2').isdigit() else 2
+    rooms = max(1, min(int(request.GET.get('rooms') or 1), 8)) if (request.GET.get('rooms') or '1').isdigit() else 1
+    lodging_type = (request.GET.get('lodging_type') or '').strip()[:30]
+    amenities = request.GET.getlist('amenities')
+    from urllib.parse import urlencode, quote
+    booking_params = {'ss': destination, 'group_adults': guests, 'no_rooms': rooms}
+    if checkin:
+        booking_params['checkin'] = checkin
+    if checkout:
+        booking_params['checkout'] = checkout
+    if lodging_type:
+        booking_params['nflt'] = f'type={lodging_type}'
+    booking_url = 'https://www.booking.com/searchresults.html?' + urlencode(booking_params)
+    airbnb_url = f"https://www.airbnb.com/s/{quote(destination)}/homes?{urlencode({'adults': guests, 'checkin': checkin, 'checkout': checkout})}"
+    return render(request, 'accommodations.html', {
+        'destination': destination, 'checkin': checkin, 'checkout': checkout,
+        'guests': guests, 'rooms': rooms, 'lodging_type': lodging_type,
+        'amenities': amenities, 'booking_url': booking_url, 'airbnb_url': airbnb_url,
+    })
 
 
 def ski_stories(request):

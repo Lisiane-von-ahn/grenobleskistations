@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{% if LANGUAGE_CODE == 'en' %}Trail maps{% elif LANGUAGE_CODE == 'pt' %}Mapas de trilhas{% elif LANGUAGE_CODE == 'it' %}Mappe dei sentieri{% elif LANGUAGE_CODE == 'es' %}Mapas de senderos{% elif LANGUAGE_CODE == 'de' %}Wegkarten{% else %}Cartes des sentiers{% endif %}{% endblock %}
+{% block content %}
+<main class="container py-5">
+  <div class="section-heading mb-4">
+    <h1>{% if LANGUAGE_CODE == 'en' %}Trail maps around Grenoble{% elif LANGUAGE_CODE == 'pt' %}Mapas de trilhas perto de Grenoble{% elif LANGUAGE_CODE == 'it' %}Mappe dei sentieri intorno a Grenoble{% elif LANGUAGE_CODE == 'es' %}Mapas de senderos cerca de Grenoble{% elif LANGUAGE_CODE == 'de' %}Wegkarten rund um Grenoble{% else %}Cartes des sentiers autour de Grenoble{% endif %}</h1>
+    <p>{% if LANGUAGE_CODE == 'en' %}Plan your route, check the weather and verify official conditions before leaving.{% elif LANGUAGE_CODE == 'pt' %}Planeje a rota, confira o tempo e verifique as condições oficiais antes de sair.{% elif LANGUAGE_CODE == 'it' %}Pianifica il percorso, controlla il meteo e verifica le condizioni ufficiali prima di partire.{% elif LANGUAGE_CODE == 'es' %}Planifica la ruta, consulta el tiempo y verifica las condiciones oficiales antes de salir.{% elif LANGUAGE_CODE == 'de' %}Plane deine Route, prüfe das Wetter und die offiziellen Bedingungen vor dem Aufbruch.{% else %}Planifiez votre itinéraire, vérifiez la météo et les conditions officielles avant de partir.{% endif %}</p>
+  </div>
+  <div class="row g-4">
+    {% for name, destination, level in trail_destinations %}
+    <div class="col-12 col-md-6"><article class="card h-100 shadow-sm border-0 p-4"><h2 class="h5">{{ name }}</h2><p class="text-muted">{% if LANGUAGE_CODE == 'en' %}Difficulty: {{ level }}{% elif LANGUAGE_CODE == 'pt' %}Dificuldade: {{ level }}{% elif LANGUAGE_CODE == 'it' %}Difficoltà: {{ level }}{% elif LANGUAGE_CODE == 'es' %}Dificultad: {{ level }}{% elif LANGUAGE_CODE == 'de' %}Schwierigkeit: {{ level }}{% else %}Difficulté : {{ level }}{% endif %}</p><div class="d-flex gap-2 flex-wrap"><a class="btn btn-primary" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query={{ destination|urlencode }}">Google Maps</a><a class="btn btn-outline-secondary" target="_blank" rel="noopener" href="https://www.openstreetmap.org/search?query={{ destination|urlencode }}">OpenStreetMap</a></div></article></div>
+    {% endfor %}
+  </div>
+</main>
+{% endblock %}
