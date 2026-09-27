@@ -1484,6 +1484,31 @@ class AuthRepository(
         Result.success(Unit)
     }
 
+    suspend fun publishStory(
+        token: String,
+        caption: String,
+        imageBase64: String,
+        stationId: Int?,
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        val payload = mutableMapOf<String, Any>("image" to imageBase64)
+        if (caption.isNotBlank()) payload["caption"] = caption
+        if (stationId != null && stationId > 0) payload["ski_station"] = stationId
+        val response = runCatching {
+            service.postResource(
+                url = "$normalizedBaseUrl/api/skistories/",
+                authHeader = "Token $token",
+                payload = payload,
+            )
+        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to publish story."))
+
+        if (!response.isSuccessful) {
+            return@withContext Result.failure(
+                IllegalStateException(extractApiErrorMessage(response.errorBody()?.string().orEmpty(), "Unable to publish story."))
+            )
+        }
+        Result.success(Unit)
+    }
+
     suspend fun rateSeller(
         token: String,
         listingId: Int,

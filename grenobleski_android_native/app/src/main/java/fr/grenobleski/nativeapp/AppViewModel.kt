@@ -93,6 +93,10 @@ data class AppUiState(
     val publishPartnerLevel: String = "intermediate",
     val publishPartnerDate: String = "",
     val isPublishingPartner: Boolean = false,
+    val publishStoryCaption: String = "",
+    val publishStoryImageBase64: String = "",
+    val publishStoryStationId: Int? = null,
+    val isPublishingStory: Boolean = false,
     val profileInfo: ProfileInfo? = null,
     val profileEditFirstName: String = "",
     val profileEditLastName: String = "",
@@ -116,6 +120,7 @@ class AppViewModel(
         private const val XP_SEND_MESSAGE = 5
         private const val XP_PUBLISH_MARKET = 20
         private const val XP_PUBLISH_PARTNER = 20
+        private const val XP_PUBLISH_STORY = 15
         private const val XP_RATE_SELLER = 10
         private const val XP_RATE_STATION = 10
     }
@@ -512,11 +517,14 @@ class AppViewModel(
                     val stations = repository.fetchStationItems(session.token)
                     val places = repository.fetchGrenoblePlaces(session.token)
                     val culture = repository.fetchSkiNews(session.token, category = "culture")
+                    val skiNews = repository.fetchSkiNews(session.token)
                     state = state.copy(
                         stationItems = stations.getOrDefault(state.stationItems),
                         grenoblePlaces = places.getOrDefault(state.grenoblePlaces),
                         cultureNewsItems = culture.getOrDefault(state.cultureNewsItems),
-                        errorMessage = stations.exceptionOrNull()?.message ?: places.exceptionOrNull()?.message ?: culture.exceptionOrNull()?.message,
+                        skiNewsItems = skiNews.getOrDefault(state.skiNewsItems),
+                        highlightedSkiNewsItems = skiNews.getOrDefault(state.skiNewsItems).filter { it.highlighted }.take(5),
+                        errorMessage = stations.exceptionOrNull()?.message ?: places.exceptionOrNull()?.message ?: culture.exceptionOrNull()?.message ?: skiNews.exceptionOrNull()?.message,
                     )
                 }
 
@@ -597,6 +605,12 @@ class AppViewModel(
                     } else {
                         state = state.copy(errorMessage = result.exceptionOrNull()?.message ?: "Unable to load stations")
                     }
+                }
+
+                NativeTab.CAMERAS -> {
+                    val result = repository.fetchStationItems(session.token)
+                    if (result.isSuccess) state = state.copy(stationItems = result.getOrNull()!!)
+                    else state = state.copy(errorMessage = result.exceptionOrNull()?.message ?: "Unable to load webcams")
                 }
 
                 NativeTab.BUS_LINES -> {
@@ -1085,6 +1099,18 @@ class AppViewModel(
         state = state.copy(publishPartnerDate = value)
     }
 
+    fun updatePublishStoryCaption(value: String) {
+        state = state.copy(publishStoryCaption = value)
+    }
+
+    fun updatePublishStoryImageBase64(value: String) {
+        state = state.copy(publishStoryImageBase64 = value)
+    }
+
+    fun updatePublishStoryStationId(value: Int?) {
+        state = state.copy(publishStoryStationId = value)
+    }
+
     fun publishArticle() {
         val session = state.session ?: return
         val title = state.publishTitle.trim()
@@ -1177,6 +1203,42 @@ class AppViewModel(
             } else {
                 val messageText = result.exceptionOrNull()?.message ?: "Unable to publish partner post"
                 state = state.copy(isPublishingPartner = false, errorMessage = messageText)
+            }
+        }
+    }
+
+    fun publishStory() {
+        val session = state.session ?: return
+        val image = state.publishStoryImageBase64
+        if (image.isBlank()) {
+            state = state.copy(errorMessage = "Choose a photo for your story.")
+            return
+        }
+
+        viewModelScope.launch {
+            state = state.copy(isPublishingStory = true, errorMessage = null)
+            val result = repository.publishStory(
+                token = session.token,
+                caption = state.publishStoryCaption.trim(),
+                imageBase64 = image,
+                stationId = state.publishStoryStationId,
+            )
+            if (result.isSuccess) {
+                state = state.copy(
+                    isPublishingStory = false,
+                    publishStoryCaption = "",
+                    publishStoryImageBase64 = "",
+                    publishStoryStationId = null,
+                    selectedTab = NativeTab.STORIES,
+                    statusMessage = "Story published for the mountain community.",
+                )
+                refreshCurrentTab()
+                awardXp(XP_PUBLISH_STORY, "Story published")
+            } else {
+                state = state.copy(
+                    isPublishingStory = false,
+                    errorMessage = result.exceptionOrNull()?.message ?: "Unable to publish story.",
+                )
             }
         }
     }
@@ -1321,6 +1383,7 @@ class AppViewModel(
             NativeTab.STORIES -> state.storyItems.isNotEmpty()
             NativeTab.COMMUNITY -> state.storyItems.isNotEmpty() || state.skiNewsItems.isNotEmpty()
             NativeTab.STATIONS -> state.stationItems.isNotEmpty()
+            NativeTab.CAMERAS -> state.stationItems.any { it.cameras.isNotEmpty() }
             NativeTab.BUS_LINES -> state.busLineItems.isNotEmpty()
             NativeTab.SERVICES -> state.serviceStoreItems.isNotEmpty()
             NativeTab.MARKETPLACE -> state.marketplaceItems.isNotEmpty()

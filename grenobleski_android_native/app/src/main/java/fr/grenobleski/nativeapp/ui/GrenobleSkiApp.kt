@@ -62,6 +62,8 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.Terrain
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -84,12 +86,14 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -117,6 +121,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.ads.AdRequest
@@ -176,16 +181,18 @@ private val GOOGLE_LOGIN_CANDIDATES = listOf(
 
 private enum class BottomNavAction {
     HOME,
-    MARKETPLACE,
-    MESSAGES,
-    MORE,
+    STATIONS,
+    WEBCAMS,
+    NEWS,
+    MENU,
 }
 
 private val bottomNavItems = listOf(
     BottomNavItem(BottomNavAction.HOME, R.string.nav_home, Icons.Filled.Home),
-    BottomNavItem(BottomNavAction.MARKETPLACE, R.string.nav_market_short, Icons.Filled.Storefront),
-    BottomNavItem(BottomNavAction.MESSAGES, R.string.nav_chat_short, Icons.AutoMirrored.Filled.Chat),
-    BottomNavItem(BottomNavAction.MORE, R.string.nav_more, Icons.Filled.MoreHoriz),
+    BottomNavItem(BottomNavAction.STATIONS, R.string.stations, Icons.Filled.Terrain),
+    BottomNavItem(BottomNavAction.WEBCAMS, R.string.nav_webcams, Icons.Filled.CameraAlt),
+    BottomNavItem(BottomNavAction.NEWS, R.string.nav_news_short, Icons.Filled.Article),
+    BottomNavItem(BottomNavAction.MENU, R.string.nav_menu, Icons.Filled.MoreHoriz),
 )
 
 private val RHONE_ALPES_CITIES = listOf(
@@ -386,6 +393,10 @@ fun GrenobleSkiApp(
             onUpdatePartnerLevel = viewModel::updatePublishPartnerLevel,
             onUpdatePartnerDate = viewModel::updatePublishPartnerDate,
             onPublishPartnerPost = viewModel::publishPartnerPost,
+            onUpdateStoryCaption = viewModel::updatePublishStoryCaption,
+            onUpdateStoryImage = viewModel::updatePublishStoryImageBase64,
+            onUpdateStoryStation = viewModel::updatePublishStoryStationId,
+            onPublishStory = viewModel::publishStory,
             onRequestCarpoolReservation = viewModel::requestCarpoolReservation,
             onCancelCarpoolReservation = viewModel::cancelCarpoolReservation,
             onApproveCarpoolReservation = viewModel::approveCarpoolReservation,
@@ -459,16 +470,22 @@ private fun LoginScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.background,
-                        MaterialTheme.colorScheme.surface,
-                    )
-                )
-            ),
+            .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center,
     ) {
+        Image(
+            painter = painterResource(id = R.drawable.grenoble_alps_hero),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop,
+        )
+        Box(
+            modifier = Modifier.fillMaxSize().background(
+                Brush.verticalGradient(
+                    listOf(Color(0x8A062F5F), Color(0xDDF5FAFF), Color(0xFFF5FAFF)),
+                )
+            )
+        )
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -481,8 +498,8 @@ private fun LoginScreen(
                     .fillMaxWidth()
                     .widthIn(max = 460.dp),
                 shape = RoundedCornerShape(22.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.96f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 10.dp),
             ) {
                 Column(
                     modifier = Modifier.padding(24.dp),
@@ -493,8 +510,9 @@ private fun LoginScreen(
                         contentDescription = stringResource(id = R.string.app_name),
                         modifier = Modifier
                             .align(Alignment.CenterHorizontally)
-                            .width(84.dp)
-                            .height(84.dp),
+                            .width(142.dp)
+                            .height(104.dp),
+                        contentScale = ContentScale.Fit,
                     )
 
                     Text(
@@ -709,6 +727,10 @@ private fun NativeShell(
     onUpdatePartnerLevel: (String) -> Unit,
     onUpdatePartnerDate: (String) -> Unit,
     onPublishPartnerPost: () -> Unit,
+    onUpdateStoryCaption: (String) -> Unit,
+    onUpdateStoryImage: (String) -> Unit,
+    onUpdateStoryStation: (Int?) -> Unit,
+    onPublishStory: () -> Unit,
     onRequestCarpoolReservation: (Int, Int) -> Unit,
     onCancelCarpoolReservation: (Int) -> Unit,
     onApproveCarpoolReservation: (Int, Int) -> Unit,
@@ -731,9 +753,13 @@ private fun NativeShell(
     var moreMenuOpen by remember { mutableStateOf(false) }
     var publishDialogOpen by remember { mutableStateOf(false) }
     var publishPartnerDialogOpen by remember { mutableStateOf(false) }
+    var publishStoryDialogOpen by remember { mutableStateOf(false) }
     val publishPhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
         val encoded = uris.mapNotNull { uri -> uriToBase64(localContext, uri) }
         onAppendPublishImages(encoded)
+    }
+    val storyPhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        onUpdateStoryImage(uriToBase64(localContext, uri).orEmpty())
     }
     val currentUserId = state.profileInfo?.userId?.takeIf { it > 0 } ?: state.session?.userId ?: 0
     val unreadMessages = state.messageItems.count { !it.isRead && it.recipientId == currentUserId }
@@ -757,6 +783,12 @@ private fun NativeShell(
         }
     }
 
+    LaunchedEffect(state.isPublishingStory, state.publishStoryImageBase64, state.selectedTab) {
+        if (publishStoryDialogOpen && !state.isPublishingStory && state.publishStoryImageBase64.isBlank() && state.selectedTab == NativeTab.STORIES) {
+            publishStoryDialogOpen = false
+        }
+    }
+
     LaunchedEffect(
         state.isPublishingPartner,
         state.publishPartnerTitle,
@@ -777,9 +809,15 @@ private fun NativeShell(
     }
 
     Scaffold(
+        containerColor = Color(0xFFF5FAFF),
         topBar = {
-            TopAppBar(
-                title = { Text(tabTitle(state.selectedTab)) },
+            if (state.selectedTab != NativeTab.HOME) TopAppBar(
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Icon(Icons.Filled.Terrain, contentDescription = null, tint = Color(0xFF9EDCFF))
+                        Text(tabTitle(state.selectedTab), fontWeight = FontWeight.Bold)
+                    }
+                },
                 actions = {
                     if (state.isTabLoading) {
                         CircularProgressIndicator(
@@ -797,26 +835,49 @@ private fun NativeShell(
                     }
                     IconButton(onClick = { onSelectTab(NativeTab.PROFILE) }) {
                         if (state.profileInfo != null) {
-                            UserAvatar(
-                                displayName = state.profileInfo.displayName,
-                                photoBase64 = state.profileInfo.profilePictureBase64,
-                                photoUrl = state.profileInfo.googleProfilePictureUrl,
-                                size = 34.dp,
-                            )
+                            Box(
+                                modifier = Modifier.size(38.dp).background(Color.White, RoundedCornerShape(50)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                UserAvatar(
+                                    displayName = state.profileInfo.displayName,
+                                    photoBase64 = state.profileInfo.profilePictureBase64,
+                                    photoUrl = state.profileInfo.googleProfilePictureUrl,
+                                    size = 34.dp,
+                                )
+                            }
                         } else {
                             Icon(Icons.Filled.Person, contentDescription = stringResource(id = R.string.profile))
                         }
                     }
                 },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xFF063A70),
+                    titleContentColor = Color.White,
+                    actionIconContentColor = Color.White,
+                ),
             )
         },
         floatingActionButton = {
             when (state.selectedTab) {
+                NativeTab.STORIES -> {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = Alignment.End) {
+                        ExtendedFloatingActionButton(
+                            onClick = { publishStoryDialogOpen = true },
+                            icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                            text = { Text(stringResource(id = R.string.fab_add_story)) },
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                            shape = RoundedCornerShape(18.dp),
+                        )
+                    }
+                }
                 NativeTab.MARKETPLACE -> {
                     ExtendedFloatingActionButton(
                         onClick = { publishDialogOpen = true },
                         icon = { Icon(Icons.Filled.Add, contentDescription = stringResource(id = R.string.publish_article)) },
                         text = { Text(stringResource(id = R.string.publish_article)) },
+                        shape = RoundedCornerShape(18.dp),
                     )
                 }
                 NativeTab.PARTNERS -> {
@@ -824,6 +885,7 @@ private fun NativeShell(
                         onClick = { publishPartnerDialogOpen = true },
                         icon = { Icon(Icons.Filled.Add, contentDescription = stringResource(id = R.string.publish_partner_post)) },
                         text = { Text(stringResource(id = R.string.publish_partner_post)) },
+                        shape = RoundedCornerShape(18.dp),
                     )
                 }
                 else -> {
@@ -837,35 +899,41 @@ private fun NativeShell(
                     MobileBannerAd(adUnitId = adBannerUnitId)
                 }
 
-                NavigationBar {
+                NavigationBar(
+                    containerColor = Color.White,
+                    tonalElevation = 10.dp,
+                ) {
                     bottomNavItems.forEach { item ->
                         val selected = when (item.action) {
                             BottomNavAction.HOME -> state.selectedTab == NativeTab.HOME
-                            BottomNavAction.MARKETPLACE -> state.selectedTab == NativeTab.MARKETPLACE
-                            BottomNavAction.MESSAGES -> state.selectedTab == NativeTab.MESSAGES
-                            BottomNavAction.MORE -> false
+                            BottomNavAction.STATIONS -> state.selectedTab == NativeTab.STATIONS
+                            BottomNavAction.WEBCAMS -> state.selectedTab == NativeTab.CAMERAS
+                            BottomNavAction.NEWS -> state.selectedTab == NativeTab.NEWS
+                            BottomNavAction.MENU -> moreMenuOpen
                         }
                         NavigationBarItem(
                             selected = selected,
-                            alwaysShowLabel = false,
+                            alwaysShowLabel = true,
                             onClick = {
                                 when (item.action) {
                                     BottomNavAction.HOME -> onSelectTab(NativeTab.HOME)
-                                    BottomNavAction.MARKETPLACE -> onSelectTab(NativeTab.MARKETPLACE)
-                                    BottomNavAction.MESSAGES -> onSelectTab(NativeTab.MESSAGES)
-                                    BottomNavAction.MORE -> moreMenuOpen = true
+                                    BottomNavAction.STATIONS -> onSelectTab(NativeTab.STATIONS)
+                                    BottomNavAction.WEBCAMS -> onSelectTab(NativeTab.CAMERAS)
+                                    BottomNavAction.NEWS -> onSelectTab(NativeTab.NEWS)
+                                    BottomNavAction.MENU -> moreMenuOpen = true
                                 }
                             },
                             icon = {
-                                if (item.action == BottomNavAction.MESSAGES && unreadMessages > 0) {
-                                    BadgedBox(badge = { Badge { Text(unreadMessages.toString()) } }) {
-                                        Icon(imageVector = item.icon, contentDescription = stringResource(id = item.labelRes))
-                                    }
-                                } else {
-                                    Icon(imageVector = item.icon, contentDescription = stringResource(id = item.labelRes))
-                                }
+                                Icon(imageVector = item.icon, contentDescription = stringResource(id = item.labelRes))
                             },
                             label = { Text(stringResource(id = item.labelRes)) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = Color(0xFF0B6FE8),
+                                selectedTextColor = Color(0xFF0B6FE8),
+                                indicatorColor = Color(0xFFE2F0FF),
+                                unselectedIconColor = Color(0xFF50545B),
+                                unselectedTextColor = Color(0xFF50545B),
+                            ),
                         )
                     }
                 }
@@ -875,12 +943,18 @@ private fun NativeShell(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color(0xFFF8FCFF), Color(0xFFEDF6FC)),
+                    )
+                )
                 .padding(padding),
         ) {
             when (state.selectedTab) {
                 NativeTab.HOME -> DiscoveryHome(
                     state = state,
                     onOpenStations = { onSelectTab(NativeTab.STATIONS) },
+                    onOpenProfile = { onSelectTab(NativeTab.PROFILE) },
                     onOpenUrl = { url -> openExternalUrl(localContext, url) },
                 )
                 NativeTab.NEWS -> SkiNewsTab(
@@ -904,6 +978,7 @@ private fun NativeShell(
                     onSubmitStationRating = onSubmitStationRating,
                     onOpenUrl = { url -> openExternalUrl(localContext, url) },
                 )
+                NativeTab.CAMERAS -> CamerasTab(state)
                 NativeTab.BUS_LINES -> BusLinesTab(state)
                 NativeTab.SERVICES -> ServicesTab(
                     state = state,
@@ -1402,6 +1477,79 @@ private fun NativeShell(
             }
         }
 
+        if (publishStoryDialogOpen) {
+            Dialog(onDismissRequest = { publishStoryDialogOpen = false }) {
+                val preview = remember(state.publishStoryImageBase64) {
+                    decodeBase64Image(state.publishStoryImageBase64)
+                }
+                val stations = remember(state.stationItems) { state.stationItems.sortedBy { it.name } }
+                Card(
+                    shape = RoundedCornerShape(26.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Brush.horizontalGradient(listOf(Color(0xFF075985), Color(0xFF0F766E))))
+                                .padding(18.dp),
+                        ) {
+                            Text(stringResource(R.string.publish_story), style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.publish_story_subtitle), style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = .85f))
+                        }
+                        Column(
+                            modifier = Modifier.padding(horizontal = 18.dp, vertical = 4.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            OutlinedTextField(
+                                value = state.publishStoryCaption,
+                                onValueChange = onUpdateStoryCaption,
+                                label = { Text(stringResource(R.string.story_caption)) },
+                                modifier = Modifier.fillMaxWidth(),
+                                minLines = 2,
+                                maxLines = 3,
+                            )
+                            OutlinedButton(onClick = { storyPhotoPicker.launch("image/*") }, modifier = Modifier.fillMaxWidth()) {
+                                Icon(Icons.Filled.Add, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(R.string.story_choose_photo))
+                            }
+                            if (preview != null) {
+                                Image(preview, null, Modifier.fillMaxWidth().height(160.dp).clip(RoundedCornerShape(16.dp)), contentScale = ContentScale.Crop)
+                            } else {
+                                Text(stringResource(R.string.story_photo_required), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Text(stringResource(R.string.story_station_optional), style = MaterialTheme.typography.labelMedium)
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                item {
+                                    FilterChipButton(
+                                        label = stringResource(R.string.all_stations),
+                                        selected = state.publishStoryStationId == null,
+                                        onClick = { onUpdateStoryStation(null) },
+                                    )
+                                }
+                                items(stations.take(20)) { station ->
+                                    FilterChipButton(
+                                        label = station.name,
+                                        selected = state.publishStoryStationId == station.id,
+                                        onClick = { onUpdateStoryStation(station.id) },
+                                    )
+                                }
+                            }
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                OutlinedButton(onClick = { publishStoryDialogOpen = false }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.close)) }
+                                Button(onClick = onPublishStory, enabled = !state.isPublishingStory, modifier = Modifier.weight(1f)) {
+                                    if (state.isPublishingStory) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = Color.White)
+                                    else Text(stringResource(R.string.publish))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         if (publishPartnerDialogOpen) {
             Dialog(onDismissRequest = { publishPartnerDialogOpen = false }) {
                 val levelOptions = listOf(
@@ -1820,7 +1968,7 @@ private fun StoriesTab(
                             )
                         }
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(onClick = onApplyStoriesFilters, modifier = Modifier.weight(1f)) { Text(stringResource(id = R.string.apply_filters)) }
                         OutlinedButton(onClick = {
                             onStoriesSearchChange("")
@@ -1849,7 +1997,7 @@ private fun StoriesTab(
                             modifier = Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(12.dp)),
                         )
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick = { onToggleStoryLike(story.id, story.likedByMe) }) {
                             Text(if (story.likedByMe) stringResource(id = R.string.unlike_story) else stringResource(id = R.string.like_story))
                         }
@@ -1982,7 +2130,7 @@ private fun CommunityDashboardTab(state: AppUiState) {
                             }
                         )
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         CommunityStatPill(
                             label = stringResource(id = R.string.community_vibe_label),
                             value = stats.momentVibe,
@@ -3849,7 +3997,7 @@ private fun PistesTab(
                         }
                     }
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         PisteMetricPill(
                             label = stringResource(id = R.string.weather),
                             value = "${weatherIcon} ${item.weatherLabel}",
@@ -3862,7 +4010,7 @@ private fun PistesTab(
                         )
                     }
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         PisteMetricPill(
                             label = stringResource(id = R.string.snow_depth),
                             value = "❄ ${item.snowDepthLabel} cm",
@@ -3875,7 +4023,7 @@ private fun PistesTab(
                         )
                     }
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         PisteMetricPill(
                             label = stringResource(id = R.string.altitude),
                             value = "⛰ ${item.altitudeLabel} m",
@@ -4031,6 +4179,9 @@ private fun PisteMetricPill(
             text = value,
             style = MaterialTheme.typography.bodySmall,
             fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
@@ -5083,7 +5234,7 @@ private fun ProfileAvatar(
 }
 
 @Composable
-private fun UserAvatar(
+internal fun UserAvatar(
     displayName: String,
     photoBase64: String,
     photoUrl: String,
@@ -5415,6 +5566,7 @@ private fun tabTitle(tab: NativeTab): String {
         NativeTab.STORIES -> stringResource(id = R.string.stories)
         NativeTab.COMMUNITY -> stringResource(id = R.string.community_dashboard)
         NativeTab.STATIONS -> stringResource(id = R.string.stations)
+        NativeTab.CAMERAS -> stringResource(id = R.string.nav_webcams)
         NativeTab.BUS_LINES -> stringResource(id = R.string.bus_lines)
         NativeTab.SERVICES -> stringResource(id = R.string.services)
         NativeTab.MARKETPLACE -> stringResource(id = R.string.marketplace)

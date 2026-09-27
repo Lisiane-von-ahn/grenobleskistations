@@ -6,7 +6,6 @@ from unittest.mock import patch
 from django.core.cache import cache
 from django.core.management import call_command
 from django.contrib.auth import get_user_model
-from django.contrib.staticfiles import finders
 from django.test import TestCase
 from django.utils import timezone
 from PIL import Image
@@ -82,10 +81,9 @@ class DiscoveryTests(TestCase):
         self.assertIn('id="site-main-nav"', html)
         self.assertEqual(html.count('class="nav-dropdown"'), 2)
         self.assertIn('id="mobile-app"', html)
-        self.assertIn('/releases/latest/download/app-release.apk', html)
-        self.assertIn('grenobleski-android-qr.png', html)
+        self.assertIn('https://play.google.com/store/apps/details?id=fr.grenobleski.nativeapp', html)
+        self.assertIn('https://api.qrserver.com/v1/create-qr-code/', html)
         self.assertNotIn('>Confidentialité</a></li>', html)
-        self.assertIsNotNone(finders.find('images/grenobleski-android-qr.png'))
 
     def test_account_actions_stay_available_inside_grouped_menu(self):
         user = get_user_model().objects.create_user(username='menu-user', password='menu-password')

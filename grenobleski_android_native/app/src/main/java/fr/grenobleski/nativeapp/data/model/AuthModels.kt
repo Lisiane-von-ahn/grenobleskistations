@@ -114,6 +114,7 @@ enum class NativeTab {
     STORIES,
     COMMUNITY,
     STATIONS,
+    CAMERAS,
     BUS_LINES,
     SERVICES,
     MARKETPLACE,
