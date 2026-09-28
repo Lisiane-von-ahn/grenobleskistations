@@ -63,6 +63,7 @@ internal fun DiscoveryHome(
     state: AppUiState,
     onOpenStations: () -> Unit,
     onOpenProfile: () -> Unit,
+    onOpenBusLines: () -> Unit,
     onOpenUrl: (String) -> Unit,
 ) {
     val french = LocalConfiguration.current.locales[0].language == "fr"
@@ -235,9 +236,19 @@ internal fun DiscoveryHome(
         }
         item {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                item { GrenobleInfoCard("●", stringResource(R.string.home_traffic), stringResource(R.string.home_traffic_status), "A48, A41") }
-                item { GrenobleInfoCard("▣", stringResource(R.string.home_transport), "Réseau TAG", stringResource(R.string.home_normal_service)) }
-                item { GrenobleInfoCard("▦", stringResource(R.string.home_events), stringResource(R.string.home_events_now), stringResource(R.string.home_see_agenda)) }
+                item {
+                    GrenobleInfoCard("●", stringResource(R.string.home_traffic), stringResource(R.string.home_traffic_status), "A48, A41") {
+                        onOpenUrl("https://www.google.com/maps/@45.1885,5.7245,11z/data=!5m1!1e1")
+                    }
+                }
+                item {
+                    GrenobleInfoCard("▣", stringResource(R.string.home_transport), "Réseau TAG", stringResource(R.string.home_normal_service), onClick = onOpenBusLines)
+                }
+                item {
+                    GrenobleInfoCard("▦", stringResource(R.string.home_events), stringResource(R.string.home_events_now), stringResource(R.string.home_see_agenda)) {
+                        onOpenUrl("https://www.grenoble.fr/agenda")
+                    }
+                }
             }
         }
     }
@@ -600,15 +611,21 @@ private fun HomeEventCard(event: fr.grenobleski.nativeapp.data.model.SkiNewsItem
 }
 
 @Composable
-private fun GrenobleInfoCard(icon: String, title: String, status: String, detail: String) {
-    Card(modifier = Modifier.width(208.dp), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(3.dp)) {
+private fun GrenobleInfoCard(icon: String, title: String, status: String, detail: String, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier.width(208.dp).clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(3.dp),
+    ) {
         Row(Modifier.padding(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
             Text(icon, color = Color(0xFF082E68), style = MaterialTheme.typography.titleLarge)
-            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
                 Text(status, color = Color(0xFF169B45), style = MaterialTheme.typography.bodySmall)
                 Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
             }
+            Text("›", color = Color(0xFF0A4E91), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         }
     }
 }

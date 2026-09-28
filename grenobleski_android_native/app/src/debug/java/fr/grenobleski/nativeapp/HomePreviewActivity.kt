@@ -88,6 +88,7 @@ private fun HomePreview() {
                 state = previewState,
                 onOpenStations = {},
                 onOpenProfile = {},
+                onOpenBusLines = {},
                 onOpenUrl = {},
             )
         }

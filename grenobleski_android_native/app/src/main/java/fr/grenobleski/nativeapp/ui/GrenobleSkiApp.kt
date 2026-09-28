@@ -260,6 +260,7 @@ fun GrenobleSkiApp(
     val localContext = androidx.compose.ui.platform.LocalContext.current
     val appContext = localContext.applicationContext
     val uiScope = rememberCoroutineScope()
+    var loginRequested by rememberSaveable { mutableStateOf(false) }
 
     val repository = remember {
         AuthRepository(
@@ -289,7 +290,7 @@ fun GrenobleSkiApp(
         onAuthUriConsumed()
     }
 
-    if (state.session == null) {
+    if (state.session == null && loginRequested) {
         LoginScreen(
             state = state,
             onEmailChange = viewModel::updateEmail,
@@ -359,7 +360,11 @@ fun GrenobleSkiApp(
             onDismissStatus = viewModel::clearStatusMessage,
             onSelectTab = viewModel::selectTab,
             onRefresh = viewModel::refreshCurrentTab,
-            onLogout = viewModel::logout,
+            onLogout = {
+                loginRequested = false
+                viewModel.logout()
+            },
+            onRequestLogin = { loginRequested = true },
             onPrepareMessageToSeller = viewModel::prepareMessageToSeller,
             onSelectMessageRecipient = viewModel::selectMessageRecipient,
             onAddFriend = viewModel::addFriend,
@@ -694,6 +699,7 @@ private fun NativeShell(
     onSelectTab: (NativeTab) -> Unit,
     onRefresh: () -> Unit,
     onLogout: () -> Unit,
+    onRequestLogin: () -> Unit,
     onPrepareMessageToSeller: (Int, String) -> Unit,
     onSelectMessageRecipient: (Int) -> Unit,
     onAddFriend: (Int) -> Unit,
@@ -762,6 +768,7 @@ private fun NativeShell(
         onUpdateStoryImage(uriToBase64(localContext, uri).orEmpty())
     }
     val currentUserId = state.profileInfo?.userId?.takeIf { it > 0 } ?: state.session?.userId ?: 0
+    val isGuest = state.session == null
     val unreadMessages = state.messageItems.count { !it.isRead && it.recipientId == currentUserId }
 
     LaunchedEffect(
@@ -830,10 +837,10 @@ private fun NativeShell(
                     IconButton(onClick = onRefresh) {
                         Icon(imageVector = Icons.Filled.Refresh, contentDescription = stringResource(id = R.string.refresh))
                     }
-                    IconButton(onClick = onLogout) {
+                    if (!isGuest) IconButton(onClick = onLogout) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.Logout, contentDescription = stringResource(id = R.string.logout))
                     }
-                    IconButton(onClick = { onSelectTab(NativeTab.PROFILE) }) {
+                    IconButton(onClick = { if (isGuest) onRequestLogin() else onSelectTab(NativeTab.PROFILE) }) {
                         if (state.profileInfo != null) {
                             Box(
                                 modifier = Modifier.size(38.dp).background(Color.White, RoundedCornerShape(50)),
@@ -863,7 +870,7 @@ private fun NativeShell(
                 NativeTab.STORIES -> {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = Alignment.End) {
                         ExtendedFloatingActionButton(
-                            onClick = { publishStoryDialogOpen = true },
+                            onClick = { if (isGuest) onRequestLogin() else publishStoryDialogOpen = true },
                             icon = { Icon(Icons.Filled.Add, contentDescription = null) },
                             text = { Text(stringResource(id = R.string.fab_add_story)) },
                             containerColor = MaterialTheme.colorScheme.primary,
@@ -874,7 +881,7 @@ private fun NativeShell(
                 }
                 NativeTab.MARKETPLACE -> {
                     ExtendedFloatingActionButton(
-                        onClick = { publishDialogOpen = true },
+                        onClick = { if (isGuest) onRequestLogin() else publishDialogOpen = true },
                         icon = { Icon(Icons.Filled.Add, contentDescription = stringResource(id = R.string.publish_article)) },
                         text = { Text(stringResource(id = R.string.publish_article)) },
                         shape = RoundedCornerShape(18.dp),
@@ -882,7 +889,7 @@ private fun NativeShell(
                 }
                 NativeTab.PARTNERS -> {
                     ExtendedFloatingActionButton(
-                        onClick = { publishPartnerDialogOpen = true },
+                        onClick = { if (isGuest) onRequestLogin() else publishPartnerDialogOpen = true },
                         icon = { Icon(Icons.Filled.Add, contentDescription = stringResource(id = R.string.publish_partner_post)) },
                         text = { Text(stringResource(id = R.string.publish_partner_post)) },
                         shape = RoundedCornerShape(18.dp),
@@ -954,7 +961,8 @@ private fun NativeShell(
                 NativeTab.HOME -> DiscoveryHome(
                     state = state,
                     onOpenStations = { onSelectTab(NativeTab.STATIONS) },
-                    onOpenProfile = { onSelectTab(NativeTab.PROFILE) },
+                    onOpenProfile = { if (isGuest) onRequestLogin() else onSelectTab(NativeTab.PROFILE) },
+                    onOpenBusLines = { onSelectTab(NativeTab.BUS_LINES) },
                     onOpenUrl = { url -> openExternalUrl(localContext, url) },
                 )
                 NativeTab.NEWS -> SkiNewsTab(
@@ -1122,13 +1130,13 @@ private fun NativeShell(
                         label = stringResource(id = R.string.publish_article),
                         shortLabel = stringResource(id = R.string.menu_short_article),
                         icon = Icons.Filled.LocalOffer,
-                        action = { publishDialogOpen = true },
+                        action = { if (isGuest) onRequestLogin() else publishDialogOpen = true },
                     ),
                     MoreMenuAction(
                         label = stringResource(id = R.string.publish_partner_post),
                         shortLabel = stringResource(id = R.string.menu_short_partner_post),
                         icon = Icons.Filled.School,
-                        action = { publishPartnerDialogOpen = true },
+                        action = { if (isGuest) onRequestLogin() else publishPartnerDialogOpen = true },
                     ),
                 )
                 val accountActions = buildList<MoreMenuAction> {
@@ -1137,7 +1145,7 @@ private fun NativeShell(
                             label = stringResource(id = R.string.profile),
                             shortLabel = stringResource(id = R.string.menu_short_profile),
                             icon = Icons.Filled.Person,
-                            action = { onSelectTab(NativeTab.PROFILE) },
+                            action = { if (isGuest) onRequestLogin() else onSelectTab(NativeTab.PROFILE) },
                         )
                     )
                     add(

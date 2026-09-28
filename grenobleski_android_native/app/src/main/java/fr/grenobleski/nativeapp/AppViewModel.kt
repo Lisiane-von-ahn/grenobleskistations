@@ -133,6 +133,8 @@ class AppViewModel(
         if (cachedSession != null) {
             state = state.copy(session = cachedSession)
             refreshAllNativeData()
+        } else {
+            refreshGuestTab(NativeTab.HOME)
         }
     }
 
@@ -275,6 +277,10 @@ class AppViewModel(
     }
 
     fun selectTab(tab: NativeTab) {
+        if (state.session == null && tab in setOf(NativeTab.MESSAGES, NativeTab.PROFILE)) {
+            state = state.copy(errorMessage = "Sign in to use this feature.", statusMessage = null)
+            return
+        }
         state = state.copy(selectedTab = tab, errorMessage = null, statusMessage = null)
         if (!hasDataForTab(tab)) {
             refreshCurrentTab()
@@ -506,7 +512,11 @@ class AppViewModel(
     }
 
     fun refreshCurrentTab() {
-        val session = state.session ?: return
+        val session = state.session
+        if (session == null) {
+            refreshGuestTab(state.selectedTab)
+            return
+        }
         val tab = state.selectedTab
 
         viewModelScope.launch {
@@ -917,6 +927,7 @@ class AppViewModel(
     fun logout() {
         sessionStore.clear()
         state = AppUiState()
+        refreshGuestTab(NativeTab.HOME)
     }
 
     fun updateMessageRecipientId(raw: String) {
@@ -1545,6 +1556,52 @@ class AppViewModel(
             )
 
             applyProfileToEditor(profileInfo)
+        }
+    }
+
+    /** Loads the information that is intentionally available before account creation. */
+    private fun refreshGuestTab(tab: NativeTab) {
+        viewModelScope.launch {
+            state = state.copy(isTabLoading = true, errorMessage = null)
+            val token = ""
+            when (tab) {
+                NativeTab.HOME -> {
+                    val stations = repository.fetchStationItems(token)
+                    val places = repository.fetchGrenoblePlaces(token)
+                    val culture = repository.fetchSkiNews(token, category = "culture")
+                    val news = repository.fetchSkiNews(token)
+                    state = state.copy(
+                        stationItems = stations.getOrDefault(state.stationItems),
+                        grenoblePlaces = places.getOrDefault(state.grenoblePlaces),
+                        cultureNewsItems = culture.getOrDefault(state.cultureNewsItems),
+                        skiNewsItems = news.getOrDefault(state.skiNewsItems),
+                        highlightedSkiNewsItems = news.getOrDefault(state.skiNewsItems).filter { it.highlighted }.take(5),
+                    )
+                }
+                NativeTab.NEWS -> state = state.copy(skiNewsItems = repository.fetchSkiNews(token).getOrDefault(state.skiNewsItems))
+                NativeTab.STATIONS, NativeTab.CAMERAS -> state = state.copy(stationItems = repository.fetchStationItems(token).getOrDefault(state.stationItems))
+                NativeTab.BUS_LINES -> state = state.copy(busLineItems = repository.fetchBusLineItems(token).getOrDefault(state.busLineItems))
+                NativeTab.SERVICES -> state = state.copy(serviceStoreItems = repository.fetchServiceStoreItems(token).getOrDefault(state.serviceStoreItems))
+                NativeTab.MARKETPLACE -> {
+                    val page = repository.fetchMarketplaceItems(token, page = 1, pageSize = MARKETPLACE_PAGE_SIZE).getOrNull()
+                    if (page != null) state = state.copy(marketplaceItems = page.items, marketplaceHasNextPage = page.hasNextPage, marketplaceNextPage = page.nextPage)
+                }
+                NativeTab.PARTNERS -> state = state.copy(partnerItems = repository.fetchPartnerItems(token).getOrDefault(state.partnerItems))
+                NativeTab.INSTRUCTORS -> state = state.copy(instructorItems = repository.fetchInstructorItems(token).getOrDefault(state.instructorItems))
+                NativeTab.PISTES -> state = state.copy(pisteItems = repository.fetchPisteItems(token).getOrDefault(state.pisteItems))
+                NativeTab.STORIES, NativeTab.COMMUNITY -> {
+                    val page = repository.fetchStoriesPage(token, page = 1, pageSize = 5).getOrNull()
+                    if (page != null) state = state.copy(
+                        storyItems = page.items,
+                        highlightedStoryItems = page.items.take(5),
+                        storiesPage = 1,
+                        storiesHasNextPage = page.hasNextPage,
+                        storiesNextPage = page.nextPage,
+                    )
+                }
+                else -> Unit // Messages and profile are protected by selectTab for guests.
+            }
+            state = state.copy(isTabLoading = false)
         }
     }
 

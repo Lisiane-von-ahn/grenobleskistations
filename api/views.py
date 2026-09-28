@@ -645,6 +645,9 @@ class PisteConditionReportViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = PisteConditionReportSerializer
 
+    def get_permissions(self):
+        return [AllowAny()] if self.request.method in ('GET', 'HEAD', 'OPTIONS') else [IsAuthenticated()]
+
     def get_queryset(self):
         return PisteConditionReport.objects.select_related('ski_station', 'user').all()
 
@@ -655,6 +658,9 @@ class PisteConditionReportViewSet(viewsets.ModelViewSet):
 class InstructorProfileViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = InstructorProfileSerializer
+
+    def get_permissions(self):
+        return [AllowAny()] if self.request.method in ('GET', 'HEAD', 'OPTIONS') else [IsAuthenticated()]
 
     def get_queryset(self):
         if self.action == 'list':
@@ -669,6 +675,9 @@ class InstructorServiceViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = InstructorServiceSerializer
 
+    def get_permissions(self):
+        return [AllowAny()] if self.request.method in ('GET', 'HEAD', 'OPTIONS') else [IsAuthenticated()]
+
     def get_queryset(self):
         qs = InstructorService.objects.select_related('instructor', 'instructor__user', 'ski_station')
         if self.action == 'list':
@@ -680,6 +689,9 @@ class InstructorReviewViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = InstructorReviewSerializer
 
+    def get_permissions(self):
+        return [AllowAny()] if self.request.method in ('GET', 'HEAD', 'OPTIONS') else [IsAuthenticated()]
+
     def get_queryset(self):
         return InstructorReview.objects.select_related('instructor', 'instructor__user', 'user').all()
 
@@ -690,6 +702,9 @@ class InstructorReviewViewSet(viewsets.ModelViewSet):
 class SkiPartnerPostViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = SkiPartnerPostSerializer
+
+    def get_permissions(self):
+        return [AllowAny()] if self.request.method in ('GET', 'HEAD', 'OPTIONS') else [IsAuthenticated()]
 
     def get_queryset(self):
         qs = SkiPartnerPost.objects.select_related('user', 'ski_station').all()
@@ -936,6 +951,9 @@ class SkiPartnerReportViewSet(viewsets.ModelViewSet):
 class SkiStoryViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = SkiStorySerializer
+
+    def get_permissions(self):
+        return [AllowAny()] if self.request.method in ('GET', 'HEAD', 'OPTIONS') else [IsAuthenticated()]
 
     class FeedPagination(PageNumberPagination):
         page_size = 5

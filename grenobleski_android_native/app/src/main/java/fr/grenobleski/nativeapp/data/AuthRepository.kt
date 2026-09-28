@@ -125,7 +125,7 @@ class AuthRepository(
     }
 
     suspend fun fetchDashboardCounts(token: String): Result<DashboardCounts> = withContext(Dispatchers.IO) {
-        val authHeader = "Token $token"
+        val authHeader = authHeader(token)
 
         val counts = DashboardCounts(
             stations = fetchCount("/api/skistations/", authHeader),
@@ -144,7 +144,7 @@ class AuthRepository(
         stationId: Int? = null,
         query: String = "",
     ): Result<StoryPage> = withContext(Dispatchers.IO) {
-        val authHeader = "Token $token"
+        val authHeader = authHeader(token)
         val safePage = page.coerceAtLeast(1)
         val safePageSize = pageSize.coerceIn(1, 20)
         val sb = StringBuilder("/api/skistories/feed/?page=$safePage&page_size=$safePageSize")
@@ -206,7 +206,7 @@ class AuthRepository(
         if (storyId <= 0) {
             return@withContext Result.failure(IllegalStateException("Invalid story id."))
         }
-        val authHeader = "Token $token"
+        val authHeader = authHeader(token)
         val response = runCatching {
             service.postResource(
                 url = "$normalizedBaseUrl/api/skistories/$storyId/like/",
@@ -226,7 +226,7 @@ class AuthRepository(
         if (storyId <= 0) {
             return@withContext Result.failure(IllegalStateException("Invalid story id."))
         }
-        val authHeader = "Token $token"
+        val authHeader = authHeader(token)
         val response = runCatching {
             service.postResource(
                 url = "$normalizedBaseUrl/api/skistories/$storyId/unlike/",
@@ -294,7 +294,7 @@ class AuthRepository(
     }
 
     suspend fun fetchSkiNews(token: String, highlightedOnly: Boolean = false, category: String = "ski"): Result<List<SkiNewsItem>> = withContext(Dispatchers.IO) {
-        val authHeader = "Token $token"
+        val authHeader = authHeader(token)
         val language = Locale.getDefault().language.lowercase().takeIf { it in setOf("fr", "en", "pt", "it", "es", "de") } ?: "fr"
         val endpoint = if (category == "culture") {
             "/api/ski-news/?category=culture"
@@ -361,7 +361,7 @@ class AuthRepository(
     }
 
     suspend fun fetchGrenoblePlaces(token: String): Result<List<fr.grenobleski.nativeapp.data.model.GrenoblePlaceItem>> = withContext(Dispatchers.IO) {
-        val payload = fetchPayloadFromCandidates(listOf("/api/grenoble-places/"), "Token $token")
+        val payload = fetchPayloadFromCandidates(listOf("/api/grenoble-places/"), authHeader(token))
             ?: return@withContext Result.failure(IllegalStateException("Unable to load Grenoble places"))
         Result.success(extractObjectList(payload).map { obj ->
             fr.grenobleski.nativeapp.data.model.GrenoblePlaceItem(
@@ -375,7 +375,7 @@ class AuthRepository(
     }
 
     suspend fun fetchStationItems(token: String): Result<List<StationItem>> = withContext(Dispatchers.IO) {
-        val authHeader = "Token $token"
+        val authHeader = authHeader(token)
         val payload = fetchPayloadFromCandidates(listOf("/api/skistations/", "/api/skistations"), authHeader)
             ?: fetchPayloadFromCandidates(listOf("/api/skistations/conditions/", "/api/skistations/conditions"), authHeader)
             ?: return@withContext Result.failure(IllegalStateException("Unable to load stations."))
@@ -437,7 +437,7 @@ class AuthRepository(
     }
 
     suspend fun fetchBusLineItems(token: String): Result<List<BusLineItem>> = withContext(Dispatchers.IO) {
-        val authHeader = "Token $token"
+        val authHeader = authHeader(token)
         val payload = fetchPayloadFromCandidates(listOf("/api/buslines/", "/api/buslines"), authHeader)
             ?: return@withContext Result.success(emptyList())
 
@@ -458,7 +458,7 @@ class AuthRepository(
     }
 
     suspend fun fetchServiceStoreItems(token: String): Result<List<ServiceStoreItem>> = withContext(Dispatchers.IO) {
-        val authHeader = "Token $token"
+        val authHeader = authHeader(token)
         val payload = fetchPayloadFromCandidates(listOf("/api/servicestores/", "/api/servicestores"), authHeader)
             ?: return@withContext Result.success(emptyList())
 
@@ -484,7 +484,7 @@ class AuthRepository(
         page: Int = 1,
         pageSize: Int = 18,
     ): Result<MarketplacePage> = withContext(Dispatchers.IO) {
-        val authHeader = "Token $token"
+        val authHeader = authHeader(token)
         val safePage = page.coerceAtLeast(1)
         val safePageSize = pageSize.coerceIn(6, 24)
         val rawBody = fetchRawBodyFromCandidates(
@@ -533,7 +533,7 @@ class AuthRepository(
     }
 
     suspend fun fetchInstructorItems(token: String): Result<List<InstructorItem>> = withContext(Dispatchers.IO) {
-        val authHeader = "Token $token"
+        val authHeader = authHeader(token)
         val payload = fetchPayloadFromCandidates(listOf("/api/instructorprofiles/", "/api/instructorprofiles"), authHeader)
             ?: return@withContext Result.success(emptyList())
 
@@ -561,7 +561,7 @@ class AuthRepository(
     }
 
     suspend fun fetchPartnerItems(token: String): Result<List<SkiPartnerItem>> = withContext(Dispatchers.IO) {
-        val authHeader = "Token $token"
+        val authHeader = authHeader(token)
         val payload = fetchPayloadFromCandidates(listOf("/api/skipartnerposts/", "/api/skipartnerposts"), authHeader)
             ?: return@withContext Result.success(emptyList())
 
@@ -618,7 +618,7 @@ class AuthRepository(
         if (postId <= 0) {
             return@withContext Result.failure(IllegalStateException("Invalid carpool post id."))
         }
-        val authHeader = "Token $token"
+        val authHeader = authHeader(token)
         val payload = mapOf("seats" to seats.coerceAtLeast(1))
         val response = runCatching {
             service.postResource(
@@ -702,7 +702,7 @@ class AuthRepository(
         }
 
     suspend fun fetchPisteItems(token: String): Result<List<PisteItem>> = withContext(Dispatchers.IO) {
-        val authHeader = "Token $token"
+        val authHeader = authHeader(token)
         val conditionsPayload = fetchPayloadFromCandidates(listOf("/api/skistations/conditions/", "/api/skistations/conditions"), authHeader)
         if (conditionsPayload != null) {
             val items = extractObjectList(conditionsPayload).map { obj ->
@@ -1591,6 +1591,11 @@ class AuthRepository(
         }
         Result.success(Unit)
     }
+
+    private fun authHeader(token: String?): String = token
+        ?.takeIf { it.isNotBlank() }
+        ?.let { "Token $it" }
+        .orEmpty()
 
     private suspend fun fetchCount(path: String, authHeader: String): Int {
         return parseCount(fetchPayload(path, authHeader))
