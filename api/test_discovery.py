@@ -1,5 +1,7 @@
+import json
 from datetime import datetime, timedelta, timezone as utc_timezone
 from decimal import Decimal
+from email.message import Message
 from io import BytesIO, StringIO
 from unittest.mock import patch
 
@@ -222,6 +224,45 @@ class DiscoveryTests(TestCase):
         self.assertNotContains(response, 'test-key')
         self.assertIn(b'"travelMode": "DRIVE"', provider.call_args.args[0].data)
         self.assertIn(b'Vizille, France', provider.call_args.args[0].data)
+
+    @override_settings(GOOGLE_ROUTES_API_KEY='test-key')
+    def test_map_view_draws_route_without_rendering_steps_or_exposing_the_key(self):
+        url = reverse('ski_station_route', args=[self.station.pk]) + '?embedded=1'
+        raw = BytesIO(json.dumps({'routes': [{
+            'localizedValues': {'duration': {'text': '48 min'}},
+            'polyline': {'encodedPolyline': 'abc?def'},
+            'legs': [{'steps': [{'navigationInstruction': {'instructions': 'Follow D111'}}]}],
+        }]}).encode())
+        image = BytesIO()
+        Image.new('RGB', (4, 4)).save(image, format='PNG')
+        image.seek(0)
+        image.headers = Message()
+        image.headers['Content-Type'] = 'image/png'
+        with patch('skistation_project.station_routes.urlopen', side_effect=[raw, image]) as provider:
+            response = self.client.post(url, {'presentation': 'map', 'mode': 'DRIVE'})
+        self.assertContains(response, 'data:image/png;base64,')
+        self.assertContains(response, '48 min')
+        self.assertNotContains(response, 'Follow D111')
+        self.assertNotContains(response, 'test-key')
+        self.assertNotIn('routes.legs.steps', provider.call_args_list[0].args[0].get_header('X-goog-fieldmask'))
+        self.assertIn('enc%3Aabc%3Fdef', provider.call_args_list[1].args[0])
+
+    @override_settings(GOOGLE_ROUTES_API_KEY='test-key')
+    def test_transit_steps_highlight_the_second_boarding_as_a_connection(self):
+        url = reverse('ski_station_route', args=[self.station.pk])
+        steps = [
+            {'transitDetails': {'transitLine': {'nameShort': 'A', 'vehicle': {'type': 'TRAM'}}}},
+            {'travelMode': 'WALK', 'navigationInstruction': {'instructions': 'Walk to the bus stop'}},
+            {'transitDetails': {'transitLine': {'nameShort': 'T65', 'vehicle': {'type': 'BUS'}}}},
+        ]
+        raw = BytesIO(json.dumps({'routes': [{'legs': [{'steps': steps}]}]}).encode())
+        with patch('skistation_project.station_routes.urlopen', return_value=raw):
+            response = self.client.post(url, {'mode': 'TRANSIT'})
+        self.assertContains(response, 'fa-train-tram')
+        self.assertContains(response, 'Walk to the bus stop')
+        self.assertContains(response, 'Correspondance', count=1)
+        self.assertContains(response, 'T65')
+        self.assertNotContains(response, 'data:image/png;base64,')
 
     def test_app_station_feed_includes_measured_zero_snow_and_crowd(self):
         StationLiveStatus.objects.create(ski_station=self.station, temperature_c=0, snow_depth_cm=0)

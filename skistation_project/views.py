@@ -48,7 +48,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from rest_framework.authtoken.models import Token
 from django.core.paginator import Paginator
-from .station_routes import GOOGLE_ROUTE_MODES, calculate_station_route
+from .station_routes import GOOGLE_ROUTE_MODES, ROUTE_ICONS, calculate_station_route
 from .forms import (
     SkiMaterialListingForm,
     ProfileForm,
@@ -465,10 +465,13 @@ def ski_station_route(request, station_id):
     station = get_object_or_404(SkiStation.objects.defer('image'), pk=station_id)
     mode = request.POST.get('mode', 'DRIVE')
     origin = request.POST.get('origin', '').strip() or 'Grenoble, France'
-    if mode not in GOOGLE_ROUTE_MODES or len(origin) > 120:
+    presentation = request.POST.get('presentation', 'steps')
+    if mode not in GOOGLE_ROUTE_MODES or presentation not in ('map', 'steps') or len(origin) > 120:
         return HttpResponse(status=400)
     route = (
-        calculate_station_route(station, origin, mode, getattr(request, 'LANGUAGE_CODE', 'fr'))
+        calculate_station_route(
+            station, origin, mode, getattr(request, 'LANGUAGE_CODE', 'fr'), show_map=presentation == 'map',
+        )
         if request.method == 'POST' else None
     )
     return render(request, 'station_route.html', {
@@ -476,7 +479,11 @@ def ski_station_route(request, station_id):
         'station': station,
         'mode': mode,
         'origin': origin,
-        'modes': zip(GOOGLE_ROUTE_MODES, (_('Voiture'), _('Bus / transport'), _('Vélo'), _('À pied'))),
+        'modes': [
+            (value, label, ROUTE_ICONS[value])
+            for value, label in zip(GOOGLE_ROUTE_MODES, (_('Voiture'), _('Bus / transport'), _('Vélo'), _('À pied')))
+        ],
+        'presentation': presentation,
         'route': route,
         'routes_available': bool(settings.GOOGLE_ROUTES_API_KEY),
         'bus_lines': station.bus_lines.all(),
