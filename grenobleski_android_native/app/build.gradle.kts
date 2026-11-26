@@ -32,12 +32,12 @@ val enableMobileAds = ((project.findProperty("ENABLE_MOBILE_ADS") as String?)
 
 android {
     namespace = "fr.grenobleski.nativeapp"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "fr.grenobleski.nativeapp"
         minSdk = 24
-        targetSdk = 35
+        targetSdk = 36
         // Use CI run number as versionCode when available, fallback to 1 for local builds.
         versionCode = (System.getenv("BUILD_NUMBER") ?: "1").toIntOrNull() ?: 1
         versionName = System.getenv("VERSION_NAME") ?: "1.0.0"
