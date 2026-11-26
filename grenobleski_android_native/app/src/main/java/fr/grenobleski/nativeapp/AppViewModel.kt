@@ -7,7 +7,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import fr.grenobleski.nativeapp.data.AuthRepository
-import fr.grenobleski.nativeapp.data.model.DashboardCounts
 import fr.grenobleski.nativeapp.data.model.BusLineItem
 import fr.grenobleski.nativeapp.data.model.ChatUserOption
 import fr.grenobleski.nativeapp.data.model.FriendLink
@@ -27,6 +26,9 @@ import fr.grenobleski.nativeapp.data.model.StoryStats
 import fr.grenobleski.nativeapp.data.model.UserActivitySummary
 import fr.grenobleski.nativeapp.data.model.UserSession
 import fr.grenobleski.nativeapp.data.session.SessionStore
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
@@ -43,7 +45,6 @@ data class AppUiState(
     val session: UserSession? = null,
     val selectedTab: NativeTab = NativeTab.HOME,
     val isTabLoading: Boolean = false,
-    val dashboardCounts: DashboardCounts = DashboardCounts(),
     val storyItems: List<StoryItem> = emptyList(),
     val highlightedStoryItems: List<StoryItem> = emptyList(),
     val skiNewsItems: List<SkiNewsItem> = emptyList(),
@@ -128,14 +129,11 @@ class AppViewModel(
     var state by mutableStateOf(AppUiState())
         private set
 
+    private var tabRefresh: Job? = null
+
     init {
-        val cachedSession = sessionStore.load()
-        if (cachedSession != null) {
-            state = state.copy(session = cachedSession)
-            refreshAllNativeData()
-        } else {
-            refreshGuestTab(NativeTab.HOME)
-        }
+        state = state.copy(session = sessionStore.load())
+        refreshCurrentTab()
     }
 
     fun updateEmail(value: String) {
@@ -282,7 +280,7 @@ class AppViewModel(
             return
         }
         state = state.copy(selectedTab = tab, errorMessage = null, statusMessage = null)
-        if (!hasDataForTab(tab)) {
+        if (!hasDataForTab(tab) || (tab == NativeTab.COMMUNITY && state.session != null)) {
             refreshCurrentTab()
         }
     }
@@ -512,6 +510,7 @@ class AppViewModel(
     }
 
     fun refreshCurrentTab() {
+        tabRefresh?.cancel()
         val session = state.session
         if (session == null) {
             refreshGuestTab(state.selectedTab)
@@ -519,24 +518,11 @@ class AppViewModel(
         }
         val tab = state.selectedTab
 
-        viewModelScope.launch {
-            state = state.copy(isTabLoading = true)
+        tabRefresh = viewModelScope.launch {
+            state = state.copy(isTabLoading = true, errorMessage = null)
 
             when (tab) {
-                NativeTab.HOME -> {
-                    val stations = repository.fetchStationItems(session.token)
-                    val places = repository.fetchGrenoblePlaces(session.token)
-                    val culture = repository.fetchSkiNews(session.token, category = "culture")
-                    val skiNews = repository.fetchSkiNews(session.token)
-                    state = state.copy(
-                        stationItems = stations.getOrDefault(state.stationItems),
-                        grenoblePlaces = places.getOrDefault(state.grenoblePlaces),
-                        cultureNewsItems = culture.getOrDefault(state.cultureNewsItems),
-                        skiNewsItems = skiNews.getOrDefault(state.skiNewsItems),
-                        highlightedSkiNewsItems = skiNews.getOrDefault(state.skiNewsItems).filter { it.highlighted }.take(5),
-                        errorMessage = stations.exceptionOrNull()?.message ?: places.exceptionOrNull()?.message ?: culture.exceptionOrNull()?.message ?: skiNews.exceptionOrNull()?.message,
-                    )
-                }
+                NativeTab.HOME -> refreshHomeData(session.token)
 
                 NativeTab.NEWS -> {
                     val result = repository.fetchSkiNews(session.token)
@@ -927,7 +913,7 @@ class AppViewModel(
     fun logout() {
         sessionStore.clear()
         state = AppUiState()
-        refreshGuestTab(NativeTab.HOME)
+        refreshCurrentTab()
     }
 
     fun updateMessageRecipientId(raw: String) {
@@ -1384,7 +1370,7 @@ class AppViewModel(
     private fun establishSession(session: UserSession) {
         sessionStore.save(session)
         state = state.copy(session = session, errorMessage = null)
-        refreshAllNativeData()
+        refreshCurrentTab()
     }
 
     private fun hasDataForTab(tab: NativeTab): Boolean {
@@ -1406,191 +1392,54 @@ class AppViewModel(
         }
     }
 
-    private fun refreshAllNativeData() {
-        val session = state.session ?: return
-
-        viewModelScope.launch {
-            state = state.copy(isTabLoading = true)
-
-            val current = state
-            var firstError: String? = null
-
-            val grenoblePlaces = repository.fetchGrenoblePlaces(session.token).getOrElse {
-                firstError = firstError ?: it.message
-                current.grenoblePlaces
-            }
-
-            val stationItems = repository.fetchStationItems(session.token).getOrElse {
-                firstError = firstError ?: (it.message ?: "Unable to load stations")
-                current.stationItems
-            }
-
-            val cultureNewsItems = repository.fetchSkiNews(session.token, category = "culture").getOrElse {
-                firstError = firstError ?: it.message
-                current.cultureNewsItems
-            }
-            state = state.copy(grenoblePlaces = grenoblePlaces, stationItems = stationItems, cultureNewsItems = cultureNewsItems)
-
-            val dashboardCounts = repository.fetchDashboardCounts(session.token).getOrElse {
-                firstError = firstError ?: (it.message ?: "Unable to load dashboard")
-                current.dashboardCounts
-            }
-
-            val storyPage = repository.fetchStoriesPage(
-                token = session.token,
-                page = 1,
-                pageSize = 5,
-                stationId = current.storiesStationFilterId,
-                query = current.storiesSearchQuery,
-            ).getOrElse {
-                firstError = firstError ?: (it.message ?: "Unable to load stories")
-                fr.grenobleski.nativeapp.data.model.StoryPage(
-                    items = current.storyItems,
-                    hasNextPage = current.storiesHasNextPage,
-                    nextPage = null,
-                )
-            }
-
-            val storyStats = repository.fetchStoryStats(session.token).getOrElse {
-                firstError = firstError ?: (it.message ?: "Unable to load community stats")
-                current.storyStats
-            }
-
-            val skiNewsItems = repository.fetchSkiNews(session.token).getOrElse {
-                firstError = firstError ?: (it.message ?: "Unable to load ski news")
-                current.skiNewsItems
-            }
-
-            val busLineItems = repository.fetchBusLineItems(session.token).getOrElse {
-                firstError = firstError ?: (it.message ?: "Unable to load bus lines")
-                current.busLineItems
-            }
-
-            val serviceStoreItems = repository.fetchServiceStoreItems(session.token).getOrElse {
-                firstError = firstError ?: (it.message ?: "Unable to load services")
-                current.serviceStoreItems
-            }
-
-            val marketplacePage = repository.fetchMarketplaceItems(
-                token = session.token,
-                page = 1,
-                pageSize = MARKETPLACE_PAGE_SIZE,
-            ).getOrElse {
-                firstError = firstError ?: (it.message ?: "Unable to load marketplace")
-                fr.grenobleski.nativeapp.data.model.MarketplacePage(
-                    items = current.marketplaceItems,
-                    hasNextPage = current.marketplaceHasNextPage,
-                    nextPage = current.marketplaceNextPage,
-                )
-            }
-
-            val partnerItems = repository.fetchPartnerItems(session.token).getOrElse {
-                firstError = firstError ?: (it.message ?: "Unable to load partner posts")
-                current.partnerItems
-            }
-
-            val instructorItems = repository.fetchInstructorItems(session.token).getOrElse {
-                firstError = firstError ?: (it.message ?: "Unable to load instructors")
-                current.instructorItems
-            }
-
-            val pisteItems = repository.fetchPisteItems(session.token).getOrElse {
-                firstError = firstError ?: (it.message ?: "Unable to load piste state")
-                current.pisteItems
-            }
-
-            val messageItems = repository.fetchMessageItems(session.token).getOrElse {
-                firstError = firstError ?: (it.message ?: "Unable to load messages")
-                current.messageItems
-            }
-
-            val chatUsers = repository.fetchChatUsers(session.token).getOrElse {
-                current.chatUsers
-            }
-
-            val friendLinks = repository.fetchFriendLinks(session.token).getOrElse {
-                current.friendLinks
-            }
-
-            val friendInvitations = repository.fetchFriendInvitations(session.token).getOrElse {
-                current.friendInvitations
-            }
-
-            val profileInfo = repository.fetchProfileInfo(session.token).getOrElse {
-                firstError = firstError ?: (it.message ?: "Unable to load profile")
-                current.profileInfo
-            }
-
-            state = state.copy(
-                isTabLoading = false,
-                dashboardCounts = dashboardCounts,
-                grenoblePlaces = grenoblePlaces,
-                storyItems = storyPage.items,
-                highlightedStoryItems = storyPage.items.sortedWith(
-                    compareByDescending<StoryItem> { it.likeCount + it.commentCount }
-                        .thenByDescending { it.createdAtRaw }
-                ).take(5),
-                skiNewsItems = skiNewsItems,
-                highlightedSkiNewsItems = skiNewsItems.filter { it.highlighted }.take(5),
-                storyStats = storyStats,
-                storiesPage = 1,
-                storiesHasNextPage = storyPage.hasNextPage,
-                stationItems = stationItems,
-                busLineItems = busLineItems,
-                serviceStoreItems = serviceStoreItems,
-                marketplaceItems = marketplacePage.items,
-                marketplacePage = 1,
-                marketplaceHasNextPage = marketplacePage.hasNextPage,
-                marketplaceNextPage = marketplacePage.nextPage ?: if (marketplacePage.hasNextPage) 2 else null,
-                isMarketplaceLoadingMore = false,
-                partnerItems = partnerItems,
-                instructorItems = instructorItems,
-                pisteItems = pisteItems,
-                messageItems = messageItems,
-                chatUsers = chatUsers,
-                friendLinks = friendLinks,
-                friendInvitations = friendInvitations,
-                profileInfo = profileInfo,
-                // Avoid noisy global errors at startup; errors are surfaced on explicit tab refresh/actions.
-                errorMessage = null,
-            )
-
-            applyProfileToEditor(profileInfo)
-        }
+    private suspend fun refreshHomeData(token: String) = coroutineScope {
+        val stationRequest = async { repository.fetchStationItems(token) }
+        val placesRequest = async { repository.fetchGrenoblePlaces(token) }
+        val cultureRequest = async { repository.fetchSkiNews(token, category = "culture") }
+        val newsRequest = async { repository.fetchSkiNews(token) }
+        val stations = stationRequest.await()
+        val places = placesRequest.await()
+        val culture = cultureRequest.await()
+        val news = newsRequest.await()
+        val skiNews = news.getOrDefault(state.skiNewsItems)
+        state = state.copy(
+            stationItems = stations.getOrDefault(state.stationItems),
+            grenoblePlaces = places.getOrDefault(state.grenoblePlaces),
+            cultureNewsItems = culture.getOrDefault(state.cultureNewsItems),
+            skiNewsItems = skiNews,
+            highlightedSkiNewsItems = skiNews.filter { it.highlighted }.take(5),
+            errorMessage = listOf(stations, places, culture, news).firstNotNullOfOrNull {
+                it.exceptionOrNull()?.message
+            },
+        )
     }
 
     /** Loads the information that is intentionally available before account creation. */
     private fun refreshGuestTab(tab: NativeTab) {
-        viewModelScope.launch {
+        tabRefresh = viewModelScope.launch {
             state = state.copy(isTabLoading = true, errorMessage = null)
+            var loadError: String? = null
+            fun <T> Result<T>.keepOnFailure(previous: T): T = getOrElse {
+                loadError = it.message
+                previous
+            }
+
             val token = ""
             when (tab) {
-                NativeTab.HOME -> {
-                    val stations = repository.fetchStationItems(token)
-                    val places = repository.fetchGrenoblePlaces(token)
-                    val culture = repository.fetchSkiNews(token, category = "culture")
-                    val news = repository.fetchSkiNews(token)
-                    state = state.copy(
-                        stationItems = stations.getOrDefault(state.stationItems),
-                        grenoblePlaces = places.getOrDefault(state.grenoblePlaces),
-                        cultureNewsItems = culture.getOrDefault(state.cultureNewsItems),
-                        skiNewsItems = news.getOrDefault(state.skiNewsItems),
-                        highlightedSkiNewsItems = news.getOrDefault(state.skiNewsItems).filter { it.highlighted }.take(5),
-                    )
-                }
-                NativeTab.NEWS -> state = state.copy(skiNewsItems = repository.fetchSkiNews(token).getOrDefault(state.skiNewsItems))
-                NativeTab.STATIONS, NativeTab.CAMERAS -> state = state.copy(stationItems = repository.fetchStationItems(token).getOrDefault(state.stationItems))
-                NativeTab.BUS_LINES -> state = state.copy(busLineItems = repository.fetchBusLineItems(token).getOrDefault(state.busLineItems))
-                NativeTab.SERVICES -> state = state.copy(serviceStoreItems = repository.fetchServiceStoreItems(token).getOrDefault(state.serviceStoreItems))
+                NativeTab.HOME -> refreshHomeData(token)
+                NativeTab.NEWS -> state = state.copy(skiNewsItems = repository.fetchSkiNews(token).keepOnFailure(state.skiNewsItems))
+                NativeTab.STATIONS, NativeTab.CAMERAS -> state = state.copy(stationItems = repository.fetchStationItems(token).keepOnFailure(state.stationItems))
+                NativeTab.BUS_LINES -> state = state.copy(busLineItems = repository.fetchBusLineItems(token).keepOnFailure(state.busLineItems))
+                NativeTab.SERVICES -> state = state.copy(serviceStoreItems = repository.fetchServiceStoreItems(token).keepOnFailure(state.serviceStoreItems))
                 NativeTab.MARKETPLACE -> {
-                    val page = repository.fetchMarketplaceItems(token, page = 1, pageSize = MARKETPLACE_PAGE_SIZE).getOrNull()
+                    val page = repository.fetchMarketplaceItems(token, page = 1, pageSize = MARKETPLACE_PAGE_SIZE).keepOnFailure(null)
                     if (page != null) state = state.copy(marketplaceItems = page.items, marketplaceHasNextPage = page.hasNextPage, marketplaceNextPage = page.nextPage)
                 }
-                NativeTab.PARTNERS -> state = state.copy(partnerItems = repository.fetchPartnerItems(token).getOrDefault(state.partnerItems))
-                NativeTab.INSTRUCTORS -> state = state.copy(instructorItems = repository.fetchInstructorItems(token).getOrDefault(state.instructorItems))
-                NativeTab.PISTES -> state = state.copy(pisteItems = repository.fetchPisteItems(token).getOrDefault(state.pisteItems))
+                NativeTab.PARTNERS -> state = state.copy(partnerItems = repository.fetchPartnerItems(token).keepOnFailure(state.partnerItems))
+                NativeTab.INSTRUCTORS -> state = state.copy(instructorItems = repository.fetchInstructorItems(token).keepOnFailure(state.instructorItems))
+                NativeTab.PISTES -> state = state.copy(pisteItems = repository.fetchPisteItems(token).keepOnFailure(state.pisteItems))
                 NativeTab.STORIES, NativeTab.COMMUNITY -> {
-                    val page = repository.fetchStoriesPage(token, page = 1, pageSize = 5).getOrNull()
+                    val page = repository.fetchStoriesPage(token, page = 1, pageSize = 5).keepOnFailure(null)
                     if (page != null) state = state.copy(
                         storyItems = page.items,
                         highlightedStoryItems = page.items.take(5),
@@ -1601,7 +1450,7 @@ class AppViewModel(
                 }
                 else -> Unit // Messages and profile are protected by selectTab for guests.
             }
-            state = state.copy(isTabLoading = false)
+            state = state.copy(isTabLoading = false, errorMessage = loadError ?: state.errorMessage)
         }
     }
 

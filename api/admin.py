@@ -2,7 +2,9 @@ from django.contrib import admin
 from django import forms
 from datetime import timedelta
 from django.contrib.auth import get_user_model
+from django.core.exceptions import PermissionDenied
 from django.db.models import Count
+from django.db.models.functions import TruncDate
 from django.template.response import TemplateResponse
 from django.urls import path
 from django.utils import timezone
@@ -61,6 +63,9 @@ class AppUsageEventAdmin(admin.ModelAdmin):
 
 
 def app_usage_dashboard_view(request):
+    if not request.user.has_perm('api.view_appusageevent'):
+        raise PermissionDenied
+
     now = timezone.now()
     start_24h = now - timedelta(hours=24)
     start_30d = now - timedelta(days=30)
@@ -71,6 +76,22 @@ def app_usage_dashboard_view(request):
 
     events_24h = AppUsageEvent.objects.filter(created_at__gte=start_24h)
     events_30d = AppUsageEvent.objects.filter(created_at__gte=start_30d)
+
+    page_views = events_30d.filter(is_api=False, method='GET', status_code=200)
+    mobile_page_views = page_views.filter(platform=AppUsageEvent.PLATFORM_MOBILE).count()
+    page_views_count = page_views.count()
+    top_pages = page_views.values('path').annotate(total=Count('id')).order_by('-total', 'path')[:12]
+    daily_counts = dict(
+        page_views.annotate(day=TruncDate('created_at'))
+        .values('day').annotate(total=Count('id')).order_by('day').values_list('day', 'total')
+    )
+    today = timezone.localdate(now)
+    days = [today - timedelta(days=offset) for offset in range(29, -1, -1)]
+    peak = max((daily_counts.get(day, 0) for day in days), default=0) or 1
+    daily_page_views = [
+        {'day': day, 'total': daily_counts.get(day, 0), 'peak': peak}
+        for day in days
+    ]
 
     top_features = list(
         events_30d.values('feature_name').annotate(total=Count('id')).order_by('-total')[:12]
@@ -84,7 +105,12 @@ def app_usage_dashboard_view(request):
 
     context = {
         **admin.site.each_context(request),
-        'title': 'App Usage Dashboard',
+        'title': 'Statistiques de fréquentation',
+        'page_views_count': page_views_count,
+        'page_views_24h': page_views.filter(created_at__gte=start_24h).count(),
+        'mobile_page_views': mobile_page_views,
+        'top_pages': top_pages,
+        'daily_page_views': daily_page_views,
         'total_users': total_users,
         'active_users_30d': active_users_30d,
         'events_24h_count': events_24h.count(),

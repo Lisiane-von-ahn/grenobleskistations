@@ -2,6 +2,7 @@ package fr.grenobleski.nativeapp.data
 
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
+import com.google.gson.JsonParseException
 import com.google.gson.JsonParser
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonToken
@@ -34,6 +35,7 @@ import fr.grenobleski.nativeapp.data.model.UserSession
 import fr.grenobleski.nativeapp.data.network.GrenobleSkiApiService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.IOException
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
@@ -57,7 +59,18 @@ class AuthRepository(
     private val normalizedBaseUrl = siteBaseUrl.trimEnd('/')
     private val dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm", Locale.getDefault())
 
-    suspend fun login(email: String, password: String): Result<UserSession> = withContext(Dispatchers.IO) {
+    private suspend fun <T> networkResult(block: suspend () -> Result<T>): Result<T> =
+        withContext(Dispatchers.IO) {
+            try {
+                block()
+            } catch (error: IOException) {
+                Result.failure(IOException("Connection interrupted. Check your internet connection and try again.", error))
+            } catch (error: JsonParseException) {
+                Result.failure(IllegalStateException("The server response could not be read. Try again.", error))
+            }
+        }
+
+    suspend fun login(email: String, password: String): Result<UserSession> = networkResult {
         val endpoints = listOf("/api/auth/login/", "/api/login/")
         var lastError = "Unable to authenticate with this server."
 
@@ -71,7 +84,7 @@ class AuthRepository(
                 val body = response.body()
                 val session = body.toSession(email)
                 if (session != null) {
-                    return@withContext Result.success(session)
+                    return@networkResult Result.success(session)
                 }
                 lastError = body?.error ?: body?.detail ?: "Authentication succeeded but no token was returned."
                 continue
@@ -97,7 +110,7 @@ class AuthRepository(
         firstName: String,
         lastName: String,
         acceptTerms: Boolean,
-    ): Result<UserSession> = withContext(Dispatchers.IO) {
+    ): Result<UserSession> = networkResult {
         val response = service.register(
             url = "$normalizedBaseUrl/api/auth/register/",
             payload = RegisterRequest(
@@ -112,9 +125,9 @@ class AuthRepository(
         if (response.isSuccessful) {
             val session = response.body().toSession(email)
             if (session != null) {
-                return@withContext Result.success(session)
+                return@networkResult Result.success(session)
             }
-            return@withContext Result.failure(
+            return@networkResult Result.failure(
                 IllegalStateException("Account created but no token was returned.")
             )
         }
@@ -124,7 +137,7 @@ class AuthRepository(
         Result.failure(IllegalStateException(message))
     }
 
-    suspend fun fetchDashboardCounts(token: String): Result<DashboardCounts> = withContext(Dispatchers.IO) {
+    suspend fun fetchDashboardCounts(token: String): Result<DashboardCounts> = networkResult {
         val authHeader = authHeader(token)
 
         val counts = DashboardCounts(
@@ -143,7 +156,7 @@ class AuthRepository(
         pageSize: Int = 5,
         stationId: Int? = null,
         query: String = "",
-    ): Result<StoryPage> = withContext(Dispatchers.IO) {
+    ): Result<StoryPage> = networkResult {
         val authHeader = authHeader(token)
         val safePage = page.coerceAtLeast(1)
         val safePageSize = pageSize.coerceIn(1, 20)
@@ -156,10 +169,10 @@ class AuthRepository(
         }
 
         val payload = fetchPayload(sb.toString(), authHeader)
-            ?: return@withContext Result.failure(IllegalStateException("Unable to load stories."))
+            ?: return@networkResult Result.failure(IllegalStateException("Unable to load stories."))
 
         if (!payload.isJsonObject) {
-            return@withContext Result.failure(IllegalStateException("Invalid stories payload."))
+            return@networkResult Result.failure(IllegalStateException("Invalid stories payload."))
         }
 
         val root = payload.asJsonObject
@@ -202,75 +215,69 @@ class AuthRepository(
         )
     }
 
-    suspend fun likeStory(token: String, storyId: Int): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun likeStory(token: String, storyId: Int): Result<Unit> = networkResult {
         if (storyId <= 0) {
-            return@withContext Result.failure(IllegalStateException("Invalid story id."))
+            return@networkResult Result.failure(IllegalStateException("Invalid story id."))
         }
         val authHeader = authHeader(token)
-        val response = runCatching {
-            service.postResource(
-                url = "$normalizedBaseUrl/api/skistories/$storyId/like/",
-                authHeader = authHeader,
-                payload = emptyMap(),
-            )
-        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to like story."))
+        val response = service.postResource(
+            url = "$normalizedBaseUrl/api/skistories/$storyId/like/",
+            authHeader = authHeader,
+            payload = emptyMap(),
+        )
 
         if (!response.isSuccessful) {
             val bodyText = response.errorBody()?.string().orEmpty()
-            return@withContext Result.failure(IllegalStateException(extractApiErrorMessage(bodyText, "Unable to like story.")))
+            return@networkResult Result.failure(IllegalStateException(extractApiErrorMessage(bodyText, "Unable to like story.")))
         }
         Result.success(Unit)
     }
 
-    suspend fun unlikeStory(token: String, storyId: Int): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun unlikeStory(token: String, storyId: Int): Result<Unit> = networkResult {
         if (storyId <= 0) {
-            return@withContext Result.failure(IllegalStateException("Invalid story id."))
+            return@networkResult Result.failure(IllegalStateException("Invalid story id."))
         }
         val authHeader = authHeader(token)
-        val response = runCatching {
-            service.postResource(
-                url = "$normalizedBaseUrl/api/skistories/$storyId/unlike/",
-                authHeader = authHeader,
-                payload = emptyMap(),
-            )
-        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to unlike story."))
+        val response = service.postResource(
+            url = "$normalizedBaseUrl/api/skistories/$storyId/unlike/",
+            authHeader = authHeader,
+            payload = emptyMap(),
+        )
 
         if (!response.isSuccessful) {
             val bodyText = response.errorBody()?.string().orEmpty()
-            return@withContext Result.failure(IllegalStateException(extractApiErrorMessage(bodyText, "Unable to unlike story.")))
+            return@networkResult Result.failure(IllegalStateException(extractApiErrorMessage(bodyText, "Unable to unlike story.")))
         }
         Result.success(Unit)
     }
 
-    suspend fun commentStory(token: String, storyId: Int, body: String): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun commentStory(token: String, storyId: Int, body: String): Result<Unit> = networkResult {
         if (storyId <= 0) {
-            return@withContext Result.failure(IllegalStateException("Invalid story id."))
+            return@networkResult Result.failure(IllegalStateException("Invalid story id."))
         }
         if (body.isBlank()) {
-            return@withContext Result.failure(IllegalStateException("Comment cannot be empty."))
+            return@networkResult Result.failure(IllegalStateException("Comment cannot be empty."))
         }
         val authHeader = "Token $token"
-        val response = runCatching {
-            service.postResource(
-                url = "$normalizedBaseUrl/api/skistories/$storyId/comment/",
-                authHeader = authHeader,
-                payload = mapOf("body" to body.trim()),
-            )
-        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to comment story."))
+        val response = service.postResource(
+            url = "$normalizedBaseUrl/api/skistories/$storyId/comment/",
+            authHeader = authHeader,
+            payload = mapOf("body" to body.trim()),
+        )
 
         if (!response.isSuccessful) {
             val bodyText = response.errorBody()?.string().orEmpty()
-            return@withContext Result.failure(IllegalStateException(extractApiErrorMessage(bodyText, "Unable to comment story.")))
+            return@networkResult Result.failure(IllegalStateException(extractApiErrorMessage(bodyText, "Unable to comment story.")))
         }
         Result.success(Unit)
     }
 
-    suspend fun fetchStoryStats(token: String): Result<StoryStats> = withContext(Dispatchers.IO) {
+    suspend fun fetchStoryStats(token: String): Result<StoryStats> = networkResult {
         val authHeader = "Token $token"
         val payload = fetchPayload("/api/skistories/stats/", authHeader)
-            ?: return@withContext Result.failure(IllegalStateException("Unable to load story stats."))
+            ?: return@networkResult Result.failure(IllegalStateException("Unable to load story stats."))
         if (!payload.isJsonObject) {
-            return@withContext Result.failure(IllegalStateException("Invalid story stats payload."))
+            return@networkResult Result.failure(IllegalStateException("Invalid story stats payload."))
         }
         val obj = payload.asJsonObject
         val crowd = mutableMapOf<String, Int>()
@@ -293,7 +300,7 @@ class AuthRepository(
         )
     }
 
-    suspend fun fetchSkiNews(token: String, highlightedOnly: Boolean = false, category: String = "ski"): Result<List<SkiNewsItem>> = withContext(Dispatchers.IO) {
+    suspend fun fetchSkiNews(token: String, highlightedOnly: Boolean = false, category: String = "ski"): Result<List<SkiNewsItem>> = networkResult {
         val authHeader = authHeader(token)
         val language = Locale.getDefault().language.lowercase().takeIf { it in setOf("fr", "en", "pt", "it", "es", "de") } ?: "fr"
         val endpoint = if (category == "culture") {
@@ -305,7 +312,7 @@ class AuthRepository(
         }
 
         val payload = fetchPayload(endpoint, authHeader)
-            ?: return@withContext Result.failure(IllegalStateException("Unable to load ski news."))
+            ?: return@networkResult Result.failure(IllegalStateException("Unable to load ski news."))
 
         val items = extractObjectList(payload).map { obj ->
             SkiNewsItem(
@@ -327,15 +334,15 @@ class AuthRepository(
         Result.success(items)
     }
 
-    suspend fun fetchUserActivity(token: String, userId: Int): Result<UserActivitySummary> = withContext(Dispatchers.IO) {
+    suspend fun fetchUserActivity(token: String, userId: Int): Result<UserActivitySummary> = networkResult {
         if (userId <= 0) {
-            return@withContext Result.failure(IllegalStateException("Invalid user id."))
+            return@networkResult Result.failure(IllegalStateException("Invalid user id."))
         }
         val authHeader = "Token $token"
         val payload = fetchPayload("/api/userview/$userId/activity/", authHeader)
-            ?: return@withContext Result.failure(IllegalStateException("Unable to load user activity."))
+            ?: return@networkResult Result.failure(IllegalStateException("Unable to load user activity."))
         if (!payload.isJsonObject) {
-            return@withContext Result.failure(IllegalStateException("Invalid user activity payload."))
+            return@networkResult Result.failure(IllegalStateException("Invalid user activity payload."))
         }
         val root = payload.asJsonObject
         val userObj = root.getAsJsonObject("user")
@@ -360,9 +367,9 @@ class AuthRepository(
         )
     }
 
-    suspend fun fetchGrenoblePlaces(token: String): Result<List<fr.grenobleski.nativeapp.data.model.GrenoblePlaceItem>> = withContext(Dispatchers.IO) {
+    suspend fun fetchGrenoblePlaces(token: String): Result<List<fr.grenobleski.nativeapp.data.model.GrenoblePlaceItem>> = networkResult {
         val payload = fetchPayloadFromCandidates(listOf("/api/grenoble-places/"), authHeader(token))
-            ?: return@withContext Result.failure(IllegalStateException("Unable to load Grenoble places"))
+            ?: return@networkResult Result.failure(IllegalStateException("Unable to load Grenoble places"))
         Result.success(extractObjectList(payload).map { obj ->
             fr.grenobleski.nativeapp.data.model.GrenoblePlaceItem(
                 obj.intOrZero("id"), obj.stringOrBlank("name"),
@@ -374,11 +381,11 @@ class AuthRepository(
         })
     }
 
-    suspend fun fetchStationItems(token: String): Result<List<StationItem>> = withContext(Dispatchers.IO) {
+    suspend fun fetchStationItems(token: String): Result<List<StationItem>> = networkResult {
         val authHeader = authHeader(token)
         val payload = fetchPayloadFromCandidates(listOf("/api/skistations/", "/api/skistations"), authHeader)
             ?: fetchPayloadFromCandidates(listOf("/api/skistations/conditions/", "/api/skistations/conditions"), authHeader)
-            ?: return@withContext Result.failure(IllegalStateException("Unable to load stations."))
+            ?: return@networkResult Result.failure(IllegalStateException("Unable to load stations."))
 
         val items = extractObjectList(payload).map { obj ->
             val altitude = obj.stringOrBlank("altitude").ifBlank {
@@ -436,10 +443,10 @@ class AuthRepository(
         })
     }
 
-    suspend fun fetchBusLineItems(token: String): Result<List<BusLineItem>> = withContext(Dispatchers.IO) {
+    suspend fun fetchBusLineItems(token: String): Result<List<BusLineItem>> = networkResult {
         val authHeader = authHeader(token)
         val payload = fetchPayloadFromCandidates(listOf("/api/buslines/", "/api/buslines"), authHeader)
-            ?: return@withContext Result.success(emptyList())
+            ?: return@networkResult Result.success(emptyList())
 
         val items = extractObjectList(payload).map { obj ->
             BusLineItem(
@@ -457,10 +464,10 @@ class AuthRepository(
         Result.success(items)
     }
 
-    suspend fun fetchServiceStoreItems(token: String): Result<List<ServiceStoreItem>> = withContext(Dispatchers.IO) {
+    suspend fun fetchServiceStoreItems(token: String): Result<List<ServiceStoreItem>> = networkResult {
         val authHeader = authHeader(token)
         val payload = fetchPayloadFromCandidates(listOf("/api/servicestores/", "/api/servicestores"), authHeader)
-            ?: return@withContext Result.success(emptyList())
+            ?: return@networkResult Result.success(emptyList())
 
         val items = extractObjectList(payload).map { obj ->
             ServiceStoreItem(
@@ -483,7 +490,7 @@ class AuthRepository(
         token: String,
         page: Int = 1,
         pageSize: Int = 18,
-    ): Result<MarketplacePage> = withContext(Dispatchers.IO) {
+    ): Result<MarketplacePage> = networkResult {
         val authHeader = authHeader(token)
         val safePage = page.coerceAtLeast(1)
         val safePageSize = pageSize.coerceIn(6, 24)
@@ -494,7 +501,7 @@ class AuthRepository(
                 "/api/skimaterial",
             ),
             authHeader = authHeader,
-        ) ?: return@withContext Result.success(
+        ) ?: return@networkResult Result.success(
             MarketplacePage(
                 items = emptyList(),
                 hasNextPage = false,
@@ -532,10 +539,10 @@ class AuthRepository(
         )
     }
 
-    suspend fun fetchInstructorItems(token: String): Result<List<InstructorItem>> = withContext(Dispatchers.IO) {
+    suspend fun fetchInstructorItems(token: String): Result<List<InstructorItem>> = networkResult {
         val authHeader = authHeader(token)
         val payload = fetchPayloadFromCandidates(listOf("/api/instructorprofiles/", "/api/instructorprofiles"), authHeader)
-            ?: return@withContext Result.success(emptyList())
+            ?: return@networkResult Result.success(emptyList())
 
         val items = extractObjectList(payload).map { obj ->
             val userObj = obj.get("user")?.takeIf { it.isJsonObject }?.asJsonObject
@@ -560,10 +567,10 @@ class AuthRepository(
         Result.success(items)
     }
 
-    suspend fun fetchPartnerItems(token: String): Result<List<SkiPartnerItem>> = withContext(Dispatchers.IO) {
+    suspend fun fetchPartnerItems(token: String): Result<List<SkiPartnerItem>> = networkResult {
         val authHeader = authHeader(token)
         val payload = fetchPayloadFromCandidates(listOf("/api/skipartnerposts/", "/api/skipartnerposts"), authHeader)
-            ?: return@withContext Result.success(emptyList())
+            ?: return@networkResult Result.success(emptyList())
 
         val userMap = fetchChatUsers(token)
             .getOrDefault(emptyList())
@@ -614,94 +621,86 @@ class AuthRepository(
         Result.success(items)
     }
 
-    suspend fun requestCarpoolReservation(token: String, postId: Int, seats: Int): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun requestCarpoolReservation(token: String, postId: Int, seats: Int): Result<Unit> = networkResult {
         if (postId <= 0) {
-            return@withContext Result.failure(IllegalStateException("Invalid carpool post id."))
+            return@networkResult Result.failure(IllegalStateException("Invalid carpool post id."))
         }
         val authHeader = authHeader(token)
         val payload = mapOf("seats" to seats.coerceAtLeast(1))
-        val response = runCatching {
-            service.postResource(
-                url = "$normalizedBaseUrl/api/skipartnerposts/$postId/reserve/",
-                authHeader = authHeader,
-                payload = payload,
-            )
-        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to request reservation."))
+        val response = service.postResource(
+            url = "$normalizedBaseUrl/api/skipartnerposts/$postId/reserve/",
+            authHeader = authHeader,
+            payload = payload,
+        )
 
         if (!response.isSuccessful) {
             val bodyText = response.errorBody()?.string().orEmpty()
             val message = extractApiErrorMessage(bodyText, "Unable to request reservation.")
-            return@withContext Result.failure(IllegalStateException(message))
+            return@networkResult Result.failure(IllegalStateException(message))
         }
         Result.success(Unit)
     }
 
-    suspend fun cancelCarpoolReservation(token: String, postId: Int): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun cancelCarpoolReservation(token: String, postId: Int): Result<Unit> = networkResult {
         if (postId <= 0) {
-            return@withContext Result.failure(IllegalStateException("Invalid carpool post id."))
+            return@networkResult Result.failure(IllegalStateException("Invalid carpool post id."))
         }
         val authHeader = "Token $token"
-        val response = runCatching {
-            service.postResource(
-                url = "$normalizedBaseUrl/api/skipartnerposts/$postId/cancel_reservation/",
-                authHeader = authHeader,
-                payload = emptyMap(),
-            )
-        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to cancel reservation."))
+        val response = service.postResource(
+            url = "$normalizedBaseUrl/api/skipartnerposts/$postId/cancel_reservation/",
+            authHeader = authHeader,
+            payload = emptyMap(),
+        )
 
         if (!response.isSuccessful) {
             val bodyText = response.errorBody()?.string().orEmpty()
             val message = extractApiErrorMessage(bodyText, "Unable to cancel reservation.")
-            return@withContext Result.failure(IllegalStateException(message))
+            return@networkResult Result.failure(IllegalStateException(message))
         }
         Result.success(Unit)
     }
 
     suspend fun approveCarpoolReservation(token: String, postId: Int, reservationId: Int): Result<Unit> =
-        withContext(Dispatchers.IO) {
+        networkResult {
             if (postId <= 0 || reservationId <= 0) {
-                return@withContext Result.failure(IllegalStateException("Invalid reservation payload."))
+                return@networkResult Result.failure(IllegalStateException("Invalid reservation payload."))
             }
             val authHeader = "Token $token"
-            val response = runCatching {
-                service.postResource(
-                    url = "$normalizedBaseUrl/api/skipartnerposts/$postId/approve_reservation/",
-                    authHeader = authHeader,
-                    payload = mapOf("reservation_id" to reservationId),
-                )
-            }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to approve reservation."))
+            val response = service.postResource(
+                url = "$normalizedBaseUrl/api/skipartnerposts/$postId/approve_reservation/",
+                authHeader = authHeader,
+                payload = mapOf("reservation_id" to reservationId),
+            )
 
             if (!response.isSuccessful) {
                 val bodyText = response.errorBody()?.string().orEmpty()
                 val message = extractApiErrorMessage(bodyText, "Unable to approve reservation.")
-                return@withContext Result.failure(IllegalStateException(message))
+                return@networkResult Result.failure(IllegalStateException(message))
             }
             Result.success(Unit)
         }
 
     suspend fun rejectCarpoolReservation(token: String, postId: Int, reservationId: Int): Result<Unit> =
-        withContext(Dispatchers.IO) {
+        networkResult {
             if (postId <= 0 || reservationId <= 0) {
-                return@withContext Result.failure(IllegalStateException("Invalid reservation payload."))
+                return@networkResult Result.failure(IllegalStateException("Invalid reservation payload."))
             }
             val authHeader = "Token $token"
-            val response = runCatching {
-                service.postResource(
-                    url = "$normalizedBaseUrl/api/skipartnerposts/$postId/reject_reservation/",
-                    authHeader = authHeader,
-                    payload = mapOf("reservation_id" to reservationId),
-                )
-            }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to reject reservation."))
+            val response = service.postResource(
+                url = "$normalizedBaseUrl/api/skipartnerposts/$postId/reject_reservation/",
+                authHeader = authHeader,
+                payload = mapOf("reservation_id" to reservationId),
+            )
 
             if (!response.isSuccessful) {
                 val bodyText = response.errorBody()?.string().orEmpty()
                 val message = extractApiErrorMessage(bodyText, "Unable to reject reservation.")
-                return@withContext Result.failure(IllegalStateException(message))
+                return@networkResult Result.failure(IllegalStateException(message))
             }
             Result.success(Unit)
         }
 
-    suspend fun fetchPisteItems(token: String): Result<List<PisteItem>> = withContext(Dispatchers.IO) {
+    suspend fun fetchPisteItems(token: String): Result<List<PisteItem>> = networkResult {
         val authHeader = authHeader(token)
         val conditionsPayload = fetchPayloadFromCandidates(listOf("/api/skistations/conditions/", "/api/skistations/conditions"), authHeader)
         if (conditionsPayload != null) {
@@ -729,11 +728,11 @@ class AuthRepository(
                     updatedAtLabel = formatServerDateTime(obj.stringOrBlank("updated_at")),
                 )
             }
-            return@withContext Result.success(items)
+            return@networkResult Result.success(items)
         }
 
         val payload = fetchPayloadFromCandidates(listOf("/api/pistereports/", "/api/pistereports"), authHeader)
-            ?: return@withContext Result.success(emptyList())
+            ?: return@networkResult Result.success(emptyList())
 
         val items = extractObjectList(payload).map { obj ->
             val stationObj = obj.get("ski_station")?.takeIf { it.isJsonObject }?.asJsonObject
@@ -760,7 +759,7 @@ class AuthRepository(
         Result.success(items)
     }
 
-    suspend fun fetchMessageItems(token: String): Result<List<MessageItem>> = withContext(Dispatchers.IO) {
+    suspend fun fetchMessageItems(token: String): Result<List<MessageItem>> = networkResult {
         val authHeader = "Token $token"
         val rawBody = fetchRawBodyFromCandidates(
             paths = listOf(
@@ -772,7 +771,7 @@ class AuthRepository(
         )
 
         if (rawBody != null) {
-            return@withContext Result.success(parseMessageItemsStreaming(rawBody))
+            return@networkResult Result.success(parseMessageItemsStreaming(rawBody))
         }
 
         // Endpoint unavailable in this deployment; do not break the whole native experience.
@@ -987,12 +986,12 @@ class AuthRepository(
         }
     }
 
-    suspend fun fetchProfileInfo(token: String): Result<ProfileInfo> = withContext(Dispatchers.IO) {
+    suspend fun fetchProfileInfo(token: String): Result<ProfileInfo> = networkResult {
         val authHeader = "Token $token"
         val payload = fetchPayloadFromCandidates(
             listOf("/api/auth/me/", "/api/auth/me", "/api/userprofile/me/"),
             authHeader,
-        ) ?: return@withContext Result.success(
+        ) ?: return@networkResult Result.success(
             ProfileInfo(
                 userId = 0,
                 displayName = "",
@@ -1002,9 +1001,9 @@ class AuthRepository(
         )
 
         val root = payload.takeIf { it.isJsonObject }?.asJsonObject
-            ?: return@withContext Result.failure(IllegalStateException("Invalid profile payload."))
+            ?: return@networkResult Result.failure(IllegalStateException("Invalid profile payload."))
         val user = root.get("user")?.takeIf { it.isJsonObject }?.asJsonObject
-            ?: return@withContext Result.failure(IllegalStateException("Invalid user payload."))
+            ?: return@networkResult Result.failure(IllegalStateException("Invalid user payload."))
 
         val firstName = user.stringOrBlank("first_name")
         val lastName = user.stringOrBlank("last_name")
@@ -1024,12 +1023,12 @@ class AuthRepository(
         )
     }
 
-    suspend fun fetchChatUsers(token: String): Result<List<ChatUserOption>> = withContext(Dispatchers.IO) {
+    suspend fun fetchChatUsers(token: String): Result<List<ChatUserOption>> = networkResult {
         val authHeader = "Token $token"
         val rawBody = fetchRawBodyFromCandidates(
             paths = listOf("/api/userview/?page=1&page_size=120", "/api/userview/", "/api/userview"),
             authHeader = authHeader,
-        ) ?: return@withContext Result.success(emptyList())
+        ) ?: return@networkResult Result.success(emptyList())
 
         Result.success(parseChatUsersStreaming(rawBody))
     }
@@ -1125,10 +1124,10 @@ class AuthRepository(
         )
     }
 
-    suspend fun fetchFriendLinks(token: String): Result<List<FriendLink>> = withContext(Dispatchers.IO) {
+    suspend fun fetchFriendLinks(token: String): Result<List<FriendLink>> = networkResult {
         val authHeader = "Token $token"
         val payload = fetchPayloadFromCandidates(listOf("/api/userfriends/", "/api/userfriends"), authHeader)
-            ?: return@withContext Result.success(emptyList())
+            ?: return@networkResult Result.success(emptyList())
 
         val links = extractObjectList(payload).mapNotNull { obj ->
             val id = obj.intOrZero("id")
@@ -1142,10 +1141,10 @@ class AuthRepository(
         Result.success(links)
     }
 
-    suspend fun fetchFriendInvitations(token: String): Result<List<FriendInvitation>> = withContext(Dispatchers.IO) {
+    suspend fun fetchFriendInvitations(token: String): Result<List<FriendInvitation>> = networkResult {
         val authHeader = "Token $token"
         val payload = fetchPayloadFromCandidates(listOf("/api/friend-invitations/", "/api/friend-invitations"), authHeader)
-            ?: return@withContext Result.success(emptyList())
+            ?: return@networkResult Result.success(emptyList())
 
         val invitations = extractObjectList(payload).mapNotNull { obj ->
             val id = obj.intOrZero("id")
@@ -1166,22 +1165,20 @@ class AuthRepository(
         Result.success(invitations)
     }
 
-    suspend fun addFriend(token: String, friendId: Int): Result<String> = withContext(Dispatchers.IO) {
+    suspend fun addFriend(token: String, friendId: Int): Result<String> = networkResult {
         if (friendId <= 0) {
-            return@withContext Result.failure(IllegalStateException("Invalid friend id."))
+            return@networkResult Result.failure(IllegalStateException("Invalid friend id."))
         }
         val authHeader = "Token $token"
-        val response = runCatching {
-            service.postResource(
-                url = "$normalizedBaseUrl/api/userfriends/",
-                authHeader = authHeader,
-                payload = mapOf("friend" to friendId),
-            )
-        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to add friend."))
+        val response = service.postResource(
+            url = "$normalizedBaseUrl/api/userfriends/",
+            authHeader = authHeader,
+            payload = mapOf("friend" to friendId),
+        )
 
         if (!response.isSuccessful) {
             val bodyText = response.errorBody()?.string().orEmpty().ifBlank { "Unable to add friend." }
-            return@withContext Result.failure(IllegalStateException(bodyText))
+            return@networkResult Result.failure(IllegalStateException(bodyText))
         }
 
         val statusValue = runCatching {
@@ -1191,105 +1188,95 @@ class AuthRepository(
         Result.success(statusValue)
     }
 
-    suspend fun acceptFriendInvitation(token: String, invitationId: Int): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun acceptFriendInvitation(token: String, invitationId: Int): Result<Unit> = networkResult {
         if (invitationId <= 0) {
-            return@withContext Result.failure(IllegalStateException("Invalid invitation id."))
+            return@networkResult Result.failure(IllegalStateException("Invalid invitation id."))
         }
         val authHeader = "Token $token"
-        val response = runCatching {
-            service.postResource(
-                url = "$normalizedBaseUrl/api/friend-invitations/$invitationId/accept/",
-                authHeader = authHeader,
-                payload = emptyMap(),
-            )
-        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to accept invitation."))
+        val response = service.postResource(
+            url = "$normalizedBaseUrl/api/friend-invitations/$invitationId/accept/",
+            authHeader = authHeader,
+            payload = emptyMap(),
+        )
 
         if (!response.isSuccessful) {
             val bodyText = response.errorBody()?.string().orEmpty().ifBlank { "Unable to accept invitation." }
-            return@withContext Result.failure(IllegalStateException(bodyText))
+            return@networkResult Result.failure(IllegalStateException(bodyText))
         }
 
         Result.success(Unit)
     }
 
-    suspend fun declineFriendInvitation(token: String, invitationId: Int): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun declineFriendInvitation(token: String, invitationId: Int): Result<Unit> = networkResult {
         if (invitationId <= 0) {
-            return@withContext Result.failure(IllegalStateException("Invalid invitation id."))
+            return@networkResult Result.failure(IllegalStateException("Invalid invitation id."))
         }
         val authHeader = "Token $token"
-        val response = runCatching {
-            service.postResource(
-                url = "$normalizedBaseUrl/api/friend-invitations/$invitationId/decline/",
-                authHeader = authHeader,
-                payload = emptyMap(),
-            )
-        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to decline invitation."))
+        val response = service.postResource(
+            url = "$normalizedBaseUrl/api/friend-invitations/$invitationId/decline/",
+            authHeader = authHeader,
+            payload = emptyMap(),
+        )
 
         if (!response.isSuccessful) {
             val bodyText = response.errorBody()?.string().orEmpty().ifBlank { "Unable to decline invitation." }
-            return@withContext Result.failure(IllegalStateException(bodyText))
+            return@networkResult Result.failure(IllegalStateException(bodyText))
         }
 
         Result.success(Unit)
     }
 
-    suspend fun cancelFriendInvitation(token: String, invitationId: Int): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun cancelFriendInvitation(token: String, invitationId: Int): Result<Unit> = networkResult {
         if (invitationId <= 0) {
-            return@withContext Result.failure(IllegalStateException("Invalid invitation id."))
+            return@networkResult Result.failure(IllegalStateException("Invalid invitation id."))
         }
         val authHeader = "Token $token"
-        val response = runCatching {
-            service.postResource(
-                url = "$normalizedBaseUrl/api/friend-invitations/$invitationId/cancel/",
-                authHeader = authHeader,
-                payload = emptyMap(),
-            )
-        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to cancel invitation."))
+        val response = service.postResource(
+            url = "$normalizedBaseUrl/api/friend-invitations/$invitationId/cancel/",
+            authHeader = authHeader,
+            payload = emptyMap(),
+        )
 
         if (!response.isSuccessful) {
             val bodyText = response.errorBody()?.string().orEmpty().ifBlank { "Unable to cancel invitation." }
-            return@withContext Result.failure(IllegalStateException(bodyText))
+            return@networkResult Result.failure(IllegalStateException(bodyText))
         }
 
         Result.success(Unit)
     }
 
-    suspend fun removeFriend(token: String, linkId: Int): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun removeFriend(token: String, linkId: Int): Result<Unit> = networkResult {
         if (linkId <= 0) {
-            return@withContext Result.failure(IllegalStateException("Invalid friend link."))
+            return@networkResult Result.failure(IllegalStateException("Invalid friend link."))
         }
         val authHeader = "Token $token"
-        val response = runCatching {
-            service.deleteResource(
-                url = "$normalizedBaseUrl/api/userfriends/$linkId/",
-                authHeader = authHeader,
-            )
-        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to remove friend."))
+        val response = service.deleteResource(
+            url = "$normalizedBaseUrl/api/userfriends/$linkId/",
+            authHeader = authHeader,
+        )
 
         if (!response.isSuccessful) {
             val bodyText = response.errorBody()?.string().orEmpty().ifBlank { "Unable to remove friend." }
-            return@withContext Result.failure(IllegalStateException(bodyText))
+            return@networkResult Result.failure(IllegalStateException(bodyText))
         }
 
         Result.success(Unit)
     }
 
-    suspend fun markThreadAsRead(token: String, otherUserId: Int): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun markThreadAsRead(token: String, otherUserId: Int): Result<Unit> = networkResult {
         if (otherUserId <= 0) {
-            return@withContext Result.success(Unit)
+            return@networkResult Result.success(Unit)
         }
 
         val authHeader = "Token $token"
-        val response = runCatching {
-            service.postResource(
-                url = "$normalizedBaseUrl/api/messages/mark-read/",
-                authHeader = authHeader,
-                payload = mapOf("user_id" to otherUserId),
-            )
-        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to mark messages as read."))
+        val response = service.postResource(
+            url = "$normalizedBaseUrl/api/messages/mark-read/",
+            authHeader = authHeader,
+            payload = mapOf("user_id" to otherUserId),
+        )
 
         if (!response.isSuccessful) {
-            return@withContext Result.failure(
+            return@networkResult Result.failure(
                 IllegalStateException(response.errorBody()?.string().orEmpty().ifBlank { "Unable to mark messages as read." })
             )
         }
@@ -1297,29 +1284,27 @@ class AuthRepository(
         Result.success(Unit)
     }
 
-    suspend fun updateProfile(token: String, firstName: String, lastName: String, email: String): Result<ProfileInfo> = withContext(Dispatchers.IO) {
+    suspend fun updateProfile(token: String, firstName: String, lastName: String, email: String): Result<ProfileInfo> = networkResult {
         val authHeader = "Token $token"
-        val response = runCatching {
-            service.patchResource(
-                url = "$normalizedBaseUrl/api/auth/profile/update/",
-                authHeader = authHeader,
-                payload = mapOf(
-                    "first_name" to firstName.trim(),
-                    "last_name" to lastName.trim(),
-                    "email" to email.trim(),
-                ),
-            )
-        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to update profile."))
+        val response = service.patchResource(
+            url = "$normalizedBaseUrl/api/auth/profile/update/",
+            authHeader = authHeader,
+            payload = mapOf(
+                "first_name" to firstName.trim(),
+                "last_name" to lastName.trim(),
+                "email" to email.trim(),
+            ),
+        )
 
         if (!response.isSuccessful) {
             val bodyText = response.errorBody()?.string().orEmpty().ifBlank { "Unable to update profile." }
-            return@withContext Result.failure(IllegalStateException(bodyText))
+            return@networkResult Result.failure(IllegalStateException(bodyText))
         }
 
         val payload = response.body()?.takeIf { it.isJsonObject }?.asJsonObject
-            ?: return@withContext Result.failure(IllegalStateException("Invalid profile response."))
+            ?: return@networkResult Result.failure(IllegalStateException("Invalid profile response."))
         val user = payload.get("user")?.takeIf { it.isJsonObject }?.asJsonObject
-            ?: return@withContext Result.failure(IllegalStateException("Invalid profile user payload."))
+            ?: return@networkResult Result.failure(IllegalStateException("Invalid profile user payload."))
 
         val first = user.stringOrBlank("first_name")
         val last = user.stringOrBlank("last_name")
@@ -1344,30 +1329,28 @@ class AuthRepository(
         currentPassword: String,
         newPassword: String,
         confirmPassword: String,
-    ): Result<String> = withContext(Dispatchers.IO) {
+    ): Result<String> = networkResult {
         val authHeader = "Token $token"
-        val response = runCatching {
-            service.postResource(
-                url = "$normalizedBaseUrl/api/auth/password/change/",
-                authHeader = authHeader,
-                payload = mapOf(
-                    "current_password" to currentPassword,
-                    "new_password" to newPassword,
-                    "confirm_password" to confirmPassword,
-                ),
-            )
-        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to update password."))
+        val response = service.postResource(
+            url = "$normalizedBaseUrl/api/auth/password/change/",
+            authHeader = authHeader,
+            payload = mapOf(
+                "current_password" to currentPassword,
+                "new_password" to newPassword,
+                "confirm_password" to confirmPassword,
+            ),
+        )
 
         if (!response.isSuccessful) {
             val bodyText = response.errorBody()?.string().orEmpty().ifBlank { "Unable to update password." }
-            return@withContext Result.failure(IllegalStateException(bodyText))
+            return@networkResult Result.failure(IllegalStateException(bodyText))
         }
 
         val payload = response.body()?.takeIf { it.isJsonObject }?.asJsonObject
-            ?: return@withContext Result.failure(IllegalStateException("Invalid password update response."))
+            ?: return@networkResult Result.failure(IllegalStateException("Invalid password update response."))
         val newToken = payload.stringOrBlank("token")
         if (newToken.isBlank()) {
-            return@withContext Result.failure(IllegalStateException("Password changed but token is missing."))
+            return@networkResult Result.failure(IllegalStateException("Password changed but token is missing."))
         }
         Result.success(newToken)
     }
@@ -1377,23 +1360,21 @@ class AuthRepository(
         recipientId: Int,
         subject: String,
         body: String,
-    ): Result<Unit> = withContext(Dispatchers.IO) {
+    ): Result<Unit> = networkResult {
         val authHeader = "Token $token"
-        val response = runCatching {
-            service.postResourceRaw(
-                url = "$normalizedBaseUrl/api/messages/",
-                authHeader = authHeader,
-                payload = mapOf(
-                    "recipient" to recipientId,
-                    "subject" to subject,
-                    "body" to body,
-                ),
-            )
-        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to send message."))
+        val response = service.postResourceRaw(
+            url = "$normalizedBaseUrl/api/messages/",
+            authHeader = authHeader,
+            payload = mapOf(
+                "recipient" to recipientId,
+                "subject" to subject,
+                "body" to body,
+            ),
+        )
 
         if (!response.isSuccessful) {
             val bodyText = response.errorBody()?.string().orEmpty().ifBlank { "Unable to send message." }
-            return@withContext Result.failure(IllegalStateException(bodyText))
+            return@networkResult Result.failure(IllegalStateException(bodyText))
         }
 
         response.body()?.close()
@@ -1411,7 +1392,7 @@ class AuthRepository(
         imagesBase64: List<String>,
         materialType: String,
         transactionType: String,
-    ): Result<Unit> = withContext(Dispatchers.IO) {
+    ): Result<Unit> = networkResult {
         val authHeader = "Token $token"
         val payload = mutableMapOf<String, Any>(
             "user" to userId,
@@ -1431,18 +1412,16 @@ class AuthRepository(
             payload["images"] = cleanedImages
         }
 
-        val response = runCatching {
-            service.postResource(
-                url = "$normalizedBaseUrl/api/skimaterial/",
-                authHeader = authHeader,
-                payload = payload,
-            )
-        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to publish article."))
+        val response = service.postResource(
+            url = "$normalizedBaseUrl/api/skimaterial/",
+            authHeader = authHeader,
+            payload = payload,
+        )
 
         if (!response.isSuccessful) {
             val bodyText = response.errorBody()?.string().orEmpty()
             val message = extractApiErrorMessage(bodyText, "Unable to publish article.")
-            return@withContext Result.failure(IllegalStateException(message))
+            return@networkResult Result.failure(IllegalStateException(message))
         }
 
         Result.success(Unit)
@@ -1455,7 +1434,7 @@ class AuthRepository(
         city: String,
         skillLevel: String,
         preferredDate: String,
-    ): Result<Unit> = withContext(Dispatchers.IO) {
+    ): Result<Unit> = networkResult {
         val authHeader = "Token $token"
         val payload = mutableMapOf<String, Any>(
             "title" to title,
@@ -1467,18 +1446,16 @@ class AuthRepository(
             payload["preferred_date"] = preferredDate
         }
 
-        val response = runCatching {
-            service.postResource(
-                url = "$normalizedBaseUrl/api/skipartnerposts/",
-                authHeader = authHeader,
-                payload = payload,
-            )
-        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to publish partner post."))
+        val response = service.postResource(
+            url = "$normalizedBaseUrl/api/skipartnerposts/",
+            authHeader = authHeader,
+            payload = payload,
+        )
 
         if (!response.isSuccessful) {
             val bodyText = response.errorBody()?.string().orEmpty()
             val errorMessage = extractApiErrorMessage(bodyText, "Unable to publish partner post.")
-            return@withContext Result.failure(IllegalStateException(errorMessage))
+            return@networkResult Result.failure(IllegalStateException(errorMessage))
         }
 
         Result.success(Unit)
@@ -1489,20 +1466,18 @@ class AuthRepository(
         caption: String,
         imageBase64: String,
         stationId: Int?,
-    ): Result<Unit> = withContext(Dispatchers.IO) {
+    ): Result<Unit> = networkResult {
         val payload = mutableMapOf<String, Any>("image" to imageBase64)
         if (caption.isNotBlank()) payload["caption"] = caption
         if (stationId != null && stationId > 0) payload["ski_station"] = stationId
-        val response = runCatching {
-            service.postResource(
-                url = "$normalizedBaseUrl/api/skistories/",
-                authHeader = "Token $token",
-                payload = payload,
-            )
-        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to publish story."))
+        val response = service.postResource(
+            url = "$normalizedBaseUrl/api/skistories/",
+            authHeader = "Token $token",
+            payload = payload,
+        )
 
         if (!response.isSuccessful) {
-            return@withContext Result.failure(
+            return@networkResult Result.failure(
                 IllegalStateException(extractApiErrorMessage(response.errorBody()?.string().orEmpty(), "Unable to publish story."))
             )
         }
@@ -1516,12 +1491,12 @@ class AuthRepository(
         score: Int,
         comment: String,
         raterUserId: Int = 0,
-    ): Result<Unit> = withContext(Dispatchers.IO) {
+    ): Result<Unit> = networkResult {
         if (listingId <= 0 || ratedUserId <= 0) {
-            return@withContext Result.failure(IllegalStateException("Invalid seller rating payload."))
+            return@networkResult Result.failure(IllegalStateException("Invalid seller rating payload."))
         }
         if (score !in 1..5) {
-            return@withContext Result.failure(IllegalStateException("Score must be between 1 and 5."))
+            return@networkResult Result.failure(IllegalStateException("Score must be between 1 and 5."))
         }
 
         val authHeader = "Token $token"
@@ -1537,18 +1512,16 @@ class AuthRepository(
             payload["rater"] = raterUserId
         }
 
-        val response = runCatching {
-            service.postResource(
-                url = "$normalizedBaseUrl/api/marketplace-ratings/",
-                authHeader = authHeader,
-                payload = payload,
-            )
-        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to rate seller."))
+        val response = service.postResource(
+            url = "$normalizedBaseUrl/api/marketplace-ratings/",
+            authHeader = authHeader,
+            payload = payload,
+        )
 
         if (!response.isSuccessful) {
             val bodyText = response.errorBody()?.string().orEmpty()
             val message = extractApiErrorMessage(bodyText, "Unable to rate seller.")
-            return@withContext Result.failure(IllegalStateException(message))
+            return@networkResult Result.failure(IllegalStateException(message))
         }
         Result.success(Unit)
     }
@@ -1558,12 +1531,12 @@ class AuthRepository(
         stationId: Int,
         score: Int,
         comment: String,
-    ): Result<Unit> = withContext(Dispatchers.IO) {
+    ): Result<Unit> = networkResult {
         if (stationId <= 0) {
-            return@withContext Result.failure(IllegalStateException("Invalid station id."))
+            return@networkResult Result.failure(IllegalStateException("Invalid station id."))
         }
         if (score !in 1..5) {
-            return@withContext Result.failure(IllegalStateException("Score must be between 1 and 5."))
+            return@networkResult Result.failure(IllegalStateException("Score must be between 1 and 5."))
         }
 
         val authHeader = "Token $token"
@@ -1576,18 +1549,16 @@ class AuthRepository(
             payload["comment"] = comment
         }
 
-        val response = runCatching {
-            service.postResource(
-                url = "$normalizedBaseUrl/api/pistereports/",
-                authHeader = authHeader,
-                payload = payload,
-            )
-        }.getOrNull() ?: return@withContext Result.failure(IllegalStateException("Unable to rate station."))
+        val response = service.postResource(
+            url = "$normalizedBaseUrl/api/pistereports/",
+            authHeader = authHeader,
+            payload = payload,
+        )
 
         if (!response.isSuccessful) {
             val bodyText = response.errorBody()?.string().orEmpty()
             val message = extractApiErrorMessage(bodyText, "Unable to rate station.")
-            return@withContext Result.failure(IllegalStateException(message))
+            return@networkResult Result.failure(IllegalStateException(message))
         }
         Result.success(Unit)
     }

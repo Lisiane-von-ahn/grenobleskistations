@@ -1,0 +1,257 @@
+:root {
+    --mountain-ink: #0e2b3d;
+    --mountain-accent: #086357;
+    --mountain-radius: 1.15rem;
+    --app-bg: #f2f7fa;
+    --app-border: #d8e4eb;
+    --app-soft-shadow: 0 8px 28px rgb(14 43 61 / 8%);
+}
+
+body.theme-dark {
+    --mountain-ink: #eff8fc;
+    --mountain-accent: #a5f0db;
+}
+
+main :focus-visible {
+    outline: 3px solid #149c89;
+    outline-offset: 3px;
+}
+
+.home-intro { margin-top: 0; padding-top: clamp(.65rem, 2vw, 1.5rem); }
+
+.mountain-hero {
+    min-height: clamp(18rem, 40vw, 31rem);
+    display: grid;
+    align-items: end;
+    padding: clamp(1.2rem, 5vw, 4rem);
+    border-radius: clamp(1rem, 3vw, 1.8rem);
+    background: linear-gradient(20deg, #092535 6%, rgb(9 37 53 / 72%) 32%, rgb(9 37 53 / 10%) 79%),
+        #164151 url('../images/chamrousse-hero.webp') center / cover;
+    box-shadow: var(--app-soft-shadow);
+}
+
+.mountain-hero h1, .station-banner h1 {
+    margin: 0;
+    color: #fff;
+    font-size: clamp(2.2rem, 6vw, 5.4rem);
+    line-height: 1.02;
+    letter-spacing: -.055em;
+    overflow-wrap: anywhere;
+}
+
+.mountain-hero p, .station-banner p {
+    margin: .75rem 0 1.2rem;
+    color: #ecf7ff;
+    font-size: clamp(1rem, 2.3vw, 1.25rem);
+    line-height: 1.45;
+}
+
+.mountain-actions { display: flex; flex-wrap: wrap; gap: .65rem; }
+
+.mountain-action, .camera-open {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .55rem;
+    min-height: 46px;
+    padding: .65rem 1rem;
+    border-radius: .7rem;
+    border: 1px solid transparent;
+    font-weight: 700;
+    line-height: 1.25;
+    text-align: center;
+}
+
+.mountain-action { background: #e0fcf3; color: #074c43; }
+.mountain-action:hover { background: #fff; color: #074c43; }
+.mountain-action-glass { background: #193b4f; color: #fff; border-color: #7ca3b3; }
+
+.station-banner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: clamp(1.15rem, 4vw, 2.25rem);
+    border-radius: var(--mountain-radius);
+    background: linear-gradient(130deg, #0e2b3d, #145d65);
+}
+
+.station-banner h1 { font-size: clamp(2rem, 5.7vw, 3.5rem); }
+.station-banner p { margin-bottom: 0; }
+
+.station-page, .station-webcams { margin-top: 0; }
+.home-webcams { margin-block: clamp(1.35rem, 4vw, 2.6rem); }
+#webcams, #cameras { scroll-margin-top: 1rem; }
+
+.home-webcams h2, .station-webcams h2 {
+    color: var(--mountain-ink);
+    font-size: clamp(1.35rem, 3vw, 1.9rem);
+    letter-spacing: -.025em;
+    margin-bottom: .85rem;
+}
+
+.webcam-stations, .camera-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+    gap: .65rem;
+}
+
+.webcam-stations { list-style: none; padding: 0; margin: 0; }
+
+.webcam-stations a {
+    display: flex;
+    align-items: center;
+    gap: .7rem;
+    min-height: 52px;
+    height: 100%;
+    padding: .65rem .85rem;
+    border-radius: .75rem;
+    border: 1px solid var(--app-border);
+    background: var(--app-surface);
+    color: var(--mountain-ink);
+    font-weight: 600;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.webcam-stations a:hover { border-color: var(--mountain-accent); }
+.webcam-stations i, .webcam-stations small { color: var(--mountain-accent); }
+.webcam-stations small { margin-left: auto; }
+
+.camera-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr)); gap: 1rem; }
+.camera-card {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--app-border);
+    border-radius: var(--mountain-radius);
+    background: var(--app-surface);
+    box-shadow: var(--app-soft-shadow);
+}
+
+.camera-preview {
+    display: grid;
+    aspect-ratio: 16 / 9;
+    position: relative;
+    color: #bfe7ed;
+    background: #173f53;
+}
+
+.camera-preview:focus-visible { outline-offset: -4px; z-index: 1; }
+.camera-preview img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.camera-preview[hidden] { display: none; }
+.camera-info { padding: 1rem; display: flex; flex-direction: column; flex: 1; gap: .65rem; }
+.camera-info h3 { margin: 0; color: var(--mountain-ink); font-size: 1.05rem; overflow-wrap: anywhere; }
+.camera-info h3 i { color: var(--mountain-accent); margin-right: .35rem; }
+.camera-info p { margin: 0; color: var(--app-text); line-height: 1.55; overflow-wrap: anywhere; }
+.camera-open { margin-top: auto; align-self: start; color: var(--mountain-accent); border-color: var(--app-border); }
+.camera-open:hover { color: var(--mountain-accent); border-color: currentColor; }
+
+@media (max-width: 575.98px) {
+    .camera-open { width: 100%; }
+    .mobile-bottom-nav a { min-width: 0; min-height: 44px; }
+    .mountain-hero { background-position: center, 58% center; }
+}
+
+@media (min-width: 768px) {
+    .webcam-stations { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+.header-area.header-sticky {
+    position: relative;
+    min-height: 0;
+    background: linear-gradient(110deg, #0d2f42, #136363);
+    box-shadow: 0 4px 18px rgb(9 37 53 / 16%);
+}
+
+body.home-page .main-content-wrap, body .main-content-wrap { margin-top: 0 !important; }
+.header-area .main-nav { min-height: 86px; }
+.header-area .main-nav .logo img { width: auto; height: 64px; margin: 0; }
+
+main .section-heading h2, main .conditions-section h2 {
+    color: var(--mountain-ink);
+    letter-spacing: -.025em;
+    text-transform: none;
+}
+
+main .section-heading p {
+    color: var(--app-text);
+    opacity: .9;
+}
+
+.visit-country .items .item {
+    border: 1px solid var(--app-border);
+    border-radius: var(--mountain-radius);
+    background: var(--app-surface);
+    padding: 1rem;
+    box-shadow: var(--app-soft-shadow);
+}
+
+.visit-country .items .item .image img,
+.station-result-photo {
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+    border-radius: .75rem;
+}
+
+.station-result-photo { display: block; }
+
+@media (max-width: 575.98px) {
+    .visit-country .items .item .main-button a {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+    }
+}
+
+.station-result-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.station-result-actions a { min-height: 44px; display: inline-flex; align-items: center; }
+
+
+@media (max-width: 992px) {
+    body { --mobile-header-height: 74px; }
+
+    .header-area.header-sticky {
+        height: var(--mobile-header-height) !important;
+    }
+
+    .header-area .main-nav {
+        min-height: var(--mobile-header-height);
+    }
+
+    .header-area .main-nav .logo img {
+        width: auto;
+        height: 55px;
+    }
+
+    .header-area .main-nav .nav {
+        top: var(--mobile-header-height);
+    }
+
+    .header-area .main-nav .profile-avatar-link {
+        flex-shrink: 0;
+    }
+
+    .header-area .main-nav .menu-trigger {
+        flex: 0 0 44px;
+        height: 44px;
+        position: relative;
+        top: auto;
+        right: auto;
+        border: 1px solid rgb(255 255 255 / 40%);
+        border-radius: 50%;
+    }
+
+    .header-area .main-nav .menu-trigger span {
+        width: 22px;
+        top: 20px;
+        left: 10px;
+    }
+
+    .header-area .main-nav .menu-trigger span::before { top: -7px; }
+    .header-area .main-nav .menu-trigger span::after { top: 7px; }
+    .header-area .main-nav .menu-trigger.active span::before { transform: translateY(4px) rotate(45deg); }
+    .header-area .main-nav .menu-trigger.active span::after { transform: translateY(-4px) rotate(-45deg); }
+}

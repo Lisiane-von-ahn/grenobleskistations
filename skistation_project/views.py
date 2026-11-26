@@ -1,5 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
+from django.http import Http404, HttpResponse, HttpResponseRedirect, JsonResponse
+from django.views.decorators.cache import cache_control
 from django.views.decorators.http import require_GET
 from django.conf import settings
 from django.contrib.auth import login
@@ -396,14 +397,32 @@ def home(request):
             'culture_news': SkiNewsItem.objects.filter(category='culture', culture_source__is_active=True).order_by('-published_at')[:6],
             'all': queryset,
             'nearest_stations': nearest_stations,
+            'camera_stations': SkiStation.objects.filter(cameras__is_active=True)
+                .values('id', 'name').annotate(camera_count=Count('cameras')).order_by('name'),
             'map_stations': map_stations,
         },
     )
 
 
+@require_GET
+@cache_control(private=True, max_age=3600)
+def ski_station_photo(request, station_id):
+    station = get_object_or_404(SkiStation.objects.only('image'), pk=station_id)
+    if not station.image:
+        raise Http404
+
+    data = bytes(station.image)
+    try:
+        with Image.open(BytesIO(data), formats=('JPEG', 'PNG', 'WEBP', 'GIF')) as photo:
+            content_type = Image.MIME[photo.format]
+    except (OSError, Image.DecompressionBombError) as error:
+        raise Http404 from error
+    return HttpResponse(data, content_type=content_type, headers={'X-Content-Type-Options': 'nosniff'})
+
+
 def ski_station_detail(request, station_id):
     ski_station = get_object_or_404(
-        SkiStation.objects.prefetch_related('cameras', 'bus_lines').annotate(num_circuits=Coalesce(Sum('skicircuit__num_pistes'), Value(0))),
+        SkiStation.objects.prefetch_related('bus_lines').annotate(num_circuits=Coalesce(Sum('skicircuit__num_pistes'), Value(0))),
         id=station_id,
     )
     bus_lines = BusLine.objects.filter(ski_station=ski_station)
@@ -540,6 +559,7 @@ def ski_station_detail(request, station_id):
 
     context = {
         'station': ski_station,
+        'cameras': ski_station.cameras.filter(is_active=True),
         'bus_lines': bus_lines,
         'service_stores': service_stores,
         'ski_circuits': ski_circuits,
@@ -573,7 +593,7 @@ def ski_station_detail(request, station_id):
 
 
 def ski_station_search(request):
-    query = SkiStation.objects.all()
+    query = SkiStation.objects.annotate(camera_count=Count('cameras', filter=Q(cameras__is_active=True)))
     
     # Filters
     capacity = request.GET.get('capacity')

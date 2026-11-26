@@ -1,99 +1,94 @@
 {% extends "admin/base_site.html" %}
 
+{% block extrastyle %}
+{{ block.super }}
+<style>
+    .traffic-dashboard { max-width: 72rem; }
+    .traffic-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: 1rem; }
+    .traffic-panel { padding: 1rem; margin-bottom: 1rem; min-width: 0; border: 1px solid var(--hairline-color); border-radius: .75rem; background: var(--body-bg); }
+    .traffic-panel strong { display: block; color: var(--body-loud-color); font-size: 1.75rem; }
+    .traffic-panel h2 { margin: 0 0 .85rem; font-size: 1rem; color: var(--body-loud-color); }
+    .traffic-panel table { width: 100%; }
+    .traffic-panel th, .traffic-panel td { overflow-wrap: anywhere; }
+    .traffic-panel td:last-child { text-align: right; }
+    .traffic-trend { display: grid; grid-template-columns: repeat(30, minmax(0, 1fr)); gap: 3px; align-items: end; height: 7rem; border-bottom: 1px solid var(--border-color); }
+    .traffic-trend meter { width: 100%; height: 100%; writing-mode: vertical-lr; direction: rtl; accent-color: var(--primary); }
+    .traffic-dates { display: flex; justify-content: space-between; margin: .5rem 0 0; padding: 0; }
+</style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Accueil</a> › Statistiques de fréquentation</div>
+{% endblock %}
+
 {% block content %}
-<div style="max-width: 1200px; margin: 0 auto;">
-    <h1>Dashboard usage application</h1>
-    <p style="margin-bottom: 18px; color: #555;">Vue globale des utilisateurs, traffic et fonctionnalites les plus utilisees.</p>
-
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:20px;">
-        <div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:14px;">
-            <div style="font-size:12px;color:#666;">Utilisateurs total</div>
-            <div style="font-size:28px;font-weight:700;">{{ total_users }}</div>
-        </div>
-        <div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:14px;">
-            <div style="font-size:12px;color:#666;">Utilisateurs actifs 30j</div>
-            <div style="font-size:28px;font-weight:700;">{{ active_users_30d }}</div>
-        </div>
-        <div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:14px;">
-            <div style="font-size:12px;color:#666;">Events usage 24h</div>
-            <div style="font-size:28px;font-weight:700;">{{ events_24h_count }}</div>
-        </div>
-        <div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:14px;">
-            <div style="font-size:12px;color:#666;">Events usage 30j</div>
-            <div style="font-size:28px;font-weight:700;">{{ events_30d_count }}</div>
-        </div>
+<div class="traffic-dashboard">
+    <p>Les pages vues comptent les consultations enregistrées avec une réponse HTTP 200. Plusieurs consultations peuvent provenir de la même personne.</p>
+    <div class="traffic-grid">
+        <div class="traffic-panel">Pages vues · 24 h<strong>{{ page_views_24h }}</strong></div>
+        <div class="traffic-panel">Pages vues · 30 j<strong>{{ page_views_count }}</strong></div>
+        <div class="traffic-panel">Pages vues sur mobile · 30 j<strong>{{ mobile_page_views }}</strong></div>
     </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-        <section style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:12px;">
-            <h2 style="margin-top:0;">Fonctionnalites les plus utilisees (30j)</h2>
-            <table style="width:100%;border-collapse:collapse;">
-                <thead>
-                    <tr>
-                        <th style="text-align:left;border-bottom:1px solid #e5e5e5;padding:8px;">Feature</th>
-                        <th style="text-align:right;border-bottom:1px solid #e5e5e5;padding:8px;">Events</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in top_features %}
-                    <tr>
-                        <td style="padding:8px;border-bottom:1px solid #f1f1f1;">{{ row.feature_name }}</td>
-                        <td style="padding:8px;border-bottom:1px solid #f1f1f1;text-align:right;">{{ row.total }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="2" style="padding:8px;color:#666;">Aucune donnee.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </section>
-
-        <section style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:12px;">
-            <h2 style="margin-top:0;">Repartition plateforme (30j)</h2>
-            <table style="width:100%;border-collapse:collapse;">
-                <thead>
-                    <tr>
-                        <th style="text-align:left;border-bottom:1px solid #e5e5e5;padding:8px;">Plateforme</th>
-                        <th style="text-align:right;border-bottom:1px solid #e5e5e5;padding:8px;">Events</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in platform_breakdown %}
-                    <tr>
-                        <td style="padding:8px;border-bottom:1px solid #f1f1f1;">{{ row.platform }}</td>
-                        <td style="padding:8px;border-bottom:1px solid #f1f1f1;text-align:right;">{{ row.total }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="2" style="padding:8px;color:#666;">Aucune donnee.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </section>
-    </div>
-
-    <section style="margin-top:14px;background:#fff;border:1px solid #ddd;border-radius:8px;padding:12px;">
-        <h2 style="margin-top:0;">Pages/endpoints les plus consultes (30j)</h2>
-        <table style="width:100%;border-collapse:collapse;">
-            <thead>
-                <tr>
-                    <th style="text-align:left;border-bottom:1px solid #e5e5e5;padding:8px;">Path</th>
-                    <th style="text-align:right;border-bottom:1px solid #e5e5e5;padding:8px;">Events</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in top_paths %}
-                <tr>
-                    <td style="padding:8px;border-bottom:1px solid #f1f1f1;">{{ row.path }}</td>
-                    <td style="padding:8px;border-bottom:1px solid #f1f1f1;text-align:right;">{{ row.total }}</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="2" style="padding:8px;color:#666;">Aucune donnee.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <section class="traffic-panel">
+        <h2>Pages vues par jour</h2>
+        <div class="traffic-trend">
+            {% for point in daily_page_views %}
+                <meter min="0" max="{{ point.peak }}" value="{{ point.total }}"
+                       aria-label="{{ point.day|date:'d/m/Y' }} · {{ point.total }} vues"
+                       title="{{ point.day|date:'d/m/Y' }} · {{ point.total }} vues"></meter>
+            {% endfor %}
+        </div>
+        <p class="traffic-dates"><span>{{ daily_page_views.0.day|date:"d/m" }}</span><span>{{ daily_page_views.29.day|date:"d/m" }}</span></p>
     </section>
-
-    <p style="margin-top:16px;">
-        <a class="button" href="/admin/api/appusageevent/">Voir les logs bruts</a>
-    </p>
+    <div class="traffic-grid">
+        <section class="traffic-panel">
+            <h2>Pages les plus consultées · 30 j</h2>
+            <table>
+                {% for row in top_pages %}
+                    <tr><th scope="row">{{ row.path }}</th><td>{{ row.total }}</td></tr>
+                {% empty %}
+                    <tr><td>Aucune consultation enregistrée.</td></tr>
+                {% endfor %}
+            </table>
+        </section>
+        <section class="traffic-panel">
+            <h2>Événements par plateforme · 30 j</h2>
+            <table>
+                {% for row in platform_breakdown %}
+                    <tr><th scope="row">{{ row.platform }}</th><td>{{ row.total }}</td></tr>
+                {% empty %}
+                    <tr><td>Aucun événement enregistré.</td></tr>
+                {% endfor %}
+            </table>
+        </section>
+    </div>
+    <details class="traffic-panel">
+        <summary>Activité du site et de l’API</summary>
+        <p>{{ events_24h_count }} événements sur 24 h · {{ events_30d_count }} sur 30 j</p>
+        <p>{{ total_users }} comptes · {{ active_users_30d }} connectés sur 30 j</p>
+        <div class="traffic-grid">
+            <section>
+                <h2>Fonctionnalités · 30 j</h2>
+                <table>
+                    {% for row in top_features %}
+                        <tr><th scope="row">{{ row.feature_name }}</th><td>{{ row.total }}</td></tr>
+                    {% empty %}
+                        <tr><td>Aucun événement enregistré.</td></tr>
+                    {% endfor %}
+                </table>
+            </section>
+            <section>
+                <h2>Pages et endpoints · 30 j</h2>
+                <table>
+                    {% for row in top_paths %}
+                        <tr><th scope="row">{{ row.path }}</th><td>{{ row.total }}</td></tr>
+                    {% empty %}
+                        <tr><td>Aucun événement enregistré.</td></tr>
+                    {% endfor %}
+                </table>
+            </section>
+        </div>
+        <p><a href="{% url 'admin:api_appusageevent_changelist' %}">Consulter les événements</a></p>
+    </details>
 </div>
 {% endblock %}

@@ -3,6 +3,7 @@ package fr.grenobleski.nativeapp.ui
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Base64
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.webkit.WebResourceRequest
@@ -52,6 +53,7 @@ import fr.grenobleski.nativeapp.AppUiState
 import fr.grenobleski.nativeapp.R
 import fr.grenobleski.nativeapp.data.model.StationCameraItem
 import fr.grenobleski.nativeapp.data.model.StationItem
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
@@ -774,6 +776,13 @@ internal fun CameraFrame(
     if (uri.scheme != "https" || uri.host.isNullOrBlank()) {
         Text(stringResource(R.string.camera_unavailable)); return
     }
+    LaunchedEffect(camera.cameraUrl, attempt, loading, failed) {
+        if (loading && !failed) {
+            delay(20_000)
+            failed = true
+            loading = false
+        }
+    }
     if (failed) {
         Text(stringResource(R.string.camera_unavailable))
         OutlinedButton(onClick = { failed = false; loading = true; attempt++ }) { Text(stringResource(R.string.refresh)) }
@@ -784,52 +793,57 @@ internal fun CameraFrame(
                 modifier = modifier,
                 factory = { context -> android.widget.VideoView(context).apply {
                     setMediaController(android.widget.MediaController(context).also { it.setAnchorView(this) })
-                    setVideoURI(uri)
                     setOnPreparedListener { loading = false; start() }
                     setOnErrorListener { _, _, _ -> failed = true; loading = false; true }
+                    setVideoURI(uri)
                 } },
                 onRelease = { it.stopPlayback() },
             )
         } else {
-        AndroidView(
-            modifier = modifier.clip(RoundedCornerShape(16.dp)),
-            factory = { context ->
-                WebView(context).apply {
-                    settings.javaScriptEnabled = true
-                    settings.domStorageEnabled = true
-                    settings.allowFileAccess = false
-                    settings.allowContentAccess = false
-                    settings.mediaPlaybackRequiresUserGesture = true
-                    webViewClient = object : WebViewClient() {
-                        override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean = request.url.scheme != "https"
-                        override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, response: android.webkit.WebResourceResponse) {
-                            if (request.isForMainFrame) { failed = true; loading = false }
+            AndroidView(
+                modifier = modifier.clip(RoundedCornerShape(16.dp)),
+                factory = { context ->
+                    WebView(context).apply {
+                        settings.javaScriptEnabled = true
+                        settings.domStorageEnabled = true
+                        settings.allowFileAccess = false
+                        settings.allowContentAccess = false
+                        settings.mediaPlaybackRequiresUserGesture = true
+                        webViewClient = object : WebViewClient() {
+                            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean = request.url.scheme != "https"
+                            override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, response: android.webkit.WebResourceResponse) {
+                                if (request.isForMainFrame) { failed = true; loading = false }
+                            }
+                            override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
+                                failed = true
+                                loading = false
+                                return true
+                            }
+                            override fun onPageFinished(view: WebView, url: String) { loading = false }
+                            override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
+                                if (request.isForMainFrame) { failed = true; loading = false }
+                            }
                         }
-                        override fun onPageFinished(view: WebView, url: String) { loading = false }
-                        override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
-                            if (request.isForMainFrame) { failed = true; loading = false }
-                        }
+                        val path = uri.path.orEmpty().lowercase()
+                        if (path.endsWith(".jpg") || path.endsWith(".jpeg") || path.endsWith(".png")) {
+                            // Snapshot timestamp belongs to the provider image, not to our refresh time.
+                            val escaped = org.json.JSONObject.quote(camera.cameraUrl)
+                            loadDataWithBaseURL(camera.cameraUrl, """
+                                <html><meta name="viewport" content="width=device-width,initial-scale=1">
+                                <body style="margin:0;background:#112735"><img id="cam" alt="Webcam" style="width:100%;height:100vh;object-fit:contain">
+                                <div id="status" hidden style="position:absolute;top:8px;color:white">Webcam unavailable / indisponible</div>
+                                <script>const u=$escaped;const i=document.getElementById('cam');
+                                function refresh(){i.src=u+(u.includes('?')?'&':'?')+'refresh='+Date.now();}
+                                i.onerror=()=>{document.getElementById('status').hidden=false;};
+                                i.onload=()=>{document.getElementById('status').hidden=true;};
+                                refresh();setInterval(refresh,60000);</script>
+                                </body></html>
+                            """.trimIndent(), "text/html", "UTF-8", null)
+                        } else loadUrl(camera.cameraUrl)
                     }
-                    val path = uri.path.orEmpty().lowercase()
-                    if (path.endsWith(".jpg") || path.endsWith(".jpeg") || path.endsWith(".png")) {
-                        // Snapshot timestamp belongs to the provider image, not to our refresh time.
-                        val escaped = org.json.JSONObject.quote(camera.cameraUrl)
-                        loadDataWithBaseURL(camera.cameraUrl, """
-                            <html><meta name="viewport" content="width=device-width,initial-scale=1">
-                            <body style="margin:0;background:#112735"><img id="cam" alt="Webcam" style="width:100%;height:100vh;object-fit:contain">
-                            <div id="status" hidden style="position:absolute;top:8px;color:white">Webcam unavailable / indisponible</div>
-                            <script>const u=$escaped;const i=document.getElementById('cam');
-                            function refresh(){i.src=u+(u.includes('?')?'&':'?')+'refresh='+Date.now();}
-                            i.onerror=()=>{document.getElementById('status').hidden=false;};
-                            i.onload=()=>{document.getElementById('status').hidden=true;};
-                            refresh();setInterval(refresh,60000);</script>
-                            </body></html>
-                        """.trimIndent(), "text/html", "UTF-8", null)
-                    } else loadUrl(camera.cameraUrl)
-                }
-            },
-            onRelease = { it.stopLoading(); it.loadUrl("about:blank"); it.destroy() },
-        )
+                },
+                onRelease = { it.destroy() },
+            )
         }
     }
 }

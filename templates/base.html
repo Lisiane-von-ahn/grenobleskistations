@@ -1067,6 +1067,7 @@
             }
         }
     </style>        
+    <link rel="stylesheet" href="{% static 'css/mountain.css' %}">
 </head>
 
 <body class="{% if request.resolver_match.url_name == 'my_template_view' %}home-page{% endif %}">
@@ -1088,6 +1089,7 @@
                             <li class="nav-dropdown">
                                 <a href="{% url 'ski_stories' %}" class="menu-chip">{% trans "Découvrir" %} ▾</a>
                                 <ul class="nav-submenu">
+                                    <li><a href="{% url 'my_template_view' %}#webcams">Webcams</a></li>
                                     <li><a href="{% url 'ski_stories' %}">{% trans "Culture et stories" %}</a></li>
                                     <li><a href="{% url 'services' %}">{% trans "Services" %}</a></li>
                                     <li><a href="{% url 'instructors' %}">{% trans "Moniteurs" %}</a></li>

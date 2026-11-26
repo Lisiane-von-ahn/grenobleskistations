@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 {% extends 'base.html' %}
 {% load static %}
-{% load base64_filters %}
 {% load i18n %}
 
 {% block title %}{% trans "Stations de Ski" %}{% endblock %}
@@ -113,7 +112,11 @@
                     <div class="card shadow-sm border-0 h-100">
                         <div class="row g-0">
                             <div class="col-md-6">
-                                <img src="data:image/jpeg;base64,{{ station.image|b64encode }}" class="img-fluid rounded-start" alt="{{ station.name }}">
+                                {% if station.image %}
+                                    <img src="{% url 'ski_station_photo' station.id %}" class="station-result-photo" alt="{{ station.name }}" loading="lazy" decoding="async">
+                                {% else %}
+                                    <img src="{% static 'images/chamrousse.jpg' %}" class="station-result-photo" alt="" loading="lazy" decoding="async">
+                                {% endif %}
 {% include "partials/station_photo_credit.html" %}
                             </div>
                             <div class="col-md-6 d-flex align-items-center">
@@ -124,7 +127,12 @@
                                         <li><strong>{% trans "Distance :" %}</strong> {{ station.distanceFromGrenoble }} km</li>
                                         <li><strong>{% trans "Capacité :" %}</strong> {{ station.capacity }}</li>
                                     </ul>
-                                    <a href="{% url 'ski_station_detail' station.id %}" class="btn btn-outline-primary btn-sm">{% trans "Voir plus de détails" %}</a>
+                                    <div class="station-result-actions">
+                                        <a href="{% url 'ski_station_detail' station.id %}" class="btn btn-outline-primary">{% trans "Voir plus de détails" %}</a>
+                                        {% if station.camera_count %}
+                                            <a href="{% url 'ski_station_detail' station.id %}#cameras" class="btn btn-outline-secondary">Webcams</a>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
                         </div>

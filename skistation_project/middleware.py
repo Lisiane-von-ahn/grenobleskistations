@@ -73,6 +73,18 @@ class ForcePasswordResetMiddleware:
 class UsageAnalyticsMiddleware:
     """Capture high-level product usage events for admin analytics dashboards."""
 
+    WEB_PAGE_NAMES = {
+        'my_template_view': 'home',
+        'ski_station_search': 'station_search',
+        'bus_line_detail': 'bus_detail',
+        'ski_stories': 'ski_stories',
+        'trail_maps': 'trail_maps',
+        'mountain_tips': 'mountain_tips',
+        'accommodations': 'accommodations',
+        'ski_material_listings': 'marketplace',
+        'listing_detail': 'listing_detail',
+    }
+
     FEATURE_PREFIX_MAP = [
         ('/covoiturage', 'covoiturage'),
         ('/ski-partners', 'ski_partners'),
@@ -111,7 +123,15 @@ class UsageAnalyticsMiddleware:
         if path.startswith('/admin/'):
             return response
 
+        match = request.resolver_match
+        is_api = path.startswith('/api/')
+        is_html = response.get('Content-Type', '').startswith('text/html')
+        if not is_api and request.method == 'GET' and response.status_code == 200 and not is_html:
+            return response
+
         feature_name = self._resolve_feature(path)
+        if not feature_name and match and is_html and request.method == 'GET' and response.status_code == 200:
+            feature_name = self.WEB_PAGE_NAMES.get(match.url_name)
         if not feature_name:
             return response
 
@@ -128,11 +148,7 @@ class UsageAnalyticsMiddleware:
                 method=(request.method or 'GET')[:8],
                 status_code=int(getattr(response, 'status_code', 200) or 200),
                 platform=platform,
-                is_api=path.startswith('/api/'),
-                metadata={
-                    'query_string': (request.META.get('QUERY_STRING') or '')[:300],
-                    'user_agent': user_agent,
-                },
+                is_api=is_api,
             )
         except Exception:
             # Analytics should never break user traffic.

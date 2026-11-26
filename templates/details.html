@@ -1,11 +1,10 @@
-<!DOCTYPE html>
 {% extends 'base.html' %}
 {% load static %}
 {% load base64_filters %}
 {% load i18n %}
 {% load l10n %}
 
-{% block title %}{% trans "Stations de Ski" %}{% endblock %}
+{% block title %}{{ station.name }} · Grenoble Ski{% endblock %}
 
 {% block content %}
 
@@ -125,30 +124,6 @@
             padding: 0.9rem;
             background: #fff;
         }
-        .media-tabs {
-            padding: 0.5rem;
-            border-bottom: 1px solid #e8edf5;
-            gap: 0.5rem;
-            background: linear-gradient(180deg, #fafcff 0%, #f3f7ff 100%);
-        }
-        .media-tabs .nav-link {
-            border: 0;
-            border-radius: 999px;
-            font-weight: 600;
-            color: #3f4f67;
-            padding: 0.5rem 0.9rem;
-        }
-        .media-tabs .nav-link.active {
-            background: #0d6efd;
-            color: #fff;
-        }
-        .camera-card {
-            border: 1px solid #e8edf5;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
-        }
-
         @media (max-width: 991.98px) {
             .station-hero-image {
                 height: 220px;
@@ -205,25 +180,52 @@
         }
     </style>
 
-    <section class="py-4">
+    <section class="station-page py-4">
         <div class="container">
-            <div class="premium-shell mb-4 p-3">
-                <div class="premium-hero">
-                    <span class="premium-kicker">Station</span>
-                    <h2 class="premium-title h2 mb-1">{{ station.name }}</h2>
-                    <p class="premium-subtitle">{{ station.distanceFromGrenoble }} km de Grenoble • {{ station.altitude }} m</p>
+            <header class="station-banner mb-4">
+                <div>
+                    <h1>{{ station.name }}</h1>
+                    <p>{{ station.distanceFromGrenoble }} km de Grenoble · {{ station.altitude }} m</p>
                 </div>
-            </div>
+                <div class="mountain-actions">
+                    {% if cameras %}<a class="mountain-action" href="#cameras">Webcams</a>{% endif %}
+                    {% if station.piste_map_url %}<a class="mountain-action mountain-action-glass" href="{{ station.piste_map_url }}" target="_blank" rel="noopener">{% trans "Carte des pistes" %}</a>{% endif %}
+                </div>
+            </header>
+
+            {% if cameras %}
+            <section class="station-webcams mb-4" id="cameras" aria-labelledby="cameras-heading">
+                <h2 id="cameras-heading">{% trans "Caméras en direct" %}</h2>
+                <div class="camera-grid">
+                    {% for camera in cameras %}
+                    <article class="camera-card">
+                        {% if camera.thumbnail_url or camera.camera_type == 'snapshot' %}
+                        <a href="{{ camera.camera_url }}" target="_blank" rel="noopener" class="camera-preview"
+                           aria-label="{% trans 'Ouvrir webcam' %} · {{ camera.name }}">
+                            <img src="{{ camera.thumbnail_url|default:camera.camera_url }}" alt=""
+                                 loading="lazy" decoding="async" width="640" height="360" data-camera-preview>
+                        </a>
+                        {% endif %}
+                        <div class="camera-info">
+                            <h3><i class="fas fa-video" aria-hidden="true"></i> {{ camera.name }}</h3>
+                            {% if camera.description %}<p>{{ camera.description }}</p>{% endif %}
+                            <a href="{{ camera.camera_url }}" target="_blank" rel="noopener" class="camera-open">{% trans "Ouvrir webcam" %}</a>
+                        </div>
+                    </article>
+                    {% endfor %}
+                </div>
+            </section>
+            <script src="{% static 'js/camera-previews.js' %}" defer></script>
+            {% endif %}
 
             <div class="row g-4">
                 <div class="col-lg-7">
                     <div class="card section-card p-3 h-100">
-                        <h3 class="mb-3">{{ station.name }}</h3>
                         {% if station.image %}
-                            <img src="data:image/jpeg;base64,{{ station.image|b64encode }}" class="station-hero-image mb-3" alt="{{ station.name }}">
+                            <img src="{% url 'ski_station_photo' station.id %}" class="station-hero-image mb-3" alt="{{ station.name }}" loading="lazy" decoding="async">
 {% include "partials/station_photo_credit.html" %}
                         {% else %}
-                            <img src="{% static 'images/chamrousse.jpg' %}" class="station-hero-image mb-3" alt="{{ station.name }}">
+                            <img src="{% static 'images/chamrousse.jpg' %}" class="station-hero-image mb-3" alt="{{ station.name }}" loading="lazy" decoding="async">
                         {% endif %}
 
                         <div class="row">
@@ -377,77 +379,17 @@
                     </div>
                 </div>
 
-                <!-- Caméras et Cartes de Pistes -->
-                <div class="col-lg-12">
-                    <div class="card section-card p-0">
-                        <div class="nav nav-tabs media-tabs" id="mediaTabs" role="tablist">
-                            {% if station.cameras.all %}
-                            <button class="nav-link active" id="cameras-tab" data-bs-toggle="tab" data-bs-target="#cameras" type="button" role="tab">
-                                <i class="bi bi-camera-video"></i> {% trans "Caméras en direct" %} <span class="badge bg-primary">{{ station.cameras.count }}</span>
-                            </button>
-                            {% endif %}
-                            {% if station.piste_map_thumbnail_url %}
-                            <button class="nav-link {% if not station.cameras.all %}active{% endif %}" id="piste-map-tab" data-bs-toggle="tab" data-bs-target="#piste-map" type="button" role="tab">
-                                <i class="bi bi-map"></i> {% trans "Carte des pistes" %}
-                            </button>
-                            {% endif %}
-                        </div>
-                        <div class="tab-content p-3" id="mediaContent">
-                            <!-- Caméras -->
-                            {% if station.cameras.all %}
-                            <div class="tab-pane fade show active" id="cameras" role="tabpanel">
-                                <div class="row g-3">
-                                    {% for camera in station.cameras.all %}
-                                    <div class="col-md-6 col-lg-4">
-                                        <div class="card h-100 camera-card">
-                                            {% if camera.thumbnail_url %}
-                                            <a href="{{ camera.camera_url }}" target="_blank" rel="noopener" class="d-block bg-dark ratio ratio-16x9 overflow-hidden">
-                                                <img src="{{ camera.thumbnail_url }}" class="img-fluid object-fit-cover" alt="{{ camera.name }}" style="object-fit: cover;">
-                                            </a>
-                                            {% else %}
-                                            <div class="card-body bg-light d-flex align-items-center justify-content-center py-5">
-                                                <i class="bi bi-camera-video-off" style="font-size: 2rem; color: #999;"></i>
-                                            </div>
-                                            {% endif %}
-                                            <div class="card-body">
-                                                <h6 class="card-title mb-1">{{ camera.name }}</h6>
-                                                {% if camera.description %}
-                                                <p class="card-text small text-muted mb-2">{{ camera.description }}</p>
-                                                {% endif %}
-                                                <a href="{{ camera.camera_url }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
-                                                    {% trans "Ouvrir webcam" %} <i class="bi bi-arrow-up-right"></i>
-                                                </a>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                            {% endif %}
-                            
-                            <!-- Carte des pistes -->
-                            {% if station.piste_map_thumbnail_url %}
-                            <div class="tab-pane fade {% if not station.cameras.all %}show active{% endif %}" id="piste-map" role="tabpanel">
-                                <div class="row">
-                                    <div class="col-lg-8 mx-auto">
-                                        <div class="text-center mb-3">
-                                            <a href="{{ station.piste_map_url }}" target="_blank" rel="noopener" class="btn btn-primary">
-                                                <i class="bi bi-box-arrow-up-right"></i> {% trans "Ouvrir la carte interactive" %}
-                                            </a>
-                                        </div>
-                                        <a href="{{ station.piste_map_url }}" target="_blank" rel="noopener" class="d-block">
-                                            <img src="{{ station.piste_map_thumbnail_url }}" class="img-fluid rounded shadow" alt="{% trans 'Carte des pistes' %}" style="max-width: 100%; height: auto;">
-                                        </a>
-                                        <small class="d-block text-center text-muted mt-2">
-                                            {% trans "Cliquez pour accéder à la carte interactive officielle" %}
-                                        </small>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endif %}
-                        </div>
+                {% if station.piste_map_thumbnail_url and station.piste_map_url %}
+                <section class="col-12" aria-labelledby="piste-map-heading">
+                    <div class="card section-card p-4">
+                        <h2 class="h5" id="piste-map-heading">{% trans "Carte des pistes" %}</h2>
+                        <a href="{{ station.piste_map_url }}" target="_blank" rel="noopener" class="d-block">
+                            <img src="{{ station.piste_map_thumbnail_url }}" class="img-fluid rounded"
+                                 alt="{% trans 'Ouvrir la carte interactive' %}" loading="lazy" decoding="async">
+                        </a>
                     </div>
-                </div>
+                </section>
+                {% endif %}
 
                 <div class="col-lg-12">
                     <div class="card section-card p-4">

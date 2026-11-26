@@ -1,7 +1,6 @@
 
 {% extends 'base.html' %}
 {% load static %}
-{% load base64_filters %}
 {% load i18n %}
 {% load l10n %}
 
@@ -202,10 +201,6 @@
     }
 
     @media (max-width: 575.98px) {
-      #section-1 .main-caption h1 {
-        font-size: 1.45rem;
-      }
-
       .visit-country .items .item .right-content h4 {
         font-size: 1.15rem;
       }
@@ -233,78 +228,35 @@
   
   <script src="{% static 'js/paginationski.js' %}"></script>
 
-  <!-- ***** Main Banner Area Start ***** -->
-  <section id="section-1">
-    {% with hero_stations=ski_stations|slice:":4" %}
-    <div class="content-slider">
-      {% for station in hero_stations %}
-      <input type="radio" id="banner{{ forloop.counter }}" class="sec-1-input" name="banner" {% if forloop.first %}checked{% endif %}>
-      {% empty %}
-      <input type="radio" id="banner1" class="sec-1-input" name="banner" checked>
-      {% endfor %}
-
-      <div class="slider">
-        {% for station in hero_stations %}
-        <div id="top-banner-{{ forloop.counter }}" class="banner" {% if station.image %}style="background-image: url('data:image/jpeg;base64,{{ station.image|b64encode }}'); background-size: cover; background-position: center center;"{% endif %}>
-            <div class="banner-inner-wrapper header-text">
-                <div class="main-caption">
-                    <h1>{{ station.name }}</h1>
-                    {% include "partials/station_photo_credit.html" %}
-                    <div class="border-button">
-                    <a href="{% url 'ski_station_detail' station.id %}">{% trans "Allez" %}</a>
-                    </div>
-                </div>
-                <div class="container">
-                    <div class="row">
-                        <div class="col-lg-12">
-                            <div class="more-info">
-                                <div class="row">
-                                    <div class="col-lg-3 col-sm-6 col-6">
-                                        <i class="fa fa-user"></i>
-                                        <h4><span>{% trans "Capacité:" %}</span><br>{{ station.capacity }} {% trans "personnes" %}</h4>
-                                    </div>
-                                    <div class="col-lg-3 col-sm-6 col-6">
-                                      <i class="fa fa-mountain"></i>
-                                      <h4><span>{% trans "Altitude:" %}</span><br>{{ station.altitude }} m</h4>
-                                  </div>
-                                  <div class="col-lg-3 col-sm-6 col-6">
-                                      <i class="fa fa-road"></i>
-                                      <h4><span>{% trans "Distance de Grenoble:" %}</span><br>{{ station.distanceFromGrenoble }} km</h4>
-                                  </div>                                    
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+  <section class="container home-intro" aria-labelledby="home-heading">
+    <div class="mountain-hero">
+      <div class="mountain-hero-content">
+        <h1 id="home-heading">Grenoble Ski</h1>
+        <p>{% trans "Stations de ski autour de Grenoble" %}</p>
+        <div class="mountain-actions">
+          <a class="mountain-action" href="{% url 'ski_station_search' %}">{% trans "Voir les stations" %}</a>
+          <a class="mountain-action mountain-action-glass" href="#webcams"><i class="fas fa-video" aria-hidden="true"></i> Webcams</a>
         </div>
-        {% empty %}
-        <div id="top-banner-1" class="banner">
-            <div class="banner-inner-wrapper header-text">
-                <div class="main-caption">
-                    <h1>{% trans "Stations Grenoble Ski" %}</h1>
-                    <div class="border-button">
-                        <a href="{% url 'ski_station_search' %}">{% trans "Voir les stations" %}</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
       </div>
-    
-      <nav>
-        <div class="controls">
-          {% for station in hero_stations %}
-          <label for="banner{{ forloop.counter }}"><span class="progressbar"><span class="progressbar-fill"></span></span><span class="text">{{ forloop.counter }}</span></label>
-          {% empty %}
-          <label for="banner1"><span class="progressbar"><span class="progressbar-fill"></span></span><span class="text">1</span></label>
-          {% endfor %}
-        </div>
-      </nav>
     </div>
-    {% endwith %}
   </section>
-  <!-- ***** Main Banner Area End ***** -->
+
+  <section class="container home-webcams" id="webcams" aria-labelledby="webcams-heading">
+    <h2 id="webcams-heading">{% trans "Caméras en direct" %}</h2>
+    <ul class="webcam-stations">
+      {% for station in camera_stations %}
+      <li>
+        <a href="{% url 'ski_station_detail' station.id %}#cameras">
+          <i class="fas fa-video" aria-hidden="true"></i>
+          <span>{{ station.name }}</span>
+          <small>{{ station.camera_count }} <span class="visually-hidden">Webcams</span></small>
+        </a>
+      </li>
+      {% empty %}
+      <li>{% trans "Aucune webcam disponible." %}</li>
+      {% endfor %}
+    </ul>
+  </section>
 
   <div class="container mt-4">
     <div class="section-heading mb-3">
@@ -315,10 +267,10 @@
       {% for station in featured_stations %}
       <article class="featured-station-card">
         {% if station.image %}
-        <img src="data:image/jpeg;base64,{{ station.image|b64encode }}" alt="{{ station.name }}">
+        <img src="{% url 'ski_station_photo' station.id %}" alt="{{ station.name }}" loading="lazy" decoding="async">
 {% include "partials/station_photo_credit.html" %}
         {% else %}
-        <img src="{% static 'images/chamrousse.jpg' %}" alt="{{ station.name }}">
+        <img src="{% static 'images/chamrousse.jpg' %}" alt="{{ station.name }}" loading="lazy" decoding="async">
         {% endif %}
         <div class="featured-station-body">
           <h6>{{ station.name }}</h6>
@@ -351,7 +303,7 @@
       {% for station in nearest_stations|slice:":3" %}
       <div class="col-12 col-md-4">
         <article class="conditions-card" data-condition-station="{{ station.id }}" data-lat="{{ station.latitude|unlocalize }}" data-lng="{{ station.longitude|unlocalize }}">
-          {% if station.image %}<img class="station-photo" src="data:image/jpeg;base64,{{ station.image|b64encode }}" alt="{{ station.name }}" loading="lazy">{% else %}<img class="station-photo" src="{% static 'images/chamrousse.jpg' %}" alt="{{ station.name }}" loading="lazy">{% endif %}
+          {% if station.image %}<img class="station-photo" src="{% url 'ski_station_photo' station.id %}" alt="{{ station.name }}" loading="lazy">{% else %}<img class="station-photo" src="{% static 'images/chamrousse.jpg' %}" alt="{{ station.name }}" loading="lazy">{% endif %}
           <div class="card-body"><span class="conditions-badge"><i class="fa fa-snowflake"></i> {% trans "À découvrir" %}</span><h3 class="h5 mt-2 mb-1">{{ station.name }}</h3><p class="small text-muted mb-0">{{ station.altitude }} m · {{ station.distanceFromGrenoble }} km de Grenoble</p>
             <div class="condition-metrics"><div class="condition-metric"><i class="fa fa-temperature-low"></i><strong class="condition-temp">—</strong><small>{% trans "Météo" %}</small></div><div class="condition-metric"><i class="fa fa-snowflake"></i><strong class="condition-snow">—</strong><small>{% trans "Neige" %}</small></div><div class="condition-metric"><i class="fa fa-road"></i><strong>{{ station.num_circuits|default:"—" }}</strong><small>{% trans "Pistes" %}</small></div></div>
             <p class="conditions-freshness" data-freshness>{% trans "Mise à jour des conditions : chargement..." %}</p>
@@ -427,7 +379,7 @@
                                     <div class="col-lg-4 col-sm-5">
                                         <div class="image">
                                             {% if station.image %}
-                                            <img src="data:image/jpeg;base64,{{ station.image|b64encode }}" alt="{{ station.name }}">
+                                            <img src="{% url 'ski_station_photo' station.id %}" alt="{{ station.name }}" loading="lazy" decoding="async">
 {% include "partials/station_photo_credit.html" %}
                                             {% else %}
                                             <img src="{% static 'images/chamrousse.jpg' %}" alt="{% trans 'Image indisponible' %}">
@@ -454,7 +406,7 @@
                                               </div>
                                             {% endif %}
                                             <div class="text-button">
-                                              <a href="ski-station/{{ station.id }}">{% trans "Besoin d'indications ?" %} <i class="fa fa-arrow-right"></i></a>
+                                              <a href="{% url 'ski_station_detail' station.id %}">{% trans "Besoin d'indications ?" %} <i class="fa fa-arrow-right"></i></a>
                                             </div>
                                         </div>
                                     </div>
