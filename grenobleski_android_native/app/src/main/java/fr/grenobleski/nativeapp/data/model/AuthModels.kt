@@ -125,6 +125,14 @@ enum class NativeTab {
     PROFILE,
 }
 
+data class CrowdSlot(val start: Int, val end: Int, val level: String, val current: Boolean)
+
+data class StationCrowd(
+    val state: String,
+    val reportedLevel: String,
+    val slots: List<CrowdSlot>,
+)
+
 data class StationItem(
     val id: Int,
     val name: String,
@@ -146,7 +154,9 @@ data class StationItem(
     val observedAt: String = "",
     val conditionSource: String = "",
     val skiAssessment: String = "unknown",
-
+    val snowDepth: String = "",
+    val photoUrl: String = "",
+    val crowd: StationCrowd? = null,
 )
 
 data class StationCameraItem(
@@ -256,12 +266,12 @@ data class PisteItem(
     val latitude: Double? = null,
     val longitude: Double? = null,
     val ratingLabel: String,
-    val crowdLabel: String,
     val weatherLabel: String,
     val temperatureLabel: String,
     val snowDepthLabel: String,
     val comment: String,
     val updatedAtLabel: String,
+    val crowd: StationCrowd? = null,
 )
 
 data class MessageItem(

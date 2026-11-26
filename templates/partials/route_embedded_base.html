@@ -1,0 +1,14 @@
+{% load i18n static %}
+<!doctype html>
+<html lang="{{ LANGUAGE_CODE|default:'fr' }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'vendor/bootstrap/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/mountain.css' %}">
+</head>
+<body class="embedded-route">
+<main>{% block content %}{% endblock %}</main>
+</body>
+</html>

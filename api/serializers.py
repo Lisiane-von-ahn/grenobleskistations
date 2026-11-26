@@ -1,3 +1,4 @@
+from django.urls import reverse
 import base64
 from django.contrib.auth.models import User
 from rest_framework import serializers
@@ -76,10 +77,39 @@ class SkiStationSerializer(serializers.ModelSerializer):
     bus_lines = serializers.SerializerMethodField()
     live_status = serializers.SerializerMethodField()
     ski_assessment = serializers.SerializerMethodField()
+    crowd_estimate = serializers.SerializerMethodField()
+    photo_url = serializers.SerializerMethodField()
+    snow_depth_cm = serializers.SerializerMethodField()
 
     class Meta:
         model = SkiStation
         fields = '__all__'
+
+    def get_fields(self):
+        fields = super().get_fields()
+        request = self.context.get('request')
+        if request and request.GET.get('image') == 'url':
+            fields.pop('image', None)
+        return fields
+
+    def get_crowd_estimate(self, obj):
+        from django.utils import timezone
+        from .discovery import estimate_ski_crowd
+        estimate = estimate_ski_crowd(getattr(obj, 'live_status', None), now=timezone.now())
+        estimate['reported_level'] = getattr(obj, 'recent_crowd_level', '') or ''
+        return estimate
+
+    def get_photo_url(self, obj):
+        if not obj.image:
+            return ''
+        return reverse('ski_station_photo', args=[obj.pk]) + '?width=960'
+
+    def get_snow_depth_cm(self, obj):
+        from .discovery import ski_assessment
+        live = getattr(obj, 'live_status', None)
+        if live and ski_assessment(live) != 'stale' and live.snow_depth_cm is not None:
+            return live.snow_depth_cm
+        return getattr(obj, 'recent_snow_depth', None)
 
     def get_ski_assessment(self, obj):
         from .discovery import ski_assessment

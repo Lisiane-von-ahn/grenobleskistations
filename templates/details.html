@@ -64,21 +64,6 @@
             letter-spacing: 1px;
             font-size: 0.95rem;
         }
-        .map-legend {
-            background: rgba(255, 255, 255, 0.94);
-            border-radius: 8px;
-            padding: 8px 10px;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
-            font-size: 0.82rem;
-            line-height: 1.35;
-        }
-        .map-legend .dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 6px;
-        }
         .premium-aside-card {
             background: linear-gradient(150deg, #ffffff 0%, #f6f9ff 100%);
             border: 1px solid #e7eefc;
@@ -159,6 +144,18 @@
                 </div>
             </header>
 
+            <dl class="station-condition-strip">
+                <div><i class="fas fa-temperature-half" aria-hidden="true"></i><dt>{% trans "Température" %}</dt>
+                    <dd id="station-temperature">{% if station_temperature is not None %}{{ station_temperature|floatformat:0 }} °C{% else %}—{% endif %}</dd>
+                </div>
+                <div><i class="fas fa-snowflake" aria-hidden="true"></i><dt>{% trans "Hauteur de neige" %}</dt>
+                    <dd>{% if station_snow_depth is not None %}{{ station_snow_depth }} cm{% else %}—{% endif %}</dd>
+                </div>
+                <div><i class="fas fa-route" aria-hidden="true"></i><dt>{% trans "Depuis Grenoble" %}</dt>
+                    <dd><a href="{% url 'ski_station_route' station.id %}">{% trans "Voir l’itinéraire" %}</a></dd>
+                </div>
+            </dl>
+
             {% if cameras %}
             <section class="station-webcams mb-4" id="cameras" aria-labelledby="cameras-heading">
                 <h2 id="cameras-heading">{% trans "Caméras en direct" %}</h2>
@@ -184,15 +181,15 @@
                 <div class="col-lg-7">
                     <div class="card section-card p-3 h-100">
                         {% if station.image %}
-                            <img src="{% url 'ski_station_photo' station.id %}" class="station-hero-image mb-3" alt="{{ station.name }}" loading="lazy" decoding="async">
+                            <img src="{% url 'ski_station_photo' station.id %}?width=1440" srcset="{% url 'ski_station_photo' station.id %}?width=480 480w, {% url 'ski_station_photo' station.id %}?width=960 960w, {% url 'ski_station_photo' station.id %}?width=1440 1440w" sizes="(max-width: 767px) 96vw, 640px" class="station-hero-image mb-3" alt="{{ station.name }}" loading="lazy" decoding="async">
 {% include "partials/station_photo_credit.html" %}
                         {% else %}
-                            <img src="{% static 'images/chamrousse.jpg' %}" class="station-hero-image mb-3" alt="{{ station.name }}" loading="lazy" decoding="async">
+                            <div class="station-photo-placeholder station-hero-image mb-3"><i class="fas fa-mountain" aria-hidden="true"></i> {% trans "Photo indisponible" %}</div>
                         {% endif %}
 
                         <div class="row">
                             <div class="col-md-6">
-                                <div class="station-stat"><i class="fas fa-users"></i> {% trans "Capacité:" %} <strong>{{ station.capacity }}</strong></div>
+                                <div class="station-stat"><i class="fas fa-users"></i> {% trans "Capacité:" %} <strong>{{ station.capacity|default_if_none:"—" }}</strong></div>
                             </div>
                             <div class="col-md-6">
                                 <div class="station-stat"><i class="fas fa-road"></i> {% trans "Pistes:" %} <strong>{{ station.num_circuits }}</strong></div>
@@ -220,34 +217,23 @@
                             </div>
                         {% endif %}
 
-                        <div class="mt-3 p-3 rounded border bg-light">
-                            <h6 class="mb-1">{% trans "Comment venir ?" %}</h6>
-                            <p class="small text-muted mb-2">{% trans "Comparez les itinéraires, le trafic, les horaires et les dénivelés dans Google Maps." %}</p>
-                            <div class="station-cta-row d-flex flex-wrap gap-2">
-                                <a href="{{ station_driving_url }}" class="btn btn-outline-success btn-sm" target="_blank" rel="noopener">🚗 {% trans "Voiture" %}</a>
-                                <a href="{{ station_transit_url }}" class="btn btn-outline-primary btn-sm" target="_blank" rel="noopener">🚌 {% trans "Bus / transport" %}</a>
-                                <a href="{{ station_bicycling_url }}" class="btn btn-outline-info btn-sm" target="_blank" rel="noopener">🚲 {% trans "Vélo" %}</a>
-                                <a href="{{ station_walking_url }}" class="btn btn-outline-secondary btn-sm" target="_blank" rel="noopener">🚶 {% trans "À pied" %}</a>
-                            </div>
-                        </div>
+                        <a class="btn btn-primary mt-3" href="{% url 'ski_station_route' station.id %}">
+                            <i class="fas fa-route" aria-hidden="true"></i> {% trans "Comment venir ?" %}
+                        </a>
                     </div>
                 </div>
 
                 <div class="col-lg-5">
                     <div class="card section-card p-4 mb-4">
                         <h5 class="mb-3">{% trans "Conditions météorologiques actuelles" %}</h5>
-                        <div id="weather-icon" style="font-size: 42px;"></div>
                         <p id="weather-condition" class="mb-1"></p>
-                        <p id="temperature" class="mb-1"></p>
+                        <p id="temperature" class="mb-1">{% if station_temperature is not None %}{% trans "Température du bulletin" %} · {{ station_temperature|floatformat:0 }} °C{% endif %}</p>
                         <p id="feels-like" class="mb-1"></p>
-                        <p id="snow-level" class="mb-1"></p>
+                        <p class="mb-1"><strong>{% trans "Hauteur de neige" %}</strong> {% if station_snow_depth is not None %}{{ station_snow_depth }} cm{% else %}—{% endif %}</p>
                         <p id="wind-speed" class="mb-1"></p>
-                        <p id="wind-direction" class="mb-1"></p>
+
                         <p id="humidity" class="mb-1"></p>
-                        <p id="visibility" class="mb-1"></p>
-                        <p id="pressure" class="mb-1"></p>
-                        <p id="sunrise" class="mb-1"></p>
-                        <p id="sunset" class="mb-0"></p>
+
                     </div>
 
                     <div class="card section-card p-4 mb-4">
@@ -317,7 +303,7 @@
                             <div class="bus-line-card mb-2">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                     <strong><i class="fas fa-bus"></i> {{ bus_line.bus_number }}</strong>
-                                    <span class="premium-chip"><i class="fas fa-clock"></i> {{ bus_line.frequency }}</span>
+                                    {% if bus_line.frequency %}<span class="premium-chip"><i class="fas fa-clock"></i> {{ bus_line.frequency }}</span>{% endif %}
                                 </div>
                                 <small class="d-block"><i class="fas fa-map-marker-alt"></i> {% trans "Départ:" %} {{ bus_line.departure_stop }}</small>
                                 <small class="d-block"><i class="fas fa-map-signs"></i> {% trans "Arrivée:" %} {{ bus_line.arrival_stop }}</small>
@@ -542,153 +528,115 @@
         var stationLng = {{ station.longitude|unlocalize }};
 
         // Initialize the map and set its view to the ski station's coordinates
-        var map = L.map('ski-map').setView([stationLat, stationLng], 15);  // Adjust zoom level if necessary
-
-        // Add OpenStreetMap tiles
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 18,
-            attribution: 'Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(map);
-
-        // Custom icon for ski station marker
-        var skiIcon = L.icon({
-            iconUrl: "{% static 'images/ski.png' %}",  // Replace with your own icon path
-            iconSize: [30, 30]
-        });
-
-        // Add a marker at the ski station's location
-        var marker = L.marker([stationLat, stationLng], { icon: skiIcon }).addTo(map);
-
-        // Bind a popup with the ski station's information
-        marker.bindPopup("<b>{{ station.name }}</b><br>{% trans 'Capacité:' %} {{ station.capacity }} {% trans 'personnes' %}<br>{% trans 'Pistes:' %} {{ station.num_circuits }}");
-
-        // Overpass overlays: amenities + downhill piste geometries
-        var amenitiesLayer = L.layerGroup().addTo(map);
-        var pistesLayer = L.layerGroup().addTo(map);
-
-        L.control.layers(null, {
-            '{% trans "Équipements" %}': amenitiesLayer,
-            '{% trans "Pistes OSM" %}': pistesLayer
-        }, { collapsed: true }).addTo(map);
-
-        const mapLegend = L.control({ position: 'bottomright' });
-        mapLegend.onAdd = function() {
-            var div = L.DomUtil.create('div', 'map-legend');
-            div.innerHTML = [
-                '<strong>{% trans "Calques" %}</strong>',
-                '<div><span class="dot" style="background:#16a34a;"></span>{% trans "Parking" %}</div>',
-                '<div><span class="dot" style="background:#0369a1;"></span>{% trans "Toilettes" %}</div>',
-                '<div><span class="dot" style="background:#f59e0b;"></span>{% trans "Restauration" %}</div>',
-                '<div><span class="dot" style="background:#dc2626;"></span>{% trans "Tracé piste" %}</div>'
-            ].join('');
-            return div;
-        };
-        mapLegend.addTo(map);
-
-        function amenityStyle(amenityType) {
-            if (amenityType === 'parking') return { color: '#16a34a' };
-            if (amenityType === 'toilets') return { color: '#0369a1' };
-            return { color: '#f59e0b' };
-        }
-
-        function drawOverpassElements(elements) {
-            elements.forEach(function(el) {
-                if (el.type === 'node' && el.tags && el.tags.amenity) {
-                    var style = amenityStyle(el.tags.amenity);
-                    var amenityName = el.tags.name || el.tags.amenity;
-                    var markerCircle = L.circleMarker([el.lat, el.lon], {
-                        radius: 5,
-                        color: style.color,
-                        fillColor: style.color,
-                        fillOpacity: 0.9,
-                        weight: 1
-                    });
-                    markerCircle.bindPopup('<strong>' + amenityName + '</strong><br>{% trans "Équipement" %}: ' + el.tags.amenity);
-                    markerCircle.addTo(amenitiesLayer);
-                }
-
-                if (el.type === 'way' && el.geometry && el.geometry.length > 1 && el.tags && el.tags['piste:type'] === 'downhill') {
-                    var points = el.geometry.map(function(g) { return [g.lat, g.lon]; });
-                    var pisteName = el.tags.name || el.tags.ref || '{% trans "Piste" %}';
-                    var line = L.polyline(points, {
-                        color: '#dc2626',
-                        weight: 2.2,
-                        opacity: 0.85
-                    });
-                    line.bindPopup('<strong>' + pisteName + '</strong>');
-                    line.addTo(pistesLayer);
-                }
-            });
-        }
-
-        function loadOverpassLayers() {
-            const overpassUrl = `/api/overpass/nearby/?lat=${encodeURIComponent(stationLat)}&lon=${encodeURIComponent(stationLng)}`;
-
-            fetch(overpassUrl)
-                .then((response) => response.json())
-                .then((data) => {
-                    if (!data || !data.elements) {
-                        return;
-                    }
-                    drawOverpassElements(data.elements);
-                })
-                .catch((error) => {
-                    console.warn('Overpass unavailable:', error);
-                });
-        }
-
-        loadOverpassLayers();
-
-        var apiKey = '{{ WEATHER_API_KEY }}';
-        var weatherLang = '{{ LANGUAGE_CODE|default:"fr"|escapejs }}';
-        var weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${stationLat}&lon=${stationLng}&appid=${apiKey}&units=metric&lang=${encodeURIComponent(weatherLang)}`;
-
-        // Map weather descriptions to icons
-        const weatherIcons = {
-            'clear sky': 'fas fa-sun',
-            'few clouds': 'fas fa-cloud-sun',
-            'scattered clouds': 'fas fa-cloud',
-            'broken clouds': 'fas fa-cloud',
-            'shower rain': 'fas fa-cloud-showers-heavy',
-            'rain': 'fas fa-cloud-rain',
-            'thunderstorm': 'fas fa-bolt',
-            'snow': 'fas fa-snowflake',
-            'mist': 'fas fa-smog'
-        };
-
-        // Fetch weather data using the station's coordinates
-        fetch(weatherUrl)
-            .then(response => response.json())
-            .then(data => {
-                if (!data || !data.weather || !data.weather.length || !data.main) {
-                    document.getElementById('weather-condition').innerHTML = '<strong>{% trans "Météo :" %}</strong> {% trans "indisponible" %}';
+        fetch("{% url 'station-weather' %}?station={{ station.id }}")
+            .then(response => response.ok ? response.json() : [])
+            .then(([weather]) => {
+                if (!weather || weather.temperature_c == null) {
+                    document.getElementById('weather-condition').textContent = '{% trans "Météo indisponible"|escapejs %}';
                     return;
                 }
-
-                const weatherDescription = data.weather[0].description;
-                const weatherIconClass = weatherIcons[weatherDescription] || 'fas fa-question-circle';  // Fallback if no icon matches
-
-                // Show the weather icon and data
-                document.getElementById('weather-icon').innerHTML = `<i class="${weatherIconClass}"></i>`;
-                document.getElementById('weather-condition').innerHTML = `<strong>{% trans "Météo :" %}</strong> ${weatherDescription}`;
-                document.getElementById('temperature').innerHTML = `<strong>{% trans "Température :" %}</strong> ${data.main.temp}°C`;
-                document.getElementById('snow-level').innerHTML = `<strong>{% trans "Niveau de neige :" %}</strong> ${data.snow ? data.snow['1h'] : '{% trans "Pas de neige" %}'} cm`;
-                document.getElementById('feels-like').innerHTML = `<strong>{% trans "Ressenti :" %}</strong> ${data.main.feels_like}°C`;
-                document.getElementById('humidity').innerHTML = `<strong>{% trans "Humidité :" %}</strong> ${data.main.humidity}%`;
-                document.getElementById('wind-speed').innerHTML = `<strong>{% trans "Vitesse du vent :" %}</strong> ${data.wind.speed} m/s`;
-                document.getElementById('wind-direction').innerHTML = `<strong>{% trans "Direction du vent :" %}</strong> ${data.wind.deg}°`;
-                document.getElementById('visibility').innerHTML = `<strong>{% trans "Visibilité :" %}</strong> ${(data.visibility / 1000).toFixed(1)} km`;
-                document.getElementById('pressure').innerHTML = `<strong>{% trans "Pression :" %}</strong> ${data.main.pressure} hPa`;
-
-                let sunrise = new Date(data.sys.sunrise * 1000).toLocaleTimeString();
-                let sunset = new Date(data.sys.sunset * 1000).toLocaleTimeString();
-                document.getElementById('sunrise').innerHTML = `<strong>{% trans "Lever du soleil :" %}</strong> ${sunrise}`;
-                document.getElementById('sunset').innerHTML = `<strong>{% trans "Coucher du soleil :" %}</strong> ${sunset}`;
-
+                const setWeather = (id, label, value, unit = '') => {
+                    if (value != null && value !== '') document.getElementById(id).textContent = `${label} · ${value}${unit}`;
+                };
+                document.getElementById('weather-condition').textContent = weather.weather_description || '';
+                const currentTemperature = `${Math.round(weather.temperature_c)} °C`;
+                const summary = document.getElementById('station-temperature');
+                if (summary.textContent.trim() === '—') summary.textContent = currentTemperature;
+                setWeather('temperature', '{% trans "Température"|escapejs %}', currentTemperature);
+                setWeather('feels-like', '{% trans "Ressenti"|escapejs %}', weather.feels_like_c, ' °C');
+                setWeather('wind-speed', '{% trans "Vent"|escapejs %}', weather.wind_speed, ' m/s');
+                setWeather('humidity', '{% trans "Humidité"|escapejs %}', weather.humidity, ' %');
             })
-            .catch(error => {
-                console.error('Erreur lors de la récupération des données météorologiques:', error);
+            .catch(() => {
+                document.getElementById('weather-condition').textContent = '{% trans "Météo indisponible"|escapejs %}';
             });
+        if (!window.L) {
+            document.getElementById('ski-map').textContent = '{% trans "Carte indisponible"|escapejs %}';
+        } else {
+            var map = L.map('ski-map').setView([stationLat, stationLng], 15);  // Adjust zoom level if necessary
+
+            // Add OpenStreetMap tiles
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 18,
+                attribution: 'Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            const stationPin = L.marker([stationLat, stationLng], {
+                icon: skiStationMapIcon(),
+                title: "{{ station.name|escapejs }}",
+                zIndexOffset: 500,
+            }).addTo(map);
+            const pinText = document.createElement('p');
+            pinText.textContent = "{{ station.name|escapejs }} · {{ station.altitude|unlocalize }} m";
+            stationPin.bindPopup(pinText);
+
+            const pistesLayer = L.layerGroup().addTo(map);
+            const amenities = {
+                parking: { label: '{% trans "Parking"|escapejs %}', icon: 'fa-square-parking', layer: L.layerGroup() },
+                toilets: { label: '{% trans "Toilettes"|escapejs %}', icon: 'fa-restroom', layer: L.layerGroup() },
+                restaurant: { label: '{% trans "Restauration"|escapejs %}', icon: 'fa-utensils', layer: L.layerGroup() },
+                cafe: { label: '{% trans "Restauration"|escapejs %}', icon: 'fa-utensils', layer: L.layerGroup() },
+            };
+            amenities.cafe.layer = amenities.restaurant.layer;
+            L.control.layers(null, {
+                [amenities.parking.label]: amenities.parking.layer,
+                [amenities.toilets.label]: amenities.toilets.layer,
+                [amenities.restaurant.label]: amenities.restaurant.layer,
+                '{% trans "Pistes OSM"|escapejs %}': pistesLayer,
+            }, { collapsed: true }).addTo(map);
+
+            function drawOverpassElements(elements) {
+                elements.forEach(function(el) {
+                    const amenity = Object.hasOwn(amenities, el.tags?.amenity) ? amenities[el.tags.amenity] : null;
+                    if (el.type === 'node' && amenity) {
+                        const popup = document.createElement('strong');
+                        popup.textContent = el.tags.name || amenity.label;
+                        L.marker([el.lat, el.lon], {
+                            title: popup.textContent,
+                            icon: L.divIcon({
+                                className: `ski-amenity-pin ski-amenity-${el.tags.amenity}`,
+                                html: `<i class="fas ${amenity.icon}" aria-hidden="true"></i>`,
+                                iconSize: [28, 28],
+                                iconAnchor: [14, 14],
+                            }),
+                        }).bindPopup(popup).addTo(amenity.layer);
+                    }
+
+                    if (el.type === 'way' && el.geometry && el.geometry.length > 1 && el.tags && el.tags['piste:type'] === 'downhill') {
+                        var points = el.geometry.map(function(g) { return [g.lat, g.lon]; });
+                        var pisteName = el.tags.name || el.tags.ref || '{% trans "Piste" %}';
+                        var line = L.polyline(points, {
+                            color: '#dc2626',
+                            weight: 2.2,
+                            opacity: 0.85
+                        });
+                        const label = document.createElement('strong');
+                        label.textContent = pisteName;
+                        line.bindPopup(label);
+                        line.addTo(pistesLayer);
+                    }
+                });
+            }
+
+            function loadOverpassLayers() {
+                const overpassUrl = `/api/overpass/nearby/?lat=${encodeURIComponent(stationLat)}&lon=${encodeURIComponent(stationLng)}`;
+
+                fetch(overpassUrl)
+                    .then((response) => response.json())
+                    .then((data) => {
+                        if (!data || !data.elements) {
+                            return;
+                        }
+                        drawOverpassElements(data.elements);
+                    })
+                    .catch((error) => {
+                        console.warn('Overpass unavailable:', error);
+                    });
+            }
+
+            loadOverpassLayers();
+        }
+
     </script>
 
 {% endblock %}

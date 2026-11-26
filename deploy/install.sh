@@ -132,9 +132,11 @@ ensure_env_file() {
 
   local env_file="${APP_DIR}/.env"
   local secret_key=""
+  local google_routes_key=""
 
   if [[ -f "${env_file}" ]]; then
     secret_key="$(grep -E '^DJANGO_SECRET_KEY=' "${env_file}" | tail -n1 | cut -d= -f2- || true)"
+    google_routes_key="$(grep -E '^GOOGLE_ROUTES_API_KEY=' "${env_file}" | tail -n1 | cut -d= -f2- || true)"
   fi
   if [[ -z "${secret_key}" ]]; then
     secret_key="$(rand_hex_64)"
@@ -165,6 +167,7 @@ DEBUG=False
 ALLOWED_HOSTS=${APP_HOSTNAME},${APP_HOSTNAME_WWW},localhost,127.0.0.1,[::1]
 DJANGO_SECRET_KEY=${secret_key}
 WEATHER_API_KEY=${WEATHER_API_KEY_ARG}
+GOOGLE_ROUTES_API_KEY=${google_routes_key}
 RUN_SEED_ON_STARTUP=false
 RUN_MIGRATIONS_ON_STARTUP=false
 

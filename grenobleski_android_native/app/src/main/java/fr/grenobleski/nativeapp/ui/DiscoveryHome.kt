@@ -134,28 +134,12 @@ internal fun DiscoveryHome(
                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                                 Icon(Icons.Filled.LocationOn, contentDescription = null, tint = Color(0xFF92D8FF), modifier = Modifier.size(22.dp))
-                                Text("Grenoble · Isère", color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(bestStation?.name ?: "Grenoble · Isère", color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
-                            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                Text("☀", style = MaterialTheme.typography.displayMedium)
-                                Spacer(Modifier.width(10.dp))
-                                Text(bestStation?.temperature?.takeIf { it.isNotBlank() }?.let { "$it°" } ?: "—°", color = Color.White, style = MaterialTheme.typography.displayLarge, fontWeight = FontWeight.Bold)
-                                Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
-                                    Text(
-                                        bestStation?.weather?.ifBlank { stringResource(R.string.home_mountain_subtitle) } ?: stringResource(R.string.home_mountain_subtitle),
-                                        color = Color.White,
-                                        style = MaterialTheme.typography.titleSmall,
-                                        maxLines = 1,
-                                        softWrap = false,
-                                    )
-                                    Text(
-                                        bestStation?.name ?: stringResource(R.string.discovery_no_conditions),
-                                        color = Color.White.copy(alpha = .8f),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                }
+                            StationWeatherMetrics(bestStation?.temperature.orEmpty(), bestStation?.snowDepth.orEmpty())
+                            val weather = bestStation?.weather.orEmpty()
+                            if (weather.isNotBlank()) {
+                                Text(weather, color = Color.White, style = MaterialTheme.typography.bodyMedium)
                             }
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 WeatherMetric("❄", stringResource(R.string.home_condition), bestStation?.skiAssessment?.replace('_', ' ').orEmpty().ifBlank { "—" }, Modifier.weight(1f))
@@ -175,16 +159,12 @@ internal fun DiscoveryHome(
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(state.stationItems.sortedWith(compareByDescending<StationItem> { stationScore(it) }.thenBy { distanceValue(it) }).take(8), key = { it.id }) { station ->
                     Card(Modifier.width(188.dp), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(4.dp)) {
-                        DiscoveryPhoto(station.imageBase64, station.name, 108.dp)
+                        StationCardImage(station, Modifier.fillMaxWidth().height(108.dp))
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                             Text(station.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(station.altitudeLabel, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("☀", style = MaterialTheme.typography.titleLarge)
-                                Spacer(Modifier.width(7.dp))
-                                Text(station.temperature.takeIf { it.isNotBlank() }?.let { "$it°" } ?: "—°", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                            }
-                            Text("❄ ${station.skiAssessment.replace('_', ' ')} · ${station.distanceLabel}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            StationWeatherMetrics(station.temperature, station.snowDepth)
+                            StationCrowdSummary(station.crowd)
                         }
                     }
                 }
@@ -197,7 +177,7 @@ internal fun DiscoveryHome(
             if (cameras.isEmpty()) Text(stringResource(R.string.no_live_cameras))
             else LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(cameras.take(8), key = { it.second.id }) { (station, camera) ->
-                    HomeCameraCard(station.name, station.imageBase64, camera) {
+                    HomeCameraCard(station, camera) {
                         selectedCameraId = camera.id
                     }
                 }
@@ -322,8 +302,7 @@ private fun HomeSectionHeader(icon: ImageVector, title: String, onSeeAll: () -> 
 
 @Composable
 private fun HomeCameraCard(
-    stationName: String,
-    stationImageBase64: String,
+    station: StationItem,
     camera: StationCameraItem,
     onClick: () -> Unit,
 ) {
@@ -341,7 +320,7 @@ private fun HomeCameraCard(
         elevation = CardDefaults.cardElevation(4.dp),
     ) {
         Box(Modifier.fillMaxSize()) {
-            DiscoveryPhoto(stationImageBase64, camera.name, 172.dp)
+            StationCardImage(station, Modifier.fillMaxSize())
             resolvedPreviewUrl?.takeIf { it.isNotBlank() }?.let { previewUrl ->
                 AsyncImage(
                     model = previewUrl,
@@ -353,7 +332,7 @@ private fun HomeCameraCard(
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xD9001428)))))
             Text("● LIVE", modifier = Modifier.align(Alignment.TopStart).padding(10.dp).background(Color(0xFFFF4D55), RoundedCornerShape(9.dp)).padding(horizontal = 9.dp, vertical = 5.dp), color = Color.White, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
             Column(Modifier.align(Alignment.BottomStart).padding(12.dp)) {
-                Text(stationName, color = Color.White, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(station.name, color = Color.White, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(camera.name, color = Color.White.copy(alpha = .9f), style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
@@ -367,7 +346,7 @@ internal fun CamerasTab(state: AppUiState) {
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item { Text(stringResource(R.string.home_webcams_subtitle), color = MaterialTheme.colorScheme.onSurfaceVariant) }
         items(cameras, key = { it.second.id }) { (station, camera) ->
-            HomeCameraCard(station.name, station.imageBase64, camera) {
+            HomeCameraCard(station, camera) {
                 selectedCameraId = camera.id
             }
         }
@@ -393,12 +372,6 @@ private fun CameraBrowserDialog(
     val (station, camera) = cameras[currentIndex]
     var viewerPreviewUrl by remember(camera.id, camera.cameraUrl, camera.thumbnailUrl) {
         mutableStateOf(camera.thumbnailUrl.takeIf { it.isNotBlank() })
-    }
-    val stationBitmap = remember(station.imageBase64) {
-        runCatching {
-            val bytes = Base64.decode(station.imageBase64.substringAfter("base64,", station.imageBase64), Base64.DEFAULT)
-            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
-        }.getOrNull()
     }
     LaunchedEffect(camera.id, camera.cameraUrl, camera.thumbnailUrl) {
         viewerPreviewUrl = camera.thumbnailUrl.takeIf { it.isNotBlank() }
@@ -439,21 +412,7 @@ private fun CameraBrowserDialog(
                             contentScale = ContentScale.Fit,
                         )
                     } ?: run {
-                        if (stationBitmap != null) {
-                            Image(
-                                bitmap = stationBitmap,
-                                contentDescription = station.name,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop,
-                            )
-                        } else {
-                            Image(
-                                painter = painterResource(R.drawable.grenoble_alps_hero),
-                                contentDescription = station.name,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop,
-                            )
-                        }
+                        StationCardImage(station, Modifier.fillMaxSize())
                         CircularProgressIndicator(
                             modifier = Modifier.align(Alignment.Center),
                             color = Color.White,
@@ -670,21 +629,6 @@ private fun HikingTrailsSection(onOpenUrl: (String) -> Unit) {
 }
 
 @Composable
-private fun StationRouteButtons(station: StationItem, onOpenUrl: (String) -> Unit) {
-    val lat = station.latitude ?: return
-    val lon = station.longitude ?: return
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(stringResource(R.string.getting_there_title), style = MaterialTheme.typography.labelLarge)
-        Text(stringResource(R.string.getting_there_subtitle), style = MaterialTheme.typography.bodySmall)
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            items(listOf("driving" to R.string.route_car, "transit" to R.string.route_transit, "bicycling" to R.string.route_bike, "walking" to R.string.route_walk)) { (mode, label) ->
-                OutlinedButton(onClick = { onOpenUrl("https://www.google.com/maps/dir/?api=1&destination=$lat,$lon&travelmode=$mode") }) { Text(stringResource(label)) }
-            }
-        }
-    }
-}
-
-@Composable
 private fun CultureNewsCard(news: fr.grenobleski.nativeapp.data.model.SkiNewsItem, onOpenUrl: (String) -> Unit) {
     val image = rememberMarketplaceImage(news.imageUrl, "culture-${news.id}-${news.imageUrl}", 640, 360)
     Card(modifier = Modifier.width(300.dp), shape = RoundedCornerShape(22.dp),
@@ -725,32 +669,6 @@ private fun DiscoveryPhoto(data: String, name: String, height: Dp = 185.dp) {
 internal fun PhotoCredit(credit: String, source: String, onOpenUrl: (String) -> Unit) {
     if (credit.isNotBlank()) TextButton(onClick = { onOpenUrl(source) }) {
         Text(credit, style = MaterialTheme.typography.labelSmall)
-    }
-}
-
-@Composable
-private fun StationConditions(station: StationItem, onOpenUrl: (String) -> Unit) {
-    Text(if (station.temperature.isBlank()) stringResource(R.string.discovery_no_temperature)
-         else "${station.temperature} °C · ${station.weather}", style = MaterialTheme.typography.titleMedium)
-    if (station.weatherObservedAt.isNotBlank()) Text(stringResource(R.string.conditions_observed, station.weatherObservedAt), style = MaterialTheme.typography.labelSmall)
-    if (station.weatherSource.isNotBlank()) Text("OpenWeather", style = MaterialTheme.typography.labelSmall)
-    val label = when (station.skiAssessment) {
-        "closed" -> R.string.ski_closed
-        "stale" -> R.string.ski_stale
-        "unfavourable" -> R.string.ski_unfavourable
-        "check_bulletin" -> R.string.ski_check_bulletin
-        else -> R.string.ski_unknown
-    }
-    Text(stringResource(label), color = MaterialTheme.colorScheme.primary)
-    if (station.skiAssessment != "closed" && station.skiAssessment != "stale") {
-        AssistChip(onClick = {}, label = { Text(stringResource(R.string.conditions_ready_today)) })
-    }
-    if (station.observedAt.isBlank() && station.weatherObservedAt.isBlank()) {
-        Text(stringResource(R.string.conditions_update_unknown), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
-    }
-    if (station.observedAt.isNotBlank()) Text(stringResource(R.string.conditions_observed, station.observedAt), style = MaterialTheme.typography.labelSmall)
-    if (station.conditionSource.isNotBlank()) TextButton(onClick = { onOpenUrl(station.conditionSource) }) {
-        Text(stringResource(R.string.conditions_bulletin))
     }
 }
 

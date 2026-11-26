@@ -25,6 +25,7 @@
     <link rel="stylesheet" href="{% static 'css/marketplace.css' %}">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="{% static 'js/station-map.js' %}"></script>
     <script src="{% static 'js/styler.js' %}"></script>
     <script>
         window.__disableLegacyMenuTrigger = true;
@@ -454,8 +455,8 @@
         .floating-btn {
             position: fixed;
             right: 16px;
-            bottom: 18px;
-            z-index: 1050;
+            bottom: calc(var(--bottom-dock-height, 0px) + 18px);
+            z-index: 1020;
         }
 
         .floating-btn .badge {
@@ -717,7 +718,7 @@
             }
 
             .main-nav .nav {
-                max-height: calc(100vh - 180px);
+                max-height: max(0px, calc(100dvh - var(--mobile-header-height, 74px) - var(--bottom-dock-height, 64px)));
                 overflow-y: auto;
                 padding-bottom: 10px;
             }
@@ -738,73 +739,8 @@
                 margin-top: 96px !important;
             }
 
-            #cookie-banner {
-                padding: 12px;
-                font-size: 14px;
-            }
-
-            #cookie-banner .btn {
-                margin-top: 6px;
-                margin-left: 0;
-                width: 100%;
-            }
-
             .floating-btn {
                 display: none;
-            }
-
-            body {
-                padding-bottom: 82px;
-                background: var(--app-bg);
-            }
-
-            .mobile-bottom-nav {
-                position: fixed;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                z-index: 1090;
-                display: grid;
-                grid-template-columns: repeat(4, minmax(0, 1fr));
-                gap: 3px;
-                padding: 6px 8px max(6px, env(safe-area-inset-bottom));
-                background: var(--app-mobile-nav);
-                border-top: 1px solid rgba(255, 255, 255, 0.12);
-                backdrop-filter: blur(4px);
-                box-shadow: 0 -8px 20px rgba(15, 34, 54, 0.2);
-            }
-
-            .mobile-bottom-nav a {
-                color: #e5e7eb;
-                text-align: center;
-                border-radius: 10px;
-                padding: 6px 4px;
-                font-size: 11px;
-                line-height: 1.2;
-                min-height: 44px;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                gap: 3px;
-                font-weight: 600;
-                transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
-            }
-
-            .mobile-bottom-nav a i {
-                font-size: 13px;
-            }
-
-            .mobile-bottom-nav a:hover,
-            .mobile-bottom-nav a:focus-visible {
-                color: #ffffff;
-                background: rgba(59, 130, 246, 0.22);
-                transform: translateY(-1px);
-            }
-
-            .mobile-bottom-nav a.active {
-                color: #ffffff;
-                background: var(--app-mobile-nav-active);
-                box-shadow: 0 6px 14px rgba(11, 126, 169, 0.34);
             }
 
             .legal-hero,
@@ -935,15 +871,10 @@
 
         /* Style pour la bannière de consentement des cookies */
         #cookie-banner {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
             background-color: rgba(0, 0, 0, 0.8);
             color: #fff;
             padding: 15px;
             display: none; /* Masqué par défaut */
-            z-index: 1000;
         }
 
         #cookie-banner p {
@@ -1018,12 +949,6 @@
         body.theme-dark .footer-links a { background: #1c394a; color: #e6f5fb; }
 
         @media (max-width: 991.98px) {
-            #cookie-banner {
-                bottom: calc(70px + env(safe-area-inset-bottom));
-                max-height: calc(100dvh - 120px);
-                overflow-y: auto;
-            }
-
             body.theme-dark .header-area {
                 background: linear-gradient(135deg, #0d394b 0%, #125b6e 100%);
             }
@@ -1134,14 +1059,6 @@
         </div>
     </header>
     <!-- ***** End of Header ***** -->
-
-    <!-- Bannière de consentement des cookies -->
-    <div id="cookie-banner" class="text-center">
-        <p>{% trans "Nous utilisons des cookies nécessaires pour le fonctionnement du site et des cookies optionnels pour améliorer l'expérience." %} <a href="{% url 'privacy' %}" class="text-info">{% trans "Politique de confidentialité" %}</a></p>
-        <button id="accept-cookies" class="btn btn-success">{% trans "Accepter" %}</button>
-        <button id="reject-cookies" class="btn btn-danger">{% trans "Refuser" %}</button>
-        <button id="manage-cookies" class="btn btn-outline-light">{% trans "Gérer" %}</button>
-    </div>
 
     <!-- ***** Dynamic Content Section ***** -->
     <main>
@@ -1445,36 +1362,47 @@
         {% endif %}
     </a>
 
-    {% with current=request.resolver_match.url_name %}
-    <nav class="mobile-bottom-nav" aria-label="{% trans 'Navigation mobile' %}">
-        <a href="{% url 'my_template_view' %}" {% if current == 'my_template_view' %}aria-current="page"{% endif %}>
-            <span class="mobile-tab-icon"><i class="fas fa-home" aria-hidden="true"></i></span>
-            <span>{% trans "Accueil" %}</span>
-        </a>
-        <a href="{% url 'ski_station_search' %}" {% if current == 'ski_station_search' or current == 'ski_station_detail' %}aria-current="page"{% endif %}>
-            <span class="mobile-tab-icon"><i class="fas fa-mountain" aria-hidden="true"></i></span>
-            <span>{% trans "Stations" %}</span>
-        </a>
-        <a href="{% url 'ski_material_listings' %}" {% if current == 'ski_material_listings' or current == 'listing_detail' or current == 'ajouter_materiel' or current == 'edit_listing' %}aria-current="page"{% endif %}>
-            <span class="mobile-tab-icon"><i class="fas fa-skiing" aria-hidden="true"></i></span>
-            <span>{% trans "Matériel" %}</span>
-        </a>
-        <a href="{% url 'messages' %}" {% if current == 'messages' %}aria-current="page"{% endif %}>
-            <span class="mobile-tab-icon">
-                <i class="fas fa-comment-dots" aria-hidden="true"></i>
-                {% if unread_count > 0 %}
-                    <span class="mobile-nav-count" aria-hidden="true">{{ unread_count }}</span>
-                    <span class="visually-hidden">{{ unread_count }} {% trans "messages non lus" %}</span>
-                {% endif %}
-            </span>
-            <span>{% trans "Messages" %}</span>
-        </a>
-        <a href="{% if user.is_authenticated %}{% url 'profile' %}{% else %}{% url 'account_login' %}{% endif %}" {% if current == 'profile' or current == 'account_login' or current == 'my_carpool_reservations' or current == 'instructor_services' or current == 'account_change_password' %}aria-current="page"{% endif %}>
-            <span class="mobile-tab-icon"><i class="fas fa-user" aria-hidden="true"></i></span>
-            <span>{% trans "Compte" %}</span>
-        </a>
-    </nav>
-    {% endwith %}
+    <div class="site-bottom-dock" data-bottom-dock>
+        <div id="cookie-banner" class="text-center">
+            <p>{% trans "Nous utilisons des cookies nécessaires pour le fonctionnement du site et des cookies optionnels pour améliorer l'expérience." %} <a href="{% url 'privacy' %}" class="text-info">{% trans "Politique de confidentialité" %}</a></p>
+            <div class="cookie-banner-actions">
+                <button id="accept-cookies" class="btn btn-success">{% trans "Accepter" %}</button>
+                <button id="reject-cookies" class="btn btn-danger">{% trans "Refuser" %}</button>
+                <button id="manage-cookies" class="btn btn-outline-light">{% trans "Gérer" %}</button>
+            </div>
+        </div>
+        {% with current=request.resolver_match.url_name %}
+        <nav class="mobile-bottom-nav" aria-label="{% trans 'Navigation mobile' %}">
+            <a href="{% url 'my_template_view' %}" {% if current == 'my_template_view' %}aria-current="page"{% endif %}>
+                <span class="mobile-tab-icon"><i class="fas fa-home" aria-hidden="true"></i></span>
+                <span>{% trans "Accueil" %}</span>
+            </a>
+            <a href="{% url 'ski_station_search' %}" {% if current == 'ski_station_search' or current == 'ski_station_detail' %}aria-current="page"{% endif %}>
+                <span class="mobile-tab-icon"><i class="fas fa-mountain" aria-hidden="true"></i></span>
+                <span>{% trans "Stations" %}</span>
+            </a>
+            <a href="{% url 'ski_material_listings' %}" {% if current == 'ski_material_listings' or current == 'listing_detail' or current == 'ajouter_materiel' or current == 'edit_listing' %}aria-current="page"{% endif %}>
+                <span class="mobile-tab-icon"><i class="fas fa-skiing" aria-hidden="true"></i></span>
+                <span>{% trans "Matériel" %}</span>
+            </a>
+            <a href="{% url 'messages' %}" {% if current == 'messages' %}aria-current="page"{% endif %}>
+                <span class="mobile-tab-icon">
+                    <i class="fas fa-comment-dots" aria-hidden="true"></i>
+                    {% if unread_count > 0 %}
+                        <span class="mobile-nav-count" aria-hidden="true">{{ unread_count }}</span>
+                        <span class="visually-hidden">{{ unread_count }} {% trans "messages non lus" %}</span>
+                    {% endif %}
+                </span>
+                <span>{% trans "Messages" %}</span>
+            </a>
+            <a href="{% if user.is_authenticated %}{% url 'profile' %}{% else %}{% url 'account_login' %}{% endif %}" {% if current == 'profile' or current == 'account_login' or current == 'my_carpool_reservations' or current == 'instructor_services' or current == 'account_change_password' %}aria-current="page"{% endif %}>
+                <span class="mobile-tab-icon"><i class="fas fa-user" aria-hidden="true"></i></span>
+                <span>{% trans "Compte" %}</span>
+            </a>
+        </nav>
+        {% endwith %}
+    </div>
+    <script src="{% static 'js/bottom-dock.js' %}" defer></script>
 
     <datalist id="city-autocomplete-list"></datalist>
     {{ city_autocomplete_values|json_script:"city-autocomplete-json" }}

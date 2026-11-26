@@ -381,4 +381,12 @@
     <string name="culture_news_empty">News is temporarily unavailable. Explore the places below or refresh later.</string>
     <string name="culture_published">Published %1$s · Original language: %2$s</string>
     <string name="culture_read_article">Read at the source</string>
+    <string name="route_load_error">Directions could not load. Check your connection and try again.</string>
+    <string name="crowd_reported">Reported crowding</string>
+    <string name="crowd_estimated">Estimated crowding</string>
+    <string name="crowd_unavailable">Unavailable</string>
+    <string name="crowd_quiet_level">Quiet</string>
+    <string name="crowd_normal_level">Moderate</string>
+    <string name="crowd_busy_level">Busy</string>
+    <string name="crowd_slot_description">%1$d:00–%2$d:00 · %3$s</string>
 </resources>

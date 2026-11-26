@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 import logging
 import os
 import base64
@@ -15,7 +16,7 @@ from django.core.cache import cache
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
-from django.db.models import Avg, Count, Exists, OuterRef, Q, Sum
+from django.db.models import Avg, Count, Exists, OuterRef, Q, Subquery, Sum
 from django.utils.dateparse import parse_date, parse_datetime
 from django.utils import timezone
 from rest_framework import status, viewsets
@@ -209,6 +210,7 @@ def _fetch_weather_summary(latitude, longitude):
     weather = payload.get("weather") or []
     main = payload.get("main") or {}
     snow = payload.get("snow") or {}
+    wind = payload.get("wind") or {}
 
     return {
         "weather_description": ((weather[0] or {}).get("description") if weather else "") or "",
@@ -216,6 +218,8 @@ def _fetch_weather_summary(latitude, longitude):
         "observed_at": datetime.fromtimestamp(payload["dt"], tz=datetime_timezone.utc).isoformat() if payload.get("dt") else "",
         "source_url": "https://openweathermap.org/",
         "feels_like_c": main.get("feels_like"),
+        "humidity": main.get("humidity"),
+        "wind_speed": wind.get("speed"),
         "snow_cm": snow.get("1h") or snow.get("3h"),
     }
 
@@ -224,6 +228,20 @@ class SkiStationViewSet(viewsets.ModelViewSet):
     queryset = SkiStation.objects.all()
     serializer_class = SkiStationSerializer
 
+    def get_queryset(self):
+        now = timezone.now()
+        recent_crowd = CrowdStatusUpdate.objects.filter(
+            ski_station=OuterRef('pk'), created_at__range=(now - timedelta(hours=3), now),
+        ).order_by('-created_at', '-pk')
+        recent_snow = SnowConditionUpdate.objects.filter(
+            ski_station=OuterRef('pk'), created_at__range=(now - timedelta(hours=24), now),
+            snow_depth_cm__isnull=False,
+        ).order_by('-created_at', '-pk')
+        return super().get_queryset().select_related('live_status').annotate(
+            recent_crowd_level=Subquery(recent_crowd.values('crowd_level')[:1]),
+            recent_snow_depth=Subquery(recent_snow.values('snow_depth_cm')[:1]),
+        )
+
     @action(detail=False, methods=["get"], permission_classes=[AllowAny])
     def conditions(self, request):
         crowd_labels = {
@@ -231,10 +249,14 @@ class SkiStationViewSet(viewsets.ModelViewSet):
             PisteConditionReport.CROWD_NORMAL: "Agreable",
             PisteConditionReport.CROWD_BUSY: "Bonde",
         }
-        stations = SkiStation.objects.order_by("distanceFromGrenoble", "name")[:18]
-        results = []
+        from .discovery import station_weather_reading
 
-        for station in stations:
+        stations = list(self.get_queryset().order_by("distanceFromGrenoble", "name")[:18])
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            readings = list(pool.map(lambda station: station_weather_reading(station.latitude, station.longitude), stations))
+
+        results = []
+        for station, weather in zip(stations, readings):
             live_status = getattr(station, 'live_status', None)
             webcam_verified_at = max(
                 (camera.last_verified_at for camera in station.cameras.filter(is_active=True) if camera.last_verified_at),
@@ -243,8 +265,8 @@ class SkiStationViewSet(viewsets.ModelViewSet):
             latest_report = PisteConditionReport.objects.filter(ski_station=station).order_by("-created_at").first()
             latest_snow = SnowConditionUpdate.objects.filter(ski_station=station).order_by("-created_at").first()
             latest_crowd = CrowdStatusUpdate.objects.filter(ski_station=station).order_by("-created_at").first()
+            summary = self.get_serializer(station)
             avg_rating = PisteConditionReport.objects.filter(ski_station=station).aggregate(avg=Avg("piste_rating")).get("avg")
-            weather = _fetch_weather_summary(station.latitude, station.longitude)
 
             updated_candidates = [
                 value for value in [
@@ -266,9 +288,12 @@ class SkiStationViewSet(viewsets.ModelViewSet):
                     "latitude": station.latitude,
                     "longitude": station.longitude,
                     "weather_description": weather.get("weather_description") or "indisponible",
-                    "temperature_c": weather.get("temperature_c"),
+                    "temperature_c": weather.get("temperature_c") if weather.get("temperature_c") is not None else (
+                        getattr(live_status, "temperature_c", None) if summary.get_ski_assessment(station) != "stale" else None
+                    ),
                     "feels_like_c": weather.get("feels_like_c"),
-                    "snow_depth_cm": getattr(latest_snow, "snow_depth_cm", None) or weather.get("snow_cm"),
+                    "snow_depth_cm": summary.get_snow_depth_cm(station),
+                    "crowd_estimate": summary.get_crowd_estimate(station),
                     "lifts_open": getattr(live_status, "lifts_open", None),
                     "lifts_total": getattr(live_status, "lifts_total", None),
                     "pistes_open": getattr(live_status, "pistes_open", None),
@@ -277,7 +302,7 @@ class SkiStationViewSet(viewsets.ModelViewSet):
                     "operator_weather": getattr(live_status, "weather_summary", ""),
                     "operator_observed_at": live_status.observed_at.isoformat() if live_status else "",
                     "webcam_last_verified_at": webcam_verified_at.isoformat() if webcam_verified_at else "",
-                    "crowd_label": crowd_labels.get(getattr(latest_crowd, "crowd_level", ""), "normal"),
+                    "crowd_label": crowd_labels.get(station.recent_crowd_level, ""),
                     "rating_avg": round(avg_rating, 1) if avg_rating is not None else None,
                     "latest_comment": getattr(latest_report, "comment", "") or "",
                     "updated_at": updated_at.isoformat() if updated_at is not None else "",

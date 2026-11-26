@@ -121,9 +121,9 @@
                         <div class="row g-0">
                             <div class="col-md-6">
                                 {% if station.image %}
-                                    <img src="{% url 'ski_station_photo' station.id %}" class="station-result-photo" alt="{{ station.name }}" loading="lazy" decoding="async">
+                                    <img src="{% url 'ski_station_photo' station.id %}?width=960" srcset="{% url 'ski_station_photo' station.id %}?width=480 480w, {% url 'ski_station_photo' station.id %}?width=960 960w, {% url 'ski_station_photo' station.id %}?width=1440 1440w" sizes="(max-width: 767px) 96vw, 640px" class="station-result-photo" alt="{{ station.name }}" loading="lazy" decoding="async">
                                 {% else %}
-                                    <img src="{% static 'images/chamrousse.jpg' %}" class="station-result-photo" alt="" loading="lazy" decoding="async">
+                                    <div class="station-photo-placeholder station-result-photo"><i class="fas fa-mountain" aria-hidden="true"></i> {% trans "Photo indisponible" %}</div>
                                 {% endif %}
 {% include "partials/station_photo_credit.html" %}
                             </div>

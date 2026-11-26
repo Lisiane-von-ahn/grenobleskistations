@@ -6,6 +6,8 @@ import com.google.gson.JsonParseException
 import com.google.gson.JsonParser
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonToken
+import fr.grenobleski.nativeapp.data.model.CrowdSlot
+import fr.grenobleski.nativeapp.data.model.StationCrowd
 import fr.grenobleski.nativeapp.data.model.DashboardCounts
 import fr.grenobleski.nativeapp.data.model.BusLineItem
 import fr.grenobleski.nativeapp.data.model.CarpoolPendingReservation
@@ -383,7 +385,7 @@ class AuthRepository(
 
     suspend fun fetchStationItems(token: String): Result<List<StationItem>> = networkResult {
         val authHeader = authHeader(token)
-        val payload = fetchPayloadFromCandidates(listOf("/api/skistations/", "/api/skistations"), authHeader)
+        val payload = fetchPayloadFromCandidates(listOf("/api/skistations/?image=url", "/api/skistations/"), authHeader)
             ?: fetchPayloadFromCandidates(listOf("/api/skistations/conditions/", "/api/skistations/conditions"), authHeader)
             ?: return@networkResult Result.failure(IllegalStateException("Unable to load stations."))
 
@@ -409,6 +411,9 @@ class AuthRepository(
                 )
             }.filter { it.cameraUrl.isNotBlank() }
 
+            val live = obj.get("live_status")?.takeIf { it.isJsonObject }?.asJsonObject
+            val assessment = obj.stringOrBlank("ski_assessment").ifBlank { "unknown" }
+            val photoPath = obj.stringOrBlank("photo_url").takeIf { it.startsWith("/station-photo/") }
             StationItem(
                 id = obj.intOrZero("id"),
                 name = stationName,
@@ -423,24 +428,51 @@ class AuthRepository(
                 cameras = cameras,
                 photoCredit = obj.stringOrBlank("photo_credit"),
                 photoSourceUrl = obj.stringOrBlank("photo_source_url"),
-                temperature = obj.get("live_status")?.takeIf { it.isJsonObject }?.asJsonObject?.stringOrBlank("temperature_c").orEmpty(),
-                weather = obj.get("live_status")?.takeIf { it.isJsonObject }?.asJsonObject?.stringOrBlank("weather_summary").orEmpty(),
+                temperature = obj.stringOrBlank("temperature_c").ifBlank {
+                    if (assessment == "stale") "" else live?.stringOrBlank("temperature_c").orEmpty()
+                },
+                weather = obj.stringOrBlank("weather_description").ifBlank {
+                    if (assessment == "stale") "" else live?.stringOrBlank("weather_summary").orEmpty()
+                },
+                snowDepth = obj.stringOrBlank("snow_depth_cm").ifBlank {
+                    if (assessment == "stale") "" else live?.stringOrBlank("snow_depth_cm").orEmpty()
+                },
+                photoUrl = photoPath?.let { "$normalizedBaseUrl$it" }.orEmpty(),
+                crowd = parseStationCrowd(obj),
                 observedAt = obj.get("live_status")?.takeIf { it.isJsonObject }?.asJsonObject?.stringOrBlank("observed_at").orEmpty(),
                 conditionSource = obj.get("live_status")?.takeIf { it.isJsonObject }?.asJsonObject?.stringOrBlank("source_url").orEmpty(),
-                skiAssessment = obj.stringOrBlank("ski_assessment").ifBlank { "unknown" },
+                skiAssessment = assessment,
             )
         }
-        val weatherPayload = fetchPayloadFromCandidates(listOf("/api/station-weather/"), authHeader)
+        val weatherPayload = networkResult {
+            Result.success(fetchPayload("/api/station-weather/", authHeader))
+        }.getOrNull()
         val weatherById = weatherPayload?.let { extractObjectList(it) }?.associateBy { it.intOrZero("id") }.orEmpty()
         Result.success(items.map { station ->
             val weather = weatherById[station.id]
-            if (weather != null && (station.temperature.isBlank() || station.skiAssessment == "stale")) station.copy(
+            if (weather != null && weather.stringOrBlank("temperature_c").isNotBlank() && station.temperature.isBlank()) station.copy(
                 temperature = weather.stringOrBlank("temperature_c"),
                 weather = weather.stringOrBlank("weather_description"),
                 weatherObservedAt = weather.stringOrBlank("observed_at"),
                 weatherSource = weather.stringOrBlank("source_url"),
             ) else station
         })
+    }
+
+    private fun parseStationCrowd(station: JsonObject): StationCrowd? {
+        val crowd = station.get("crowd_estimate")?.takeIf { it.isJsonObject }?.asJsonObject ?: return null
+        return StationCrowd(
+            state = crowd.stringOrBlank("state"),
+            reportedLevel = crowd.stringOrBlank("reported_level"),
+            slots = crowd.arrayObjects("slots").map { slot ->
+                CrowdSlot(
+                    start = slot.intOrZero("start"),
+                    end = slot.intOrZero("end"),
+                    level = slot.stringOrBlank("level"),
+                    current = slot.boolOrFalse("current"),
+                )
+            },
+        )
     }
 
     suspend fun fetchBusLineItems(token: String): Result<List<BusLineItem>> = networkResult {
@@ -720,7 +752,8 @@ class AuthRepository(
                     latitude = obj.doubleOrNull("latitude"),
                     longitude = obj.doubleOrNull("longitude"),
                     ratingLabel = ratingAvg.ifBlank { "-" },
-                    crowdLabel = obj.stringOrBlank("crowd_label").ifBlank { "normal" },
+
+                    crowd = parseStationCrowd(obj),
                     weatherLabel = obj.stringOrBlank("weather_description").ifBlank { "indisponible" },
                     temperatureLabel = temperatureValue.ifBlank { "-" },
                     snowDepthLabel = snowDepth.ifBlank { "-" },
@@ -748,7 +781,7 @@ class AuthRepository(
                 latitude = stationObj?.doubleOrNull("latitude"),
                 longitude = stationObj?.doubleOrNull("longitude"),
                 ratingLabel = obj.stringOrBlank("piste_rating").ifBlank { "-" },
-                crowdLabel = obj.stringOrBlank("crowd_level").ifBlank { "normal" },
+
                 weatherLabel = "indisponible",
                 temperatureLabel = "-",
                 snowDepthLabel = "-",

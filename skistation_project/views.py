@@ -1,9 +1,10 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import Http404, HttpResponse, HttpResponseRedirect, JsonResponse
-from django.views.decorators.cache import cache_control
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.cache import cache_control, never_cache
+from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from django.conf import settings
 from django.contrib.auth import login
+from api.discovery import estimate_ski_crowd, ski_assessment
 from api.models import (
     SkiStation,
     SkiStationCamera,
@@ -47,6 +48,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from rest_framework.authtoken.models import Token
 from django.core.paginator import Paginator
+from .station_routes import GOOGLE_ROUTE_MODES, calculate_station_route
 from .forms import (
     SkiMaterialListingForm,
     ProfileForm,
@@ -74,7 +76,7 @@ from urllib.parse import quote_plus, urlencode
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 import re
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageOps
 from django.utils.translation import check_for_language
 from django.utils import translation
 from django.utils.translation import gettext as _
@@ -373,7 +375,12 @@ def home(request):
 
     random_ski_stations = list(queryset.order_by('?'))
     featured_stations = random_ski_stations[:5]
-    nearest_stations = list(queryset.order_by('distanceFromGrenoble', 'name')[:5])
+    nearest_stations = list(queryset.select_related('live_status').order_by('distanceFromGrenoble', 'name')[:5])
+    for station in nearest_stations:
+        live = getattr(station, 'live_status', None)
+        if live and ski_assessment(live) != 'stale':
+            station.measured_snow_depth = live.snow_depth_cm
+
     map_stations = list(queryset.order_by('distanceFromGrenoble', 'name'))
 
     station_ids = [station.id for station in map_stations]
@@ -439,14 +446,47 @@ def ski_station_photo(request, station_id):
     try:
         with Image.open(BytesIO(data), formats=('JPEG', 'PNG', 'WEBP', 'GIF')) as photo:
             content_type = Image.MIME[photo.format]
+            width = request.GET.get('width')
+            if width in {'480', '960', '1440'}:
+                photo = ImageOps.exif_transpose(photo)
+                max_width = int(width)
+                photo.thumbnail((max_width, max_width), Image.Resampling.LANCZOS)
+                buffer = BytesIO()
+                photo.save(buffer, format='WEBP', quality=83, method=4)
+                data, content_type = buffer.getvalue(), 'image/webp'
     except (OSError, Image.DecompressionBombError) as error:
         raise Http404 from error
     return HttpResponse(data, content_type=content_type, headers={'X-Content-Type-Options': 'nosniff'})
 
 
+@never_cache
+@require_http_methods(['GET', 'POST'])
+def ski_station_route(request, station_id):
+    station = get_object_or_404(SkiStation.objects.defer('image'), pk=station_id)
+    mode = request.POST.get('mode', 'DRIVE')
+    origin = request.POST.get('origin', '').strip() or 'Grenoble, France'
+    if mode not in GOOGLE_ROUTE_MODES or len(origin) > 120:
+        return HttpResponse(status=400)
+    route = (
+        calculate_station_route(station, origin, mode, getattr(request, 'LANGUAGE_CODE', 'fr'))
+        if request.method == 'POST' else None
+    )
+    return render(request, 'station_route.html', {
+        'route_base': 'partials/route_embedded_base.html' if request.GET.get('embedded') == '1' else 'base.html',
+        'station': station,
+        'mode': mode,
+        'origin': origin,
+        'modes': zip(GOOGLE_ROUTE_MODES, (_('Voiture'), _('Bus / transport'), _('Vélo'), _('À pied'))),
+        'route': route,
+        'routes_available': bool(settings.GOOGLE_ROUTES_API_KEY),
+        'bus_lines': station.bus_lines.all(),
+    })
+
+
 def ski_station_detail(request, station_id):
     ski_station = get_object_or_404(
-        SkiStation.objects.prefetch_related('bus_lines').annotate(num_circuits=Coalesce(Sum('skicircuit__num_pistes'), Value(0))),
+        SkiStation.objects.select_related('live_status').prefetch_related('bus_lines')
+        .annotate(num_circuits=Coalesce(Sum('skicircuit__num_pistes'), Value(0))),
         id=station_id,
     )
     bus_lines = BusLine.objects.filter(ski_station=ski_station)
@@ -464,7 +504,8 @@ def ski_station_detail(request, station_id):
     if trend not in ('3h', '24h'):
         trend = '24h'
     window_delta = timedelta(hours=3 if trend == '3h' else 24)
-    window_start = timezone.now() - window_delta
+    now = timezone.now()
+    window_start = now - window_delta
 
     if request.method == 'POST' and request.user.is_authenticated:
         form_type = request.POST.get('form_type', '').strip()
@@ -528,7 +569,7 @@ def ski_station_detail(request, station_id):
     snow_updates = SnowConditionUpdate.objects.filter(ski_station=ski_station).select_related('user').order_by('-created_at')[:20]
     piste_reports = PisteConditionReport.objects.filter(ski_station=ski_station).select_related('user').order_by('-created_at')[:20]
     crowd_updates = CrowdStatusUpdate.objects.filter(ski_station=ski_station)
-    window_crowd = crowd_updates.filter(created_at__gte=window_start)
+    window_crowd = crowd_updates.filter(created_at__range=(window_start, now))
     crowd_counts = dict(window_crowd.values('crowd_level').annotate(total=Count('id')).order_by()
                         .values_list('crowd_level', 'total'))
     crowd_total = sum(crowd_counts.values())
@@ -540,12 +581,18 @@ def ski_station_detail(request, station_id):
     avg_rating = PisteConditionReport.objects.filter(ski_station=ski_station).aggregate(avg=Avg('piste_rating')).get('avg')
     report_count = PisteConditionReport.objects.filter(ski_station=ski_station).count()
 
-    last_crowd = crowd_updates.order_by('-created_at', '-pk').first()
-    destination = f"{ski_station.latitude},{ski_station.longitude}"
-    station_transit_url = f"https://www.google.com/maps/dir/?api=1&destination={destination}&travelmode=transit"
-    station_driving_url = f"https://www.google.com/maps/dir/?api=1&destination={destination}&travelmode=driving"
-    station_walking_url = f"https://www.google.com/maps/dir/?api=1&destination={destination}&travelmode=walking"
-    station_bicycling_url = f"https://www.google.com/maps/dir/?api=1&destination={destination}&travelmode=bicycling"
+    live_status = getattr(ski_station, 'live_status', None)
+    live_is_recent = live_status is not None and ski_assessment(live_status, now=now) != 'stale'
+    snow_depth = live_status.snow_depth_cm if live_is_recent else None
+    if snow_depth is None:
+        snow_depth = SnowConditionUpdate.objects.filter(
+            ski_station=ski_station, created_at__range=(now - timedelta(hours=24), now), snow_depth_cm__isnull=False,
+        ).values_list('snow_depth_cm', flat=True).first()
+    last_crowd = window_crowd.order_by('-created_at', '-pk').first()
+    crowd_estimate = estimate_ski_crowd(getattr(ski_station, 'live_status', None), now=now)
+    crowd_labels = {row['key']: row['label'] for row in crowd_rows}
+    for slot in crowd_estimate.get('slots', ()):
+        slot['label'] = crowd_labels[slot['level']]
     google_place_rating = _fetch_google_place_rating(ski_station)
     station_news_items = list(
         SkiNewsItem.objects.filter(ski_station=ski_station, category='ski')
@@ -574,10 +621,6 @@ def ski_station_detail(request, station_id):
         'service_stores': service_stores,
         'ski_circuits': ski_circuits,
         'circuit_breakdown': circuit_breakdown,
-        'station_transit_url': station_transit_url,
-        'station_driving_url': station_driving_url,
-        'station_walking_url': station_walking_url,
-        'station_bicycling_url': station_bicycling_url,
         'piste_form': piste_form,
         'snow_form': snow_form,
         'piste_reports': piste_reports,
@@ -586,7 +629,10 @@ def ski_station_detail(request, station_id):
         'piste_average_rating_rounded': int(round(avg_rating)) if avg_rating else 0,
         'piste_report_count': report_count,
         'piste_trend': trend,
+        'station_temperature': live_status.temperature_c if live_is_recent else None,
+        'station_snow_depth': snow_depth,
         'crowd_rows': crowd_rows,
+        'crowd_estimate': crowd_estimate,
         'crowd_total': crowd_total,
         'last_crowd': last_crowd,
         'crowd_history': window_crowd.order_by('-created_at', '-pk')[:12],

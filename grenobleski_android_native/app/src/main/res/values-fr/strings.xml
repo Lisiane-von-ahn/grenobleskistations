@@ -354,4 +354,12 @@
     <string name="culture_news_empty">Les actualités sont momentanément indisponibles. Explorez les lieux ci-dessous ou actualisez plus tard.</string>
     <string name="culture_published">Publié le %1$s · Langue originale : %2$s</string>
     <string name="culture_read_article">Lire chez l’éditeur</string>
+    <string name="route_load_error">Impossible de charger le trajet. Vérifiez votre connexion et réessayez.</string>
+    <string name="crowd_reported">Affluence signalée</string>
+    <string name="crowd_estimated">Affluence estimée</string>
+    <string name="crowd_unavailable">Indisponible</string>
+    <string name="crowd_quiet_level">Faible</string>
+    <string name="crowd_normal_level">Modérée</string>
+    <string name="crowd_busy_level">Forte</string>
+    <string name="crowd_slot_description">%1$d h–%2$d h · %3$s</string>
 </resources>

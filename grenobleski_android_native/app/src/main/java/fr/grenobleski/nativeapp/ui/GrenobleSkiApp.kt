@@ -130,7 +130,10 @@ import com.google.android.gms.ads.AdView
 import fr.grenobleski.nativeapp.AppUiState
 import fr.grenobleski.nativeapp.AppViewModel
 import fr.grenobleski.nativeapp.AppViewModelFactory
+import coil.compose.AsyncImage
 import fr.grenobleski.nativeapp.BuildConfig
+import fr.grenobleski.nativeapp.data.model.StationCrowd
+import fr.grenobleski.nativeapp.data.model.StationItem
 import fr.grenobleski.nativeapp.R
 import fr.grenobleski.nativeapp.data.AuthRepository
 import fr.grenobleski.nativeapp.data.model.PisteItem
@@ -2273,6 +2276,7 @@ private fun StationsTab(
     var searchQuery by remember { mutableStateOf("") }
     var selectedStation by remember { mutableStateOf<fr.grenobleski.nativeapp.data.model.StationItem?>(null) }
     var selectedStationForRating by remember { mutableStateOf<fr.grenobleski.nativeapp.data.model.StationItem?>(null) }
+    var routeStationId by remember { mutableStateOf<Int?>(null) }
     var stationScore by remember { mutableStateOf(5) }
     var stationComment by remember { mutableStateOf("") }
     val filteredItems = remember(state.stationItems, searchQuery) {
@@ -2310,27 +2314,19 @@ private fun StationsTab(
             }
         }
         items(visibleItems) { item ->
-            val previewImage = remember(item.imageBase64) { decodeBase64Image(item.imageBase64) }
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 modifier = Modifier.clickable { selectedStation = item },
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    if (previewImage != null) {
-                        Image(
-                            bitmap = previewImage,
-                            contentDescription = item.name,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(180.dp),
-                            contentScale = ContentScale.Crop,
-                        )
-                    }
+                    StationCardImage(item, Modifier.fillMaxWidth().height(180.dp))
                     Column(
                         modifier = Modifier.padding(14.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         Text(item.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        StationWeatherMetrics(item.temperature, item.snowDepth)
+                        StationCrowdSummary(item.crowd)
                         PhotoCredit(item.photoCredit, item.photoSourceUrl, onOpenUrl)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             PisteMetricPill(
@@ -2389,8 +2385,8 @@ private fun StationsTab(
     }
 
     val stationDetails = selectedStation
-    if (stationDetails != null) {
-        val previewImage = remember(stationDetails.imageBase64) { decodeBase64Image(stationDetails.imageBase64) }
+    routeStationId?.let { StationRouteDialog(it, onDismiss = { routeStationId = null }) }
+    if (stationDetails != null && routeStationId == null) {
         val stationNewsItems = remember(
             stationDetails.id,
             stationDetails.name,
@@ -2432,16 +2428,7 @@ private fun StationsTab(
                             .weight(1f, fill = false)
                             .verticalScroll(rememberScrollState()),
                     ) {
-                        if (previewImage != null) {
-                            Image(
-                                bitmap = previewImage,
-                                contentDescription = stationDetails.name,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(220.dp),
-                                contentScale = ContentScale.Crop,
-                            )
-                        }
+                        StationCardImage(stationDetails, Modifier.fillMaxWidth().height(220.dp))
 
                         Column(
                             modifier = Modifier.padding(16.dp),
@@ -2452,6 +2439,11 @@ private fun StationsTab(
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
                             )
+                            StationWeatherMetrics(stationDetails.temperature, stationDetails.snowDepth)
+                            StationCrowdSummary(stationDetails.crowd, showSchedule = true)
+                            Button(onClick = { routeStationId = stationDetails.id }, modifier = Modifier.fillMaxWidth()) {
+                                Text(stringResource(R.string.getting_there_title))
+                            }
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 PisteMetricPill(
                                     label = stringResource(id = R.string.altitude),
@@ -3902,6 +3894,8 @@ private fun PistesTab(
     onOpenUrl: (String) -> Unit,
 ) {
     var searchQuery by remember { mutableStateOf("") }
+    var routeStationId by remember { mutableStateOf<Int?>(null) }
+    routeStationId?.let { StationRouteDialog(it, onDismiss = { routeStationId = null }) }
     val filteredItems = remember(state.pisteItems, searchQuery) {
         state.pisteItems.filter { item ->
             searchQuery.isBlank() || item.stationName.contains(searchQuery, ignoreCase = true) || item.weatherLabel.contains(searchQuery, ignoreCase = true)
@@ -3922,10 +3916,11 @@ private fun PistesTab(
                     latitude = station.latitude,
                     longitude = station.longitude,
                     ratingLabel = "-",
-                    crowdLabel = "normal",
+
+                    crowd = station.crowd,
                     weatherLabel = "indisponible",
-                    temperatureLabel = "-",
-                    snowDepthLabel = "-",
+                    temperatureLabel = station.temperature,
+                    snowDepthLabel = station.snowDepth,
                     comment = "-",
                     updatedAtLabel = "",
                 )
@@ -3973,13 +3968,6 @@ private fun PistesTab(
             }
         }
         items(visibleItems) { item ->
-            val crowdLower = item.crowdLabel.lowercase()
-            val crowdIcon = when {
-                crowdLower.contains("bon") || crowdLower.contains("busy") -> "🔴"
-                crowdLower.contains("peu") || crowdLower.contains("quiet") -> "🟢"
-                else -> "🟡"
-            }
-
             val weatherIcon = when {
                 item.weatherLabel.contains("neige", ignoreCase = true) -> "❄"
                 item.weatherLabel.contains("pluie", ignoreCase = true) -> "🌧"
@@ -4013,7 +4001,7 @@ private fun PistesTab(
                         )
                         PisteMetricPill(
                             label = stringResource(id = R.string.temperature),
-                            value = "🌡 ${item.temperatureLabel}°C",
+                            value = formatStationMeasurement(item.temperatureLabel, "°C"),
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -4021,7 +4009,7 @@ private fun PistesTab(
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         PisteMetricPill(
                             label = stringResource(id = R.string.snow_depth),
-                            value = "❄ ${item.snowDepthLabel} cm",
+                            value = formatStationMeasurement(item.snowDepthLabel, "cm"),
                             modifier = Modifier.weight(1f),
                         )
                         PisteMetricPill(
@@ -4044,20 +4032,9 @@ private fun PistesTab(
                         )
                     }
 
-                    Box(
-                        modifier = Modifier
-                            .background(
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                                RoundedCornerShape(10.dp),
-                            )
-                            .padding(horizontal = 10.dp, vertical = 7.dp),
-                    ) {
-                        Text(
-                            text = "$crowdIcon ${item.crowdLabel}",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.SemiBold,
-                        )
+                    StationCrowdSummary(item.crowd)
+                    OutlinedButton(onClick = { routeStationId = item.id }) {
+                        Text(stringResource(R.string.getting_there_title))
                     }
 
                     if (item.comment.isNotBlank() && item.comment != "-") {
@@ -4132,23 +4109,14 @@ private fun PisteStationsMapCard(
                             isHorizontalScrollBarEnabled = false
                             webChromeClient = WebChromeClient()
                             webViewClient = WebViewClient()
-                            loadDataWithBaseURL(
-                                "https://www.openstreetmap.org",
-                                mapHtml,
-                                "text/html",
-                                "utf-8",
-                                null,
-                            )
+
                         }
                     },
                     update = { webView ->
-                        webView.loadDataWithBaseURL(
-                            "https://www.openstreetmap.org",
-                            mapHtml,
-                            "text/html",
-                            "utf-8",
-                            null,
-                        )
+                        if (webView.tag != mapHtml) {
+                            webView.tag = mapHtml
+                            webView.loadDataWithBaseURL("https://www.openstreetmap.org", mapHtml, "text/html", "utf-8", null)
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -4194,6 +4162,75 @@ private fun PisteMetricPill(
     }
 }
 
+internal fun formatStationMeasurement(value: String, unit: String): String =
+    if (value.toDoubleOrNull() == null) "—" else "$value $unit"
+
+@Composable
+internal fun StationWeatherMetrics(temperature: String, snowDepth: String) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        PisteMetricPill(stringResource(R.string.temperature), formatStationMeasurement(temperature, "°C"), Modifier.weight(1f))
+        PisteMetricPill(stringResource(R.string.snow_depth), formatStationMeasurement(snowDepth, "cm"), Modifier.weight(1f))
+    }
+}
+
+@Composable
+internal fun StationCardImage(station: StationItem, modifier: Modifier) {
+    val legacyPhoto = remember(station.photoUrl, station.imageBase64) {
+        if (station.photoUrl.isBlank()) decodeBase64Image(station.imageBase64) else null
+    }
+    val fallback = painterResource(R.drawable.grenoble_alps_hero)
+    if (legacyPhoto != null) {
+        Image(legacyPhoto, station.name, modifier, contentScale = ContentScale.Crop)
+    } else {
+        AsyncImage(
+            model = station.photoUrl.takeIf(String::isNotBlank),
+            contentDescription = station.name,
+            modifier = modifier,
+            contentScale = ContentScale.Crop,
+            placeholder = fallback,
+            error = fallback,
+            fallback = fallback,
+        )
+    }
+}
+
+@Composable
+internal fun StationCrowdSummary(crowd: StationCrowd?, showSchedule: Boolean = false) {
+    val reported = crowd?.reportedLevel?.takeIf(String::isNotBlank)
+    val current = crowd?.slots?.firstOrNull { it.current }?.level
+    val title = if (reported != null) R.string.crowd_reported else R.string.crowd_estimated
+    val level = reported ?: current
+    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Text(stringResource(title), style = MaterialTheme.typography.labelMedium)
+        Text(
+            when {
+                level != null -> stringResource(crowdLevelLabel(level))
+                crowd?.state == "closed" -> stringResource(R.string.ski_closed)
+                else -> stringResource(R.string.crowd_unavailable)
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        if (showSchedule && !crowd?.slots.isNullOrEmpty()) {
+            if (reported != null) Text(stringResource(R.string.crowd_estimated), style = MaterialTheme.typography.labelMedium)
+            for (slot in crowd?.slots.orEmpty()) {
+                Text(
+                    stringResource(R.string.crowd_slot_description, slot.start, slot.end, stringResource(crowdLevelLabel(slot.level))),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = if (slot.current) FontWeight.SemiBold else FontWeight.Normal,
+                )
+            }
+        }
+    }
+}
+
+private fun crowdLevelLabel(level: String): Int = when (level) {
+    "quiet" -> R.string.crowd_quiet_level
+    "normal" -> R.string.crowd_normal_level
+    "busy" -> R.string.crowd_busy_level
+    else -> R.string.crowd_unavailable
+}
+
 private fun buildStationsMapHtml(items: List<PisteItem>): String {
     val markers = items.joinToString(separator = ",\n") { item ->
         val latitude = item.latitude ?: 0.0
@@ -4206,19 +4243,20 @@ private fun buildStationsMapHtml(items: List<PisteItem>): String {
             append("<br/>")
             append("Note: ")
             append(escapeHtml(item.ratingLabel))
-            append(" | Neige: ")
-            append(escapeHtml(item.snowDepthLabel))
-            append(" cm")
+            append(" · ")
+            append(escapeHtml(formatStationMeasurement(item.temperatureLabel, "°C")))
+            append(" · ❄ ")
+            append(escapeHtml(formatStationMeasurement(item.snowDepthLabel, "cm")))
         }
-        """{ lat: $latitude, lng: $longitude, title: \"${escapeForJs(item.stationName)}\", popup: \"${escapeForJs(popup)}\" }"""
+        """{ lat: $latitude, lng: $longitude, title: "${escapeForJs(item.stationName).replace("<", "\\u003c")}", popup: "${escapeForJs(popup)}" }"""
     }
 
     return """
         <!DOCTYPE html>
         <html>
         <head>
-            <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no\" />
-            <link rel=\"stylesheet\" href=\"https://unpkg.com/leaflet@1.9.4/dist/leaflet.css\" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
             <style>
                 html, body, #map {
                     height: 100%;
@@ -4227,16 +4265,23 @@ private fun buildStationsMapHtml(items: List<PisteItem>): String {
                     padding: 0;
                     background: #eef3f8;
                 }
-                .leaflet-container {
-                    font-family: sans-serif;
+                .leaflet-container { font-family: sans-serif; }
+                .ski-marker {
+                    display: grid; place-items: center; border-radius: 50%;
+                    background: #0b514c; border: 2px solid #fff;
+                    box-shadow: 0 4px 9px #0e2b3d6b; font-size: 20px;
+                }
+                .ski-marker span {
+                    width: 21px; height: 21px; background: #fff;
+                    mask: url('${BuildConfig.API_BASE_URL.trimEnd('/')}/static/images/ski.png') center / contain no-repeat;
                 }
             </style>
         </head>
         <body>
-            <div id=\"map\"></div>
-            <script src=\"https://unpkg.com/leaflet@1.9.4/dist/leaflet.js\"></script>
+            <div id="map"></div>
+            <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
             <script>
-                const map = L.map('map', { zoomControl: false, attributionControl: true });
+                const map = L.map('map', { zoomControl: true, attributionControl: true });
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     maxZoom: 18,
                     attribution: '&copy; OpenStreetMap contributors'
@@ -4246,7 +4291,8 @@ private fun buildStationsMapHtml(items: List<PisteItem>): String {
                 const bounds = [];
 
                 markers.forEach((item) => {
-                    const marker = L.marker([item.lat, item.lng]).addTo(map);
+                    const icon = L.divIcon({className: 'ski-marker', html: '<span aria-hidden="true"></span>', iconSize: [36, 36], iconAnchor: [18, 34], popupAnchor: [0, -29]});
+                    const marker = L.marker([item.lat, item.lng], {icon, title: item.title}).addTo(map);
                     marker.bindPopup(item.popup);
                     bounds.push([item.lat, item.lng]);
                 });

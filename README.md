@@ -72,7 +72,13 @@ Le projet inclut un déploiement prêt pour serveur Linux avec:
 - `PROPELLERADS_SCRIPT_SRC` / `PROPELLERADS_CONTAINER_ID` (compatibilite ancienne config)
 - `ADS_TXT_CONTENT` (contenu ads.txt, `\\n` pour retour ligne)
 
-### Set automatique des secrets GitHub
+#Pour activer les trajets dans le site et l’application, ajouter
+`GOOGLE_ROUTES_API_KEY` dans le `.env` du serveur. Activer Routes API sur le
+projet Google Cloud, limiter la clé à cette API et configurer un quota.
+Le départ est Grenoble par défaut et peut être modifié. Sans clé,
+la page affiche les lignes de bus enregistrées pour la station.
+
+## Set automatique des secrets GitHub
 
 1. Créez un fichier local non versionné:
 

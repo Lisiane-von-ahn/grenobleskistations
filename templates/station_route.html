@@ -1,0 +1,64 @@
+{% extends route_base %}
+{% load i18n tz %}
+{% block title %}{% trans "Comment venir ?" %} · {{ station.name }}{% endblock %}
+{% block content %}
+<section class="container route-page">
+    {% if route_base == "base.html" %}<a href="{% url 'ski_station_detail' station.pk %}">{% trans "Retour à la station" %}</a>{% endif %}
+    <h1>{% trans "Comment venir ?" %}</h1>
+    <p class="route-destination">{{ origin }} <span aria-hidden="true">→</span> {{ station.name }}</p>
+
+    {% if routes_available %}
+    <form method="post" class="route-form">
+        {% csrf_token %}
+        <label for="route-origin" class="form-label">{% trans "Point de départ" %}</label>
+        <input class="form-control" type="text" id="route-origin" name="origin" maxlength="120" value="{{ origin }}" autocomplete="address-line1">
+        <div class="route-modes">
+        {% for value, label in modes %}
+            <button type="submit" name="mode" value="{{ value }}" class="btn {% if mode == value %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                {{ label }}
+            </button>
+        {% endfor %}
+        </div>
+    </form>
+    {% endif %}
+
+    {% if route.state == "ready" %}
+        <section class="route-result" aria-labelledby="route-result-heading">
+            <div class="route-result-heading">
+                <h2 id="route-result-heading">{% trans "Résumé du trajet" %}</h2>
+                <span class="route-attribution" translate="no">Google Maps</span>
+            </div>
+            <div class="route-summary"><strong>{{ route.duration|default:"—" }}</strong><span>{{ route.distance }}</span></div>
+            {% if mode == "WALK" or mode == "BICYCLE" %}
+                <p>{% trans "Les itinéraires à pied et à vélo sont en bêta. Certains trottoirs, chemins ou aménagements cyclables peuvent manquer." %}</p>
+            {% endif %}
+            <ol class="route-steps">
+                {% for step in route.steps %}
+                    <li>
+                        {% if step.line %}<strong>{{ step.line }}</strong>{% endif %}
+                        {% if step.instruction %}<span>{{ step.instruction }}</span>{% endif %}
+                        {% if step.departure or step.arrival %}<span>{{ step.departure }} → {{ step.arrival }}</span>{% endif %}
+                        {% if step.departure_time or step.arrival_time %}<small>{% timezone "Europe/Paris" %}{{ step.departure_time|date:"H:i" }} – {{ step.arrival_time|date:"H:i" }}{% endtimezone %}</small>{% endif %}
+                        {% if step.distance or step.agency %}<small>{{ step.distance }} {{ step.agency }}</small>{% endif %}
+                    </li>
+                {% endfor %}
+            </ol>
+        </section>
+    {% elif route or not routes_available %}
+        <p class="route-notice">{% trans "Le calcul d’itinéraire est indisponible pour ce trajet. Consultez les lignes de bus renseignées ci-dessous." %}</p>
+    {% else %}
+        <p>{% trans "Choisissez un mode de transport pour afficher la durée, la distance et les étapes." %}</p>
+    {% endif %}
+
+    <section class="route-buses" aria-labelledby="route-bus-heading">
+        <h2 id="route-bus-heading">{% trans "Lignes de bus vers la station" %}</h2>
+        <ul>
+            {% for line in bus_lines %}
+                <li><strong>{{ line.bus_number }}</strong><span>{{ line.departure_stop }} → {{ line.arrival_stop }}</span>{% if line.travel_time %}<small>{{ line.travel_time }}</small>{% endif %}</li>
+            {% empty %}
+                <li>{% trans "Aucune ligne de bus renseignée." %}</li>
+            {% endfor %}
+        </ul>
+    </section>
+</section>
+{% endblock %}

@@ -5,4 +5,12 @@
     <string name="open_trail_maps">Mapas de senderos</string><string name="open_mountain_tips">Consejos de montaña</string><string name="hiking_trails_title">Senderos y mapas</string><string name="hiking_trails_subtitle">Explora Grenoble y las montañas cercanas. Consulta el tiempo y las condiciones oficiales.</string>
     <string name="accommodation_check_price">Consultar precio actual</string>
     <string name="previous_page">Anterior</string><string name="next_page">Siguiente</string>
+    <string name="route_load_error">No se pudo cargar el itinerario. Comprueba tu conexión y vuelve a intentarlo.</string>
+    <string name="crowd_reported">Afluencia comunicada</string>
+    <string name="crowd_estimated">Afluencia estimada</string>
+    <string name="crowd_unavailable">No disponible</string>
+    <string name="crowd_quiet_level">Baja</string>
+    <string name="crowd_normal_level">Moderada</string>
+    <string name="crowd_busy_level">Alta</string>
+    <string name="crowd_slot_description">%1$d h–%2$d h · %3$s</string>
 </resources>

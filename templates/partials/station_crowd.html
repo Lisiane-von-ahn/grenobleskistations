@@ -1,10 +1,28 @@
 {% load i18n tz %}
 <section id="affluence" class="station-crowd mb-4" aria-labelledby="crowd-heading">
+    <h2 id="crowd-heading">{% trans "Affluence en station" %}</h2>
+    <div class="crowd-estimate">
+        <h3>{% trans "Estimation du jour" %}</h3>
+        {% if crowd_estimate.state == 'closed' %}
+            <p>{% trans "Le dernier bulletin de l’exploitant indique une fermeture du domaine skiable." %}</p>
+        {% elif crowd_estimate.state == 'out_of_season' %}
+            <p>{% trans "Estimation de ski indisponible hors saison sans bulletin d’ouverture récent." %}</p>
+        {% else %}
+            <ul class="crowd-estimate-slots" aria-label="{% trans 'Créneaux indicatifs en heure locale' %}">
+                {% for slot in crowd_estimate.slots %}
+                    <li{% if slot.current %} aria-current="time"{% endif %}>
+                        <span>{{ slot.start }} h – {{ slot.end }} h{% if slot.current %} <span class="visually-hidden">({% trans "En ce moment" %})</span>{% endif %}</span>
+                        <strong class="crowd-estimate-{{ slot.level }}">{{ slot.label }}</strong>
+                    </li>
+                {% endfor %}
+            </ul>
+            <p>{% trans "Tendance indicative selon l’heure et le jour de la semaine. Aucun comptage en direct." %}
+                {% if not crowd_estimate.open_confirmed %}{% trans "Ouverture du domaine non confirmée." %}{% endif %}
+            </p>
+        {% endif %}
+    </div>
     <div class="crowd-heading">
-        <div>
-            <h2 id="crowd-heading">{% trans "Affluence en station" %}</h2>
-            <p>{% trans "Signalements des visiteurs sur le terrain." %}</p>
-        </div>
+        <h3>{% trans "Signalements des visiteurs" %}</h3>
         <nav class="crowd-period" aria-label="{% trans 'Période des signalements' %}">
             <a href="?trend=3h#affluence" {% if piste_trend == '3h' %}aria-current="true"{% endif %}>3 h</a>
             <a href="?trend=24h#affluence" {% if piste_trend == '24h' %}aria-current="true"{% endif %}>24 h</a>

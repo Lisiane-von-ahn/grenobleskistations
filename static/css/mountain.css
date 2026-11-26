@@ -548,3 +548,136 @@ body.theme-dark .account-menu-logout button:hover { background: #294453; }
     .theme-toggle { color: var(--mountain-ink); border-color: var(--app-border); margin-block: .25rem; }
     .theme-toggle span { display: inline; }
 }
+
+.site-bottom-dock { position: fixed; inset: auto 0 0; z-index: 1030; }
+body { padding-bottom: var(--bottom-dock-height, 0px); }
+html { scroll-padding-bottom: calc(var(--bottom-dock-height, 0px) + .75rem); }
+#cookie-banner { max-height: 40dvh; overflow-y: auto; overscroll-behavior: contain; }
+.cookie-banner-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: .4rem; }
+#cookie-banner .cookie-banner-actions .btn { margin: 0; min-height: 44px; }
+.header-area .main-nav .site-brand { min-width: 0; flex-shrink: 1; }
+.site-brand-mark { flex-shrink: 0; }
+.site-brand-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+.crowd-estimate { margin: .95rem 0 1.25rem; padding-bottom: 1.15rem; border-bottom: 1px solid var(--app-border); }
+.crowd-estimate h3, .crowd-heading h3 { color: var(--mountain-ink); font-size: 1.05rem; }
+.crowd-estimate p { margin: .55rem 0 0; font-size: .875rem; color: var(--app-text); line-height: 1.5; }
+.crowd-estimate-slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .45rem; padding: 0; margin: .65rem 0 0; }
+.crowd-estimate-slots li {
+    display: flex;
+    flex-direction: column;
+    gap: .25rem;
+    padding: .55rem .6rem;
+    border: 1px solid var(--app-border);
+    border-radius: .55rem;
+    font-size: .875rem;
+    overflow-wrap: anywhere;
+}
+.crowd-estimate-slots li[aria-current] { border-color: var(--mountain-accent); background: color-mix(in srgb, var(--mountain-accent) 9%, var(--app-surface)); }
+.crowd-estimate-quiet { color: var(--mountain-accent); }
+.crowd-estimate-normal { color: #235d90; }
+.crowd-estimate-busy { color: #a23d32; }
+body.theme-dark .crowd-estimate-normal { color: #a9d2f8; }
+body.theme-dark .crowd-estimate-busy { color: #ffc1b8; }
+
+@media (max-width: 991.98px) {
+    body { padding-bottom: var(--bottom-dock-height, calc(64px + env(safe-area-inset-bottom))); }
+    html { scroll-padding-bottom: calc(var(--bottom-dock-height, 64px) + .75rem); }
+    .mobile-bottom-nav { display: grid; }
+    .mobile-bottom-nav a { flex-direction: column; text-align: center; border-radius: .45rem; }
+    #cookie-banner { padding: .55rem .7rem; font-size: .875rem; }
+    #listing-builder-form .d-flex.gap-2.justify-content-end { bottom: calc(var(--bottom-dock-height, 64px) + .45rem); }
+}
+
+@media (max-width: 359px) {
+    .crowd-estimate-slots { grid-template-columns: minmax(0, 1fr); }
+    .crowd-estimate-slots li { flex-direction: row; justify-content: space-between; gap: .5rem; }
+}
+
+#id_image_file {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.ski-map-pin {
+    background: #0b514c;
+    border: 2px solid #fff;
+    border-radius: 50% 50% 50% .45rem;
+    box-shadow: 0 3px 9px #0e2b3d70;
+    transform-origin: center;
+    display: grid;
+    place-items: center;
+}
+.ski-map-pin span { width: 22px; height: 22px; background: #fff; mask: url('../images/ski.png') center / contain no-repeat; }
+.ski-map-pin:focus-visible { outline: 3px solid #f2b951; outline-offset: 2px; }
+
+.station-condition-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .6rem; }
+.station-condition-strip > div {
+    padding: .7rem;
+    border: 1px solid var(--app-border);
+    border-radius: .7rem;
+    background: var(--app-surface);
+    color: var(--mountain-ink);
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+.station-condition-strip i { color: var(--mountain-accent); }
+.station-condition-strip dt { font-size: .8rem; }
+.station-condition-strip dd { margin: 0; font-size: clamp(1.15rem, 4vw, 1.65rem); font-weight: 700; }
+.station-condition-strip a { color: var(--mountain-accent); font-size: .95rem; display: inline-flex; align-items: center; min-height: 44px; }
+
+.embedded-route { background: var(--app-bg); color: #0e2b3d; }
+.route-page { max-width: 51rem; margin: 0 auto; padding: clamp(.85rem, 3vw, 2rem); }
+.route-page h1 { color: var(--mountain-ink); font-size: clamp(1.6rem, 4vw, 2.6rem); margin: .35rem 0; }
+.route-page h2 { color: var(--mountain-ink); font-size: 1.25rem; }
+.route-destination { color: var(--app-text); font-weight: 650; }
+.route-modes { display: flex; flex-wrap: wrap; gap: .45rem; margin: .85rem 0; }
+.route-modes button { min-height: 44px; }
+.route-result, .route-buses, .route-notice { border: 1px solid var(--app-border); background: var(--app-surface); border-radius: .8rem; padding: .85rem; margin: .75rem 0; }
+.route-result-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .4rem; }
+.route-attribution { font: 400 .875rem/1.4 Roboto, Arial, sans-serif; color: #5e5e5e; white-space: nowrap; }
+body.theme-dark .route-attribution { color: #fff; }
+.route-summary { display: flex; align-items: baseline; gap: 1rem; margin: .6rem 0; }
+.route-summary strong { color: var(--mountain-accent); font-size: 1.55rem; }
+.route-steps { list-style: decimal inside; padding: 0; margin: .5rem 0 0; }
+.route-steps li, .route-buses li { border-top: 1px solid var(--app-border); padding: .65rem 0; }
+.route-steps span, .route-steps small, .route-buses span, .route-buses small { display: block; }
+.route-steps span:first-of-type { display: inline; }
+.route-buses ul { margin: .65rem 0 0; padding: 0; }
+
+@media (max-width: 520px) {
+    .station-condition-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .station-condition-strip > div:last-child { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
+    .station-condition-strip > div:last-child dd { margin-left: auto; }
+}
+
+.embedded-route { --app-surface: #fff; --app-text: #1f2937; }
+.station-photo-placeholder {
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    min-height: 9rem;
+    gap: .4rem;
+    background: linear-gradient(145deg, #ddedf2, #e7f5ef);
+    color: #245166;
+    text-align: center;
+    font-weight: 650;
+}
+.station-photo-placeholder i { font-size: 1.5rem; }
+
+.ski-amenity-pin {
+    display: grid;
+    place-items: center;
+    background: #176384;
+    color: #fff;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 2px 7px #0e2b3d60;
+}
+.ski-amenity-pin i { font-size: 13px; }
+.ski-amenity-parking { background: #146451; }
+.ski-amenity-restaurant, .ski-amenity-cafe { background: #8b4a13; }
+
+.route-form { margin: .8rem 0; }
+.route-form input { min-height: 44px; font-size: 1rem; }
