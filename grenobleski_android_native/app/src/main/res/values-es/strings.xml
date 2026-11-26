@@ -13,4 +13,15 @@
     <string name="crowd_normal_level">Moderada</string>
     <string name="crowd_busy_level">Alta</string>
     <string name="crowd_slot_description">%1$d h–%2$d h · %3$s</string>
+    <string name="station_access_open">Dominio esquiable abierto</string>
+    <string name="station_access_closed">Dominio esquiable cerrado</string>
+    <string name="station_access_unknown">Apertura por confirmar</string>
+    <string name="station_access_next_opening">Apertura prevista para el %1$s</string>
+    <string name="station_access_day_pass">Forfait de adulto · 1 día</string>
+    <string name="station_access_price_unknown">Consulta el precio</string>
+    <string name="station_access_high_season">%1$s · Temporada alta</string>
+    <string name="station_access_buy">Comprar un forfait</string>
+    <string name="station_access_prices">Precios oficiales</string>
+    <string name="station_access_bulletin">Boletín oficial</string>
+    <string name="station_access_calendar">Calendario oficial</string>
 </resources>

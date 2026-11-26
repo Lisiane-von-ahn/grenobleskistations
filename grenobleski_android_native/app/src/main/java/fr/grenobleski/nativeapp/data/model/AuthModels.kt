@@ -133,6 +133,19 @@ data class StationCrowd(
     val slots: List<CrowdSlot>,
 )
 
+data class StationAccess(
+    val status: String,
+    val observedAt: String,
+    val nextOpening: String,
+    val openingUrl: String,
+    val scheduleUrl: String,
+    val purchaseUrl: String,
+    val pricesUrl: String,
+    val adultDayPrice: String,
+    val priceSeason: String,
+    val highSeason: Boolean,
+)
+
 data class StationItem(
     val id: Int,
     val name: String,
@@ -157,6 +170,7 @@ data class StationItem(
     val snowDepth: String = "",
     val photoUrl: String = "",
     val crowd: StationCrowd? = null,
+    val access: StationAccess? = null,
 )
 
 data class StationCameraItem(
@@ -272,6 +286,7 @@ data class PisteItem(
     val comment: String,
     val updatedAtLabel: String,
     val crowd: StationCrowd? = null,
+    val access: StationAccess? = null,
 )
 
 data class MessageItem(

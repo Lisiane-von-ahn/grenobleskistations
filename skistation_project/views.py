@@ -367,7 +367,7 @@ def home(request):
         .values('total')[:1]
     )
 
-    queryset = SkiStation.objects.annotate(
+    queryset = SkiStation.objects.select_related('live_status').annotate(
         num_circuits=Coalesce(Subquery(circuit_total_subquery, output_field=IntegerField()), Value(0)),
         service_count=Count('servicestore', distinct=True),
         instructor_service_count=Value(0, output_field=IntegerField()),
@@ -646,7 +646,7 @@ def ski_station_detail(request, station_id):
 
 
 def ski_station_search(request):
-    query = SkiStation.objects.annotate(camera_count=Count('cameras', filter=Q(cameras__is_active=True)))
+    query = SkiStation.objects.select_related('live_status').annotate(camera_count=Count('cameras', filter=Q(cameras__is_active=True)))
     name = request.GET.get('q', '').strip()[:100]
     webcam_only = request.GET.get('webcams') == '1'
     sort = request.GET.get('sort', 'distance')

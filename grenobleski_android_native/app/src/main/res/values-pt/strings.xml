@@ -13,4 +13,15 @@
     <string name="crowd_normal_level">Moderado</string>
     <string name="crowd_busy_level">Alto</string>
     <string name="crowd_slot_description">%1$dh–%2$dh · %3$s</string>
+    <string name="station_access_open">Área de esqui aberta</string>
+    <string name="station_access_closed">Área de esqui fechada</string>
+    <string name="station_access_unknown">Abertura a confirmar</string>
+    <string name="station_access_next_opening">Abertura prevista para %1$s</string>
+    <string name="station_access_day_pass">Passe diário adulto</string>
+    <string name="station_access_price_unknown">Consulte o preço</string>
+    <string name="station_access_high_season">%1$s · Alta temporada</string>
+    <string name="station_access_buy">Comprar passe de esqui</string>
+    <string name="station_access_prices">Preços oficiais</string>
+    <string name="station_access_bulletin">Boletim oficial</string>
+    <string name="station_access_calendar">Calendário oficial</string>
 </resources>

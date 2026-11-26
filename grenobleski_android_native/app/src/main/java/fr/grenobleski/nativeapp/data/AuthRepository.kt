@@ -7,6 +7,7 @@ import com.google.gson.JsonParser
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonToken
 import fr.grenobleski.nativeapp.data.model.CrowdSlot
+import fr.grenobleski.nativeapp.data.model.StationAccess
 import fr.grenobleski.nativeapp.data.model.StationCrowd
 import fr.grenobleski.nativeapp.data.model.DashboardCounts
 import fr.grenobleski.nativeapp.data.model.BusLineItem
@@ -439,6 +440,7 @@ class AuthRepository(
                 },
                 photoUrl = photoPath?.let { "$normalizedBaseUrl$it" }.orEmpty(),
                 crowd = parseStationCrowd(obj),
+                access = parseStationAccess(obj),
                 observedAt = obj.get("live_status")?.takeIf { it.isJsonObject }?.asJsonObject?.stringOrBlank("observed_at").orEmpty(),
                 conditionSource = obj.get("live_status")?.takeIf { it.isJsonObject }?.asJsonObject?.stringOrBlank("source_url").orEmpty(),
                 skiAssessment = assessment,
@@ -457,6 +459,22 @@ class AuthRepository(
                 weatherSource = weather.stringOrBlank("source_url"),
             ) else station
         })
+    }
+
+    private fun parseStationAccess(station: JsonObject): StationAccess? {
+        val access = station.get("access_info")?.takeIf { it.isJsonObject }?.asJsonObject ?: return null
+        return StationAccess(
+            status = access.stringOrBlank("status"),
+            observedAt = access.stringOrBlank("observed_at").takeIf(String::isNotBlank)?.let(::formatServerDateTime).orEmpty(),
+            nextOpening = access.stringOrBlank("next_opening"),
+            openingUrl = access.stringOrBlank("opening_url"),
+            scheduleUrl = access.stringOrBlank("schedule_url"),
+            purchaseUrl = access.stringOrBlank("purchase_url"),
+            pricesUrl = access.stringOrBlank("prices_url"),
+            adultDayPrice = access.stringOrBlank("adult_day_price"),
+            priceSeason = access.stringOrBlank("price_season"),
+            highSeason = access.boolOrFalse("price_high_season"),
+        )
     }
 
     private fun parseStationCrowd(station: JsonObject): StationCrowd? {
@@ -754,6 +772,7 @@ class AuthRepository(
                     ratingLabel = ratingAvg.ifBlank { "-" },
 
                     crowd = parseStationCrowd(obj),
+                    access = parseStationAccess(obj),
                     weatherLabel = obj.stringOrBlank("weather_description").ifBlank { "indisponible" },
                     temperatureLabel = temperatureValue.ifBlank { "-" },
                     snowDepthLabel = snowDepth.ifBlank { "-" },

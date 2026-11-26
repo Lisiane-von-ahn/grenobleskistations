@@ -389,4 +389,15 @@
     <string name="crowd_normal_level">Moderate</string>
     <string name="crowd_busy_level">Busy</string>
     <string name="crowd_slot_description">%1$d:00–%2$d:00 · %3$s</string>
+    <string name="station_access_open">Ski area open</string>
+    <string name="station_access_closed">Ski area closed</string>
+    <string name="station_access_unknown">Opening to be confirmed</string>
+    <string name="station_access_next_opening">Planned opening: %1$s</string>
+    <string name="station_access_day_pass">Adult day pass</string>
+    <string name="station_access_price_unknown">Check prices</string>
+    <string name="station_access_high_season">%1$s · Peak season</string>
+    <string name="station_access_buy">Buy a ski pass</string>
+    <string name="station_access_prices">Official prices</string>
+    <string name="station_access_bulletin">Official bulletin</string>
+    <string name="station_access_calendar">Official calendar</string>
 </resources>

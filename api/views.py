@@ -294,6 +294,7 @@ class SkiStationViewSet(viewsets.ModelViewSet):
                     "feels_like_c": weather.get("feels_like_c"),
                     "snow_depth_cm": summary.get_snow_depth_cm(station),
                     "crowd_estimate": summary.get_crowd_estimate(station),
+                    "access_info": station.access_info,
                     "lifts_open": getattr(live_status, "lifts_open", None),
                     "lifts_total": getattr(live_status, "lifts_total", None),
                     "pistes_open": getattr(live_status, "pistes_open", None),

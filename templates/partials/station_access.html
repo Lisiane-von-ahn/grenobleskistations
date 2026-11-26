@@ -1,0 +1,44 @@
+{% load i18n tz %}
+{% with access=station.access_info %}
+<section class="station-access" aria-label="{% trans 'Ouverture et forfaits' %}">
+    <div class="station-access-facts">
+        <div>
+            <span class="station-access-label">{% trans "Domaine skiable" %}</span>
+            <strong class="station-access-status station-access-status-{{ access.status }}">
+                {% if access.status == 'open' %}{% trans "Ouvert" %}
+                {% elif access.status == 'closed' %}{% trans "Fermé" %}
+                {% else %}{% trans "Ouverture à confirmer" %}{% endif %}
+            </strong>
+            {% if access.observed_at %}
+                <small>{% trans "Bulletin du" %} {{ access.observed_at|timezone:"Europe/Paris"|date:"d/m H:i" }}</small>
+            {% endif %}
+            {% if access.next_opening %}
+                <small>{% trans "Ouverture prévue le" %} {{ access.next_opening|date:"j F Y" }}</small>
+            {% endif %}
+        </div>
+        <div>
+            <span class="station-access-label">{% trans "Forfait adulte · 1 jour" %}</span>
+            <strong>{% if access.adult_day_price %}{{ access.adult_day_price }}{% else %}{% trans "Tarif à vérifier" %}{% endif %}</strong>
+            {% if access.price_season %}
+                <small>{{ access.price_season }}{% if access.price_high_season %} · {% trans "Haute saison" %}{% endif %}</small>
+            {% endif %}
+        </div>
+    </div>
+    {% if access.purchase_url or access.prices_url or access.opening_url or access.schedule_url %}
+        <div class="station-access-links">
+            {% if access.purchase_url %}
+                <a class="btn btn-primary btn-sm" href="{{ access.purchase_url }}" target="_blank" rel="noopener">{% trans "Acheter un forfait" %}</a>
+            {% endif %}
+            {% if access.prices_url and access.prices_url != access.purchase_url %}
+                <a href="{{ access.prices_url }}" target="_blank" rel="noopener">{% trans "Tarifs officiels" %}</a>
+            {% endif %}
+            {% if access.opening_url and access.opening_url != access.prices_url and access.opening_url != access.purchase_url %}
+                <a href="{{ access.opening_url }}" target="_blank" rel="noopener">{% trans "Bulletin officiel" %}</a>
+            {% endif %}
+            {% if access.schedule_url and access.schedule_url != access.prices_url and access.schedule_url != access.opening_url %}
+                <a href="{{ access.schedule_url }}" target="_blank" rel="noopener">{% trans "Calendrier officiel" %}</a>
+            {% endif %}
+        </div>
+    {% endif %}
+</section>
+{% endwith %}

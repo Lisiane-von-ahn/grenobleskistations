@@ -25,6 +25,12 @@ class SkiStation(models.Model):
     piste_map_url = models.URLField(null=True, blank=True)
     piste_map_thumbnail_url = models.URLField(null=True, blank=True)
 
+    @property
+    def access_info(self):
+        from .station_access import station_access
+
+        return station_access(self)
+
     def __str__(self):
         return self.name
 

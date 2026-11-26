@@ -13,4 +13,15 @@
     <string name="crowd_normal_level">Mittel</string>
     <string name="crowd_busy_level">Hoch</string>
     <string name="crowd_slot_description">%1$d–%2$d Uhr · %3$s</string>
+    <string name="station_access_open">Skigebiet geöffnet</string>
+    <string name="station_access_closed">Skigebiet geschlossen</string>
+    <string name="station_access_unknown">Öffnung noch unbestätigt</string>
+    <string name="station_access_next_opening">Geplante Öffnung: %1$s</string>
+    <string name="station_access_day_pass">Tagespass für Erwachsene</string>
+    <string name="station_access_price_unknown">Preis prüfen</string>
+    <string name="station_access_high_season">%1$s · Hauptsaison</string>
+    <string name="station_access_buy">Skipass kaufen</string>
+    <string name="station_access_prices">Offizielle Preise</string>
+    <string name="station_access_bulletin">Offizieller Pistenbericht</string>
+    <string name="station_access_calendar">Offizieller Kalender</string>
 </resources>

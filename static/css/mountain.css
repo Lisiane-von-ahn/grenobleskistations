@@ -681,3 +681,55 @@ body.theme-dark .route-attribution { color: #fff; }
 
 .route-form { margin: .8rem 0; }
 .route-form input { min-height: 44px; font-size: 1rem; }
+
+.station-access {
+    margin-block: .75rem 1rem;
+    padding: clamp(.75rem, 2vw, 1.25rem);
+    border: 1px solid #cfe1ef;
+    border-radius: 1rem;
+    background: #eef7ff;
+    color: #17344c;
+}
+
+.station-access-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
+    gap: .75rem 1.25rem;
+}
+
+.station-access-facts strong {
+    display: block;
+    font-size: 1.12rem;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.station-access-label,
+.station-access-facts small {
+    display: block;
+    font-size: .8rem;
+    line-height: 1.35;
+}
+
+.station-access-status-open { color: #116440; }
+.station-access-status-closed { color: #9b2e36; }
+
+.station-access-links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .25rem 1rem;
+    margin-top: .65rem;
+}
+
+.station-access-links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    font-size: .875rem;
+}
+
+.station-access-links a:not(.btn) {
+    color: #164c79;
+    text-decoration: underline;
+}

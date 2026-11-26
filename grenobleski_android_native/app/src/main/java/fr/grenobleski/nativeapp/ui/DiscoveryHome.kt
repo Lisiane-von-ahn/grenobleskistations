@@ -163,6 +163,7 @@ internal fun DiscoveryHome(
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                             Text(station.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(station.altitudeLabel, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            StationAccessSummary(station.access, onOpenUrl, compact = true)
                             StationWeatherMetrics(station.temperature, station.snowDepth)
                             StationCrowdSummary(station.crowd)
                         }

@@ -144,6 +144,7 @@
                 </div>
             </header>
 
+            {% include "partials/station_access.html" with station=station only %}
             <dl class="station-condition-strip">
                 <div><i class="fas fa-temperature-half" aria-hidden="true"></i><dt>{% trans "Température" %}</dt>
                     <dd id="station-temperature">{% if station_temperature is not None %}{{ station_temperature|floatformat:0 }} °C{% else %}—{% endif %}</dd>

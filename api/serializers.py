@@ -73,6 +73,7 @@ def _display_name_for_user(user):
     return (user.username or user.email or '').strip()
 
 class SkiStationSerializer(serializers.ModelSerializer):
+    access_info = serializers.ReadOnlyField()
     cameras = serializers.SerializerMethodField()
     bus_lines = serializers.SerializerMethodField()
     live_status = serializers.SerializerMethodField()

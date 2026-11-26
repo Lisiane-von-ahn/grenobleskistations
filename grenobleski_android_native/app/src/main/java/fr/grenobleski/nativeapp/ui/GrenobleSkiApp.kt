@@ -91,6 +91,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -132,6 +133,7 @@ import fr.grenobleski.nativeapp.AppViewModel
 import fr.grenobleski.nativeapp.AppViewModelFactory
 import coil.compose.AsyncImage
 import fr.grenobleski.nativeapp.BuildConfig
+import fr.grenobleski.nativeapp.data.model.StationAccess
 import fr.grenobleski.nativeapp.data.model.StationCrowd
 import fr.grenobleski.nativeapp.data.model.StationItem
 import fr.grenobleski.nativeapp.R
@@ -2325,6 +2327,7 @@ private fun StationsTab(
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         Text(item.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        StationAccessSummary(item.access, onOpenUrl)
                         StationWeatherMetrics(item.temperature, item.snowDepth)
                         StationCrowdSummary(item.crowd)
                         PhotoCredit(item.photoCredit, item.photoSourceUrl, onOpenUrl)
@@ -2439,6 +2442,7 @@ private fun StationsTab(
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
                             )
+                            StationAccessSummary(stationDetails.access, onOpenUrl)
                             StationWeatherMetrics(stationDetails.temperature, stationDetails.snowDepth)
                             StationCrowdSummary(stationDetails.crowd, showSchedule = true)
                             Button(onClick = { routeStationId = stationDetails.id }, modifier = Modifier.fillMaxWidth()) {
@@ -4032,6 +4036,7 @@ private fun PistesTab(
                         )
                     }
 
+                    StationAccessSummary(item.access, onOpenUrl)
                     StationCrowdSummary(item.crowd)
                     OutlinedButton(onClick = { routeStationId = item.id }) {
                         Text(stringResource(R.string.getting_there_title))
@@ -4164,6 +4169,72 @@ private fun PisteMetricPill(
 
 internal fun formatStationMeasurement(value: String, unit: String): String =
     if (value.toDoubleOrNull() == null) "—" else "$value $unit"
+
+@Composable
+internal fun StationAccessSummary(access: StationAccess?, onOpenUrl: (String) -> Unit, compact: Boolean = false) {
+    if (access == null) return
+
+    val status = when (access.status) {
+        "open" -> R.string.station_access_open
+        "closed" -> R.string.station_access_closed
+        else -> R.string.station_access_unknown
+    }
+    val statusColor = when (access.status) {
+        "open" -> MaterialTheme.colorScheme.primary
+        "closed" -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+    ) {
+        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(stringResource(status), style = MaterialTheme.typography.titleSmall, color = statusColor)
+            if (access.observedAt.isNotBlank()) {
+                Text(access.observedAt, style = MaterialTheme.typography.labelSmall)
+            }
+            if (access.nextOpening.isNotBlank()) {
+                val openingDate = remember(access.nextOpening) {
+                    runCatching {
+                        val parser = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT)
+                        val date = requireNotNull(parser.parse(access.nextOpening))
+                        java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(date)
+                    }.getOrDefault(access.nextOpening)
+                }
+                Text(stringResource(R.string.station_access_next_opening, openingDate), style = MaterialTheme.typography.bodySmall)
+            }
+
+            Text(stringResource(R.string.station_access_day_pass), style = MaterialTheme.typography.labelMedium)
+            Text(
+                access.adultDayPrice.ifBlank { stringResource(R.string.station_access_price_unknown) },
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+            )
+            if (access.priceSeason.isNotBlank()) {
+                val season = if (access.highSeason) {
+                    stringResource(R.string.station_access_high_season, access.priceSeason)
+                } else access.priceSeason
+                Text(season, style = MaterialTheme.typography.labelSmall)
+            }
+            if (!compact) {
+                if (access.purchaseUrl.isNotBlank()) {
+                    Button(onClick = { onOpenUrl(access.purchaseUrl) }, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.station_access_buy))
+                    }
+                }
+                val officialLinks = listOf(
+                    access.pricesUrl.takeUnless { it == access.purchaseUrl }.orEmpty() to R.string.station_access_prices,
+                    access.openingUrl to R.string.station_access_bulletin,
+                    access.scheduleUrl to R.string.station_access_calendar,
+                )
+                officialLinks.filter { (url, _) -> url.isNotBlank() }.distinctBy { it.first }.forEach { (url, label) ->
+                    TextButton(onClick = { onOpenUrl(url) }) { Text(stringResource(label)) }
+                }
+            }
+        }
+    }
+}
 
 @Composable
 internal fun StationWeatherMetrics(temperature: String, snowDepth: String) {

@@ -130,6 +130,7 @@
                             <div class="col-md-6 d-flex align-items-center">
                                 <div class="card-body">
                                     <h4 class="card-title text-primary">{{ station.name }}</h4>
+                                    {% include "partials/station_access.html" with station=station only %}
                                     <ul class="list-unstyled">
                                         <li><strong>{% trans "Altitude :" %}</strong> {{ station.altitude }} m</li>
                                         <li><strong>{% trans "Distance :" %}</strong> {{ station.distanceFromGrenoble }} km</li>
