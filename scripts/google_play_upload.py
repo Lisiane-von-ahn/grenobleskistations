@@ -188,24 +188,15 @@ def main() -> None:
 
     except HttpError as err:
         status = getattr(err.resp, "status", None)
-        body = str(err)
+        reason = err.reason
 
-        if status == 404 and "Package not found" in body:
+        if status == 404 and "Package not found" in reason:
             raise SystemExit(
                 "[ERROR] Google Play package not found for this account/project. "
                 "Check package name and Play Console permissions."
             )
 
-        if status == 403 and (
-            "SERVICE_DISABLED" in body
-            or "Android Developer API" in body
-            or "androidpublisher.googleapis.com" in body
-        ):
-            raise SystemExit(
-                "[ERROR] Android Publisher API is not enabled for the Google Cloud project linked to this service account."
-            )
-
-        raise SystemExit(f"[ERROR] Google Play API request failed ({status}): {body}")
+        raise SystemExit(f"[ERROR] Google Play API request failed ({status}): {reason}")
 
 
 if __name__ == "__main__":
