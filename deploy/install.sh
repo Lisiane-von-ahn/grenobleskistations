@@ -132,11 +132,13 @@ ensure_env_file() {
 
   local env_file="${APP_DIR}/.env"
   local secret_key=""
-  local google_routes_key=""
+  local google_routes_key="${GOOGLE_ROUTES_API_KEY:-}"
 
   if [[ -f "${env_file}" ]]; then
     secret_key="$(grep -E '^DJANGO_SECRET_KEY=' "${env_file}" | tail -n1 | cut -d= -f2- || true)"
-    google_routes_key="$(grep -E '^GOOGLE_ROUTES_API_KEY=' "${env_file}" | tail -n1 | cut -d= -f2- || true)"
+    if [[ -z "${google_routes_key}" ]]; then
+      google_routes_key="$(grep -E '^GOOGLE_ROUTES_API_KEY=' "${env_file}" | tail -n1 | cut -d= -f2- || true)"
+    fi
   fi
   if [[ -z "${secret_key}" ]]; then
     secret_key="$(rand_hex_64)"
