@@ -1,11 +1,12 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import Http404, HttpResponse, HttpResponseRedirect, JsonResponse
 from django.views.decorators.cache import cache_control
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_POST
 from django.conf import settings
 from django.contrib.auth import login
 from api.models import (
     SkiStation,
+    SkiStationCamera,
     BusLine,
     ServiceStore,
     SkiCircuit,
@@ -344,6 +345,18 @@ def _build_bus_route_stops(line):
     return generated
 
 
+def _webcam_media(camera):
+    # Only embed the known provider. Other cameras can supply a still or a direct link.
+    embed_url = (
+        camera.camera_url
+        if camera.camera_type == 'embedded'
+        and re.fullmatch(r'https://www\.skaping\.com(?:/[a-zA-Z0-9_-]+){2,}/?', camera.camera_url)
+        else ''
+    )
+    preview = camera.thumbnail_url or (camera.camera_url if camera.camera_type == 'snapshot' else '')
+    return {'camera': camera, 'embed': embed_url, 'preview': preview if preview.startswith('https://') else ''}
+
+
 def home(request):
     circuit_total_subquery = (
         SkiCircuit.objects.filter(ski_station=OuterRef('pk'))
@@ -388,6 +401,17 @@ def home(request):
         station.circuit_breakdown = breakdown_by_station_id.get(station.id, [])
         station.circuit_breakdown_summary = summary_by_station_id.get(station.id, '')
 
+    webcams = [
+        _webcam_media(camera)
+        for camera in SkiStationCamera.objects.filter(is_active=True).select_related('ski_station')
+        .defer('ski_station__image').order_by('ski_station__distanceFromGrenoble', 'ski_station__name', 'name', 'pk')
+    ]
+    webcams.sort(key=lambda item: not bool(item['embed'] or item['preview']))
+    selected_webcam = next(
+        (item for item in webcams if str(item['camera'].pk) == request.GET.get('webcam')),
+        webcams[0] if webcams else None,
+    )
+
     return render(
         request,
         'index.html',
@@ -397,8 +421,8 @@ def home(request):
             'culture_news': SkiNewsItem.objects.filter(category='culture', culture_source__is_active=True).order_by('-published_at')[:6],
             'all': queryset,
             'nearest_stations': nearest_stations,
-            'camera_stations': SkiStation.objects.filter(cameras__is_active=True)
-                .values('id', 'name').annotate(camera_count=Count('cameras')).order_by('name'),
+            'webcams': webcams,
+            'selected_webcam': selected_webcam,
             'map_stations': map_stations,
         },
     )
@@ -474,7 +498,7 @@ def ski_station_detail(request, station_id):
                 messages.success(request, _('Affluence mise a jour.'))
             else:
                 messages.error(request, _('Valeur d\'affluence invalide.'))
-            return redirect(f"{reverse('ski_station_detail', args=[station_id])}?trend={trend}")
+            return redirect(f"{reverse('ski_station_detail', args=[station_id])}?trend={trend}#affluence")
 
         if form_type == 'snow_update':
             snow_form_post = SnowConditionUpdateForm(request.POST, request.FILES)
@@ -503,34 +527,20 @@ def ski_station_detail(request, station_id):
 
     snow_updates = SnowConditionUpdate.objects.filter(ski_station=ski_station).select_related('user').order_by('-created_at')[:20]
     piste_reports = PisteConditionReport.objects.filter(ski_station=ski_station).select_related('user').order_by('-created_at')[:20]
-    window_reports = PisteConditionReport.objects.filter(
-        ski_station=ski_station,
-        created_at__gte=window_start,
-    ).order_by('created_at')
-
-    crowd_to_value = {
-        PisteConditionReport.CROWD_QUIET: 1,
-        PisteConditionReport.CROWD_NORMAL: 2,
-        PisteConditionReport.CROWD_BUSY: 3,
-    }
-
-    chart_labels = [report.created_at.strftime('%H:%M') for report in window_reports]
-    chart_reports = [1 for _ in window_reports]
-    chart_ratings = [report.piste_rating for report in window_reports]
-    chart_crowd = [crowd_to_value.get(report.crowd_level, 2) for report in window_reports]
+    crowd_updates = CrowdStatusUpdate.objects.filter(ski_station=ski_station)
+    window_crowd = crowd_updates.filter(created_at__gte=window_start)
+    crowd_counts = dict(window_crowd.values('crowd_level').annotate(total=Count('id')).order_by()
+                        .values_list('crowd_level', 'total'))
+    crowd_total = sum(crowd_counts.values())
+    crowd_rows = [
+        {'key': key, 'label': label, 'count': crowd_counts.get(key, 0)}
+        for key, label in [('quiet', _('Peu de gens')), ('normal', _('Agréable')), ('busy', _('Bondé'))]
+    ]
 
     avg_rating = PisteConditionReport.objects.filter(ski_station=ski_station).aggregate(avg=Avg('piste_rating')).get('avg')
     report_count = PisteConditionReport.objects.filter(ski_station=ski_station).count()
 
-    last_crowd = CrowdStatusUpdate.objects.filter(ski_station=ski_station).order_by('-created_at').first()
-    crowd_display_map = {
-        PisteConditionReport.CROWD_QUIET: _('Peu'),
-        PisteConditionReport.CROWD_NORMAL: _('Agreable'),
-        PisteConditionReport.CROWD_BUSY: _('Bonde'),
-    }
-    last_crowd_key = last_crowd.crowd_level if last_crowd else None
-    last_crowd_label = crowd_display_map.get(last_crowd_key)
-
+    last_crowd = crowd_updates.order_by('-created_at', '-pk').first()
     destination = f"{ski_station.latitude},{ski_station.longitude}"
     station_transit_url = f"https://www.google.com/maps/dir/?api=1&destination={destination}&travelmode=transit"
     station_driving_url = f"https://www.google.com/maps/dir/?api=1&destination={destination}&travelmode=driving"
@@ -559,7 +569,7 @@ def ski_station_detail(request, station_id):
 
     context = {
         'station': ski_station,
-        'cameras': ski_station.cameras.filter(is_active=True),
+        'cameras': [_webcam_media(camera) for camera in ski_station.cameras.filter(is_active=True)],
         'bus_lines': bus_lines,
         'service_stores': service_stores,
         'ski_circuits': ski_circuits,
@@ -575,14 +585,11 @@ def ski_station_detail(request, station_id):
         'piste_average_rating': avg_rating,
         'piste_average_rating_rounded': int(round(avg_rating)) if avg_rating else 0,
         'piste_report_count': report_count,
-        'piste_last_crowd': last_crowd_label,
-        'piste_last_crowd_key': last_crowd_key,
-        'piste_window_label': _('3 heures') if trend == '3h' else _('24 heures'),
         'piste_trend': trend,
-        'piste_chart_labels': json.dumps(chart_labels),
-        'piste_chart_reports': json.dumps(chart_reports),
-        'piste_chart_ratings': json.dumps(chart_ratings),
-        'piste_chart_crowd': json.dumps(chart_crowd),
+        'crowd_rows': crowd_rows,
+        'crowd_total': crowd_total,
+        'last_crowd': last_crowd,
+        'crowd_history': window_crowd.order_by('-created_at', '-pk')[:12],
         'google_place_rating': google_place_rating,
         'station_news_items': station_news_items,
         'station_highlighted_news': station_highlighted_news,
@@ -594,24 +601,30 @@ def ski_station_detail(request, station_id):
 
 def ski_station_search(request):
     query = SkiStation.objects.annotate(camera_count=Count('cameras', filter=Q(cameras__is_active=True)))
-    
-    # Filters
-    capacity = request.GET.get('capacity')
-    distance = request.GET.get('distance')
-    altitude = request.GET.get('altitude')
-    
-    if capacity:
-        query = query.filter(capacity__gte=capacity)
-    if distance:
-        query = query.filter(distanceFromGrenoble__lte=distance)
-    if altitude:
-        query = query.filter(altitude__gte=altitude)
-    
-    context = {
-        'ski_stations': query,
-    }
-    
-    return render(request, 'search.html', context)
+    name = request.GET.get('q', '').strip()[:100]
+    webcam_only = request.GET.get('webcams') == '1'
+    sort = request.GET.get('sort', 'distance')
+    if name:
+        query = query.filter(name__icontains=name)
+    if webcam_only:
+        query = query.filter(camera_count__gt=0)
+
+    for parameter, lookup in (
+        ('capacity', 'capacity__gte'), ('distance', 'distanceFromGrenoble__lte'), ('altitude', 'altitude__gte'),
+    ):
+        raw_value = request.GET.get(parameter, '')
+        if re.fullmatch(r'[0-9]{1,9}', raw_value):
+            query = query.filter(**{lookup: int(raw_value)})
+
+    sort_field = {'distance': 'distanceFromGrenoble', 'altitude': '-altitude', 'name': 'name'}.get(
+        sort, 'distanceFromGrenoble',
+    )
+    return render(request, 'search.html', {
+        'ski_stations': query.order_by(sort_field, 'name', 'pk'),
+        'search_name': name,
+        'webcam_only': webcam_only,
+        'station_sort': sort,
+    })
 
 
 def service_search(request):
@@ -2715,9 +2728,11 @@ def profile_view(request):
         'profile_picture': profile_picture_data,  # Pass local profile picture in base64
         'google_profile_picture_url': google_profile_picture_url,
         'google_full_name': google_full_name,
+        'google_connected': social is not None,
     })
 
 @login_required
+@require_POST
 def delete_account(request):
     user = request.user
     user.delete()

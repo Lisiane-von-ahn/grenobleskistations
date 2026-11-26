@@ -64,30 +64,6 @@
             letter-spacing: 1px;
             font-size: 0.95rem;
         }
-        .crowd-choice {
-            display: inline-flex;
-            border: 1px solid #dfe3e6;
-            border-radius: 10px;
-            overflow: hidden;
-            background: #fff;
-        }
-        .crowd-choice input {
-            display: none;
-        }
-        .crowd-choice label {
-            margin: 0;
-            padding: 0.45rem 0.8rem;
-            font-size: 0.9rem;
-            cursor: pointer;
-            border-right: 1px solid #dfe3e6;
-        }
-        .crowd-choice label:last-child {
-            border-right: 0;
-        }
-        .crowd-choice input:checked + label {
-            background: var(--bs-primary, #0d6efd);
-            color: #fff;
-        }
         .map-legend {
             background: rgba(255, 255, 255, 0.94);
             border-radius: 8px;
@@ -166,17 +142,6 @@
                 height: 260px !important;
             }
 
-            .crowd-choice {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                width: 100%;
-            }
-
-            .crowd-choice label {
-                border-right: 0;
-                border-bottom: 1px solid #dfe3e6;
-                text-align: center;
-            }
         }
     </style>
 
@@ -189,6 +154,7 @@
                 </div>
                 <div class="mountain-actions">
                     {% if cameras %}<a class="mountain-action" href="#cameras">Webcams</a>{% endif %}
+                    <a class="mountain-action mountain-action-glass" href="#affluence">{% trans "Affluence" %}</a>
                     {% if station.piste_map_url %}<a class="mountain-action mountain-action-glass" href="{{ station.piste_map_url }}" target="_blank" rel="noopener">{% trans "Carte des pistes" %}</a>{% endif %}
                 </div>
             </header>
@@ -197,19 +163,13 @@
             <section class="station-webcams mb-4" id="cameras" aria-labelledby="cameras-heading">
                 <h2 id="cameras-heading">{% trans "Caméras en direct" %}</h2>
                 <div class="camera-grid">
-                    {% for camera in cameras %}
+                    {% for webcam in cameras %}
                     <article class="camera-card">
-                        {% if camera.thumbnail_url or camera.camera_type == 'snapshot' %}
-                        <a href="{{ camera.camera_url }}" target="_blank" rel="noopener" class="camera-preview"
-                           aria-label="{% trans 'Ouvrir webcam' %} · {{ camera.name }}">
-                            <img src="{{ camera.thumbnail_url|default:camera.camera_url }}" alt=""
-                                 loading="lazy" decoding="async" width="640" height="360" data-camera-preview>
-                        </a>
-                        {% endif %}
+                        {% include "partials/webcam_media.html" with webcam=webcam eager=forloop.first only %}
                         <div class="camera-info">
-                            <h3><i class="fas fa-video" aria-hidden="true"></i> {{ camera.name }}</h3>
-                            {% if camera.description %}<p>{{ camera.description }}</p>{% endif %}
-                            <a href="{{ camera.camera_url }}" target="_blank" rel="noopener" class="camera-open">{% trans "Ouvrir webcam" %}</a>
+                            <h3><i class="fas fa-video" aria-hidden="true"></i> {{ webcam.camera.name }}</h3>
+                            {% if webcam.camera.description %}<p>{{ webcam.camera.description }}</p>{% endif %}
+                            <a href="{{ webcam.camera.camera_url }}" target="_blank" rel="noopener" class="camera-open">{% trans "Ouvrir webcam" %}</a>
                         </div>
                     </article>
                     {% endfor %}
@@ -217,6 +177,8 @@
             </section>
             <script src="{% static 'js/camera-previews.js' %}" defer></script>
             {% endif %}
+
+            {% include "partials/station_crowd.html" %}
 
             <div class="row g-4">
                 <div class="col-lg-7">
@@ -433,9 +395,7 @@
                             {% else %}
                                 <span class="badge badge-secondary">{% trans "Pas encore de note piste" %}</span>
                             {% endif %}
-                            {% if piste_last_crowd %}
-                                <span class="badge badge-info">{% trans "Affluence actuelle:" %} {{ piste_last_crowd }}</span>
-                            {% endif %}
+
                         </div>
 
                         {% if user.is_authenticated %}
@@ -466,24 +426,6 @@
                                 </div>
                             </form>
 
-                            <form method="post" class="row g-2 mb-4">
-                                {% csrf_token %}
-                                <input type="hidden" name="form_type" value="crowd_update">
-                                <div class="col-md-8">
-                                    <label class="form-label d-block mb-1">{% trans "Affluence actuelle (mise à jour instantanée):" %}</label>
-                                    <div class="crowd-choice" role="radiogroup" aria-label="{% trans 'Affluence actuelle' %}">
-                                        <input type="radio" id="crowd_quiet" name="crowd_level" value="quiet" {% if piste_last_crowd_key == 'quiet' %}checked{% endif %}>
-                                        <label for="crowd_quiet">{% trans "Peu" %}</label>
-                                        <input type="radio" id="crowd_normal" name="crowd_level" value="normal" {% if piste_last_crowd_key == 'normal' %}checked{% endif %}>
-                                        <label for="crowd_normal">{% trans "Agréable" %}</label>
-                                        <input type="radio" id="crowd_busy" name="crowd_level" value="busy" {% if piste_last_crowd_key == 'busy' %}checked{% endif %}>
-                                        <label for="crowd_busy">{% trans "Bondé" %}</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-4 d-flex align-items-end">
-                                    <button type="submit" class="btn btn-outline-primary w-100">{% trans "Mettre à jour l'affluence" %}</button>
-                                </div>
-                            </form>
                         {% else %}
                             <p><a href="{% url 'login' %}">{% trans "Connectez-vous" %}</a> {% trans "pour partager l'état des pistes." %}</p>
                         {% endif %}
@@ -516,19 +458,6 @@
                             {% endfor %}
                         </div>
 
-                        <div class="mt-4">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h5 class="mb-0">{% trans "Tendance sur" %} {{ piste_window_label }}</h5>
-                                <div>
-                                    <a href="{% url 'ski_station_detail' station.id %}?trend=3h" class="btn btn-sm {% if piste_trend == '3h' %}btn-primary{% else %}btn-outline-primary{% endif %}">3h</a>
-                                    <a href="{% url 'ski_station_detail' station.id %}?trend=24h" class="btn btn-sm {% if piste_trend != '3h' %}btn-primary{% else %}btn-outline-primary{% endif %}">24h</a>
-                                </div>
-                            </div>
-                            <div style="height: 320px; position: relative;">
-                                <canvas id="pisteTrendChart"></canvas>
-                            </div>
-                            <small class="text-muted">{% trans "Affluence: 1 = peu de gens, 2 = agréable, 3 = bondé (basé sur les mises à jour instantanées)." %}</small>
-                        </div>
 
                     </div>
                 </div>
@@ -593,105 +522,7 @@
         </div>
     </section>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        const chartLabels = {{ piste_chart_labels|safe }};
-        const chartReports = {{ piste_chart_reports|safe }};
-        const chartRatings = {{ piste_chart_ratings|safe }};
-        const chartCrowd = {{ piste_chart_crowd|safe }};
-
-        const chartCanvas = document.getElementById('pisteTrendChart');
-        if (chartCanvas && typeof Chart !== 'undefined') {
-            const existingChart = Chart.getChart(chartCanvas);
-            if (existingChart) {
-                existingChart.destroy();
-            }
-
-            try {
-                new Chart(chartCanvas, {
-                    type: 'bar',
-                    data: {
-                        labels: chartLabels,
-                        datasets: [
-                            {
-                                type: 'bar',
-                                label: '{% trans "Nombre de retours" %}',
-                                data: chartReports,
-                                backgroundColor: 'rgba(54, 162, 235, 0.25)',
-                                borderColor: 'rgba(54, 162, 235, 0.8)',
-                                borderWidth: 1,
-                                yAxisID: 'yReports'
-                            },
-                            {
-                                type: 'line',
-                                label: '{% trans "Note moyenne piste" %}',
-                                data: chartRatings,
-                                borderColor: 'rgba(75, 192, 192, 1)',
-                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                                tension: 0.35,
-                                spanGaps: true,
-                                yAxisID: 'yRating'
-                            },
-                            {
-                                type: 'line',
-                                label: '{% trans "Affluence moyenne" %}',
-                                data: chartCrowd,
-                                borderColor: 'rgba(255, 159, 64, 1)',
-                                backgroundColor: 'rgba(255, 159, 64, 0.2)',
-                                borderDash: [6, 4],
-                                tension: 0.35,
-                                spanGaps: true,
-                                yAxisID: 'yCrowd'
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        animation: false,
-                        normalized: true,
-                        scales: {
-                            yReports: {
-                                type: 'linear',
-                                position: 'left',
-                                beginAtZero: true,
-                                title: { display: true, text: '{% trans "Retours" %}' }
-                            },
-                            yRating: {
-                                type: 'linear',
-                                position: 'right',
-                                beginAtZero: true,
-                                min: 0,
-                                max: 5,
-                                grid: { drawOnChartArea: false },
-                                title: { display: true, text: '{% trans "Note /5" %}' }
-                            },
-                            yCrowd: {
-                                type: 'linear',
-                                position: 'right',
-                                beginAtZero: true,
-                                min: 1,
-                                max: 3,
-                                grid: { drawOnChartArea: false },
-                                title: { display: true, text: '{% trans "Affluence" %}' },
-                                ticks: {
-                                    callback: function(value) {
-                                        if (value === 1) return '{% trans "Peu" %}';
-                                        if (value === 2) return '{% trans "Agréable" %}';
-                                        if (value === 3) return '{% trans "Bondé" %}';
-                                        return value;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            } catch (error) {
-                chartCanvas.parentElement.innerHTML = "<div class='alert alert-light border'>{% trans "Impossible d'afficher la tendance pour le moment." %}</div>";
-                console.error('Erreur chart tendance:', error);
-            }
-        }
-
         const quickPisteForm = document.getElementById('piste-quick-form');
         if (quickPisteForm) {
             const quickInputs = quickPisteForm.querySelectorAll('input[name="piste_rating"], input[name="crowd_level"]');
@@ -709,25 +540,25 @@
         // Use the station's latitude and longitude to center the map dynamically
         var stationLat = {{ station.latitude|unlocalize }};
         var stationLng = {{ station.longitude|unlocalize }};
-        
+
         // Initialize the map and set its view to the ski station's coordinates
         var map = L.map('ski-map').setView([stationLat, stationLng], 15);  // Adjust zoom level if necessary
-    
+
         // Add OpenStreetMap tiles
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 18,
             attribution: 'Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
-    
+
         // Custom icon for ski station marker
         var skiIcon = L.icon({
             iconUrl: "{% static 'images/ski.png' %}",  // Replace with your own icon path
             iconSize: [30, 30]
         });
-    
+
         // Add a marker at the ski station's location
         var marker = L.marker([stationLat, stationLng], { icon: skiIcon }).addTo(map);
-    
+
         // Bind a popup with the ski station's information
         marker.bindPopup("<b>{{ station.name }}</b><br>{% trans 'Capacité:' %} {{ station.capacity }} {% trans 'personnes' %}<br>{% trans 'Pistes:' %} {{ station.num_circuits }}");
 
@@ -807,7 +638,7 @@
         }
 
         loadOverpassLayers();
-    
+
         var apiKey = '{{ WEATHER_API_KEY }}';
         var weatherLang = '{{ LANGUAGE_CODE|default:"fr"|escapejs }}';
         var weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${stationLat}&lon=${stationLng}&appid=${apiKey}&units=metric&lang=${encodeURIComponent(weatherLang)}`;
@@ -824,7 +655,7 @@
             'snow': 'fas fa-snowflake',
             'mist': 'fas fa-smog'
         };
-    
+
         // Fetch weather data using the station's coordinates
         fetch(weatherUrl)
             .then(response => response.json())
@@ -833,10 +664,10 @@
                     document.getElementById('weather-condition').innerHTML = '<strong>{% trans "Météo :" %}</strong> {% trans "indisponible" %}';
                     return;
                 }
-                
+
                 const weatherDescription = data.weather[0].description;
                 const weatherIconClass = weatherIcons[weatherDescription] || 'fas fa-question-circle';  // Fallback if no icon matches
-                
+
                 // Show the weather icon and data
                 document.getElementById('weather-icon').innerHTML = `<i class="${weatherIconClass}"></i>`;
                 document.getElementById('weather-condition').innerHTML = `<strong>{% trans "Météo :" %}</strong> ${weatherDescription}`;
@@ -848,7 +679,7 @@
                 document.getElementById('wind-direction').innerHTML = `<strong>{% trans "Direction du vent :" %}</strong> ${data.wind.deg}°`;
                 document.getElementById('visibility').innerHTML = `<strong>{% trans "Visibilité :" %}</strong> ${(data.visibility / 1000).toFixed(1)} km`;
                 document.getElementById('pressure').innerHTML = `<strong>{% trans "Pression :" %}</strong> ${data.main.pressure} hPa`;
-        
+
                 let sunrise = new Date(data.sys.sunrise * 1000).toLocaleTimeString();
                 let sunset = new Date(data.sys.sunset * 1000).toLocaleTimeString();
                 document.getElementById('sunrise').innerHTML = `<strong>{% trans "Lever du soleil :" %}</strong> ${sunrise}`;
@@ -859,5 +690,5 @@
                 console.error('Erreur lors de la récupération des données météorologiques:', error);
             });
     </script>
-    
+
 {% endblock %}

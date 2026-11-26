@@ -14,7 +14,7 @@ from PIL import Image
 from rest_framework.test import APIClient
 
 from api.discovery import ski_assessment
-from api.models import AppUsageEvent, GrenoblePlace, SkiStation, SkiStationCamera, StationLiveStatus
+from api.models import AppUsageEvent, CrowdStatusUpdate, GrenoblePlace, PisteConditionReport, SkiStation, SkiStationCamera, StationLiveStatus
 from api.serializers import SkiStationSerializer
 
 
@@ -94,7 +94,22 @@ class DiscoveryTests(TestCase):
         html = response.content.decode()
         self.assertIn('href="/profile/"', html)
         self.assertIn('href="/messages/"', html)
-        self.assertIn('href="/logout/"', html)
+        self.assertIn('method="post" action="/logout/"', html)
+
+    def test_account_workspace_contains_shortcuts_and_protects_deletion(self):
+        user = get_user_model().objects.create_user(username='member', password='member-password')
+        self.client.force_login(user)
+        profile = self.client.get(reverse('profile'))
+        self.assertContains(profile, reverse('my_carpool_reservations'))
+        self.assertContains(profile, reverse('account_change_password'))
+        self.assertContains(profile, 'id="workspace-title"')
+        self.assertEqual(self.client.get(reverse('delete_account')).status_code, 405)
+        self.assertTrue(get_user_model().objects.filter(pk=user.pk).exists())
+
+    def test_google_sign_in_keeps_the_return_destination(self):
+        response = self.client.get(reverse('account_login'), {'next': reverse('profile')})
+        self.assertContains(response, 'images/google-g.png')
+        self.assertContains(response, f'{reverse("google_login")}?next={reverse("profile")}')
 
     def test_webcams_are_linked_from_home_and_inactive_cameras_are_hidden(self):
         camera_fields = {'ski_station': self.station, 'camera_url': 'https://example.com/camera'}
@@ -110,6 +125,47 @@ class DiscoveryTests(TestCase):
         self.assertContains(detail, 'https://example.com/preview.jpg')
         self.assertContains(detail, 'loading="lazy"')
         self.assertNotContains(detail, 'Caméra inactive')
+
+    def test_home_loads_the_first_supported_camera_and_can_switch(self):
+        live = SkiStationCamera.objects.create(
+            ski_station=self.station, name='La Croix', camera_type='embedded',
+            camera_url='https://www.skaping.com/chamrousse/la-croix',
+        )
+        other = SkiStationCamera.objects.create(
+            ski_station=self.station, name='Other', camera_type='embedded',
+            camera_url='https://www.skaping.com.example.com/chamrousse/la-croix',
+        )
+        home = self.client.get('/')
+        self.assertEqual(home.context['selected_webcam']['camera'], live)
+        self.assertContains(home, f'<iframe src="{live.camera_url}"', html=False)
+        self.assertContains(home, 'loading="eager"')
+
+        selected = self.client.get('/', {'webcam': other.pk})
+        self.assertEqual(selected.context['selected_webcam']['camera'], other)
+        self.assertNotContains(selected, f'<iframe src="{other.camera_url}"')
+
+    def test_crowd_uses_visitor_updates_in_the_selected_time_window(self):
+        visitor = get_user_model().objects.create_user(username='crowd-visitor')
+        CrowdStatusUpdate.objects.create(ski_station=self.station, user=visitor, crowd_level='busy')
+        previous = CrowdStatusUpdate.objects.create(ski_station=self.station, user=visitor, crowd_level='quiet')
+        CrowdStatusUpdate.objects.filter(pk=previous.pk).update(created_at=timezone.now() - timedelta(hours=5))
+        PisteConditionReport.objects.create(ski_station=self.station, user=visitor, piste_rating=5)
+        url = reverse('ski_station_detail', args=[self.station.pk])
+
+        short = self.client.get(url, {'trend': '3h'})
+        self.assertContains(short, 'id="affluence"')
+        self.assertEqual({row['key']: row['count'] for row in short.context['crowd_rows']},
+                         {'quiet': 0, 'normal': 0, 'busy': 1})
+        self.assertEqual(self.client.get(url, {'trend': '24h'}).context['crowd_total'], 2)
+
+    def test_station_search_filters_by_name_and_active_webcam(self):
+        SkiStation.objects.create(name='Chamrousse annexe', latitude=45.1, longitude=5.8)
+        SkiStationCamera.objects.create(
+            ski_station=self.station, name='Sommet', camera_type='snapshot',
+            camera_url='https://example.com/camera.jpg',
+        )
+        response = self.client.get(reverse('ski_station_search'), {'q': 'chamrousse', 'webcams': '1', 'distance': 'abc'})
+        self.assertEqual(list(response.context['ski_stations']), [self.station])
 
     def test_station_photo_is_cached_separately_from_html(self):
         image = BytesIO()

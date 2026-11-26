@@ -970,30 +970,6 @@
             text-transform: uppercase;
         }
 
-        .theme-toggle {
-            position: fixed;
-            right: 16px;
-            bottom: 74px;
-            z-index: 1050;
-            width: 46px;
-            height: 46px;
-            display: grid;
-            place-items: center;
-            border: 1px solid rgba(14, 80, 104, 0.18);
-            border-radius: 50%;
-            background: #ffffff;
-            color: #164e63;
-            box-shadow: 0 10px 22px rgba(15, 44, 61, 0.18);
-            font-size: 18px;
-        }
-
-        .theme-toggle:hover,
-        .theme-toggle:focus-visible {
-            background: #e6f7fb;
-            color: #0b7892;
-            transform: translateY(-2px);
-        }
-
         body.theme-dark {
             --app-bg: linear-gradient(180deg, #091923 0%, #0d202c 52%, #101923 100%);
             --app-text: #e6eef4;
@@ -1040,18 +1016,12 @@
         body.theme-dark .form-control::placeholder { color: #92a9b7; }
         body.theme-dark .site-footer { background: #0b1a24; border-color: #294453; }
         body.theme-dark .footer-links a { background: #1c394a; color: #e6f5fb; }
-        body.theme-dark .theme-toggle { background: #1b3949; border-color: #456474; color: #f7fbfd; }
 
         @media (max-width: 991.98px) {
             #cookie-banner {
                 bottom: calc(70px + env(safe-area-inset-bottom));
                 max-height: calc(100dvh - 120px);
                 overflow-y: auto;
-            }
-
-            .theme-toggle {
-                right: 12px;
-                bottom: calc(84px + env(safe-area-inset-bottom));
             }
 
             body.theme-dark .header-area {
@@ -1078,8 +1048,9 @@
             <div class="row">
                 <div class="col-12">
                     <nav class="main-nav">
-                        <a href="{% url 'my_template_view' %}" class="logo">
-                            <img src="{% static 'images/logo.png' %}" alt="Logo">
+                        <a href="{% url 'my_template_view' %}" class="logo site-brand" aria-label="Grenoble Ski · {% trans 'Accueil' %}">
+                            <span class="site-brand-mark"><img src="{% static 'images/grenoble-ski-mark.webp' %}" alt="" width="80" height="40"></span>
+                            <span class="site-brand-name">Grenoble <strong>Ski</strong></span>
                         </a>
                         {% with current=request.resolver_match.url_name %}
                         <ul class="nav" id="site-main-nav">
@@ -1109,9 +1080,15 @@
                                     <li><a href="{% url 'profile' %}">{% trans "Mon profil" %}</a></li>
                                     <li><a href="{% url 'messages' %}">{% trans "Messages" %}{% if unread_count > 0 %} ({{ unread_count }}){% endif %}</a></li>
                                     <li><a href="{% url 'ski_material_listings' %}?my_listings=1">{% trans "Mes annonces" %}</a></li>
+                                    <li><a href="{% url 'my_carpool_reservations' %}">{% trans "Mes réservations" %}</a></li>
                                     <li><a href="{% url 'instructor_services' %}">{% trans "Mes offres" %}</a></li>
                                     <li><a href="{% url 'become_instructor' %}">{% trans "Devenir moniteur" %}</a></li>
-                                    <li><a href="{% url 'logout' %}" class="logout-link">{% trans "Déconnexion" %}</a></li>
+                                    <li>
+                                        <form method="post" action="{% url 'logout' %}" class="account-menu-logout">
+                                            {% csrf_token %}
+                                            <button type="submit">{% trans "Déconnexion" %}</button>
+                                        </form>
+                                    </li>
                                     {% else %}
                                     <li><a href="{% url 'login' %}">{% trans "Connexion" %}</a></li>
                                     <li><a href="{% url 'register' %}">{% trans "Créer un compte" %}</a></li>
@@ -1132,6 +1109,11 @@
                                 </form>
                             </li>
 
+                            <li class="theme-menu-item">
+                                <button class="theme-toggle" type="button" data-theme-toggle aria-label="Activer le mode sombre" title="Mode sombre">
+                                    <i class="fas fa-moon" aria-hidden="true"></i><span>{% trans "Thème" %}</span>
+                                </button>
+                            </li>
                         </ul>
                         <a class="profile-avatar-link" href="{% if user.is_authenticated %}{% url 'profile' %}{% else %}{% url 'login' %}{% endif %}" aria-label="{% if user.is_authenticated %}{% trans 'Ouvrir mon profil' %}{% else %}{% trans 'Se connecter' %}{% endif %}">
                             {% if user.is_authenticated and user.profile.profile_picture %}
@@ -1164,6 +1146,13 @@
     <!-- ***** Dynamic Content Section ***** -->
     <main>
         <div class="main-content-wrap">
+            {% if user.is_authenticated %}
+                {% with current=request.resolver_match.url_name %}
+                    {% if current == 'messages' or current == 'my_carpool_reservations' or current == 'instructor_services' or current == 'account_change_password' or current == 'account_set_password' or current == 'ski_material_listings' and mine_only %}
+                        {% include "partials/account_navigation.html" %}
+                    {% endif %}
+                {% endwith %}
+            {% endif %}
             {% block content %} 
             {% endblock %}
         </div>
@@ -1456,30 +1445,33 @@
         {% endif %}
     </a>
 
-    <button class="theme-toggle" type="button" data-theme-toggle aria-label="Activer le mode sombre" title="Mode sombre">
-        <i class="fas fa-moon" aria-hidden="true"></i>
-    </button>
-
     {% with current=request.resolver_match.url_name %}
-    <nav class="mobile-bottom-nav" aria-label="Navigation mobile">
-        <a href="{% url 'my_template_view' %}" class="{% if current == 'my_template_view' %}active{% endif %}">
-            <i class="fas fa-home" aria-hidden="true"></i>
+    <nav class="mobile-bottom-nav" aria-label="{% trans 'Navigation mobile' %}">
+        <a href="{% url 'my_template_view' %}" {% if current == 'my_template_view' %}aria-current="page"{% endif %}>
+            <span class="mobile-tab-icon"><i class="fas fa-home" aria-hidden="true"></i></span>
             <span>{% trans "Accueil" %}</span>
         </a>
-        <a href="{% url 'ski_station_search' %}" class="{% if current == 'ski_station_search' or current == 'ski_station_detail' %}active{% endif %}">
-            <i class="fas fa-search" aria-hidden="true"></i>
-            <span>{% trans "Recherche" %}</span>
+        <a href="{% url 'ski_station_search' %}" {% if current == 'ski_station_search' or current == 'ski_station_detail' %}aria-current="page"{% endif %}>
+            <span class="mobile-tab-icon"><i class="fas fa-mountain" aria-hidden="true"></i></span>
+            <span>{% trans "Stations" %}</span>
         </a>
-        <a href="{% url 'ski_material_listings' %}" class="{% if current == 'ski_material_listings' or current == 'listing_detail' or current == 'ajouter_materiel' or current == 'edit_listing' %}active{% endif %}">
-            <i class="fas fa-skiing" aria-hidden="true"></i>
-            <span>{% trans "Marketplace" %}</span>
+        <a href="{% url 'ski_material_listings' %}" {% if current == 'ski_material_listings' or current == 'listing_detail' or current == 'ajouter_materiel' or current == 'edit_listing' %}aria-current="page"{% endif %}>
+            <span class="mobile-tab-icon"><i class="fas fa-skiing" aria-hidden="true"></i></span>
+            <span>{% trans "Matériel" %}</span>
         </a>
-        <a href="{% url 'messages' %}" class="{% if current == 'messages' %}active{% endif %}">
-            <i class="fas fa-comment-dots" aria-hidden="true"></i>
+        <a href="{% url 'messages' %}" {% if current == 'messages' %}aria-current="page"{% endif %}>
+            <span class="mobile-tab-icon">
+                <i class="fas fa-comment-dots" aria-hidden="true"></i>
+                {% if unread_count > 0 %}
+                    <span class="mobile-nav-count" aria-hidden="true">{{ unread_count }}</span>
+                    <span class="visually-hidden">{{ unread_count }} {% trans "messages non lus" %}</span>
+                {% endif %}
+            </span>
             <span>{% trans "Messages" %}</span>
-            {% if unread_count > 0 %}
-                <span class="nav-unread-badge">{{ unread_count }}</span>
-            {% endif %}
+        </a>
+        <a href="{% if user.is_authenticated %}{% url 'profile' %}{% else %}{% url 'account_login' %}{% endif %}" {% if current == 'profile' or current == 'account_login' or current == 'my_carpool_reservations' or current == 'instructor_services' or current == 'account_change_password' %}aria-current="page"{% endif %}>
+            <span class="mobile-tab-icon"><i class="fas fa-user" aria-hidden="true"></i></span>
+            <span>{% trans "Compte" %}</span>
         </a>
     </nav>
     {% endwith %}

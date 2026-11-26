@@ -165,3 +165,48 @@ msgstr "Resultados GrenobleSki según tus criterios."
 
 msgid "Pour voir l’inventaire complet et les disponibilités en temps réel."
 msgstr "Consulta todo el inventario y la disponibilidad en tiempo real."
+
+msgid "Navigation mobile"
+msgstr "Navegación móvil"
+
+msgid "Matériel"
+msgstr "Equipo"
+
+msgid "Compte"
+msgstr "Cuenta"
+
+msgid "Mes réservations"
+msgstr "Mis reservas"
+
+msgid "Espace membre"
+msgstr "Área personal"
+
+msgid "Modifier le profil"
+msgstr "Editar perfil"
+
+msgid "Compte Google associé"
+msgstr "Cuenta de Google vinculada"
+
+msgid "Sécurité du compte"
+msgstr "Seguridad de la cuenta"
+
+msgid "Mes offres"
+msgstr "Mis ofertas"
+
+msgid "Définir un mot de passe"
+msgstr "Establecer contraseña"
+
+msgid "Supprimer définitivement"
+msgstr "Eliminar definitivamente"
+
+msgid "ou par e-mail"
+msgstr "o por correo electrónico"
+
+msgid "Accédez à votre espace Grenoble Ski."
+msgstr "Accede a tu cuenta de Grenoble Ski."
+
+msgid "messages non lus"
+msgstr "mensajes sin leer"
+
+msgid "non lus"
+msgstr "sin leer"

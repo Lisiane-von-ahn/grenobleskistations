@@ -225,43 +225,89 @@
       }
     }
   </style>
-  
+
   <script src="{% static 'js/paginationski.js' %}"></script>
 
-  <section class="container home-intro" aria-labelledby="home-heading">
-    <div class="mountain-hero">
-      <div class="mountain-hero-content">
+  <section class="container live-home" id="webcams" aria-labelledby="home-heading">
+    <div class="live-home-grid">
+      <div class="live-home-intro">
         <h1 id="home-heading">Grenoble Ski</h1>
-        <p>{% trans "Stations de ski autour de Grenoble" %}</p>
+        <p>{% trans "Webcams, neige et conditions dans les stations autour de Grenoble." %}</p>
         <div class="mountain-actions">
-          <a class="mountain-action" href="{% url 'ski_station_search' %}">{% trans "Voir les stations" %}</a>
-          <a class="mountain-action mountain-action-glass" href="#webcams"><i class="fas fa-video" aria-hidden="true"></i> Webcams</a>
+          <a class="mountain-action" href="#conditions-heading">{% trans "Conditions du jour" %}</a>
+          <a class="mountain-action mountain-action-glass" href="{% url 'ski_station_search' %}">{% trans "Voir les stations" %}</a>
         </div>
+      </div>
+      <div class="live-home-player">
+        <h2 id="webcams-heading">{% trans "Caméras en direct" %}</h2>
+        {% if selected_webcam %}
+          <div class="live-camera-card">
+            {% include "partials/webcam_media.html" with webcam=selected_webcam eager=True only %}
+            <div class="live-camera-info">
+              <div>
+                <h3>{{ selected_webcam.camera.ski_station.name }}</h3>
+                <p>{{ selected_webcam.camera.description|default:selected_webcam.camera.name }}</p>
+                {% if selected_webcam.preview and not selected_webcam.embed %}<small>{% trans "Aperçu de la webcam" %}</small>{% endif %}
+              </div>
+              <div class="live-camera-links">
+                <a href="{{ selected_webcam.camera.camera_url }}" target="_blank" rel="noopener">{% trans "Ouvrir webcam" %}</a>
+                <a href="{% url 'ski_station_detail' selected_webcam.camera.ski_station_id %}#cameras">{% trans "Voir la station" %}</a>
+                <a href="{% url 'ski_station_detail' selected_webcam.camera.ski_station_id %}#affluence">{% trans "Affluence" %}</a>
+              </div>
+            </div>
+          </div>
+          <form method="get" action="{% url 'my_template_view' %}#webcams" class="webcam-picker">
+            <label for="webcam-select">{% trans "Choisir une webcam" %}</label>
+            <div>
+              <select name="webcam" id="webcam-select">
+                {% for webcam in webcams %}
+                  <option value="{{ webcam.camera.pk }}" {% if webcam.camera.pk == selected_webcam.camera.pk %}selected{% endif %}>
+                    {{ webcam.camera.ski_station.name }} · {{ webcam.camera.name }}
+                  </option>
+                {% endfor %}
+              </select>
+              <button type="submit">{% trans "Afficher" %}</button>
+            </div>
+          </form>
+          <script src="{% static 'js/camera-previews.js' %}" defer></script>
+        {% else %}
+          <p>{% trans "Aucune webcam disponible." %}</p>
+        {% endif %}
       </div>
     </div>
   </section>
 
-  <section class="container home-webcams" id="webcams" aria-labelledby="webcams-heading">
-    <h2 id="webcams-heading">{% trans "Caméras en direct" %}</h2>
-    <ul class="webcam-stations">
-      {% for station in camera_stations %}
-      <li>
-        <a href="{% url 'ski_station_detail' station.id %}#cameras">
-          <i class="fas fa-video" aria-hidden="true"></i>
-          <span>{{ station.name }}</span>
-          <small>{{ station.camera_count }} <span class="visually-hidden">Webcams</span></small>
-        </a>
-      </li>
-      {% empty %}
-      <li>{% trans "Aucune webcam disponible." %}</li>
+  <nav class="container home-shortcuts" aria-label="{% trans 'Préparer votre sortie' %}">
+    <a href="{% url 'bus' %}"><i class="fas fa-bus" aria-hidden="true"></i> {% trans "Bus et accès" %}</a>
+    <a href="{% url 'trail_maps' %}"><i class="fas fa-map" aria-hidden="true"></i> {% trans "Cartes de randonnée" %}</a>
+    <a href="{% url 'covoiturage' %}"><i class="fas fa-car" aria-hidden="true"></i> {% trans "Covoiturage" %}</a>
+    <a href="{% url 'accommodations' %}"><i class="fas fa-bed" aria-hidden="true"></i> {% trans "Hébergements" %}</a>
+  </nav>
+
+  <section class="container conditions-section" aria-labelledby="conditions-heading">
+    <div class="section-heading mb-3 d-flex justify-content-between align-items-end">
+      <div><h2 id="conditions-heading">{% trans "Les conditions du jour" %}</h2><p>{% trans "Neige, météo et domaine skiable pour choisir votre prochaine sortie." %}</p></div>
+      <a class="btn btn-outline-primary" href="{% url 'ski_station_search' %}">{% trans "Comparer les stations" %}</a>
+    </div>
+    <div class="row g-4">
+      {% for station in nearest_stations|slice:":3" %}
+      <div class="col-12 col-md-4">
+        <article class="conditions-card" data-condition-station="{{ station.id }}" data-lat="{{ station.latitude|unlocalize }}" data-lng="{{ station.longitude|unlocalize }}">
+          {% if station.image %}<img class="station-photo" src="{% url 'ski_station_photo' station.id %}" alt="{{ station.name }}" loading="lazy">{% else %}<img class="station-photo" src="{% static 'images/chamrousse.jpg' %}" alt="{{ station.name }}" loading="lazy">{% endif %}
+          <div class="card-body"><span class="conditions-badge"><i class="fa fa-snowflake"></i> {% trans "À découvrir" %}</span><h3 class="h5 mt-2 mb-1">{{ station.name }}</h3><p class="small text-muted mb-0">{{ station.altitude }} m · {{ station.distanceFromGrenoble }} km de Grenoble</p>
+            <div class="condition-metrics"><div class="condition-metric"><i class="fa fa-temperature-low"></i><strong class="condition-temp">—</strong><small>{% trans "Météo" %}</small></div><div class="condition-metric"><i class="fa fa-snowflake"></i><strong class="condition-snow">—</strong><small>{% trans "Neige" %}</small></div><div class="condition-metric"><i class="fa fa-road"></i><strong>{{ station.num_circuits|default:"—" }}</strong><small>{% trans "Pistes" %}</small></div></div>
+            <p class="conditions-freshness" data-freshness>{% trans "Mise à jour des conditions : chargement..." %}</p>
+            <a class="btn btn-primary w-100 mt-3" href="{% url 'ski_station_detail' station.id %}">{% trans "Voir la station" %} <i class="fa fa-arrow-right"></i></a>
+          </div>
+        </article>
+      </div>
       {% endfor %}
-    </ul>
+    </div>
   </section>
 
   <div class="container mt-4">
     <div class="section-heading mb-3">
-      <h2>{% trans "5 stations en evidence" %}</h2>
-      <p>{% trans "Selection aleatoire du jour autour de Grenoble." %}</p>
+      <h2>{% trans "Stations à découvrir" %}</h2>
     </div>
     <div class="featured-stations-grid">
       {% for station in featured_stations %}
@@ -294,27 +340,6 @@
     </div>
   </section>
 
-  <section class="container conditions-section" aria-labelledby="conditions-heading">
-    <div class="section-heading mb-3 d-flex justify-content-between align-items-end">
-      <div><h2 id="conditions-heading">{% trans "Les conditions du jour" %}</h2><p>{% trans "Neige, météo et domaine skiable pour choisir votre prochaine sortie." %}</p></div>
-      <a class="btn btn-outline-primary" href="{% url 'ski_station_search' %}">{% trans "Comparer les stations" %}</a>
-    </div>
-    <div class="row g-4">
-      {% for station in nearest_stations|slice:":3" %}
-      <div class="col-12 col-md-4">
-        <article class="conditions-card" data-condition-station="{{ station.id }}" data-lat="{{ station.latitude|unlocalize }}" data-lng="{{ station.longitude|unlocalize }}">
-          {% if station.image %}<img class="station-photo" src="{% url 'ski_station_photo' station.id %}" alt="{{ station.name }}" loading="lazy">{% else %}<img class="station-photo" src="{% static 'images/chamrousse.jpg' %}" alt="{{ station.name }}" loading="lazy">{% endif %}
-          <div class="card-body"><span class="conditions-badge"><i class="fa fa-snowflake"></i> {% trans "À découvrir" %}</span><h3 class="h5 mt-2 mb-1">{{ station.name }}</h3><p class="small text-muted mb-0">{{ station.altitude }} m · {{ station.distanceFromGrenoble }} km de Grenoble</p>
-            <div class="condition-metrics"><div class="condition-metric"><i class="fa fa-temperature-low"></i><strong class="condition-temp">—</strong><small>{% trans "Météo" %}</small></div><div class="condition-metric"><i class="fa fa-snowflake"></i><strong class="condition-snow">—</strong><small>{% trans "Neige" %}</small></div><div class="condition-metric"><i class="fa fa-road"></i><strong>{{ station.num_circuits|default:"—" }}</strong><small>{% trans "Pistes" %}</small></div></div>
-            <p class="conditions-freshness" data-freshness>{% trans "Mise à jour des conditions : chargement..." %}</p>
-            <a class="btn btn-primary w-100 mt-3" href="{% url 'ski_station_detail' station.id %}">{% trans "Voir la station" %} <i class="fa fa-arrow-right"></i></a>
-          </div>
-        </article>
-      </div>
-      {% endfor %}
-    </div>
-  </section>
-  
   <section class="container" id="mobile-app" aria-labelledby="mobile-app-heading">
     <div class="mobile-app-card">
       <div>
@@ -364,8 +389,8 @@
         <div class="row">
             <div class="col-lg-5">
                 <div class="section-heading">
-                  <h2>{% trans "Visitez l'une de nos stations de ski dès maintenant" %}</h2>
-                  <p>{% trans "Découvrez les meilleures stations de ski que nous proposons, avec des informations détaillées et des visuels époustouflants." %}</p>                </div>
+                  <h2 id="station-map-heading">{% trans "Stations sur la carte" %}</h2>
+                </div>
             </div>
         </div>
         <div class="row">
@@ -395,7 +420,7 @@
                                             </div>
                                             <p>{% blocktrans with station_name=station.name %}Découvrez la beauté de {{ station_name }}.{% endblocktrans %}</p>
                                             <ul class="info">
-                                              <li><i class="fa fa-user"></i> {% trans "Capacité" %} : {{ station.capacity }}</li>
+                                              <li><i class="fa fa-user"></i> {% trans "Capacité" %} : {{ station.capacity|default_if_none:"—" }}</li>
                                               <li><i class="fa fa-user"></i> {% trans "Pistes" %} : {{ station.num_circuits }}</li>
                                             </ul>
                                             {% if station.circuit_breakdown %}
@@ -446,7 +471,7 @@
           <span id="pagination-numbers"></span>
           <button id="next-btn" class="pagination-btn">{% trans "Suivant" %}</button>
         </div>
-  
+
       </div>
     </div>
   </div>

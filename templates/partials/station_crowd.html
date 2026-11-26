@@ -1,0 +1,56 @@
+{% load i18n tz %}
+<section id="affluence" class="station-crowd mb-4" aria-labelledby="crowd-heading">
+    <div class="crowd-heading">
+        <div>
+            <h2 id="crowd-heading">{% trans "Affluence en station" %}</h2>
+            <p>{% trans "Signalements des visiteurs sur le terrain." %}</p>
+        </div>
+        <nav class="crowd-period" aria-label="{% trans 'Période des signalements' %}">
+            <a href="?trend=3h#affluence" {% if piste_trend == '3h' %}aria-current="true"{% endif %}>3 h</a>
+            <a href="?trend=24h#affluence" {% if piste_trend == '24h' %}aria-current="true"{% endif %}>24 h</a>
+        </nav>
+    </div>
+    {% if crowd_total %}
+        <p class="crowd-summary">
+            {% blocktrans count count=crowd_total %}{{ count }} signalement{% plural %}{{ count }} signalements{% endblocktrans %}
+            · {% trans "Dernier signalement" %} <strong>{{ last_crowd.get_crowd_level_display }}</strong>
+            <time datetime="{{ last_crowd.created_at|date:'c' }}">{% timezone "Europe/Paris" %}{{ last_crowd.created_at|date:"d/m H:i" }}{% endtimezone %}</time>
+        </p>
+        <ul class="crowd-chart">
+            {% for row in crowd_rows %}
+                <li>
+                    <span>{{ row.label }}</span>
+                    <div class="crowd-track" aria-hidden="true"><span class="crowd-fill crowd-fill-{{ row.key }}" style="width:{% widthratio row.count crowd_total 100 %}%"></span></div>
+                    <strong>{{ row.count }}</strong>
+                </li>
+            {% endfor %}
+        </ul>
+        <details class="crowd-history">
+            <summary>{% trans "Derniers signalements" %}</summary>
+            <ul>
+                {% for update in crowd_history %}
+                    <li><time datetime="{{ update.created_at|date:'c' }}">{% timezone "Europe/Paris" %}{{ update.created_at|date:"d/m H:i" }}{% endtimezone %}</time> <strong>{{ update.get_crowd_level_display }}</strong></li>
+                {% endfor %}
+            </ul>
+        </details>
+    {% else %}
+        <p class="crowd-summary">{% trans "Aucun signalement sur cette période." %}</p>
+    {% endif %}
+    {% if user.is_authenticated %}
+        <form method="post" class="crowd-form">
+            {% csrf_token %}
+            <input type="hidden" name="form_type" value="crowd_update">
+            <fieldset>
+                <legend>{% trans "Signaler l’affluence" %}</legend>
+                <div class="crowd-options">
+                    {% for row in crowd_rows %}
+                        <label><input type="radio" name="crowd_level" value="{{ row.key }}" required> {{ row.label }}</label>
+                    {% endfor %}
+                </div>
+            </fieldset>
+            <button type="submit">{% trans "Envoyer" %}</button>
+        </form>
+    {% else %}
+        <a class="crowd-report" href="{% url 'account_login' %}?next={{ request.get_full_path|urlencode }}%23affluence">{% trans "Se connecter pour signaler l’affluence" %}</a>
+    {% endif %}
+</section>

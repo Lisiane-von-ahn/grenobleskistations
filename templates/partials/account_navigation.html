@@ -1,0 +1,15 @@
+{% load i18n %}
+<nav class="container account-navigation" aria-label="{% trans 'Espace membre' %}">
+    <a href="{% url 'profile' %}" {% if current == 'profile' %}aria-current="page"{% endif %}>
+        <i class="fas fa-user" aria-hidden="true"></i> {% trans "Mon profil" %}
+    </a>
+    <a href="{% url 'messages' %}" {% if current == 'messages' %}aria-current="page"{% endif %}>
+        <i class="fas fa-comment-dots" aria-hidden="true"></i> {% trans "Messages" %}
+    </a>
+    <a href="{% url 'ski_material_listings' %}?my_listings=1" {% if current == 'ski_material_listings' %}aria-current="page"{% endif %}>
+        <i class="fas fa-tag" aria-hidden="true"></i> {% trans "Mes annonces" %}
+    </a>
+    <a href="{% url 'my_carpool_reservations' %}" {% if current == 'my_carpool_reservations' %}aria-current="page"{% endif %}>
+        <i class="fas fa-car" aria-hidden="true"></i> {% trans "Mes réservations" %}
+    </a>
+</nav>

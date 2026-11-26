@@ -1,0 +1,14 @@
+{% load i18n %}
+{% if webcam.embed %}
+    <div class="webcam-screen">
+        <iframe src="{{ webcam.embed }}" title="{{ webcam.camera.ski_station.name }} · {{ webcam.camera.name }}"
+                {% if eager %}loading="eager"{% else %}loading="lazy"{% endif %}
+                sandbox="allow-scripts allow-same-origin" referrerpolicy="no-referrer" allowfullscreen></iframe>
+    </div>
+{% elif webcam.preview %}
+    <a href="{{ webcam.camera.camera_url }}" target="_blank" rel="noopener" class="webcam-screen camera-preview"
+       aria-label="{% trans 'Ouvrir webcam' %} · {{ webcam.camera.name }}">
+        <img src="{{ webcam.preview }}" alt="{{ webcam.camera.name }}" {% if eager %}loading="eager"{% else %}loading="lazy"{% endif %}
+             decoding="async" width="640" height="360" data-camera-preview>
+    </a>
+{% endif %}

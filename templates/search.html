@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 {% extends 'base.html' %}
 {% load static %}
 {% load i18n %}
@@ -59,52 +58,61 @@
     }
 </style>
 
-<div class="search-page-wrap">
-
-<section class="premium-shell mb-4 p-3">
-    <div class="premium-hero text-center">
-        <span class="premium-kicker">Stations</span>
-        <h2 class="premium-title h2">{% trans "Trouvez la station de ski idéale" %}</h2>
-        <p class="premium-subtitle">{% trans "Recherchez des stations de ski adaptées à vos préférences." %}</p>
-    </div>
-</section>
-
-<!-- Formulaire de recherche amélioré -->
-<div class="search-form py-5">
-    <div class="container">
-        <form method="GET" id="search-form" action="{% url 'ski_station_search' %}">
-            <div class="row g-4">
-                <div class="col-lg-3">
-                    <label for="capacity" class="form-label">
-                        <i class="bi bi-people"></i> {% trans "Capacité" %}
-                    </label>
-                    <input class="form-control form-control-lg" type="number" name="capacity" id="capacity" placeholder="{% trans 'Capacité minimale' %}" value="{{ request.GET.capacity }}">
+<div class="search-page-wrap station-search">
+<div class="container">
+    <header class="station-banner mb-3">
+        <div>
+            <h1>{% trans "Stations de ski" %}</h1>
+            <p>{% trans "Comparez les stations, les distances et les webcams autour de Grenoble." %}</p>
+        </div>
+    </header>
+    <div class="search-form">
+        <form method="get" id="search-form" action="{% url 'ski_station_search' %}">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-6">
+                    <label for="station-q" class="form-label">{% trans "Nom de la station" %}</label>
+                    <input class="form-control" type="search" name="q" id="station-q" value="{{ search_name }}">
                 </div>
-                <div class="col-lg-3">
-                    <label for="distance" class="form-label">
-                        <i class="bi bi-geo-alt"></i> {% trans "Distance de Grenoble (km)" %}
-                    </label>
-                    <input class="form-control form-control-lg" type="number" name="distance" id="distance" placeholder="{% trans 'Distance maximale' %}" value="{{ request.GET.distance }}">
+                <div class="col-7 col-md-4">
+                    <label for="station-sort" class="form-label">{% trans "Trier par" %}</label>
+                    <select class="form-select" name="sort" id="station-sort">
+                        <option value="distance">{% trans "Distance de Grenoble" %}</option>
+                        <option value="altitude" {% if station_sort == 'altitude' %}selected{% endif %}>{% trans "Altitude" %}</option>
+                        <option value="name" {% if station_sort == 'name' %}selected{% endif %}>{% trans "Nom" %}</option>
+                    </select>
                 </div>
-                <div class="col-lg-3">
-                    <label for="altitude" class="form-label">
-                        <i class="bi bi-arrow-up"></i> {% trans "Altitude (m)" %}
-                    </label>
-                    <input class="form-control form-control-lg" type="number" name="altitude" id="altitude" placeholder="{% trans 'Altitude minimale' %}" value="{{ request.GET.altitude }}">
-                </div>
-                <div class="col-lg-3 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary btn-lg w-100">
-                        <i class="bi bi-search"></i> {% trans "Rechercher" %}
-                    </button>
+                <div class="col-5 col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">{% trans "Rechercher" %}</button>
                 </div>
             </div>
+            <label class="d-inline-flex align-items-center gap-2 mt-2" style="min-height:44px">
+                <input class="form-check-input m-0" type="checkbox" name="webcams" value="1" {% if webcam_only %}checked{% endif %}>
+                {% trans "Avec webcam" %}
+            </label>
+            <details {% if request.GET.capacity or request.GET.distance or request.GET.altitude %}open{% endif %}>
+                <summary>{% trans "Plus de filtres" %}</summary>
+                <div class="row g-3 mt-1">
+                    <div class="col-md-4">
+                        <label for="distance" class="form-label">{% trans "Distance maximale (km)" %}</label>
+                        <input class="form-control" type="number" min="0" name="distance" id="distance" value="{{ request.GET.distance }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="altitude" class="form-label">{% trans "Altitude minimale (m)" %}</label>
+                        <input class="form-control" type="number" min="0" name="altitude" id="altitude" value="{{ request.GET.altitude }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="capacity" class="form-label">{% trans "Capacité minimale" %}</label>
+                        <input class="form-control" type="number" min="0" name="capacity" id="capacity" value="{{ request.GET.capacity }}">
+                    </div>
+                </div>
+            </details>
         </form>
     </div>
 </div>
 
-<!-- Résultats améliorés -->
-<div class="amazing-deals py-5 bg-light">
+<div class="amazing-deals station-results pb-5">
     <div class="container">
+        <h2 class="mb-3">{% blocktrans count count=ski_stations|length %}{{ count }} station{% plural %}{{ count }} stations{% endblocktrans %}</h2>
         <div class="row g-4 justify-content-center">
             {% if ski_stations %}
                 {% for station in ski_stations %}
@@ -125,7 +133,7 @@
                                     <ul class="list-unstyled">
                                         <li><strong>{% trans "Altitude :" %}</strong> {{ station.altitude }} m</li>
                                         <li><strong>{% trans "Distance :" %}</strong> {{ station.distanceFromGrenoble }} km</li>
-                                        <li><strong>{% trans "Capacité :" %}</strong> {{ station.capacity }}</li>
+                                        <li><strong>{% trans "Capacité :" %}</strong> {{ station.capacity|default_if_none:"—" }}</li>
                                     </ul>
                                     <div class="station-result-actions">
                                         <a href="{% url 'ski_station_detail' station.id %}" class="btn btn-outline-primary">{% trans "Voir plus de détails" %}</a>

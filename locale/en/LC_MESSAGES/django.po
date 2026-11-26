@@ -3029,3 +3029,42 @@ msgstr ""
 
 #~ msgid "QR code de téléchargement de l'application Android"
 #~ msgstr "QR code to download the Android app"
+
+msgid "Navigation mobile"
+msgstr "Mobile navigation"
+
+msgid "Matériel"
+msgstr "Gear"
+
+msgid "Compte"
+msgstr "Account"
+
+msgid "Mes réservations"
+msgstr "My bookings"
+
+msgid "Espace membre"
+msgstr "Member area"
+
+msgid "Modifier le profil"
+msgstr "Edit profile"
+
+msgid "Compte Google associé"
+msgstr "Google account linked"
+
+msgid "Sécurité du compte"
+msgstr "Account security"
+
+msgid "Supprimer définitivement"
+msgstr "Delete permanently"
+
+msgid "ou par e-mail"
+msgstr "or use email"
+
+msgid "Accédez à votre espace Grenoble Ski."
+msgstr "Sign in to your Grenoble Ski account."
+
+msgid "messages non lus"
+msgstr "unread messages"
+
+msgid "non lus"
+msgstr "unread"

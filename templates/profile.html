@@ -6,39 +6,46 @@
 <div class="profile-page">
   <div class="profile-container">
     <header class="profile-heading">
-      <div>
-        <span class="profile-eyebrow"><i class="fas fa-mountain" aria-hidden="true"></i> {% trans "Espace Membre" %}</span>
-        <h1>{% trans "Profil utilisateur" %}</h1>
-        <p>{% trans "Mettez a jour votre identite, votre photo et les informations visibles dans l'application mobile." %}</p>
+      {% if profile_picture %}
+        <img class="profile-avatar" src="data:image/png;base64,{{ profile_picture }}" alt="" width="88" height="88">
+      {% elif google_profile_picture_url %}
+        <img class="profile-avatar" src="{{ google_profile_picture_url }}" alt="" width="88" height="88" referrerpolicy="no-referrer">
+      {% else %}
+        <img class="profile-avatar" src="{% static 'images/default-profile.png' %}" alt="" width="88" height="88">
+      {% endif %}
+      <div class="profile-heading-identity">
+        <h1>{% if user.first_name or user.last_name %}{{ user.first_name }} {{ user.last_name }}{% else %}{{ google_full_name|default:user.username }}{% endif %}</h1>
+        <p>{{ user.email }}</p>
+        {% if google_connected %}
+          <span class="profile-connected"><img src="{% static 'images/google-g.png' %}" alt="" width="16" height="16"> {% trans "Compte Google associé" %}</span>
+        {% endif %}
       </div>
-      <a class="profile-home" href="{% url 'my_template_view' %}"><i class="fas fa-arrow-left" aria-hidden="true"></i> {% trans "Retour à l'accueil" %}</a>
+      <a class="profile-home" href="#profile-edit-title">{% trans "Modifier le profil" %}</a>
     </header>
 
-    {% for message in messages %}<div class="alert alert-info" role="status">{{ message }}</div>{% endfor %}
+    {% for message in messages %}<div class="alert alert-info mt-3" role="status">{{ message }}</div>{% endfor %}
+
+
+    <section class="profile-workspace" aria-labelledby="workspace-title">
+      <h2 id="workspace-title">{% trans "Mon espace" %}</h2>
+      <nav class="profile-quick-links" aria-labelledby="workspace-title">
+        <a href="{% url 'messages' %}">
+          <i class="fas fa-comment-dots" aria-hidden="true"></i>
+          <span>{% trans "Messages" %}{% if unread_count %}<small>{{ unread_count }} {% trans "non lus" %}</small>{% endif %}</span>
+        </a>
+        <a href="{% url 'ski_material_listings' %}?my_listings=1">
+          <i class="fas fa-tag" aria-hidden="true"></i><span>{% trans "Mes annonces" %}</span>
+        </a>
+        <a href="{% url 'my_carpool_reservations' %}">
+          <i class="fas fa-car" aria-hidden="true"></i><span>{% trans "Mes réservations" %}</span>
+        </a>
+        <a href="{% url 'instructor_services' %}">
+          <i class="fas fa-person-skiing" aria-hidden="true"></i><span>{% trans "Mes offres" %}</span>
+        </a>
+      </nav>
+    </section>
 
     <div class="profile-layout">
-      <aside class="profile-identity profile-panel" aria-labelledby="profile-name">
-        <div class="profile-cover" aria-hidden="true"><i class="fas fa-mountain"></i></div>
-        <div class="profile-identity-content">
-          {% if profile_picture %}
-            <img class="profile-avatar" src="data:image/png;base64,{{ profile_picture }}" alt="{% trans 'Photo de profil' %}" width="104" height="104">
-          {% elif google_profile_picture_url %}
-            <img class="profile-avatar" src="{{ google_profile_picture_url }}" alt="{% trans 'Photo Google' %}" width="104" height="104">
-          {% else %}
-            <img class="profile-avatar" src="{% static 'images/default-profile.png' %}" alt="{% trans 'Photo de profil' %}" width="104" height="104">
-          {% endif %}
-          <h2 id="profile-name">{% if user.first_name or user.last_name %}{{ user.first_name }} {{ user.last_name }}{% else %}{{ user.username }}{% endif %}</h2>
-          <p class="profile-email">{{ user.email }}</p>
-          {% if google_profile_picture_url %}<span class="profile-connected"><i class="fas fa-check-circle" aria-hidden="true"></i> {% trans "Connecté avec Google" %}</span>{% endif %}
-          <dl class="profile-details">
-            {% if google_full_name %}<div><dt>{% trans "Nom Google :" %}</dt><dd>{{ google_full_name }}</dd></div>{% endif %}
-            <div><dt>{% trans "Identifiant (email) :" %}</dt><dd>{{ user.email }}</dd></div>
-            <div><dt>{% trans "Membre depuis :" %}</dt><dd>{{ user.date_joined|date:"d/m/Y" }}</dd></div>
-            <div><dt>{% trans "Dernière connexion :" %}</dt><dd>{{ user.last_login|date:"d/m/Y H:i"|default:"—" }}</dd></div>
-          </dl>
-        </div>
-      </aside>
-
       <div class="profile-main">
         <section class="profile-editor profile-panel" aria-labelledby="profile-edit-title">
           <div class="profile-panel-heading">
@@ -78,14 +85,32 @@
             </div>
           </form>
         </section>
-        <div class="profile-danger">
-          <span class="profile-danger-icon" aria-hidden="true"><i class="fas fa-shield-alt"></i></span>
-          <form method="post" action="{% url 'delete_account' %}" data-delete-account data-confirm-message="{% trans 'Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible.' %}">
-            {% csrf_token %}
-            <button type="submit"><i class="far fa-trash-alt" aria-hidden="true"></i> {% trans "Supprimer le compte" %}</button>
-          </form>
-        </div>
       </div>
+
+      <aside class="profile-panel profile-settings" aria-labelledby="profile-settings-title">
+        <div class="profile-panel-heading">
+          <span class="profile-section-icon" aria-hidden="true"><i class="fas fa-shield-alt"></i></span>
+          <h2 id="profile-settings-title">{% trans "Sécurité du compte" %}</h2>
+        </div>
+        <div class="profile-settings-content">
+          <a href="{% if user.has_usable_password %}{% url 'account_change_password' %}{% else %}{% url 'account_set_password' %}{% endif %}">
+            <i class="fas fa-key" aria-hidden="true"></i>
+            {% if user.has_usable_password %}{% trans "Modifier le mot de passe" %}{% else %}{% trans "Définir un mot de passe" %}{% endif %}
+          </a>
+          <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button type="submit"><i class="fas fa-sign-out-alt" aria-hidden="true"></i> {% trans "Déconnexion" %}</button>
+          </form>
+          <details class="profile-danger">
+            <summary>{% trans "Supprimer le compte" %}</summary>
+            <form method="post" action="{% url 'delete_account' %}" data-delete-account data-confirm-message="{% trans 'Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible.' %}">
+              {% csrf_token %}
+              <p>{% trans "Cette action est irréversible." %}</p>
+              <button type="submit"><i class="far fa-trash-alt" aria-hidden="true"></i> {% trans "Supprimer définitivement" %}</button>
+            </form>
+          </details>
+        </div>
+      </aside>
     </div>
   </div>
 </div>
