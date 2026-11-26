@@ -96,6 +96,11 @@ jobs:
               "${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}"
 
             echo "==> Displaying migration plan before apply"
+            if [ -n "${GOOGLE_ROUTES_API_KEY:-}" ]; then
+              echo "==> Checking Google Routes from the application container"
+              docker compose -f docker-compose.yml exec -T web python manage.py shell -c "from types import SimpleNamespace; from skistation_project.station_routes import calculate_station_route; station = SimpleNamespace(latitude=45.107944, longitude=5.879200); print('Google Routes test:', calculate_station_route(station, 'Grenoble, France', 'DRIVE', 'fr')['state'])"
+            fi
+
             docker compose -f docker-compose.yml run --rm --no-deps --entrypoint "" web python manage.py migrate --plan
 
             echo "==> Applying all Django migrations explicitly from GitHub Actions"

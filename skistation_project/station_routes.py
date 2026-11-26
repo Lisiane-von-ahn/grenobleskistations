@@ -1,11 +1,13 @@
 import json
-from urllib.error import URLError
+import logging
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from django.conf import settings
 from django.utils.dateparse import parse_datetime
 
 GOOGLE_ROUTE_MODES = ('DRIVE', 'TRANSIT', 'BICYCLE', 'WALK')
+logger = logging.getLogger(__name__)
 
 
 def calculate_station_route(station, origin, mode, language):
@@ -39,6 +41,16 @@ def calculate_station_route(station, origin, mode, language):
     try:
         with urlopen(request, timeout=6) as response:
             routes = json.load(response).get('routes', [])
+    except HTTPError as error:
+        with error:
+            try:
+                payload = json.load(error)
+            except (OSError, ValueError):
+                payload = {}
+        details = payload.get('error', {}).get('details', [])
+        reasons = [item['reason'] for item in details if item.get('@type') == 'type.googleapis.com/google.rpc.ErrorInfo' and item.get('reason')]
+        logger.warning('Google Routes rejected the request: HTTP %s; reasons=%s', error.code, reasons)
+        return {'state': 'unavailable'}
     except (URLError, OSError, ValueError):
         return {'state': 'unavailable'}
     if not routes:
