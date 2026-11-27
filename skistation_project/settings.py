@@ -55,6 +55,7 @@ CSRF_COOKIE_SECURE = not DEBUG
 SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 
 WEATHER_API_KEY = os.getenv('WEATHER_API_KEY', 'qssdsdsd')
+OPEN_METEO_API_KEY = os.getenv('OPEN_METEO_API_KEY', '').strip()
 GOOGLE_ROUTES_API_KEY = os.getenv('GOOGLE_ROUTES_API_KEY', '').strip()
 GOOGLE_PLACES_API_KEY = os.getenv('GOOGLE_PLACES_API_KEY', '').strip()
 

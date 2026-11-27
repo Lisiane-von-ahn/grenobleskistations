@@ -789,3 +789,20 @@ body.theme-dark .route-attribution { color: #fff; }
     color: #164c79;
     text-decoration: underline;
 }
+
+.planning-page { max-width: 1200px; }
+.planning-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 1rem; margin: 1rem 0; }
+.planning-filters label { min-height: 44px; display: flex; align-items: center; gap: .5rem; }
+.planning-filters label:first-child, .planning-filters label:last-child { flex-direction: column; align-items: stretch; }
+.planning-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 1rem; }
+.planning-card, .planning-alerts, .station-bulletin { border: 1px solid var(--app-border); padding: 1rem; border-radius: 1rem; background: var(--app-surface, #fff); }
+.planning-card[hidden] { display: none; }
+.planning-card h2 { font-size: 1.3rem; }
+.planning-card header { margin-bottom: .75rem; }
+.bulletin-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; margin: .7rem 0; }
+.bulletin-metrics span, .bulletin-metrics strong, .bulletin-metrics small { display: block; }
+.station-bulletin h3 { font-size: 1.1rem; }
+
+.planning-filters label { max-width: 100%; }
+.planning-filters .planning-budget { flex-direction: column; align-items: stretch; }
+.planning-filters input:not([type="checkbox"]) { min-width: 0; }

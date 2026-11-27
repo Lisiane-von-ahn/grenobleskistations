@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.dispatch import receiver
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.core.files.base import ContentFile
 from django.utils import timezone
 from io import BytesIO
@@ -24,6 +24,13 @@ class SkiStation(models.Model):
     distanceFromGrenoble = models.IntegerField(null=False,default=100)
     piste_map_url = models.URLField(null=True, blank=True)
     piste_map_thumbnail_url = models.URLField(null=True, blank=True)
+
+    @property
+    def beginner_pistes(self):
+        return sum(
+            circuit.num_pistes for circuit in self.skicircuit_set.all()
+            if circuit.difficulty.casefold() in {'débutant', 'beginner', 'green', 'verte', 'vert'}
+        )
 
     @property
     def access_info(self):
@@ -600,6 +607,11 @@ class StationLiveStatus(models.Model):
     pistes_open = models.PositiveSmallIntegerField(null=True, blank=True)
     pistes_total = models.PositiveSmallIntegerField(null=True, blank=True)
     snow_depth_cm = models.PositiveSmallIntegerField(null=True, blank=True)
+    snow_base_cm = models.PositiveSmallIntegerField(null=True, blank=True)
+    snow_top_cm = models.PositiveSmallIntegerField(null=True, blank=True)
+    base_altitude_m = models.PositiveSmallIntegerField(null=True, blank=True)
+    top_altitude_m = models.PositiveSmallIntegerField(null=True, blank=True)
+    operational_notice = models.CharField(max_length=500, blank=True)
     snow_fall_24h_cm = models.PositiveSmallIntegerField(null=True, blank=True)
     weather_summary = models.CharField(max_length=120, blank=True)
     temperature_c = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
@@ -950,3 +962,44 @@ class CultureFeedSource(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class StationAlert(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='station_alerts')
+    station = models.ForeignKey(SkiStation, on_delete=models.CASCADE)
+    kind = models.CharField(max_length=16, choices=[('opening', 'Opening'), ('snow', 'Fresh snow'), ('notice', 'Conditions')])
+    observed_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at', '-pk']
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'station', 'kind', 'observed_at'], name='unique_station_alert'),
+        ]
+
+
+@receiver(pre_save, sender=StationLiveStatus)
+def remember_previous_station_status(sender, instance, **kwargs):
+    instance.previous_status = sender.objects.filter(pk=instance.pk).values(
+        'pistes_open', 'lifts_open', 'operational_notice', 'snow_fall_24h_cm',
+    ).first() if instance.pk else None
+
+
+@receiver(post_save, sender=StationLiveStatus)
+def publish_station_alerts(sender, instance, **kwargs):
+    if not timezone.now() - timedelta(hours=6) <= instance.observed_at <= timezone.now():
+        return
+    previous = getattr(instance, 'previous_status', None) or {}
+    kinds = []
+    if not ((previous.get('pistes_open') or 0) > 0 and (previous.get('lifts_open') or 0) > 0) and (instance.pistes_open or 0) > 0 and (instance.lifts_open or 0) > 0:
+        kinds.append('opening')
+    if (instance.snow_fall_24h_cm or 0) >= 5 and (previous.get('snow_fall_24h_cm') or 0) < 5:
+        kinds.append('snow')
+    if instance.operational_notice.strip() and instance.operational_notice != previous.get('operational_notice'):
+        kinds.append('notice')
+    users = User.objects.filter(profile__favorite_stations=instance.ski_station)
+    StationAlert.objects.bulk_create([
+        StationAlert(user=user, station=instance.ski_station, kind=kind, observed_at=instance.observed_at)
+        for user in users for kind in kinds
+    ], ignore_conflicts=True)

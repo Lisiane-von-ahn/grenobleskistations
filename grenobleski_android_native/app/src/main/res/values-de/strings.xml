@@ -24,4 +24,22 @@
     <string name="station_access_prices">Offizielle Preise</string>
     <string name="station_access_bulletin">Offizieller Pistenbericht</string>
     <string name="station_access_calendar">Offizieller Kalender</string>
+    <string name="planning_compare">Skigebiete vergleichen</string>
+    <string name="planning_offline">Gespeicherte Daten · offline</string>
+    <string name="planning_snow_base">Schnee im Tal</string>
+    <string name="planning_snow_top">Schnee am Gipfel</string>
+    <string name="planning_lifts">Offene Lifte</string>
+    <string name="planning_pistes">Offene Pisten</string>
+    <string name="planning_favorites">Favoriten</string>
+    <string name="planning_price">Preis</string>
+    <string name="planning_sync_error">Synchronisierung fehlgeschlagen. Mit Verbindung erneut versuchen.</string>
+    <string name="planning_alert_open">Öffnung angekündigt</string>
+    <string name="planning_alert_snow">Neuschnee gemeldet</string>
+    <string name="planning_alert_notice">Bedingungen aktualisiert</string>
+    <string name="planning_unfavorite">Favorit entfernen</string>
+    <string name="planning_favorite">Skigebiet folgen</string>
+    <string name="planning_roundtrip">Hin- und Rückfahrt planen</string>
+    <string name="planning_bus">Buslinie vorhanden</string>
+    <string name="planning_budget">Budget Tagespass Erwachsene (€)</string>
+    <string name="planning_read">Als gelesen markieren</string>
 </resources>

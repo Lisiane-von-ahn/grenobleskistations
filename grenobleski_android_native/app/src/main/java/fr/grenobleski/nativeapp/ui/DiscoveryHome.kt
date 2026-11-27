@@ -136,7 +136,10 @@ internal fun DiscoveryHome(
                                 Icon(Icons.Filled.LocationOn, contentDescription = null, tint = Color(0xFF92D8FF), modifier = Modifier.size(22.dp))
                                 Text(bestStation?.name ?: "Grenoble · Isère", color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
-                            StationWeatherMetrics(bestStation?.temperature.orEmpty(), bestStation?.snowDepth.orEmpty())
+                            StationWeatherMetrics(
+                                bestStation?.temperature.orEmpty(), bestStation?.snowDepth.orEmpty(),
+                                bestStation?.snowDepthEstimated == true,
+                            )
                             val weather = bestStation?.weather.orEmpty()
                             if (weather.isNotBlank()) {
                                 Text(weather, color = Color.White, style = MaterialTheme.typography.bodyMedium)
@@ -163,8 +166,8 @@ internal fun DiscoveryHome(
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                             Text(station.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(station.altitudeLabel, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            StationAccessSummary(station.access, onOpenUrl, compact = true)
-                            StationWeatherMetrics(station.temperature, station.snowDepth)
+                            StationAccessSummary(if (station.offline) station.access?.copy(status = "unknown") else station.access, onOpenUrl, compact = true)
+                            StationWeatherMetrics(station.temperature, station.snowDepth, station.snowDepthEstimated)
                             StationCrowdSummary(station.crowd)
                         }
                     }

@@ -400,4 +400,22 @@
     <string name="station_access_prices">Official prices</string>
     <string name="station_access_bulletin">Official bulletin</string>
     <string name="station_access_calendar">Official calendar</string>
+    <string name="planning_compare">Compare stations</string>
+    <string name="planning_offline">Saved data · offline</string>
+    <string name="planning_snow_base">Snow at base</string>
+    <string name="planning_snow_top">Snow at summit</string>
+    <string name="planning_lifts">Open lifts</string>
+    <string name="planning_pistes">Open pistes</string>
+    <string name="planning_favorites">Favorites</string>
+    <string name="planning_price">Price</string>
+    <string name="planning_sync_error">Unable to sync. Try again when connected.</string>
+    <string name="planning_alert_open">Ski area opening announced</string>
+    <string name="planning_alert_snow">Fresh snow reported</string>
+    <string name="planning_alert_notice">Conditions updated</string>
+    <string name="planning_unfavorite">Remove favorite</string>
+    <string name="planning_favorite">Follow station</string>
+    <string name="planning_roundtrip">Plan outbound and return</string>
+    <string name="planning_bus">Bus line listed</string>
+    <string name="planning_budget">Adult day pass budget (€)</string>
+    <string name="planning_read">Mark as read</string>
 </resources>

@@ -8,6 +8,7 @@ try:
 except Exception:
     SocialAccount = None
 
+from .snow_depth import station_snow_depths
 from .models import (
     BusLine,
     GamificationBadge,
@@ -72,8 +73,16 @@ def _display_name_for_user(user):
         return f"{first} {last}".strip()
     return (user.username or user.email or '').strip()
 
+class SkiStationListSerializer(serializers.ListSerializer):
+    def to_representation(self, data):
+        stations = list(data.all() if hasattr(data, 'all') else data)
+        self.context['snow_depths'] = station_snow_depths(stations)
+        return super().to_representation(stations)
+
+
 class SkiStationSerializer(serializers.ModelSerializer):
     access_info = serializers.ReadOnlyField()
+    beginner_pistes = serializers.ReadOnlyField()
     cameras = serializers.SerializerMethodField()
     bus_lines = serializers.SerializerMethodField()
     live_status = serializers.SerializerMethodField()
@@ -81,9 +90,11 @@ class SkiStationSerializer(serializers.ModelSerializer):
     crowd_estimate = serializers.SerializerMethodField()
     photo_url = serializers.SerializerMethodField()
     snow_depth_cm = serializers.SerializerMethodField()
+    snow_depth = serializers.SerializerMethodField()
 
     class Meta:
         model = SkiStation
+        list_serializer_class = SkiStationListSerializer
         fields = '__all__'
 
     def get_fields(self):
@@ -105,12 +116,15 @@ class SkiStationSerializer(serializers.ModelSerializer):
             return ''
         return reverse('ski_station_photo', args=[obj.pk]) + '?width=960'
 
+    def get_snow_depth(self, obj):
+        readings = self.context.setdefault('snow_depths', {})
+        if obj.pk not in readings:
+            readings.update(station_snow_depths([obj]))
+        return readings[obj.pk]
+
     def get_snow_depth_cm(self, obj):
-        from .discovery import ski_assessment
-        live = getattr(obj, 'live_status', None)
-        if live and ski_assessment(live) != 'stale' and live.snow_depth_cm is not None:
-            return live.snow_depth_cm
-        return getattr(obj, 'recent_snow_depth', None)
+        reading = self.get_snow_depth(obj)
+        return reading['cm'] if reading else None
 
     def get_ski_assessment(self, obj):
         from .discovery import ski_assessment

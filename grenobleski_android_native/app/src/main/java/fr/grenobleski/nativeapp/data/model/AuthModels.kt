@@ -168,6 +168,19 @@ data class StationItem(
     val conditionSource: String = "",
     val skiAssessment: String = "unknown",
     val snowDepth: String = "",
+    val snowDepthEstimated: Boolean = false,
+    val snowBase: String = "",
+    val snowTop: String = "",
+    val baseAltitude: String = "",
+    val topAltitude: String = "",
+    val liftsOpen: String = "",
+    val pistesOpen: String = "",
+    val operationalNotice: String = "",
+    val offline: Boolean = false,
+    val hasBus: Boolean = false,
+    val beginnerPistes: Int = 0,
+    val savedAt: Long = 0,
+
     val photoUrl: String = "",
     val crowd: StationCrowd? = null,
     val access: StationAccess? = null,
@@ -287,6 +300,7 @@ data class PisteItem(
     val updatedAtLabel: String,
     val crowd: StationCrowd? = null,
     val access: StationAccess? = null,
+    val snowDepthEstimated: Boolean = false,
 )
 
 data class MessageItem(

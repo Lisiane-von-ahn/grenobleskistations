@@ -18,6 +18,8 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
+    path('offline/', views.offline_routes, name='offline_routes'),
+    path('route-offline-worker.js', views.route_offline_worker),
    path('i18n/', include('django.conf.urls.i18n')),
    path('set-language/', views.set_language_view, name='set_language_safe'),
    path('accounts/organization-name/suggest/', views.suggest_organization_name, name='suggest_organization_name'),
@@ -30,6 +32,7 @@ urlpatterns = [
     path('ski-station/<int:station_id>/route/', views.ski_station_route, name='ski_station_route'),
     path('ski-station/<int:station_id>/', views.ski_station_detail, name='ski_station_detail'),
    path('ski-station/<int:station_id>/snow-update/<int:update_id>/delete/', views.delete_snow_update, name='delete_snow_update'),
+    path('compare/', views.compare_stations, name='compare_stations'),
     path('search/', views.ski_station_search, name='ski_station_search'),
     path('services/', views.service_search, name='services'),
    path('services/<int:service_id>/', views.service_detail, name='service_detail'),

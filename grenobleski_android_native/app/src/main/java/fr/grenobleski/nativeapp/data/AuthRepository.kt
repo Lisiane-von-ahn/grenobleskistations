@@ -52,6 +52,7 @@ import okhttp3.ResponseBody
 class AuthRepository(
     private val service: GrenobleSkiApiService,
     private val siteBaseUrl: String,
+    private val offlineStore: android.content.SharedPreferences? = null,
 ) {
     private data class MarketplaceParseResult(
         val items: List<MarketplaceItem>,
@@ -435,6 +436,19 @@ class AuthRepository(
                 weather = obj.stringOrBlank("weather_description").ifBlank {
                     if (assessment == "stale") "" else live?.stringOrBlank("weather_summary").orEmpty()
                 },
+                snowDepthEstimated = isSnowDepthEstimated(obj),
+                snowBase = if (assessment == "stale") "" else live?.stringOrBlank("snow_base_cm").orEmpty(),
+                snowTop = if (assessment == "stale") "" else live?.stringOrBlank("snow_top_cm").orEmpty(),
+                baseAltitude = live?.stringOrBlank("base_altitude_m").orEmpty(),
+                topAltitude = live?.stringOrBlank("top_altitude_m").orEmpty(),
+                liftsOpen = if (assessment == "stale") "" else live?.stringOrBlank("lifts_open").orEmpty(),
+                pistesOpen = if (assessment == "stale") "" else live?.stringOrBlank("pistes_open").orEmpty(),
+                operationalNotice = if (assessment == "stale") "" else live?.stringOrBlank("operational_notice").orEmpty(),
+                offline = obj.boolOrFalse("offline"),
+                hasBus = obj.arrayObjects("bus_lines").isNotEmpty(),
+                beginnerPistes = obj.intOrZero("beginner_pistes"),
+                savedAt = obj.stringOrBlank("saved_at_ms").toLongOrNull() ?: 0,
+
                 snowDepth = obj.stringOrBlank("snow_depth_cm").ifBlank {
                     if (assessment == "stale") "" else live?.stringOrBlank("snow_depth_cm").orEmpty()
                 },
@@ -460,6 +474,10 @@ class AuthRepository(
             ) else station
         })
     }
+
+    private fun isSnowDepthEstimated(station: JsonObject): Boolean =
+        station.get("snow_depth")?.takeIf { it.isJsonObject }?.asJsonObject
+            ?.stringOrBlank("source") == "open_meteo"
 
     private fun parseStationAccess(station: JsonObject): StationAccess? {
         val access = station.get("access_info")?.takeIf { it.isJsonObject }?.asJsonObject ?: return null
@@ -776,6 +794,7 @@ class AuthRepository(
                     weatherLabel = obj.stringOrBlank("weather_description").ifBlank { "indisponible" },
                     temperatureLabel = temperatureValue.ifBlank { "-" },
                     snowDepthLabel = snowDepth.ifBlank { "-" },
+                    snowDepthEstimated = isSnowDepthEstimated(obj),
                     comment = obj.stringOrBlank("latest_comment").ifBlank { "-" },
                     updatedAtLabel = formatServerDateTime(obj.stringOrBlank("updated_at")),
                 )
@@ -1635,11 +1654,35 @@ class AuthRepository(
     }
 
     private suspend fun fetchPayload(path: String, authHeader: String): JsonElement? {
-        val response = service.listResource("$normalizedBaseUrl$path", authHeader)
-        if (!response.isSuccessful) {
-            return null
+        val cacheable = path in setOf(
+            "/api/skistations/?image=url", "/api/skistations/conditions/", "/api/buslines/", "/api/servicestores/",
+        )
+        val cacheKey = "$normalizedBaseUrl$path"
+        try {
+            val response = service.listResource(cacheKey, authHeader)
+            if (response.isSuccessful) {
+                val payload = response.body()
+                if (cacheable && payload != null) {
+                    val savedAt = System.currentTimeMillis()
+                    val objects = extractObjectList(payload)
+                    objects.forEach { it.addProperty("saved_at_ms", savedAt) }
+                    offlineStore?.edit()?.putString(cacheKey, payload.toString())?.apply()
+                }
+                return payload
+            }
+            if (response.code() < 500) return null
+        } catch (error: IOException) {
+            if (!cacheable) throw error
+        } catch (error: JsonParseException) {
+            if (!cacheable) throw error
         }
-        return response.body()
+        if (!cacheable) return null
+        val saved = offlineStore?.getString(cacheKey, null) ?: return null
+        return runCatching {
+            JsonParser.parseString(saved).also { payload ->
+                extractObjectList(payload).forEach { it.addProperty("offline", true) }
+            }
+        }.getOrNull()
     }
 
     private suspend fun fetchRawBodyFromCandidates(paths: List<String>, authHeader: String): ResponseBody? {

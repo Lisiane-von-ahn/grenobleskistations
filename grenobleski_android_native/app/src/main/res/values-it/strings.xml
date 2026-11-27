@@ -24,4 +24,22 @@
     <string name="station_access_prices">Prezzi ufficiali</string>
     <string name="station_access_bulletin">Bollettino ufficiale</string>
     <string name="station_access_calendar">Calendario ufficiale</string>
+    <string name="planning_compare">Confronta stazioni</string>
+    <string name="planning_offline">Dati salvati · offline</string>
+    <string name="planning_snow_base">Neve alla base</string>
+    <string name="planning_snow_top">Neve in vetta</string>
+    <string name="planning_lifts">Impianti aperti</string>
+    <string name="planning_pistes">Piste aperte</string>
+    <string name="planning_favorites">Preferiti</string>
+    <string name="planning_price">Prezzo</string>
+    <string name="planning_sync_error">Sincronizzazione fallita. Riprova con una connessione.</string>
+    <string name="planning_alert_open">Apertura annunciata</string>
+    <string name="planning_alert_snow">Neve fresca segnalata</string>
+    <string name="planning_alert_notice">Condizioni aggiornate</string>
+    <string name="planning_unfavorite">Rimuovi preferito</string>
+    <string name="planning_favorite">Segui stazione</string>
+    <string name="planning_roundtrip">Pianifica andata e ritorno</string>
+    <string name="planning_bus">Linea autobus indicata</string>
+    <string name="planning_budget">Budget skipass adulto (€)</string>
+    <string name="planning_read">Segna come letto</string>
 </resources>

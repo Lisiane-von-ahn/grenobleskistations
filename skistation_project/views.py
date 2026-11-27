@@ -5,6 +5,7 @@ from django.views.decorators.http import require_GET, require_POST, require_http
 from django.conf import settings
 from django.contrib.auth import login
 from api.discovery import estimate_ski_crowd, ski_assessment
+from api.snow_depth import observed_snow_depth, station_snow_depths
 from api.models import (
     SkiStation,
     SkiStationCamera,
@@ -375,11 +376,17 @@ def home(request):
 
     random_ski_stations = list(queryset.order_by('?'))
     featured_stations = random_ski_stations[:5]
-    nearest_stations = list(queryset.select_related('live_status').order_by('distanceFromGrenoble', 'name')[:5])
+    now = timezone.now()
+    recent_snow = SnowConditionUpdate.objects.filter(
+        ski_station=OuterRef('pk'), created_at__range=(now - timedelta(hours=24), now),
+        snow_depth_cm__isnull=False,
+    ).order_by('-created_at', '-pk')
+    nearest_stations = list(queryset.annotate(
+        recent_snow_depth=Subquery(recent_snow.values('snow_depth_cm')[:1]),
+    ).order_by('distanceFromGrenoble', 'name')[:5])
+    snow_depths = station_snow_depths(nearest_stations, now=now)
     for station in nearest_stations:
-        live = getattr(station, 'live_status', None)
-        if live and ski_assessment(live) != 'stale':
-            station.measured_snow_depth = live.snow_depth_cm
+        station.snow_depth_reading = snow_depths[station.pk]
 
     map_stations = list(queryset.order_by('distanceFromGrenoble', 'name'))
 
@@ -465,12 +472,24 @@ def ski_station_route(request, station_id):
     station = get_object_or_404(SkiStation.objects.defer('image'), pk=station_id)
     mode = request.POST.get('mode', 'DRIVE')
     origin = request.POST.get('origin', '').strip() or 'Grenoble, France'
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    returning = request.POST.get('direction') == 'return'
+    departure_value = request.POST.get('departure_time', '').strip()
+    departure_time = None
+    if departure_value:
+        try:
+            departure_time = datetime.fromisoformat(departure_value).replace(tzinfo=ZoneInfo('Europe/Paris'))
+        except ValueError:
+            return HttpResponse(status=400)
+        if departure_time < timezone.now():
+            return HttpResponse('Choisissez une date de départ future.', status=400)
     presentation = request.POST.get('presentation', 'steps')
     if mode not in GOOGLE_ROUTE_MODES or presentation not in ('map', 'steps') or len(origin) > 120:
         return HttpResponse(status=400)
     route = (
         calculate_station_route(
-            station, origin, mode, getattr(request, 'LANGUAGE_CODE', 'fr'), show_map=presentation == 'map',
+            station, origin, mode, getattr(request, 'LANGUAGE_CODE', 'fr'), show_map=presentation == 'map', departure_time=departure_time, returning=returning,
         )
         if request.method == 'POST' else None
     )
@@ -484,6 +503,10 @@ def ski_station_route(request, station_id):
             for value, label in zip(GOOGLE_ROUTE_MODES, (_('Voiture'), _('Bus / transport'), _('Vélo'), _('À pied')))
         ],
         'presentation': presentation,
+        'departure_value': departure_value,
+        'returning': returning,
+        'route_start': station.name if returning else origin,
+        'route_end': origin if returning else station.name,
         'route': route,
         'routes_available': bool(settings.GOOGLE_ROUTES_API_KEY),
         'bus_lines': station.bus_lines.all(),
@@ -590,11 +613,11 @@ def ski_station_detail(request, station_id):
 
     live_status = getattr(ski_station, 'live_status', None)
     live_is_recent = live_status is not None and ski_assessment(live_status, now=now) != 'stale'
-    snow_depth = live_status.snow_depth_cm if live_is_recent else None
-    if snow_depth is None:
-        snow_depth = SnowConditionUpdate.objects.filter(
+    if observed_snow_depth(ski_station, now) is None:
+        ski_station.recent_snow_depth = SnowConditionUpdate.objects.filter(
             ski_station=ski_station, created_at__range=(now - timedelta(hours=24), now), snow_depth_cm__isnull=False,
-        ).values_list('snow_depth_cm', flat=True).first()
+        ).order_by('-created_at', '-pk').values_list('snow_depth_cm', flat=True).first()
+    snow_depth = station_snow_depths([ski_station], now=now)[ski_station.pk]
     last_crowd = window_crowd.order_by('-created_at', '-pk').first()
     crowd_estimate = estimate_ski_crowd(getattr(ski_station, 'live_status', None), now=now)
     crowd_labels = {row['key']: row['label'] for row in crowd_rows}
@@ -638,6 +661,7 @@ def ski_station_detail(request, station_id):
         'piste_trend': trend,
         'station_temperature': live_status.temperature_c if live_is_recent else None,
         'station_snow_depth': snow_depth,
+        'recent_bulletin': live_status if live_is_recent else None,
         'crowd_rows': crowd_rows,
         'crowd_estimate': crowd_estimate,
         'crowd_total': crowd_total,
@@ -3130,3 +3154,75 @@ def delete_instructor_service(request, service_id):
     service.delete()
     messages.success(request, 'Offre moniteur supprimee.')
     return redirect('instructor_services')
+
+
+@require_http_methods(['GET', 'POST'])
+def compare_stations(request):
+    from api.models import StationAlert
+
+    profile = None
+    if request.user.is_authenticated:
+        profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    if request.method == 'POST':
+        if profile is None:
+            return redirect('account_login')
+        if request.POST.get('read_alerts') == '1':
+            StationAlert.objects.filter(user=request.user, read_at__isnull=True).update(read_at=timezone.now())
+            return redirect('compare_stations')
+        station = get_object_or_404(SkiStation, pk=request.POST.get('station_id'))
+        if request.POST.get('favorite') == '1':
+            profile.favorite_stations.add(station)
+        else:
+            profile.favorite_stations.remove(station)
+        return redirect('compare_stations')
+    stations = list(SkiStation.objects.select_related('live_status').defer('image').prefetch_related('bus_lines', 'skicircuit_set').order_by('distanceFromGrenoble', 'name')[:50])
+    readings = station_snow_depths(stations)
+    favorites = set(profile.favorite_stations.values_list('pk', flat=True)) if profile else set()
+    for station in stations:
+        station.snow_depth_reading = readings[station.pk]
+        live = getattr(station, 'live_status', None)
+        station.recent_bulletin = live if live and ski_assessment(live) != 'stale' else None
+        station.is_favorite = station.pk in favorites
+        station.crowd = estimate_ski_crowd(live, now=timezone.now())
+        station.has_bus = bool(station.bus_lines.all())
+    return render(request, 'compare_stations.html', {
+        'stations': stations,
+        'alerts': StationAlert.objects.filter(user=request.user, station_id__in=favorites, read_at__isnull=True, created_at__gte=timezone.now() - timedelta(days=7)).select_related('station')[:20] if profile else [],
+        'route_base': 'partials/route_embedded_base.html' if request.GET.get('embedded') == '1' else 'base.html',
+    })
+
+
+@require_GET
+def route_offline_worker(request):
+    script = """
+const CACHE = 'grenobleski-offline-v1';
+self.addEventListener('install', event => {
+    event.waitUntil(caches.open(CACHE).then(cache => cache.addAll([
+        '/offline/', '/static/js/route-offline.js',
+        '/static/css/mountain.css', '/static/vendor/bootstrap/css/bootstrap.min.css'
+    ])));
+    self.skipWaiting();
+});
+self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
+self.addEventListener('fetch', event => {
+    const url = new URL(event.request.url);
+    if (url.origin !== self.location.origin || event.request.method !== 'GET') return;
+    if (url.pathname === '/offline/' || url.pathname.startsWith('/static/')) {
+        event.respondWith(fetch(event.request).then(response => {
+            if (response.ok) {
+                const copy = response.clone();
+                caches.open(CACHE).then(cache => cache.put(event.request, copy));
+            }
+            return response;
+        }).catch(() => caches.match(event.request)));
+    } else if (event.request.mode === 'navigate') {
+        event.respondWith(fetch(event.request).catch(() => caches.match('/offline/')));
+    }
+});
+"""
+    return HttpResponse(script, content_type='application/javascript', headers={'Cache-Control': 'no-cache'})
+
+
+@require_GET
+def offline_routes(request):
+    return render(request, 'offline.html')

@@ -24,4 +24,22 @@
     <string name="station_access_prices">Preços oficiais</string>
     <string name="station_access_bulletin">Boletim oficial</string>
     <string name="station_access_calendar">Calendário oficial</string>
+    <string name="planning_compare">Comparar estações</string>
+    <string name="planning_offline">Dados salvos · sem conexão</string>
+    <string name="planning_snow_base">Neve na base</string>
+    <string name="planning_snow_top">Neve no topo</string>
+    <string name="planning_lifts">Remontes abertos</string>
+    <string name="planning_pistes">Pistas abertas</string>
+    <string name="planning_favorites">Favoritos</string>
+    <string name="planning_price">Preço</string>
+    <string name="planning_sync_error">Falha ao sincronizar. Tente com conexão.</string>
+    <string name="planning_alert_open">Abertura anunciada</string>
+    <string name="planning_alert_snow">Neve nova informada</string>
+    <string name="planning_alert_notice">Condições atualizadas</string>
+    <string name="planning_unfavorite">Remover favorito</string>
+    <string name="planning_favorite">Seguir estação</string>
+    <string name="planning_roundtrip">Planejar ida e volta</string>
+    <string name="planning_bus">Linha de ônibus cadastrada</string>
+    <string name="planning_budget">Orçamento do passe adulto (€)</string>
+    <string name="planning_read">Marcar como lido</string>
 </resources>

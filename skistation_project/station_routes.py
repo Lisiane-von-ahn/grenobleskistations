@@ -76,18 +76,21 @@ def route_map_image(route, language):
     return base64.b64encode(image).decode('ascii')
 
 
-def calculate_station_route(station, origin, mode, language, *, show_map=False):
+def calculate_station_route(station, origin, mode, language, *, show_map=False, departure_time=None, returning=False):
     if not settings.GOOGLE_ROUTES_API_KEY:
         return {'state': 'unconfigured'}
 
+    station_location = {'location': {'latLng': {
+        'latitude': float(station.latitude), 'longitude': float(station.longitude),
+    }}}
+    town_location = {'address': origin}
     request = Request(
         'https://routes.googleapis.com/directions/v2:computeRoutes',
         data=json.dumps({
-            'origin': {'address': origin},
-            'destination': {'location': {'latLng': {
-                'latitude': float(station.latitude), 'longitude': float(station.longitude),
-            }}},
+            'origin': station_location if returning else town_location,
+            'destination': town_location if returning else station_location,
             'travelMode': mode,
+            **({'departureTime': departure_time.isoformat()} if departure_time and mode in ('DRIVE', 'TRANSIT') else {}),
             'languageCode': language,
             'units': 'METRIC',
             **({'polylineQuality': 'OVERVIEW'} if show_map else {}),

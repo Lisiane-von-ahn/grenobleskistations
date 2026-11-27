@@ -237,7 +237,7 @@ class SkiStationViewSet(viewsets.ModelViewSet):
             ski_station=OuterRef('pk'), created_at__range=(now - timedelta(hours=24), now),
             snow_depth_cm__isnull=False,
         ).order_by('-created_at', '-pk')
-        return super().get_queryset().select_related('live_status').annotate(
+        return super().get_queryset().select_related('live_status').prefetch_related('skicircuit_set').annotate(
             recent_crowd_level=Subquery(recent_crowd.values('crowd_level')[:1]),
             recent_snow_depth=Subquery(recent_snow.values('snow_depth_cm')[:1]),
         )
@@ -250,13 +250,16 @@ class SkiStationViewSet(viewsets.ModelViewSet):
             PisteConditionReport.CROWD_BUSY: "Bonde",
         }
         from .discovery import station_weather_reading
+        from .snow_depth import station_snow_depths
 
         stations = list(self.get_queryset().order_by("distanceFromGrenoble", "name")[:18])
         with ThreadPoolExecutor(max_workers=8) as pool:
             readings = list(pool.map(lambda station: station_weather_reading(station.latitude, station.longitude), stations))
 
+        snow_depths = station_snow_depths(stations)
         results = []
         for station, weather in zip(stations, readings):
+            snow_depth = snow_depths[station.pk]
             live_status = getattr(station, 'live_status', None)
             webcam_verified_at = max(
                 (camera.last_verified_at for camera in station.cameras.filter(is_active=True) if camera.last_verified_at),
@@ -292,7 +295,8 @@ class SkiStationViewSet(viewsets.ModelViewSet):
                         getattr(live_status, "temperature_c", None) if summary.get_ski_assessment(station) != "stale" else None
                     ),
                     "feels_like_c": weather.get("feels_like_c"),
-                    "snow_depth_cm": summary.get_snow_depth_cm(station),
+                    "snow_depth_cm": snow_depth['cm'] if snow_depth else None,
+                    "snow_depth": snow_depth,
                     "crowd_estimate": summary.get_crowd_estimate(station),
                     "access_info": station.access_info,
                     "lifts_open": getattr(live_status, "lifts_open", None),

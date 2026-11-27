@@ -1,0 +1,2 @@
+{% load i18n %}
+{% if reading %}{% if reading.source == 'open_meteo' %}≈ {% endif %}{{ reading.cm }} cm{% if reading.source == 'open_meteo' %} <small><a href="{{ reading.source_url }}">{% trans "Estimation Open-Meteo" %}</a>{% if reading.elevation_m %} · {{ reading.elevation_m }} m{% endif %}</small>{% elif reading.source == 'community' %} <small>{% trans "Signalement récent" %}</small>{% endif %}{% else %}—{% endif %}

@@ -1,0 +1,11 @@
+{% extends "partials/route_embedded_base.html" %}
+{% load i18n static %}
+{% block title %}{% trans "Mes pages enregistrées" %}{% endblock %}
+{% block content %}
+<section class="container py-4"><h1>{% trans "Mes pages enregistrées" %}</h1>
+<p>{% trans "Consultez les pages sauvegardées sur cet appareil. Les horaires et conditions peuvent avoir changé depuis leur enregistrement." %}</p>
+<div id="offline-list" data-remove="{% trans 'Supprimer' %}" data-empty="{% trans 'Aucune page enregistrée sur cet appareil.' %}"></div>
+<iframe id="offline-preview" title="{% trans 'Trajet enregistré' %}" sandbox="" style="width:100%;height:75vh;border:0" hidden></iframe>
+</section>
+<script src="{% static 'js/route-offline.js' %}" defer></script>
+{% endblock %}

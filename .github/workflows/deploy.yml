@@ -19,9 +19,10 @@ jobs:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         env:
+          OPEN_METEO_API_KEY: ${{ secrets.OPEN_METEO_API_KEY }}
           GOOGLE_ROUTES_API_KEY: ${{ secrets.GOOGLE_ROUTES_API_KEY || secrets.GOOGLE_ROUTES_API_K }}
         with:
-          envs: GOOGLE_ROUTES_API_KEY
+          envs: GOOGLE_ROUTES_API_KEY,OPEN_METEO_API_KEY
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}

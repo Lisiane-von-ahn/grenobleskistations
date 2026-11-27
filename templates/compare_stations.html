@@ -1,0 +1,44 @@
+{% extends route_base %}
+{% load i18n static tz %}
+{% block title %}{% trans "Comparer les stations" %}{% endblock %}
+{% block content %}
+<section class="container py-4 planning-page">
+<h1>{% trans "Comparer les stations" %}</h1>
+<div class="my-3">
+<button type="button" class="btn btn-outline-primary" id="save-route" data-success="{% trans 'Page enregistrée sur cet appareil' %}" data-failure="{% trans 'Enregistrement impossible sur cet appareil' %}">{% trans "Enregistrer pour consulter hors connexion" %}</button>
+<span id="save-route-status" role="status"></span>
+<a href="{% url 'offline_routes' %}">{% trans "Mes pages enregistrées" %}</a>
+</div>
+<div class="planning-filters">
+<label>{% trans "Station" %}<input id="station-filter" type="search" class="form-control" autocomplete="off"></label>
+<label><input id="open-filter" type="checkbox"> {% trans "Domaine ouvert" %}</label>
+<label><input id="bus-filter" type="checkbox"> {% trans "Ligne de bus renseignée" %}</label>
+<label><input id="beginner-filter" type="checkbox"> {% trans "Pistes débutantes renseignées" %}</label>
+<label><input id="favorite-filter" type="checkbox"> {% trans "Favoris" %}</label>
+<label class="planning-budget">{% trans "Budget forfait adulte (€)" %}<input id="budget-filter" type="number" min="0" step="1" class="form-control"></label>
+<label>{% trans "Trier" %}<select id="planning-sort" class="form-select"><option value="distance">{% trans "Distance" %}</option><option value="price">{% trans "Prix" %}</option><option value="snow">{% trans "Neige" %}</option></select></label>
+</div>
+{% if alerts %}
+<details class="planning-alerts" open><summary>{% trans "Alertes de vos favoris" %}</summary>
+{% for alert in alerts %}<p><strong>{{ alert.station.name }}</strong> · {% if alert.kind == 'opening' %}{% trans "Ouverture du domaine annoncée" %}{% elif alert.kind == 'snow' %}{% trans "Nouvelle neige annoncée" %}{% else %}{% trans "Conditions mises à jour" %}{% endif %} · {{ alert.observed_at|timezone:"Europe/Paris"|date:"d/m H:i" }}</p>{% endfor %}
+<form method="post">{% csrf_token %}<button name="read_alerts" value="1" class="btn btn-outline-primary">{% trans "Marquer comme lu" %}</button></form>
+</details>
+{% endif %}
+<p id="planning-count" role="status"></p>
+<div class="planning-grid" id="planning-grid">
+{% for station in stations %}
+<article class="planning-card" data-name="{{ station.name|lower }}" data-distance="{{ station.distanceFromGrenoble }}" data-open="{{ station.access_info.status }}" data-bus="{{ station.has_bus|yesno:'1,0' }}" data-favorite="{{ station.is_favorite|yesno:'1,0' }}" data-beginner="{{ station.beginner_pistes }}" data-snow="{{ station.snow_depth_reading.cm|default_if_none:'' }}" data-price="{{ station.access_info.adult_day_price }}">
+<header><h2><a href="{% url 'ski_station_detail' station.pk %}">{{ station.name }}</a></h2><span>{{ station.distanceFromGrenoble }} km · {{ station.altitude }} m</span></header>
+{% if user.is_authenticated %}<form method="post">{% csrf_token %}<input type="hidden" name="station_id" value="{{ station.pk }}"><button class="btn btn-outline-primary" name="favorite" value="{{ station.is_favorite|yesno:'0,1' }}">{% if station.is_favorite %}♥ {% trans "Retirer des favoris" %}{% else %}♡ {% trans "Ajouter aux favoris" %}{% endif %}</button></form>{% else %}<a href="{% url 'account_login' %}">{% trans "Connectez-vous pour suivre cette station" %}</a>{% endif %}
+{% include "partials/station_access.html" with station=station only %}
+<p><strong>{% trans "Hauteur de neige" %}</strong> {% include "partials/snow_depth.html" with reading=station.snow_depth_reading only %}</p>
+{% include "partials/station_bulletin.html" with bulletin=station.recent_bulletin only %}
+<p>{% trans "Affluence estimée" %} · {% if station.crowd.state == 'closed' %}{% trans "Domaine fermé" %}{% else %}{% for slot in station.crowd.slots %}{% if slot.current %}{% if slot.level == 'quiet' %}{% trans "Calme" %}{% elif slot.level == 'busy' %}{% trans "Forte" %}{% else %}{% trans "Modérée" %}{% endif %}{% endif %}{% endfor %}{% endif %}</p>
+<a class="btn btn-primary" href="{% url 'ski_station_route' station.pk %}">{% trans "Préparer l’aller et le retour" %}</a>
+</article>
+{% endfor %}
+</div>
+</section>
+<script src="{% static 'js/station-planning.js' %}" defer></script>
+<script src="{% static 'js/route-offline.js' %}" defer></script>
+{% endblock %}

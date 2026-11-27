@@ -373,4 +373,22 @@
     <string name="station_access_prices">Tarifs officiels</string>
     <string name="station_access_bulletin">Bulletin officiel</string>
     <string name="station_access_calendar">Calendrier officiel</string>
+    <string name="planning_compare">Comparer les stations</string>
+    <string name="planning_offline">Données enregistrées · hors connexion</string>
+    <string name="planning_snow_base">Neige en bas</string>
+    <string name="planning_snow_top">Neige au sommet</string>
+    <string name="planning_lifts">Remontées ouvertes</string>
+    <string name="planning_pistes">Pistes ouvertes</string>
+    <string name="planning_favorites">Favoris</string>
+    <string name="planning_price">Prix</string>
+    <string name="planning_sync_error">Synchronisation impossible. Réessayez avec une connexion.</string>
+    <string name="planning_alert_open">Ouverture annoncée</string>
+    <string name="planning_alert_snow">Neige fraîche annoncée</string>
+    <string name="planning_alert_notice">Conditions mises à jour</string>
+    <string name="planning_unfavorite">Retirer des favoris</string>
+    <string name="planning_favorite">Suivre la station</string>
+    <string name="planning_roundtrip">Préparer l’aller et le retour</string>
+    <string name="planning_bus">Ligne de bus renseignée</string>
+    <string name="planning_budget">Budget forfait adulte (€)</string>
+    <string name="planning_read">Marquer comme lu</string>
 </resources>

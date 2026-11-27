@@ -1,5 +1,5 @@
 {% extends route_base %}
-{% load i18n tz %}
+{% load i18n tz static %}
 {% block title %}{% trans "Comment venir ?" %} · {{ station.name }}{% endblock %}
 {% block content %}
 <section class="container route-page">
@@ -18,8 +18,15 @@
     <form method="post" class="route-form">
         {% csrf_token %}
         <input type="hidden" name="presentation" value="{{ presentation }}">
+        <label for="route-direction" class="form-label">{% trans "Sens du trajet" %}</label>
+        <select id="route-direction" name="direction" class="form-select mb-3">
+            <option value="outbound"{% if not returning %} selected{% endif %}>{% trans "Aller vers la station" %}</option>
+            <option value="return"{% if returning %} selected{% endif %}>{% trans "Retour depuis la station" %}</option>
+        </select>
         <label for="route-origin" class="form-label">{% trans "Point de départ" %}</label>
         <input class="form-control" type="text" id="route-origin" name="origin" maxlength="120" value="{{ origin }}" autocomplete="address-line1">
+        <label for="route-departure" class="form-label mt-3">{% trans "Date et heure de départ" %}</label>
+        <input class="form-control" type="datetime-local" id="route-departure" name="departure_time" value="{{ departure_value }}">
         <div class="route-modes">
             {% for value, label, icon in modes %}
             <button type="submit" name="mode" value="{{ value }}" class="btn {% if mode == value %}btn-primary{% else %}btn-outline-primary{% endif %}"{% if route and mode == value %} aria-current="true"{% endif %}>
@@ -41,6 +48,8 @@
                     {% csrf_token %}
                     <input type="hidden" name="origin" value="{{ origin }}">
                     <input type="hidden" name="mode" value="{{ mode }}">
+                    <input type="hidden" name="departure_time" value="{{ departure_value }}">
+                    <input type="hidden" name="direction" value="{{ returning|yesno:'return,outbound' }}">
                     <button class="btn {% if presentation == 'steps' %}btn-primary{% else %}btn-outline-primary{% endif %}" type="submit" name="presentation" value="steps" {% if presentation == 'steps' %}aria-current="true" disabled{% endif %}><i class="fas fa-list" aria-hidden="true"></i> {% trans "Étapes" %}</button>
                     <button class="btn {% if presentation == 'map' %}btn-primary{% else %}btn-outline-primary{% endif %}" type="submit" name="presentation" value="map" {% if presentation == 'map' %}aria-current="true" disabled{% endif %}><i class="fas fa-map" aria-hidden="true"></i> {% trans "Carte" %}</button>
                 </form>
@@ -52,7 +61,7 @@
                 {% if route.map_image %}
                     <figure class="route-map">
                         <img src="data:image/png;base64,{{ route.map_image }}" width="1280" height="720" alt="{% trans 'Carte du trajet entre le départ et la station' %}">
-                        <figcaption><span><b>A</b> {{ origin }}</span><span><b>B</b> {{ station.name }}</span></figcaption>
+                        <figcaption><span><b>A</b> {{ route_start }}</span><span><b>B</b> {{ route_end }}</span></figcaption>
                     </figure>
                 {% else %}
                     <p class="route-notice">{% trans "La carte est indisponible. Les étapes restent accessibles." %}</p>
@@ -61,7 +70,7 @@
                 <ol class="route-steps">
                     <li>
                         <span class="route-icon" aria-hidden="true"><i class="fas fa-location-dot"></i></span>
-                        <div><small>{% trans "Départ" %}</small><strong>{{ origin }}</strong></div>
+                        <div><small>{% trans "Départ" %}</small><strong>{{ route_start }}</strong></div>
                     </li>
                     {% for step in route.steps %}
                         <li>
@@ -83,10 +92,13 @@
                     {% endfor %}
                     <li>
                         <span class="route-icon" aria-hidden="true"><i class="fas fa-flag-checkered"></i></span>
-                        <div><small>{% trans "Arrivée" %}</small><strong>{{ station.name }}</strong></div>
+                        <div><small>{% trans "Arrivée" %}</small><strong>{{ route_end }}</strong></div>
                     </li>
                 </ol>
             {% endif %}
+            <button type="button" class="btn btn-outline-primary" id="save-route" data-success="{% trans 'Trajet enregistré sur cet appareil' %}" data-failure="{% trans 'Enregistrement impossible sur cet appareil' %}">{% trans "Enregistrer pour consulter hors connexion" %}</button>
+            <p id="save-route-status" role="status"></p>
+            <a href="{% url 'offline_routes' %}">{% trans "Mes pages enregistrées" %}</a>
             <p class="route-attribution" translate="no">Google Maps</p>
         </section>
     {% elif route or not routes_available %}
@@ -100,10 +112,11 @@
             <h2 id="route-bus-heading"><i class="fas fa-bus" aria-hidden="true"></i> {% trans "Lignes de bus vers la station" %}</h2>
             <ul>
                 {% for line in bus_lines %}
-                    <li><strong>{{ line.bus_number }}</strong><span>{{ line.departure_stop }} → {{ line.arrival_stop }}</span>{% if line.travel_time %}<small>{{ line.travel_time }}</small>{% endif %}</li>
+                    <li><strong>{{ line.bus_number }}</strong><span>{{ line.departure_stop }} → {{ line.arrival_stop }}</span>{% if line.travel_time %}<small>{{ line.travel_time }}</small>{% endif %}{% if line.last_departure %}<small>{% trans "Dernier départ publié" %} · {{ line.last_departure|time:"H:i" }}</small>{% endif %}{% if line.itinerary_url %}<a href="{{ line.itinerary_url }}" target="_blank" rel="noopener">{% trans "Horaires de l’opérateur" %}</a>{% endif %}</li>
                 {% endfor %}
             </ul>
         </section>
     {% endif %}
 </section>
+<script src="{% static 'js/route-offline.js' %}" defer></script>
 {% endblock %}

@@ -1,0 +1,15 @@
+{% load i18n tz %}
+{% if bulletin %}
+<section class="station-bulletin">
+    <h3>{% trans "Bulletin du domaine" %}</h3>
+    <div class="bulletin-metrics">
+        <div><span>{% trans "Température" %}</span><strong>{{ bulletin.temperature_c|default_if_none:"—" }}{% if bulletin.temperature_c is not None %} °C{% endif %}</strong></div>
+        <div><span>{% trans "Neige en bas" %}</span><strong>{{ bulletin.snow_base_cm|default_if_none:"—" }}{% if bulletin.snow_base_cm is not None %} cm{% endif %}</strong>{% if bulletin.base_altitude_m %}<small>{{ bulletin.base_altitude_m }} m</small>{% endif %}</div>
+        <div><span>{% trans "Neige au sommet" %}</span><strong>{{ bulletin.snow_top_cm|default_if_none:"—" }}{% if bulletin.snow_top_cm is not None %} cm{% endif %}</strong>{% if bulletin.top_altitude_m %}<small>{{ bulletin.top_altitude_m }} m</small>{% endif %}</div>
+        <div><span>{% trans "Pistes ouvertes" %}</span><strong>{{ bulletin.pistes_open|default_if_none:"—" }} / {{ bulletin.pistes_total|default_if_none:"—" }}</strong></div>
+        <div><span>{% trans "Remontées ouvertes" %}</span><strong>{{ bulletin.lifts_open|default_if_none:"—" }} / {{ bulletin.lifts_total|default_if_none:"—" }}</strong></div>
+    </div>
+    {% if bulletin.operational_notice %}<p>{{ bulletin.operational_notice }}</p>{% endif %}
+    <small>{{ bulletin.observed_at|timezone:"Europe/Paris"|date:"d/m/Y H:i" }}{% if bulletin.source_url %} · <a href="{{ bulletin.source_url }}" target="_blank" rel="noopener">{% trans "Source du bulletin" %}</a>{% endif %}</small>
+</section>
+{% endif %}

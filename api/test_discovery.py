@@ -265,14 +265,38 @@ class DiscoveryTests(TestCase):
         self.assertNotContains(response, 'data:image/png;base64,')
 
     def test_app_station_feed_includes_measured_zero_snow_and_crowd(self):
-        StationLiveStatus.objects.create(ski_station=self.station, temperature_c=0, snow_depth_cm=0)
+        StationLiveStatus.objects.create(
+            ski_station=self.station, temperature_c=0, snow_depth_cm=0,
+            observed_at=timezone.now() - timedelta(hours=8),
+        )
         user = get_user_model().objects.create_user(username='recent-reporter')
         CrowdStatusUpdate.objects.create(ski_station=self.station, user=user, crowd_level='normal')
         response = self.client.get('/api/skistations/?image=url')
         row = (response.data.get('results', []) if isinstance(response.data, dict) else response.data)[0]
         self.assertEqual(row['snow_depth_cm'], 0)
+        self.assertEqual(row['snow_depth']['source'], 'operator')
         self.assertEqual(row['crowd_estimate']['reported_level'], 'normal')
         self.assertNotIn('image', row)
+
+    @override_settings(OPEN_METEO_API_KEY='test-key')
+    def test_snow_depth_fallback_batches_stations_and_preserves_zero(self):
+        SkiStation.objects.create(name='Les 7 Laux', latitude=45.24, longitude=5.97)
+        now = timezone.now()
+        model_values = [
+            {'current_units': {'snow_depth': 'm'},
+             'current': {'snow_depth': depth, 'time': now.replace(tzinfo=None).isoformat()}}
+            for depth in (0.25, 0.0)
+        ]
+        cache.clear()
+        with patch('api.snow_depth._model_readings', return_value=model_values) as model:
+            for _ in range(2):
+                response = self.client.get('/api/skistations/?image=url')
+                self.assertEqual(response.status_code, 200)
+                rows = response.data.get('results', []) if isinstance(response.data, dict) else response.data
+                self.assertCountEqual([row['snow_depth_cm'] for row in rows], [25, 0])
+                self.assertTrue(all(row['snow_depth']['source'] == 'open_meteo' for row in rows))
+        model.assert_called_once()
+        self.assertEqual(len(model.call_args.args[0]), 2)
 
     def test_station_photo_is_cached_separately_from_html(self):
         image = BytesIO()

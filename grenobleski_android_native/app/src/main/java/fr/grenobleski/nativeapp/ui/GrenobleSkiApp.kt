@@ -271,6 +271,7 @@ fun GrenobleSkiApp(
         AuthRepository(
             service = GrenobleSkiApiClient.createService(BuildConfig.API_BASE_URL),
             siteBaseUrl = BuildConfig.API_BASE_URL,
+            offlineStore = appContext.getSharedPreferences("station-offline", android.content.Context.MODE_PRIVATE),
         )
     }
     val sessionStore = remember { SessionStore(appContext) }
@@ -2275,6 +2276,10 @@ private fun StationsTab(
         return
     }
 
+    var showPlanner by remember { mutableStateOf(false) }
+    if (showPlanner) {
+        StationPlanner(state, onDismiss = { showPlanner = false }, onOpenUrl = onOpenUrl)
+    }
     var searchQuery by remember { mutableStateOf("") }
     var selectedStation by remember { mutableStateOf<fr.grenobleski.nativeapp.data.model.StationItem?>(null) }
     var selectedStationForRating by remember { mutableStateOf<fr.grenobleski.nativeapp.data.model.StationItem?>(null) }
@@ -2302,6 +2307,9 @@ private fun StationsTab(
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item {
+            Button(onClick = { showPlanner = true }, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.planning_compare))
+            }
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -2327,8 +2335,9 @@ private fun StationsTab(
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         Text(item.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                        StationAccessSummary(item.access, onOpenUrl)
-                        StationWeatherMetrics(item.temperature, item.snowDepth)
+                        StationAccessSummary(if (item.offline) item.access?.copy(status = "unknown") else item.access, onOpenUrl)
+                        if (item.offline) Text(stringResource(R.string.planning_offline))
+                        StationWeatherMetrics(item.temperature, item.snowDepth, item.snowDepthEstimated)
                         StationCrowdSummary(item.crowd)
                         PhotoCredit(item.photoCredit, item.photoSourceUrl, onOpenUrl)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -2442,8 +2451,12 @@ private fun StationsTab(
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
                             )
-                            StationAccessSummary(stationDetails.access, onOpenUrl)
-                            StationWeatherMetrics(stationDetails.temperature, stationDetails.snowDepth)
+                            StationAccessSummary(if (stationDetails.offline) stationDetails.access?.copy(status = "unknown") else stationDetails.access, onOpenUrl)
+                            StationBulletin(stationDetails, onOpenUrl)
+                            StationWeatherMetrics(stationDetails.temperature, stationDetails.snowDepth, stationDetails.snowDepthEstimated)
+                            if (stationDetails.snowDepthEstimated) {
+                                Text("Open-Meteo · ICON", style = MaterialTheme.typography.labelSmall)
+                            }
                             StationCrowdSummary(stationDetails.crowd, showSchedule = true)
                             Button(onClick = { routeStationId = stationDetails.id }, modifier = Modifier.fillMaxWidth()) {
                                 Text(stringResource(R.string.getting_there_title))
@@ -3925,6 +3938,7 @@ private fun PistesTab(
                     weatherLabel = "indisponible",
                     temperatureLabel = station.temperature,
                     snowDepthLabel = station.snowDepth,
+                    snowDepthEstimated = station.snowDepthEstimated,
                     comment = "-",
                     updatedAtLabel = "",
                 )
@@ -4013,7 +4027,7 @@ private fun PistesTab(
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         PisteMetricPill(
                             label = stringResource(id = R.string.snow_depth),
-                            value = formatStationMeasurement(item.snowDepthLabel, "cm"),
+                            value = formatSnowDepth(item.snowDepthLabel, item.snowDepthEstimated),
                             modifier = Modifier.weight(1f),
                         )
                         PisteMetricPill(
@@ -4236,11 +4250,16 @@ internal fun StationAccessSummary(access: StationAccess?, onOpenUrl: (String) ->
     }
 }
 
+private fun formatSnowDepth(value: String, estimated: Boolean): String {
+    val measurement = formatStationMeasurement(value, "cm")
+    return if (estimated && measurement != "—") "≈ $measurement" else measurement
+}
+
 @Composable
-internal fun StationWeatherMetrics(temperature: String, snowDepth: String) {
+internal fun StationWeatherMetrics(temperature: String, snowDepth: String, snowDepthEstimated: Boolean) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         PisteMetricPill(stringResource(R.string.temperature), formatStationMeasurement(temperature, "°C"), Modifier.weight(1f))
-        PisteMetricPill(stringResource(R.string.snow_depth), formatStationMeasurement(snowDepth, "cm"), Modifier.weight(1f))
+        PisteMetricPill(stringResource(R.string.snow_depth), formatSnowDepth(snowDepth, snowDepthEstimated), Modifier.weight(1f))
     }
 }
 
@@ -4317,7 +4336,7 @@ private fun buildStationsMapHtml(items: List<PisteItem>): String {
             append(" · ")
             append(escapeHtml(formatStationMeasurement(item.temperatureLabel, "°C")))
             append(" · ❄ ")
-            append(escapeHtml(formatStationMeasurement(item.snowDepthLabel, "cm")))
+            append(escapeHtml(formatSnowDepth(item.snowDepthLabel, item.snowDepthEstimated)))
         }
         """{ lat: $latitude, lng: $longitude, title: "${escapeForJs(item.stationName).replace("<", "\\u003c")}", popup: "${escapeForJs(popup)}" }"""
     }

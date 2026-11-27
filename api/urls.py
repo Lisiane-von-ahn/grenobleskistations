@@ -1,3 +1,4 @@
+from .station_planning import station_favorites, station_alerts
 from django.urls import path, include
 from django.views.generic import RedirectView
 from rest_framework.routers import DefaultRouter
@@ -74,6 +75,8 @@ router.register(r'gamification/badges', GamificationBadgeViewSet, basename='badg
 router.register(r'gamification/user-badges', UserBadgeViewSet, basename='user-badges')
 
 urlpatterns = [
+    path("station-favorites/", station_favorites),
+    path("station-alerts/", station_alerts),
     path("station-weather/", station_weather, name="station-weather"),
     path('overpass/nearby/', overpass_nearby_view, name='api-overpass-nearby'),
     path('accommodations/', accommodations_view, name='api-accommodations'),

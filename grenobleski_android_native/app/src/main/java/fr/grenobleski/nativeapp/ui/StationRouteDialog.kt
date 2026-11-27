@@ -77,14 +77,16 @@ internal fun StationRouteDialog(stationId: Int, onDismiss: () -> Unit) {
                             modifier = Modifier.fillMaxWidth().weight(1f),
                             factory = { context ->
                                 WebView(context).apply {
-                                    settings.javaScriptEnabled = false
+                                    settings.javaScriptEnabled = true
+                                    settings.domStorageEnabled = true
+                                    settings.javaScriptCanOpenWindowsAutomatically = false
                                     settings.allowFileAccess = false
                                     settings.allowContentAccess = false
                                     webViewClient = object : WebViewClient() {
                                         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                                             val target = request.url
                                             return target.scheme != base.scheme || target.host != base.host ||
-                                                target.port != base.port || target.path != path
+                                                target.port != base.port || target.path !in setOf(path, "/offline/")
                                         }
 
                                         override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
@@ -96,7 +98,10 @@ internal fun StationRouteDialog(stationId: Int, onDismiss: () -> Unit) {
                                         }
 
                                         override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
-                                            if (request.isForMainFrame) failed = true
+                                            if (request.isForMainFrame) {
+                                                if (view.url?.contains("/offline/") == true) failed = true
+                                                else view.loadUrl(base.buildUpon().path("/offline/").clearQuery().build().toString())
+                                            }
                                         }
 
                                         override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, response: WebResourceResponse) {
